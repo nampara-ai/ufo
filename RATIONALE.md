@@ -328,9 +328,9 @@ a nested universe shown through a Portal. It needed an algorithm the
 specification did not have (now §5.7) and a different `break` (now §6.3).
 Built without the standard library and passed through a size optimiser, it
 came to 78.4 KiB, about 40 bytes for each line of its own code. At that
-density the kernel's line budget and byte budget cannot both hold; the
-specification records the disagreement, and the byte budget is the one
-expected to stand.
+density the first line budget, 10 000, and the byte budget could not both
+hold. The byte budget is what a file pays for, so it stood at 256 KiB, and
+the line budget became 6 000.
 
 **The printer.** The same kernel printed six described modules to bytes
 identical to a second implementation's, and the specification's vector to
@@ -411,8 +411,8 @@ recorded so they can be reversed for good reason.
 - Converting a foreign document to description can lose nuance. The
   original bytes are always kept, and the conversion is recorded.
 - Every size and speed figure in the specification is a target set before
-  anything was built, and the one measurement so far, of a miniature, says
-  the kernel's two limits disagree. Budgets change on measurement only.
+  anything was built, except the kernel's line limit, which was reset from
+  one measurement of a miniature. Budgets change on measurement only.
 - A web page that carries its own reader cannot vouch for itself. What it
   says about seals and origins is the file's own account until an installed
   reader checks it.

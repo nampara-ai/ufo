@@ -532,9 +532,19 @@ the mark (`TRADEMARKS.md`). **Counsel will review all of it before the
 project's public launch.** Three points for that review in particular: the
 agreement is written for a final specification and is here applied to a
 draft, version by version; the signature is a typed name entered at the
-owner's instruction; and CONTRIBUTING.md does not yet say on what terms
-outside contributions to the specification's text are accepted, which the
-agreement's own contributor form (OWF CLA 1.0) exists for.
+owner's instruction; and the terms for outside contributions, on which the
+owner's proposal is this, now stated in CONTRIBUTING.md as pending counsel:
+
+- contributions to the specification are made under the Open Web
+  Foundation's Contributor License Agreement 1.0;
+- contributions of code are made under Apache-2.0, by its contribution
+  clause (section 5);
+- the Final Specification Agreement is applied at each released version.
+
+The Open Web Foundation publishes that contributor agreement in two forms,
+one covering copyright only and one covering copyright and patents. The
+proposal is read here as the second, since the final agreement makes
+patent promises; counsel should confirm.
 
 What follows is the proposal as it was put, kept for its reasoning. It
 recommended Apache-2.0 for the vectors; the owner chose CC0 for them.
@@ -715,10 +725,13 @@ the count is the count, and the document is now 9% longer than it was.
    no build step, no separate ledger mechanism. Statements are addressed
    by their permanent identities. The trial's JavaScript printers are
    deleted with the spike; the kernel's printer is the only implementation.
-2. **Kernel budgets: not yet decided.** Measured with the reductions asked
-   for (`spike/FINDINGS.md` §7): 78.4 KiB, about 40 bytes a line. The owner
-   expects the byte limit of 256 KiB to stand and the line limit to be set
-   from measured density. Neither is changed.
+2. **Kernel budgets: decided.** Measured with the reductions asked for
+   (`spike/FINDINGS.md` §7): 78.4 KiB, 40 bytes a line. The compiled limit
+   stays at 256 KiB, firm. The line limit is 6 000 lines of the kernel's
+   own code, and the per-part budgets were divided again to sum to it
+   (SPEC §12.2). Still open, found while applying this: at the measured
+   compression ratio a 256 KiB kernel is about 123 KiB compressed, over the
+   96 KiB compressed limit and the envelope's allowance for it.
 3. **Canonical exports: reproducible given a named renderer** identified by
    its hash; a component fetched or carried only when such an export is
    requested, never part of an ordinary file's player. No engine chosen

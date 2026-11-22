@@ -36,6 +36,22 @@ pass the opposite test: it may remove mechanism, never reach. Whoever
 removes a concept shows what it now composes from, and that every worked
 example of SPEC §14 still works.
 
+## The terms of a contribution
+
+*Proposed by the project's owner and pending review by counsel; until that
+review is done, outside contributions are welcome as issues and reviews,
+and are not merged.*
+
+- **To the specification** (`SPEC.md`, `CORE.md`): under the Open Web
+  Foundation's [Contributor License Agreement 1.0](https://www.openwebfoundation.org/the-agreements/the-owf-1-0-agreements-granted-claims),
+  in its form covering copyright and patents. The
+  [Final Specification Agreement](SPEC-LICENSE.md) is then applied to each
+  released version.
+- **To code and tooling, and to the other documents**: under the
+  [Apache License 2.0](LICENSE), by its contribution clause (section 5):
+  what you submit for inclusion is under that licence unless you say
+  otherwise.
+
 ## Standards
 
 - Report only what you ran and observed. Where a check could not be run,

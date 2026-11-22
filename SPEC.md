@@ -3259,8 +3259,8 @@ These limits change only on measurement.
 
 | Measure | Limit | Reason |
 | --- | --- | --- |
-| Kernel source, excluding tests | 10 000 lines | one engineer reading about 1 200 lines an hour finishes in a working day |
-| Kernel, compiled WebAssembly | 256 KiB | a tenth of a typical phone photograph |
+| Kernel, compiled WebAssembly | 256 KiB | a tenth of a typical phone photograph. This is the limit a file pays for, and it is firm |
+| Kernel source: its own code, excluding tests and anything borrowed | 6 000 lines | set from the compiled limit at the measured density of about 40 bytes a line; one engineer reads it in a working day |
 | Kernel, DEFLATE-compressed | 96 KiB | what an envelope actually carries |
 | Binding source, per host | 600 lines | readable in minutes; this now includes executing the drawing contract (§6.2) |
 | Web binding, as shipped | 16 KiB | |
@@ -3276,26 +3276,29 @@ happens:
 
 | Part of the kernel | Lines |
 | --- | --- |
-| Hashing, values, pack, recovery, index, compaction | 1 300 |
-| Objects, object map, blobs, changes, conservation, sequences | 1 300 |
-| Anchors, resolution, pins, digests, derivations, travel layers | 1 000 |
-| Formulas, including arithmetic that must be identical everywhere | 1 200 |
-| Layout, composition, clocks, hit testing, presentation state, pagination | 2 500 |
-| Projections, search, difference, actions, undo | 1 500 |
-| Printing, module checking, instrumentation, promotion | 1 200 |
+| Hashing, values, pack, recovery, index, compaction | 800 |
+| Objects, object map, blobs, changes, conservation, sequences | 800 |
+| Anchors, resolution, pins, digests, derivations, travel layers | 600 |
+| Formulas, including arithmetic that must be identical everywhere | 700 |
+| Composition: layout, clocks, hit testing, presentation state, pagination | 1 500 |
+| Projections, outlines, search, difference, actions, undo | 900 |
+| Printing, module checking, instrumentation, promotion | 700 |
 
-**Measured once, in miniature.** A throwaway kernel of 1 613 lines — the
-storage layer, composition of text into lines, rows and pages, the
-plain-text face, nested universes and the printer — compiled, without the
-standard library and after a size-optimising pass, to 78.4 KiB. Leaving
-out an inflater it borrowed, which is the host's to supply (§6.3), it was
-67.3 KiB: an allocator of 4.2 KiB, and about 40 bytes of WebAssembly for
-each line of Rust. At that density the two limits above disagree: 256 KiB
-holds about 6 400 lines, and 10 000 lines would be about 396 KiB. The
-miniature was not written for size. This section records the disagreement
-and changes neither number. Its web binding was 79 lines and 3.0 KiB
-compressed, for half of the drawing contract's items and one host
-function.
+**The measurement behind these.** A throwaway kernel of 1 613 lines — the
+reading half of the first two rows (675 lines), composition of text into
+lines, rows and pages with the plain-text face and Portals (491), and the
+printer for the instructions its test programs used (344) — compiled,
+without the standard library and after a size-optimising pass, to 78.4 KiB.
+Leaving out an inflater it borrowed, which is the host's to supply (§6.3),
+it was 67.3 KiB: an allocator of 4.2 KiB, and 40 bytes of WebAssembly for
+each line of its own code. At that density 6 000 lines compile to about
+239 KiB. The line limit was 10 000 before this was measured; the compiled
+limit did not move. The same build compressed to 48% of its size, at which
+a kernel of 256 KiB would be about 123 KiB compressed: more than the
+compressed limit above, and than the share of a one-paragraph envelope
+allowed for it. That disagreement is recorded here and not yet resolved.
+The miniature's web binding was 79 lines and 3.0 KiB compressed, for half
+of the drawing contract's items and one host function.
 
 ### 12.3 Behavior
 
