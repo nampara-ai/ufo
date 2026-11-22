@@ -30,9 +30,9 @@ it generous in three ways, all corrected here. Rows rested "tested" on
 independent readers of a storage form that has since changed. The count
 took each row at its best status. And several rows said "specified,
 untested" of things with too little written to build from. Of the 48 rows
-below, taking each at its **weakest** status: 2 are tested, 16 tested in
-miniature, 13 specified and untested, and 17 thin. Taking each at its
-first status: 2, 20, 13 and 13. Before version 0.8 there were 44 rows:
+below, taking each at its **weakest** status: 3 are tested, 14 tested in
+miniature, 14 specified and untested, and 17 thin. Taking each at its
+first status: 7, 15, 13 and 13. Before version 0.8 there were 44 rows:
 2, 11, 14 and 17 at their weakest.
 
 Three cautions.
@@ -65,6 +65,15 @@ kernel. Making them found 64 places where the text did not decide what
 to do (`spike/QUERY-NOTES.md`, `spike/COMPOSITION-NOTES.md`). The last
 section lists what is still text and nothing else.
 
+**The reader test.** An independent reader was then built from the core
+document alone, with the expected values withheld. Storage, changes,
+sequences, anchors into sequences, timelines and the published copy are
+now tested in their current form by something other than their author.
+It found 52 unclear places, and three things a core reader must do that
+the core does not let it decide: where a continuous axis ends, which
+missing records are withheld and which are damage, and the digest in
+general.
+
 ## The ten commitments the owner set as not negotiable
 
 | # | Element | Realized in | Exercised by | Status |
@@ -84,9 +93,9 @@ section lists what is still text and nothing else.
 
 | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
-| The object: identity, type, history, provenance | §1.3–§1.6 | Two independent readers of an earlier form; byte-level vectors; the kernel miniature, by the vectors' author, on the current form | **Tested in miniature** in its current form. Tested independently only in a form since changed |
+| The object: identity, type, history, provenance | §1.3–§1.6 | An independent reader built from the core document alone, expected values withheld: all eight packs opened, every record verified, 231 nodes re-encoded byte for byte | **Tested** in its current form |
 | The view: any object inside any other through a Portal | §7.8, §7.7 | A Portal to a text in a nested universe, composed in line with the surrounding document | **Tested in miniature**, for one Portal presenting text |
-| The memory: an append-only Chronicle with origin, evidence, decision | §1.7, §5.4 | Conservation replayed by two independent readers on an earlier design, and once by the reviewer on the current vectors; a ledger used by models to find a planted bug | **Tested in miniature** for conservation; **specified, untested** for evidence, decisions, findings and `why` |
+| The memory: an append-only Chronicle with origin, evidence, decision | §1.7, §5.4 | The independent reader replayed every change of every pack to exactly the committed state, and caught each of 16 corruptions it injected | **Tested** for conservation in its current form; **specified, untested** for evidence, decisions, findings and `why` |
 | The attention: the light cone | §10.2 | See row 8 | **Tested in miniature** |
 | The membrane | §14.4, §13.3 | Nothing | **Specified, untested**; the layers of what travels have no vector, and no published copy has been built or read |
 
@@ -94,9 +103,9 @@ section lists what is still text and nothing else.
 
 | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
-| Anchors into sequences, resolved without history | §4.3 | Two independent readers of an earlier form; the kernel on the current one | **Tested in miniature** in its current form |
-| Time that is edited: a timeline | §4.5, §1.7 | `timeline.ufx`: a cut from the middle and an insertion. Every anchor and play resolved by the generator and by the kernel, which agree | **Tested in miniature.** Two implementations, one author. Nothing has played |
-| Pins and staleness | §4.4 | Two digests on which generator and kernel agree; three pins followed across three commits: current, stale, detached | **Tested in miniature**, for a sequence region and a whole object only |
+| Anchors into sequences, resolved without history | §4.3 | The independent reader resolved every anchor in every pack at every commit, and the nine cases of the vectors | **Tested** for sequences. For continuous axes the arithmetic agrees and the rest was guessed: the core does not say where an axis's extent comes from |
+| Time that is edited: a timeline | §4.5, §1.7 | `timeline.ufx`: generator and kernel agree; the independent reader, from the text alone, reproduced all 38 values | **Tested** for resolution. Nothing has played, and a play whose first element is cut is undefined |
+| Pins and staleness | §4.4 | Generator, kernel and the independent reader agree on two digests and on three pins across three commits | **Tested** for a sequence region and a whole object; the reader found the general rule under-specified in four places |
 | Projections for agents | §10.1, Appendix B | Twelve projections of real packs as text, from the kernel | **Tested in miniature.** No model has read them |
 
 ## Faces
@@ -143,10 +152,10 @@ section lists what is still text and nothing else.
 
 | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
-| The pack: append-only, recoverable, indexable | §2, §3 | Two independent readers, including recovery from four truncations; the kernel miniature | **Tested.** Frames, heads, the index and recovery are little changed since the independent readers; the records inside the frames have changed (see the object) |
+| The pack: append-only, recoverable, indexable | §2, §3 | Two independent readers of an earlier form; a third, of the current form, recovered the last whole state from about 30 truncations of each pack | **Tested** |
 | The web envelope | §13.2 | Nothing | **Thin** (row 3) |
 | Video and image envelopes, and the mark | §13.4 | Nothing | **Specified, untested** |
-| What leaves: content, attribution, working history | §13.3 | The kernel assigns every record of four packs to a layer, as a provisional vector | **Tested in miniature** for the assignment, which found the current object map and the opening of a veiled work in no layer. No copy holding two layers has been written or opened |
+| What leaves: content, attribution, working history | §13.3 | Generator and kernel agree on the layers of `history.ufx`; `published.ufx`, holding two layers, is opened by the kernel and by the independent reader. The reader, guessing the rule the core does not give, disagreed on which changes are attribution in two other packs | **Tested in miniature**, with a defect: the core depends on a definition it does not hold |
 | Platform declarations, media type | §13.5, `registration/` | The name was checked against live registries | **Specified, untested** |
 
 ## The worked examples

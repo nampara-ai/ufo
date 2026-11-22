@@ -940,3 +940,64 @@ provisional-vector notes added the rest.
 
 Next, after the owner's review: the strict spec-first reader test on the
 core alone; then the envelope spike.
+
+## 20. The strict reader test of the core, and what followed (2026-11-22)
+
+**Decisions before it (owner).** Qualifiers, not new words: object
+identity and element identity; universe state, machine state and
+presentation state. The honest count is therefore 123 concepts and 176
+terms. One defect fixed first, with a vector: the current object map is
+content (`published.ufx`). CONCEPTS.md ranks the 123 for a later
+simplification pass. The envelope spike will begin by building the kernel
+comparably and projecting its full size; if that exceeds 128 KiB
+compressed, work stops for options.
+
+**The test.** An implementer with no part in the project was given the
+core document and the eight pack files, and nothing else: no other part
+of the specification, no generator, no kernel, no expected values. It
+wrote a reader in Python. Only then were the expected values released,
+and its untouched reader compared with them.
+
+| | |
+| --- | --- |
+| Packs opened | 8 of 8 |
+| Changes replayed to exactly the committed state | every one whose work is present |
+| Expected values compared | 311 |
+| Agreed on the first run | 304 |
+| Of the 7 that differed | 1 an error in its own comparison; 2 errors in Appendix F's prose, now corrected; 4 from the layers of what travels |
+| Misreadings of §1 to §5 | none |
+| Places it found the text unclear | 52 |
+
+It reproduced, from the text alone, the timeline vector (38 values), the
+digests and the provisional staleness values (24), and the published copy
+(13). Those are no longer checked only by their author.
+
+**What it could not do from the core.**
+
+1. *Clip a continuous region.* The extent of an axis is declared in the
+   presentation part. It guessed, and the guess matched.
+2. *Tell withheld from damaged.* §2.5 depends on "live" and on the three
+   layers, which the travel part defines. Its guess gave the right layers
+   for two packs and the wrong ones for two: it took every change to be
+   attribution, where the kernel takes only those a live object names. It
+   also found that §2.5's list of what may be absent omits a commit's
+   change, so that a published copy of two packs read as malformed.
+3. *Compute a digest in general.* The two pins in the vectors agree; four
+   choices the rule leaves open were not exercised.
+
+It also found: the asset section calls `bytes` a sequence while the
+vector sets it whole; a play whose first element is cut has no defined
+time base; the list of sections said to suffice for an independent
+reader names one that is not in the core; and that in a published copy
+of a universe that nests another, nobody can say who wrote the nested
+text.
+
+**The judgment it gave.** Storage can be built from the text alone.
+Addressing and travel cannot yet, for the three reasons above.
+
+Its notes, both phases and its reader are kept outside this repository.
+Nothing it found has been fixed yet, except the two wrong sentences in
+Appendix F: by the rule, each fix comes with a vector.
+
+Next, after the owner's review: the envelope spike, beginning with the
+kernel's size.

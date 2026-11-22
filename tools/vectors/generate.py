@@ -369,7 +369,7 @@ V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file
          "text": "Hello, universe.", "span_p1_resolves_to": [0, 16], "seq": seqj([[C1, 0, 16]])},
         {"height": 1, "root_hash": hK2.hex(), "object_map_root": hM2.hex(), "objects": len(state2), "pack_length_at_first_head": len2,
          "text": t1, "span_p1_resolves_to": [0, 13], "seq": seqj(seq2), "text_revision": hT2.hex(), "change_revision": hC2.hex(),
-         "note": "its object map has an interior node; one node frame and one chunk frame use codec 1; one property is kept outside its node"},
+         "note": "its object map has an interior node; one node frame and three chunk frames use codec 1; two properties are kept outside their nodes: the asset's bytes and one item's long"},
         {"height": 2, "root_hash": hK3.hex(), "object_map_root": hM3.hex(), "objects": len(state3), "pack_length_at_first_head": len(pk.b),
          "text": t2, "span_p1_resolves_to": [0, 14], "seq": seqj(seq3), "text_revision": hT3.hex(), "change_revision": hC3.hex(),
          "note": "the asset is dropped: absent from this map, present in the previous one"}],

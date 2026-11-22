@@ -613,7 +613,7 @@
     ],
     "text_revision": "7e76a8e54d4e31fe42c190e38846d3b1d998ce395216ff3a6a438f35ee46e7eb",
     "change_revision": "682b91dc71ec077aa21d103b637008a6469a5c359d652ffb178794382b42619d",
-    "note": "its object map has an interior node; one node frame and one chunk frame use codec 1; one property is kept outside its node"
+    "note": "its object map has an interior node; one node frame and three chunk frames use codec 1; two properties are kept outside their nodes: the asset's bytes and one item's long"
    },
    {
     "height": 2,
