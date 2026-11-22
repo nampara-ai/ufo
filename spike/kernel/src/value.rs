@@ -348,8 +348,10 @@ pub fn sha256(parts: &[&[u8]]) -> [u8; 32] {
         }
     }
     feed(&mut h, 0x80);
-    while fill != 56 {
+    let mut n = total + 1;
+    while n % 64 != 56 {
         feed(&mut h, 0);
+        n += 1;
     }
     for b in ((total as u64) * 8).to_be_bytes() {
         feed(&mut h, b);

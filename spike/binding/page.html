@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>spike</title>
+<body style="margin:0;background:#888"><canvas id="c"></canvas>
+<script type="module">
+import { start, draw, canvasMeasure } from './binding.mjs';
+const q = new URLSearchParams(location.search);
+const [wasm, pack] = await Promise.all(['kernel.wasm', q.get('f')].map(u => fetch(u).then(r => r.arrayBuffer())));
+const c = document.getElementById('c'), g = c.getContext('2d');
+const k = await start(wasm, canvasMeasure(g));
+window.result = { opened: k.open(new Uint8Array(pack)) };
+const t0 = performance.now();
+const s = k.sample(q.get('as') === 'pages' ? { as: 'pages' } : q.get('as') === 'text' ? { as: 'text' } : { as: 'view', w: +q.get('w') || 600 });
+window.result.ms = performance.now() - t0;
+if (s.text !== undefined) { document.body.innerHTML = '<pre style="background:#fff;margin:0;padding:16px;white-space:pre-wrap">' + s.text.replace(/</g, '&lt;') + '</pre>'; }
+else { const r = 2; c.width = s.w * r; c.height = s.h * r; c.style.width = s.w + 'px'; g.scale(r, r); if (!s.pages) { g.fillStyle = '#fff'; g.fillRect(0, 0, s.w, s.h); } draw(g, s.list); }
+Object.assign(window.result, { items: s.list ? s.list.length : 0, pages: s.pages, w: s.w, h: s.h, rows: s.rows });
+window.done = true;
+</script>
