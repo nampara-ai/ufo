@@ -1227,3 +1227,50 @@ line; the firm limit holds about 7 400 lines; the budget is set at 7 000
 with the stable compiler give identical bytes, and the nightly flags that
 were rejected would now save under half a kibibyte. The projection is
 under the limit, so the envelope spike continues.
+
+## 24. The envelope spike: the round trip, in one browser engine (2026-11-22)
+
+The founding acceptance test, run in headless Chromium, the only engine
+available here (`spike/envelope/`; 125 checks, all passing):
+
+| Step | From disk | From another origin | Phone-sized, touch (emulated) | Scripts off |
+| --- | --- | --- | --- | --- |
+| Opened, with no network request but the file | passed | passed | passed | — |
+| Read in two faces (three are offered) | passed | passed | passed | — |
+| One paragraph edited through the tools, attribution recorded | passed | passed | passed | — |
+| Saved as a new travel-form file | passed | passed | passed | — |
+| Reopened to the same state; edited and saved again | passed | passed | passed | — |
+| Sent on: opened elsewhere; replayed by the independent reader | passed | passed | not attempted | — |
+| Static face: the text, and what to do next | — | — | — | passed |
+
+**Not attempted anywhere:** Safari, any WebKit, Firefox, a real iPhone or
+Android phone, a file preview, Mail, Messages, AirDrop, the share sheet.
+The emulated phones are Chromium with a small screen and touch. The
+owner is testing a real iPhone with the kit in `spike/envelope/phone/`;
+a branch `pages` holds the two test envelopes for the hosted path, and
+is to be deleted afterwards.
+
+**Sizes.** The envelope of the test document is 152 KiB against 256. The
+kernel in it is 83.6 KiB compressed, with the write path. The binding is
+100 lines and 10.3 KiB; with the reader's shell the script is 17.9 KiB,
+over the 16 KiB set for the binding as shipped, unminified.
+
+**A denser encoding than base64** was built and measured. 6.75 bits a
+byte is reachable in valid HTML against base64's 6; the envelope shrinks
+8.4%, and grows 10.5% wherever a transport compresses it. It also loses
+fixed offsets into the pack and survives no tool that tidies text. Not
+recommended; base64 stays.
+
+**What the specification got wrong or left open**: 35 places, in
+`spike/envelope/NOTES.md`. The ones that matter most: a page cannot read
+its own bytes, so "the fixed parts of the very page" works only if the
+exporter writes the page exactly as a browser would write it back, which
+the text does not say; the tools universe as specified cannot carry its
+own meaning, and the reader's shell holds it; there may be no truthful
+instruction for opening a local web page in a phone's browser; an edit
+replaces a whole paragraph, so the whole paragraph is attributed to
+whoever changed one word; text typed at the very start of a paragraph
+joins the one before.
+
+None of these is fixed in the specification: by the owner's rule for the
+spike, findings stay in the spike's notes until a fix comes with a test.
