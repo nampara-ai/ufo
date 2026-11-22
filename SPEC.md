@@ -1230,8 +1230,8 @@ structure, never as text to be parsed; a readable spelling is a projection.
 
 | Group | Operators |
 | --- | --- |
-| reference | `get` (a property of an object, by ref and key path), `cell` (a table cell by row and column key), `col` (a column as a list), `arg` (a named value supplied by the enclosing `each`), `size` (the laid-out width and height of an earlier sibling in the same group) |
-| environment | `time` (the enclosing clock's time), `input` (the pointer's position and pressed state within the enclosing region), `view` (the available width and height), `state` (a named value of presentation state) |
+| reference | `get` (a property of an object, by ref and key path), `cell` (a table cell by row and column key), `col` (a column as a list), `arg` (a named value supplied by the enclosing `each`, or by the Portal that presents this, §5.6), `size` (the laid-out width and height of an earlier sibling in the same group), `ask` (the records of a projection, §7.5) |
+| environment | `time` (the enclosing clock's time), `input` (the pointer's position and pressed state within the enclosing region, and the `src` of the item under it), `view` (the available width and height), `state` (a named value of presentation state) |
 | arithmetic | `+ − × ÷ mod neg abs min max floor ceil round sqrt pow exp ln sin cos atan2` |
 | logic | `= ≠ < ≤ > ≥ and or not if` |
 | text | `concat len slice format` (numbers and dates to text by a stated pattern) |
@@ -1282,7 +1282,8 @@ and a result that is not finite is an error value.
 | `list count sum mean nth range` | `sum` of nothing is 0 and `mean` of nothing an error value; `nth(list, i)` counts from 0 and is an error value outside the list; `range(a, b)` is the integers from *a* up to but not including *b*, at most 2²⁰ of them |
 | `sort filter map` | `sort(list, key)` is stable and ascending by the key formula's value, or by the items themselves |
 | `get cell col` | `get(ref, path)` is the value at a key path of an object's properties; `cell(ref, row, col)` a cell's value, a formula there being evaluated; `col(ref, col)` a column's values in the table's order. A missing object, key or cell is an error value |
-| `arg size time input view state` | `size(key)` is `[w, h]`; `time` is in flicks; `input` is `[x, y, pressed]`; `view` is `[w, h]`; `state(name)` is null until set |
+| `arg size time input view state` | `size(key)` is `[w, h]`; `time` is in flicks; `input` is `[x, y, pressed, src]`, `src` being the anchor carried by the item under the pointer (§6.2); `view` is `[w, h]`; `state(name)` is null until set |
+| `ask` | `ask(projection, argument…)` is the records a projection of §7.5 returns for those arguments, as a list of maps from field name to value. A projection is a function of a commit, so `ask` is as pure as `get`. It reads the universe the formula is in, or a subject it was given (§5.6). Each record counts one toward the bound of **F2** |
 
 **Repetition.** A group MAY carry `each`: a formula yielding a list or a ref
 to a data object, and `as`, a name. Its single child is then a template,
@@ -1295,7 +1296,8 @@ Primitives declare which input sets which state (`on`, Appendix A). It is not
 part of the universe and changing it changes no byte. Each presentation of
 an object through a Portal has its own state: two Portals onto one table
 sort independently, and nothing inside a nested or linked universe can read
-or set the state of what presents it. An action that edits
+or set the state of what presents it; what it is given, it is given in
+`with` (§5.6). An action that edits
 the universe is a change (§1.7), made through the onboard tools.
 
 ### 5.4 The deletion test
@@ -1421,6 +1423,24 @@ origin `{basis: witnessed, by: person}` naming the person using the reader.
 It is verified and committed, or refused, like any change (**L4**). A
 checkbox, a form, an editable cell and a button that adds a row are
 therefore description, with no Compute-let.
+
+A handler may instead carry `act`: the name of any action of §11.8 and its
+arguments, in which any field may be a formula. The kernel performs it as
+the act of the person using the reader. `propose` is the commonest case and
+keeps its own spelling. An action that needs something only the person can
+supply — a file to import, a place to save, a recipient — makes the reader
+ask for it.
+
+**Subjects.** A Portal MAY pass values to what it presents, in `with`; the
+description presented reads them with `arg`, and a Portal there MAY have
+`arg` as its `of`. This is what lets an interface work on something other
+than itself. An `ask` reads, and an action changes, the universe that holds
+the formula or handler, unless it is aimed at a **subject**: an anchor to
+another universe that the presenter supplied in `with`. A presenter can
+supply as a subject only itself, or a subject it was itself given, so
+nesting a universe never gives it power over anything but what its
+presenter chose to hand it. A reader hands the universe being worked on to
+the tools it has chosen (§6.6).
 
 **Editable text.** A text primitive, or a region of one, marked `editable`
 accepts text entry. The host supplies the editing surface it already has —
@@ -1887,8 +1907,8 @@ Exactly one of three treatments applies, in this order of preference.
 
 - **[B2]** Import never discards or alters the original bytes.
 - **[B3]** Export encodes at the border the same way: through the host's
-  `encode` capability, or through an encoder Compute-let fetched or carried
-  by content when a reproducible export is asked for (§7.4).
+  `encode` capability, or, for a canonical export, through the renderer
+  (§7.4).
 
 ### 6.5 Baseline asset formats
 
@@ -1917,13 +1937,16 @@ are two things.
 1. *Functions of the kernel*: the projections of §7.5 and the actions of
    §11.8. Because they are in the kernel, every reader on every rung has
    them, and so does every web envelope.
-2. *An interface to those functions*, which is itself a universe: text,
-   groups, regions and paths, with handlers that set presentation state and
-   propose changes (§5.6), and Portals onto the universe being worked on.
-   It is identified by its commit hash, carried in the pack as a nested
-   universe (§1.8), and presented by the kernel as the frame around the
-   primary face. A reader that holds the same tools universe
-   uses its own copy (**K3**); a reader MAY substitute a newer one.
+2. *An interface to those functions*, which is itself a universe, the
+   **tools universe**: text, groups, regions and paths. It reads the
+   universe being worked on with `ask` (§5.3), changes it through handlers
+   that `act` (§5.6), and shows it through a Portal whose `of` is
+   `arg("subject")`. The reader presents the tools universe and gives it
+   the working universe as its subject. Nothing in a tools universe names
+   any particular universe, so one tools universe, with one hash, serves
+   every file. It is carried under `components.tools` as a nested universe
+   (§1.8); a reader that holds the same one uses its own copy (**K3**), and
+   a reader MAY substitute a newer one.
 
 - **[K5]** A web envelope MUST carry a tools universe sufficient to: choose
   among faces; show for anything on screen its origin, evidence and
@@ -1931,8 +1954,9 @@ are two things.
   contribution; verify the universe and its seals; show what will travel;
   and save or send the result.
 - **[K6]** The tools interface contains no logic of its own. Everything it
-  does is a formula, a presentation-state change, or a proposed change. It
-  adds no code to the binding and none to the kernel.
+  does is a formula, a presentation-state change, or an action of §11.8 on
+  its subject, performed by the kernel as the act of the person using it.
+  It adds no code to the binding and none to the kernel.
 
 **What one change is.** While a person types, edits accumulate in the
 reader. They become one change when the person pauses, moves elsewhere,
@@ -1967,8 +1991,8 @@ which.
 
 The classification is derived, not declared, from the derivation (§8.3) of
 what the face presents: *carried* if it is an asset with a derivation;
-*transmuted* if it is described objects whose derivation has `how`
-`transmute`; otherwise *sampled*. A transmuted face is itself description,
+*transmuted* if it is described objects with a derivation that a model
+performed, whatever its `how`; otherwise *sampled*. A transmuted face is itself description,
 so it is then sampled like any other, and it remains transmuted however
 much a person edits it afterward: the attribution of each part says who
 wrote what. A carried face made by a model — synthesized narration, a
@@ -1993,7 +2017,7 @@ A face object has type `ufo.face` and properties:
 | Property | Value |
 | --- | --- |
 | `of` | ref to the object presented; absent for a face that is offered but not yet made |
-| `recipe` | for a face not yet made: what `derive` would be given to make it (§8.3) — `sources` as anchors, `how`, and the origin's `model`, `prompt` and `parameters`. A reader lists such a face as available on request |
+| `recipe` | for a face not yet made: what `derive` would be given to make it (§8.3) — `sources` as anchors, `how`, and the origin's `model`, `prompt` and `parameters`. A reader lists such a face as available on request. The prompt it names is content: a live object refers to it |
 | `medium` | a hint for the person's choice: `document`, `pages`, `text`, `data`, `image`, `video`, `audio`, `deck`, `space`, `application` |
 | `label` | text |
 | `sampling` | map of sampling parameters that fix the face: viewport size, page size, time range, frame rate, camera (see §7.4) |
@@ -2011,11 +2035,15 @@ layout or style. It is Unicode text, in lines ended by U+000A.
 | Object | Its plain text |
 | --- | --- |
 | a text | one line for each block (§5.7), in order: the block's characters, without those under `markup` spans. A list item's line begins with two spaces for each level above the first, then its marker — `•`, its number and a full stop, or its literal text — and a space. An empty line separates two blocks unless both are list items. An embedded child contributes its own plain text in place: within the line if that is a single line, otherwise as lines of its own |
-| a group, region or clock | the plain text of its children, in order (for a clock, in order of start time), each starting a new line |
-| a Portal | the plain text of what it presents — the object, or the region its anchor names — wherever that is in the file: in this universe or in a nested one (§1.8). Content from another universe is marked: a line holding the Portal's label and a colon, then the content with `> ` before each of its lines. Where the target is in a linked universe that is not at hand, where the chain of **O7** already holds it, or beyond the reader's limit on nesting (§3.1): one line, the Portal's label, followed for a linked universe by a space and `(ufo:` the commit hash in lowercase hexadecimal `)` |
-| a data object | its rows as tab-separated lines, table by table |
+| a group, region or clock | the plain text of its children, in list order, each starting a new line; for a group under `each`, that of each copy of its template |
+| a Portal | the plain text of what it presents — the object, or the region its anchor names — where that is in this universe or in a universe nested in the file (§1.8). Content from another universe is marked: a line holding the Portal's label and a colon, then the content with `> ` before each of its lines. Where the target is in a linked universe, where the chain of **O7** already holds it, or beyond the reader's limit on nesting (§3.1): one line, the Portal's label, followed for a linked universe by a space and `(ufo:` the commit hash in lowercase hexadecimal `)` |
+| a data object | its tables in key order. For each: a line of the columns' labels, then a line for each row, in the table's order; cells in the order of their columns, separated by U+0009. A cell that holds a formula gives its value. A tab or a line break inside a cell is written as a space |
 | a surface | the plain text of what it presents, then that of its children |
 | anything else | its label |
+
+The plain-text face of a universe is that of the object its `primary` root
+presents. It is a function of the file: a linked universe contributes its
+label and reference whether or not a reader could find its records.
 
 - **[S4]** Every reader MUST be able to produce the plain-text face of any
   object. It is what a text editor, a search index, a screen reader and a
@@ -2044,21 +2072,47 @@ There are two **determinism tiers**.
   layout decisions made by the kernel, with glyph shapes and anti-aliasing
   as the host renders them.
 - **Canonical.** A canonical export is reproducible given a named renderer.
-  The **renderer** is a component identified by its hash, like any other
-  (**K3**): a Compute-let that serves `break` in the host's place (§6.3)
-  and executes the display list (§6.2) into pixels and samples, using fonts
-  embedded in the universe as assets and taking nothing from the host but
-  bytes. The export's parameters name the renderer by hash, and the export
-  records it. **[S5]** The same universe, face, parameters and renderer
-  MUST yield identical bytes on every reader; this follows from **M5**.
+  **[S5]** The same universe, face, parameters and renderer MUST yield
+  identical bytes on every reader; this follows from **M5**.
 
-A renderer is fetched, or carried by a universe that asks for it under
-`components.renderer`, only when a canonical export is requested. It is
-never part of an ordinary file's player, is not counted in the player's
-budgets (§12.2), and nothing else in a reader depends on it. This
-specification defines no rasterizer and no shaping algorithm, and chooses
-no renderer: an existing engine may fill the role, and a different one may
-later, without any file changing its meaning.
+The **renderer** is a component identified by its hash, like any other
+(**K3**): a Compute-let with no surface, which the reader runs and
+addresses on one port. It does three things, and takes nothing from the
+host but bytes:
+
+| Message to the renderer | Reply |
+| --- | --- |
+| `{measure: measure-request}` | a `measure-reply` (§6.3): during a canonical export the kernel sends `measure` here, not to the host |
+| `{render: {list, w, h, scale}}` | `{pixels: {mem, w, h}}`, and `{samples: {mem, n, hz, channels}}` if the list sounds: the display list of §6.2, executed |
+| `{encode: {format, parameters}}` | `{bytes: {mem, len}}`: what was last rendered, encoded |
+
+Replies name ranges of the renderer's own memory, which the reader reads.
+The renderer reads the fonts, images and other blobs a display list names
+through one capability, `blobs`, whose scope is those hashes and whose one
+operation is `read(hash, offset, length)`.
+
+A renderer declares what it reproduces: which display-list items, and which
+formats of raster, samples and font. An export is canonical only if all it
+draws is within that declaration; otherwise the reader does not call it
+canonical, and says which item prevents it. A surface drawn through `gpu`
+is within it only for a renderer that carries those operations in software
+(Appendix E). The export's parameters name the renderer by hash, and a
+canonical export kept as a rendition records them in its origin (§8.3).
+
+A renderer is used only when a canonical export is requested. It is never
+part of an ordinary file's player, is not counted in the player's budgets
+(§12.2), and nothing else in a reader depends on it. A universe that wants
+its canonical exports to be possible anywhere carries one under
+`components.renderer`; otherwise a reader holds one, or finds one by a
+location hint (§2.5). A web envelope opened as a page reaches no network
+(§9.2), so it makes canonical exports only with a renderer it carries.
+
+This specification defines no rasterizer and no shaping algorithm, and
+chooses no renderer: an existing engine may fill the role, and a different
+one may later, without any file changing its meaning. The engines measured
+so far, for text and paths alone, come to about 0.9 MiB; decoders and
+encoders for the formats of §6.5 would add to that, and have not been
+measured.
 
 An export is a fixed performance. It carries no structure, history or
 behavior, unless it is an envelope (§9.2). Importing an exported file creates
@@ -2081,6 +2135,7 @@ and the agent interface's (§11.8).
 | `expand(anchor)` | the outline of an object or region: its parts, each with its size, when and by whom it last changed, and its summary where one exists (§11.7) |
 | `recipe(ref)` | for a derived object: its sources with the state of each, how it was made, by what and at whose request (§8.3) |
 | `verify(commit)` | the result of the conservation check and every profile check, by validation class |
+| `leaving(parameters)` | exactly what a send, share or export with those parameters would carry (**E12**) |
 | `sample(face, parameters)` | a face: as text, as a display list, or as an encoded export |
 | `items(ref)` | a module's functions, globals and exports, with name, signature, size, origin and tests (§11.5) |
 | `unit(ref)` | a function: its signature, and its statements one to a line, each with its identity and the change that wrote it |
@@ -2212,23 +2267,32 @@ it, and the recipe must still be found.
 - A **transmutation** is a set of described objects whose derivation has
   `how` `transmute`, made by a model: a deck from a report, a narration
   from a document.
-- Summaries (§11.7), the spans derived from a foreign syntax (§8.1), native
-  description converted from a foreign document (§6.4) and a described
-  module lifted from a carried one (§11.3) are derivations too.
+- Summaries (§11.7), native description converted from a foreign document
+  (§6.4) and a described module lifted from a carried one (§11.3) are
+  derivations too.
 
-Every object a derivation creates carries the same `from`. Writers SHOULD
-keep it outside the node (§1.4), where it is stored once.
+Each object a derivation creates carries a `from`. Its `sources` are those
+that object was made from: all the derivation's sources, or the subset the
+writer states for that object, so that a slide leads back to its section
+and not only to the whole report (**D2**). Where many objects share one
+`from`, writers SHOULD keep it outside the node (§1.4), where it is stored
+once.
 
 - **[D1]** A derivation is **stale** if any of its pins is stale (§4.4) —
   which includes a pin to something that is itself a stale derivation — and
   current otherwise. Readers MUST compute this; it is never stored.
 - **[D2]** A derived object is never treated as independent of its sources:
   a reader showing it MUST be able to lead the person to each source region.
-- **[D3] Made again in one step.** `refresh` (§11.8) repeats a recipe: the
-  same sources, resolved as they now are; the same `how`; the same model,
-  prompt and parameters. It is one change, which writes new revisions with
-  new pins and names the earlier change in its origin's `context`. The
-  earlier revisions remain in history. Where part of the recipe is withheld
+- **[D3] Made again in one step.** `refresh` (§11.8) repeats a recipe. The
+  kernel does not run models: a writer that has the model takes the recipe
+  from `recipe` — the same sources, resolved as they now are; the same
+  `how`, model, prompt and parameters — runs it, and hands the result to
+  `refresh`, which commits it as `derive` would, naming the earlier change
+  in its origin's `context`. For a derivation by a tool the reader holds,
+  the reader does all of it. The result may give new revisions to objects
+  the earlier derivation made, add objects and drop some; `recipe` lists
+  those a person has edited since, so that a writer can ask before
+  replacing them. The earlier revisions remain in history. Where part of the recipe is withheld
   — a prompt, in a copy published without working history (§9.3) — the
   recipe still says how the object was made, and `refresh` is refused with
   that reason.
@@ -2250,8 +2314,9 @@ its own identity, distinct from what it presents.
 
 | Property | Value |
 | --- | --- |
-| `of` | what is presented: a ref (the object, as it now is); an anchor (a region of it as it now is, so that it follows edits); a pin (exactly the revision pinned, which never changes beneath the Portal); or an anchor into another universe (§1.8) |
-| `face` | preferred face of the target: a ref to a face object or a `medium` hint; absent lets the reader choose |
+| `of` | what is presented: a ref (the object, as it now is); an anchor (a region of it as it now is, so that it follows edits); a pin (the same, marked when what it shows has changed since the pin was made, §4.4); an anchor that names a commit (§1.8) — exactly what was there, in another universe or in an earlier state of this one, and for a universe object, the face its `primary` root names; or `arg` (§5.6) |
+| `face` | preferred face of the target: a ref, or for a target in another universe an anchor, to a face object there; or a `medium` hint; absent lets the reader choose |
+| `with` | map from names to values: what this Portal gives to what it presents (§5.6) |
 | `place` | how it sits in the parent: `inline`, `block`, `float-start`, `float-end` (in a flow); by `x`, `y`, order (in an `absolute` group); by cell (in a `grid`); by `at`, an anchor into the space its parent surface presents (§5.6) |
 | `w`, `h` | authored size |
 | `align`, `fit`, `crop` | alignment in the available space; `contain`, `cover`, `fill` or `none`; fractions cut from each edge |
@@ -2267,9 +2332,11 @@ the clock it is placed under (§4.5).
 - **[O1] Inert.** A Portal is data. A reader that does not interpret Portals
   shows the label. Nothing is presented, decoded or run until a reader
   chooses to present the target.
-- **[O2] Parents size children.** The parent gives the Portal a rectangle;
-  the target is presented inside it by `fit`. A target never sizes its
-  Portal.
+- **[O2] Parents size children.** The parent gives the Portal its width, and
+  the Portal's own `h` its height; the target is presented inside that
+  rectangle by `fit`. A Portal that states no height takes the height its
+  target's rows need at that width, as a text does (§5.7). A target never
+  sets its Portal's width, nor its height where one is stated.
 - **[O3] Occurrences are never shared.** Duplicating a Portal, by any means,
   gives the copy a new identity. Both may present the same target.
 - **[O4] Missing targets.** A Portal whose target is absent or unavailable
@@ -2299,8 +2366,11 @@ the clock it is placed under (§4.5).
 another object, in this universe or another. The presented content remains
 what its own Chronicle says it is: `why` on any part of it answers from the
 source's history. With an anchor the Portal shows the region as it now is.
-With a pin, or across universes, the source cannot change beneath the
-Portal; a later revision is offered as an update (**C9**).
+With a pin it shows the same, and says when what it shows has changed
+since the pin was made. With an anchor that names a commit — of another
+universe, or an earlier one of this — it shows exactly what was there,
+which cannot change beneath it; a later state is offered as an update
+(**C9**).
 
 ### 8.5 The Chronicle: origin, evidence, decision
 
@@ -2317,7 +2387,7 @@ the change that introduced the content:
 | `who` | for `person`: a principal (§10.1) |
 | `model` | for `model`: the model's identifier as its provider states it |
 | `prompt` | for `model`: a ref to the text object holding the prompt, or the conversation it was part of |
-| `context` | for `model`: list of pins to what the model was given |
+| `context` | list of pins to what the contribution was made from or answers: for a model, what it was given; for an undo or a refresh, the earlier change |
 | `tool` | for `tool`: name and version of the deterministic process |
 | `asked` | for `model` and `tool`: the principal at whose request it ran |
 | `copied` | an anchor to the region this content was copied from |
@@ -3331,8 +3401,8 @@ to outside agents as tools under the Model Context Protocol:
 | `test(computelet)` | run its tests against the current state and report |
 | `import(bytes)` | add an asset |
 | `derive(sources, how, origin, operations)` | write objects derived from the stated sources — a transmutation, a rendition, a summary — in one change: the kernel computes pins to exactly those sources, puts `from` on every object the operations create, and records the origin. A derivation can enter a universe no other way |
-| `refresh(object)` | make a derived object again from its recipe (**D3**) |
-| `export(face, parameters)` | sample and encode a face |
+| `refresh(object, operations)` | commit a derived object made again from its recipe (**D3**) |
+| `export(face or universe, parameters)` | sample and encode a face; or write the universe itself, as a travel form or a working form holding the layers the parameters state (§9.3) |
 
 Projections show a statement, or an item of any list that is a sequence,
 with its identity, and an operation names it by that identity. Characters
@@ -3376,7 +3446,7 @@ revised once, with reasons, before anything is frozen.
 | Node kinds | 5 | 4 | values kept outside a node are blobs |
 | Kinds of reference a value can hold | 5 | 4 | ref, anchor, formula, indirect; the link is gone |
 | Frame kinds | 6 | 6 | |
-| Formula operators | 64 | 51 | a spreadsheet's essentials; anything larger is a Compute-let |
+| Formula operators | 64 | 52 | a spreadsheet's essentials, and `ask`; anything larger is a Compute-let |
 | Base host functions | 12 | 10, plus 2 exports | small enough to implement identically on every host |
 | Capabilities | 20 | 16 | each is something only a host can provide (**H4**) |
 | Operations across all capabilities | 64 | 32 written or sketched: `text` 3, `present` 2, `gpu` 27 (Appendix E); `objects` reuses the projections and actions | the rest are unwritten; the count is part of the interface's true size |
@@ -4078,6 +4148,7 @@ passed back, exactly as written, as an argument to another projection.
 | `expand` | anchor | `part`* |
 | `recipe` | identity | `source`*; `made` |
 | `verify` | commit | `check`*; `issue`* |
+| `leaving` | the parameters of an export | `layer`*; `seal`*; `lacks`? |
 | `sample` | face, parameters | as text: `text`; as a display list: `item`* |
 | `items` | identity of a module | `item`* |
 | `unit` | identity of a function | `unit`; `stmt`* |
@@ -4109,6 +4180,7 @@ passed back, exactly as written, as an argument to another projection.
 | `change` | `id` `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of identities) [`note`] |
 | `op` | `op` `obj` [`key`] [`after`] [`del`] then `old` and `new`, each a value; where the change's `work` is withheld, one record `op withheld` |
 | `check` | `rule` (a label of this document) `scope` `result` (`pass`, `fail`, `skipped`) [`reason`] |
+| `layer` | `name` (`content`, `attribution`, `history`) `included` (boolean) `objects` (count) `bytes` `actors` (list) `models` (list) `changes` (count) `first` `last` (times) |
 | `issue` | `class` (of §1.9) `record` `rule` `s` |
 | `item` | for `sample`: the display-list item as fields. For `items`: `id` `kind` `name` `size` `by` `basis` `tests` (count) [`signature`] |
 | `unit` | `id` `name` `signature` `r` `statements` (count) |
