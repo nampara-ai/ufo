@@ -1666,5 +1666,94 @@
     ]
    }
   ]
+ },
+ "compose_pack": {
+  "file": "compose.ufx",
+  "length": 9339,
+  "root_hash": "092acf577819a704d5106c685ec0315f76a87d30ec3b79658b722c3d9ec448c7",
+  "text": "71717171717171717171717171717171",
+  "blocks": [
+   {
+    "role": "heading",
+    "level": 1,
+    "characters": 20
+   },
+   {
+    "role": "paragraph",
+    "characters": 146
+   },
+   {
+    "role": "item",
+    "level": 1,
+    "marker": "bullet",
+    "characters": 19
+   },
+   {
+    "role": "item",
+    "level": 1,
+    "marker": "bullet",
+    "characters": 82
+   },
+   {
+    "role": "item",
+    "level": 2,
+    "marker": "number",
+    "characters": 16
+   },
+   {
+    "role": "item",
+    "level": 2,
+    "marker": "number",
+    "characters": 22
+   },
+   {
+    "role": "item",
+    "level": 1,
+    "marker": "bullet",
+    "characters": 12
+   },
+   {
+    "role": "quote",
+    "characters": 70
+   },
+   {
+    "role": "code",
+    "characters": 30
+   },
+   {
+    "role": "heading",
+    "level": 2,
+    "characters": 6
+   },
+   {
+    "role": "paragraph",
+    "characters": 115
+   },
+   {
+    "role": "paragraph",
+    "characters": 124
+   },
+   {
+    "role": "paragraph",
+    "characters": 101
+   },
+   {
+    "role": "paragraph",
+    "characters": 109
+   },
+   {
+    "role": "paragraph",
+    "characters": 109
+   },
+   {
+    "role": "paragraph",
+    "characters": 103
+   },
+   {
+    "role": "paragraph",
+    "characters": 0
+   }
+  ],
+  "what": "one text holding a heading, a paragraph with emphasis and strong, bulleted items with two numbered items nested, a quote, code with a line break, a second heading, six paragraphs and an empty last paragraph; a document face and a face of pages 320 by 400 with margins of 24"
  }
 }

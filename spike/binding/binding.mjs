@@ -49,6 +49,7 @@ export async function start(wasmBytes, measure) {
   return {
     open: pack => ex.open(give(pack), pack.length) === 1,
     print: id => { const p = ex.print(give(id)); return mem().slice(p, p + ex.out_len()); },
+    query: q => { const b = encode(q); const p = ex.query(give(b), b.length); return decode(mem().slice(p, p + ex.out_len())); },
     sample: params => { const q = encode(params); const p = ex.sample(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); },
   };
 }

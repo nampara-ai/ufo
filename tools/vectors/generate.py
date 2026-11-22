@@ -683,6 +683,58 @@ def timeline_pack():
         "commits": commits}
 tpk, tv = timeline_pack()
 open(os.path.join(OUT, "timeline.ufx"), "wb").write(tpk.b); V["timeline"] = tv
+
+# ---- 11. a text with every block role, for composition, pagination and the plain-text face (sections 7.7, 8.3) ----
+def compose_pack():
+    pk = Pack(); CU, CT, CF, CP = bytes(16), bytes([0x71]) * 16, bytes([0x72]) * 16, bytes([0x73]) * 16; CC = bytes([0x7c]) * 16; lin = bytes([0x55]) * 16
+    filler = ["Every figure in this section was taken from the ledger at the close of the quarter and has not been adjusted since.",
+              "Where a number differs from the one reported last time, the difference is explained beside it and the earlier value is kept.",
+              "Nothing here is a forecast. The next section says what the team expects, and why, and how sure it is.",
+              "Readers who want the detail behind a line can open it: each row leads back to the entries it was summed from.",
+              "The appendix lists what was left out and the reason for each omission, so that nothing is absent by accident.",
+              "Corrections are welcome and are recorded with the name of whoever made them and the evidence they gave."]
+    blocks = [("heading", {"level": 1}, "The Quarterly Review"),
+              ("paragraph", {}, "Revenue grew in every region this quarter, and for the first time the growth came mostly from customers who had been with us for more than a year."),
+              ("item", {"level": 1, "marker": "bullet"}, "First point, short."),
+              ("item", {"level": 1, "marker": "bullet"}, "Second point, which runs long enough to need a second line at the width used here."),
+              ("item", {"level": 2, "marker": "number"}, "A numbered step."),
+              ("item", {"level": 2, "marker": "number"}, "Another numbered step."),
+              ("item", {"level": 1, "marker": "bullet"}, "Third point."),
+              ("quote", {}, "What gets measured gets managed, and what gets explained gets trusted."),
+              ("code", {}, "total = sum(rows)\nprint(total)"),
+              ("heading", {"level": 2}, "Method")] + [("paragraph", {}, f) for f in filler] + [("paragraph", {}, "")]
+    chars = "".join(b[2] for b in blocks); spans = {}; at = 0
+    def el(i): return [CC, i, 0]
+    starts = []
+    for b in blocks: starts.append(at); at += len(b[2])
+    for i, (role, props, text) in enumerate(blocks):
+        nxt = next((starts[j] for j in range(i + 1, len(blocks)) if starts[j] < len(chars)), None)
+        a = el(starts[i]) if starts[i] < len(chars) else "end"
+        e = el(nxt) if (nxt is not None and len(text)) else ("end" if len(text) or starts[i] >= len(chars) else el(starts[i]))
+        spans["b%02d" % i] = dict({"at": anchor({"o": CT, "a": {"chars": ["s", a, e]}}), "kind": "block", "role": role}, **props)
+    def inline(key, word, role, nth=0):
+        i = chars.index(word); spans[key] = {"at": anchor({"o": CT, "a": {"chars": ["s", [CC, i, 0], [CC, i + len(word) - 1, 1]]}}), "kind": "inline", "role": role}
+    inline("i0", "every region", "emphasis"); inline("i1", "for the first time", "strong")
+    samp = {"page": [320.0, 400.0], "margins": [24.0, 24.0, 24.0, 24.0]}
+    roots = {"primary": ref(CF)}; faces = [ref(CF), ref(CP)]
+    tp = {"chars": chars, "spans": spans, "size": 16.0}
+    st = {CU: revision(pk, CU, "ufo.universe", 1, CC, 6001, {"lineage": lin, "roots": roots, "faces": faces}),
+          CT: revision(pk, CT, "ufo.text", 1, CC, 6002, tp, seq={"chars": [[CC, 0, len(chars)]]}),
+          CF: revision(pk, CF, "ufo.face", 1, CC, 6003, {"of": ref(CT), "medium": "document"}),
+          CP: revision(pk, CP, "ufo.face", 1, CC, 6004, {"of": ref(CT), "medium": "pages", "sampling": samp})}
+    ops = [{"op": "new", "obj": CU, "type": "ufo.universe"}, {"op": "set", "obj": CU, "key": "lineage", "val": lin},
+           {"op": "new", "obj": CT, "type": "ufo.text"}, {"op": "splice", "obj": CT, "key": "chars", "after": None, "ins": chars},
+           {"op": "set", "obj": CT, "key": "spans", "val": spans}, {"op": "set", "obj": CT, "key": "size", "val": 16.0},
+           {"op": "new", "obj": CF, "type": "ufo.face"}, {"op": "set", "obj": CF, "key": "of", "val": ref(CT)}, {"op": "set", "obj": CF, "key": "medium", "val": "document"},
+           {"op": "new", "obj": CP, "type": "ufo.face"}, {"op": "set", "obj": CP, "key": "of", "val": ref(CT)}, {"op": "set", "obj": CP, "key": "medium", "val": "pages"}, {"op": "set", "obj": CP, "key": "sampling", "val": samp},
+           {"op": "set", "obj": CU, "key": "roots", "val": roots}, {"op": "set", "obj": CU, "key": "faces", "val": faces}]
+    st, _, _, k = commit(pk, st, CC, ops, None, {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 6005)
+    pk.index(); pk.head(k)
+    return pk, {"file": "compose.ufx", "length": len(pk.b), "root_hash": k.hex(), "text": CT.hex(),
+                "blocks": [{"role": r, **pr, "characters": len(t)} for r, pr, t in blocks],
+                "what": "one text holding a heading, a paragraph with emphasis and strong, bulleted items with two numbered items nested, a quote, code with a line break, a second heading, six paragraphs and an empty last paragraph; a document face and a face of pages 320 by 400 with margins of 24"}
+cpk, cv = compose_pack()
+open(os.path.join(OUT, "compose.ufx"), "wb").write(cpk.b); V["compose_pack"] = cv
 json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)
 print("minimal.ufx", V["minimal_pack"]["length"], V["minimal_pack"]["root_hash"][:16],
       "| history.ufx", V["history_pack"]["length"], hK3.hex()[:16], "| objects at commit 2:", len(state2))

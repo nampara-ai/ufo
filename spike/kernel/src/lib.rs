@@ -5,6 +5,7 @@ extern crate alloc;
 mod layout;
 mod pack;
 mod print;
+mod query;
 mod value;
 use alloc::string::String;
 use alloc::vec;
@@ -108,5 +109,12 @@ unsafe fn run(params: &V) -> Option<V> {
 pub unsafe extern "C" fn print(p: *const u8) -> *const u8 {
     let id: [u8; 16] = core::slice::from_raw_parts(p, 16).try_into().unwrap_or([0; 16]);
     OUT = PACK.as_ref().and_then(|pk| print::print(pk, &pk.head, &id)).unwrap_or_default();
+    OUT.as_ptr()
+}
+/// Answers a query, an encoded map with `q` naming it. Null if it cannot be answered.
+#[no_mangle]
+pub unsafe extern "C" fn query(p: *mut u8, n: usize) -> *const u8 {
+    let q = decode(&Vec::from_raw_parts(p, n, n.max(1))).unwrap_or(V::Null);
+    OUT = encode(&PACK.as_ref().and_then(|pk| query::query(pk, &q)).unwrap_or(V::Null));
     OUT.as_ptr()
 }

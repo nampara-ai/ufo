@@ -1,12 +1,17 @@
-# The measurement spike (November 2026)
+# Spike
 
-`FINDINGS.md` is the record of a throwaway spike that tried the format's new
-claims in miniature and wrote what it found back into the specification
-(version 0.7). `out/` holds the three faces its kernel produced from one
-small universe, and the transcript of its transmutation miniature.
+`FINDINGS.md` is the record of the measurement spike of version 0.7, and
+is kept as evidence.
 
-The code is deleted, as agreed before it was written: it was never the
-beginning of the implementation. That includes the JavaScript printers
-used in the model trials; the kernel's printer, specified in SPEC §11.3,
-is the only one there will be. The code as it last stood is in this
-repository's history at commit `0320ea7`, under `spike/`.
+`kernel/` and `binding/` are the spike's throwaway kernel, restored at the
+owner's direction to generate the **provisional** test vectors of version
+0.8: it runs on the packs in `vectors/` and its answers are written to
+`vectors/provisional.json`. It is not the beginning of the implementation,
+nothing may depend on it, and a vector it produced stays provisional until
+an implementation written independently, from the specification alone,
+reproduces it.
+
+Build and run:
+
+    cd spike/kernel && cargo build --release --target wasm32-unknown-unknown
+    node spike/vectors.mjs
