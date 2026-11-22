@@ -1,6 +1,6 @@
 # The Universal File Object (UFO) Specification: Travel and trust
 
-**Version 0.8 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
+**Version 0.8 — draft for review. Nothing here is frozen. There is no implementation: only test vectors, throwaway code and test readers.**
 
 This part specifies the forms in which a universe leaves a reader — the pack alone, and envelopes that carry the player with it — what is included when it leaves, the readers it meets, and trust: principals, seals, permissions and membranes.
 

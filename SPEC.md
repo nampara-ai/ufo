@@ -1,6 +1,6 @@
 # The Universal File Object (UFO) Specification: Core
 
-**Version 0.8 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
+**Version 0.8 — draft for review. Nothing here is frozen. There is no implementation: only test vectors, throwaway code and test readers.**
 
 The UFO format is a single file that holds a universe of described
 meaning, carries the small player and tools that present and edit it,
@@ -2021,16 +2021,20 @@ Three values, for a first check without opening the files:
 | Root hash of `minimal.ufx` | `804ec174f46f773d36c1fe7318c999ff21c338b735cb4e5068224725b9cce8bf` |
 | Root hash of `history.ufx` | `821d84843a250c08a1f2b36670e715fd8c1ac1c2f0bcc5ad787277f7b7a76d72` |
 
-How far these have been checked. For version 0.8 an independent reader was
-written from this document alone, with every expected value withheld until
-it ran. It opened all eight packs, replayed every change, and agreed with
-304 of the 311 values it could be compared with on its first run; none of
-the seven differences was a misreading of §1 to §5, two were errors in
-this appendix's prose, since corrected, and four came from the layers of
-what travels, which this document uses and does not define. It
-reproduced the `timeline`, `digests` and `published` groups and the
-provisional staleness values. It recorded 52 places where this text was
-unclear. Before that, a second implementation, by the same
+How far these have been checked. For version 0.8 two independent readers
+were written from this document alone, one after the other, each with
+every expected value withheld until it ran. The first opened the eight
+packs there then were, replayed every change, and agreed with 304 of the
+311 values it could be compared with on its first run; none of the seven
+differences was a misreading of §1 to §5, and four came from the layers
+of what travels, which this document then used and did not define. Its
+findings were answered, each with a vector, and a second reader was
+written from the revised text: it opened all eleven packs and agreed
+with 456 of 458 values on its first run, the two differences being in
+how its own check printed a number. Each recorded 52 places where this
+text was unclear. Both readers came from the model that wrote this
+specification, so their agreement makes a vector reproduced and not
+confirmed. Before that, a second implementation, by the same
 author as the script, opened the first five packs, read the expected text from
 the first two, presented the nested text and the linked label, and printed
 the module to the bytes recorded. The WebAssembly vectors were run in one

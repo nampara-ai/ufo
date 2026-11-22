@@ -38,3 +38,4 @@ text that would help the next implementer most.
 | When | Who | Result |
 | --- | --- | --- |
 | 2026-11-22 | an independent instance of the model that wrote the specification, given the core of version 0.8 | 304 of 311 on the first run; 52 notes. ORIENTATION.md §20 |
+| 2026-11-22 | a second such instance, given the core as revised after the first | 456 of 458 on the first run, both differences in its own check; 52 notes. ORIENTATION.md §21 |

@@ -1,6 +1,6 @@
 # The Universal File Object (UFO) Specification: Presentation
 
-**Version 0.8 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
+**Version 0.8 — draft for review. Nothing here is frozen. There is no implementation: only test vectors, throwaway code and test readers.**
 
 This part specifies how a universe describes what it shows: the eleven primitives and their layout, formulas, the algorithm that composes a description into rows, lines and pages, Portals, and faces.
 

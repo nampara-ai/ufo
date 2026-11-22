@@ -1,6 +1,6 @@
 # The Universal File Object (UFO) Specification: The player
 
-**Version 0.8 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
+**Version 0.8 — draft for review. Nothing here is frozen. There is no implementation: only test vectors, throwaway code and test readers.**
 
 This part specifies what presents a universe and lets it be worked on: the kernel, the drawing contract between kernel and host, the host interface and its capabilities, the onboard tools, the light cone, the agent interface, and the budgets all of it is held to.
 

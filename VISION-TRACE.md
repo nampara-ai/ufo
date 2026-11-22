@@ -30,9 +30,9 @@ it generous in three ways, all corrected here. Rows rested "tested" on
 independent readers of a storage form that has since changed. The count
 took each row at its best status. And several rows said "specified,
 untested" of things with too little written to build from. Of the 48 rows
-below, taking each at its **weakest** status: 3 are tested, 14 tested in
-miniature, 14 specified and untested, and 17 thin. Taking each at its
-first status: 7, 15, 13 and 13. Before version 0.8 there were 44 rows:
+below, taking each at its **weakest** status: 7 are tested, 11 tested in
+miniature, 13 specified and untested, and 17 thin. Taking each at its
+first status: 8, 14, 13 and 13. Before version 0.8 there were 44 rows:
 2, 11, 14 and 17 at their weakest.
 
 Three cautions.
@@ -74,6 +74,16 @@ the core does not let it decide: where a continuous axis ends, which
 missing records are withheld and which are damage, and the digest in
 general.
 
+**The second reader test.** The first reader's findings in the core were
+answered, each with a vector, and the three layers, extents and the rest
+of what the core needed were moved into the core. A second reader, built
+from the revised text alone, agreed with 456 of 458 expected values on its
+first run, the two differences being in its own check. It is of the same
+model family as the specification's author, so the vectors it reproduced
+are *reproduced*, not *confirmed*. It warned that the score overstates
+the evidence: about half of the fifty choices it had to make are reached
+by no vector.
+
 ## The ten commitments the owner set as not negotiable
 
 | # | Element | Realized in | Exercised by | Status |
@@ -103,9 +113,9 @@ general.
 
 | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
-| Anchors into sequences, resolved without history | §4.3 | The independent reader resolved every anchor in every pack at every commit, and the nine cases of the vectors | **Tested** for sequences. For continuous axes the arithmetic agrees and the rest was guessed: the core does not say where an axis's extent comes from |
-| Time that is edited: a timeline | §4.5, §1.7 | `timeline.ufx`: generator and kernel agree; the independent reader, from the text alone, reproduced all 38 values | **Tested** for resolution. Nothing has played, and a play whose first element is cut is undefined |
-| Pins and staleness | §4.4 | Generator, kernel and the independent reader agree on two digests and on three pins across three commits | **Tested** for a sequence region and a whole object; the reader found the general rule under-specified in four places |
+| Anchors, resolved without history | §4.2, §4.3 | Two independent readers of the current form. The second, from the revised text, resolved an anchor of every kind in `pins.ufx`: sequence, continuous inside, clipped, touching and outside an extent, of unknown extent, keyed, a point | **Tested.** Two differently written boundaries with nothing between them are detached by the letter of the rule, which both readers followed and both questioned |
+| Time that is edited: a timeline | §4.5, §1.7 | `timeline.ufx`, four commits: a cut from the middle, an insertion, the start of a play cut. Generator, kernel and two independent readers agree on every value | **Tested** for resolution. Nothing has played |
+| Pins and staleness | §4.4 | Ten digests and three pins across three commits, on which generator, kernel and the second independent reader agree | **Tested** for what the vectors reach. The second reader listed eleven small choices in the rule that no vector reaches |
 | Projections for agents | §10.1, Appendix B | Twelve projections of real packs as text, from the kernel | **Tested in miniature.** No model has read them |
 
 ## Faces
@@ -155,7 +165,7 @@ general.
 | The pack: append-only, recoverable, indexable | §2, §3 | Two independent readers of an earlier form; a third, of the current form, recovered the last whole state from about 30 truncations of each pack | **Tested** |
 | The web envelope | §13.2 | Nothing | **Thin** (row 3) |
 | Video and image envelopes, and the mark | §13.4 | Nothing | **Specified, untested** |
-| What leaves: content, attribution, working history | §13.3 | Generator and kernel agree on the layers of `history.ufx`; `published.ufx`, holding two layers, is opened by the kernel and by the independent reader. The reader, guessing the rule the core does not give, disagreed on which changes are attribution in two other packs | **Tested in miniature**, with a defect: the core depends on a definition it does not hold |
+| What leaves: content, attribution, working history | §2.5, §13.3 | Three published copies. The second independent reader computed the layers of seven packs from the core's rule and agreed with the generator and the kernel on every record; it read each published copy with nothing reported as damage | **Tested** for the layers and for reading a published copy. No reader has written one. Absent blobs and linked universes' hints have no vector, and one rule about missing chunks contradicts another |
 | Platform declarations, media type | §13.5, `registration/` | The name was checked against live registries | **Specified, untested** |
 
 ## The worked examples

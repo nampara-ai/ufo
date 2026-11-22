@@ -1001,3 +1001,80 @@ Appendix F: by the rule, each fix comes with a vector.
 
 Next, after the owner's review: the envelope spike, beginning with the
 kernel's size.
+
+## 21. The core revised, and the second reader test (2026-11-22)
+
+**Decisions (owner).** Fix the first reader's seven findings in the core,
+each with a vector; the core must not depend on the profiles. Vector
+status in three levels: provisional, reproduced, confirmed. The founding
+names — Chronicle, ledger, light cone, player, onboard tools — are kept
+and counted as names: 118 concepts and 5 names. The mechanism candidates
+of CONCEPTS.md wait for a simplification pass after the envelope spike;
+reproducible exports may be deferred there only as a later profile with
+its design hook kept. Then the envelope spike, stopping if the kernel
+projects over 128 KiB compressed.
+
+**What changed in the core, with the vector that exercises each.**
+
+| Finding | Now | Vector |
+| --- | --- | --- |
+| Where a continuous axis ends | an extent is a closed pair in present coordinates; the core defines a clock's and an asset's; an unknown one is reported unclipped (§4.2, §4.3) | `pins.ufx` |
+| Withheld, or damage | live, and the three layers, defined in the core; a commit's change may be absent where it is not attributing (§2.5) | `published-timeline.ufx` |
+| The digest's open choices | points, removed elements, empty maps, the pinned object, `snapshot` and `of` settled (§4.4) | eight cases in `pins` |
+| Asset bytes | set whole; a continuous axis in whole bytes (§5.2) | `pins.ufx` |
+| A play whose start is cut | its time base is read from its anchor (§4.5) | fourth commit of `timeline.ufx` |
+| Who wrote nested text | a nested universe's attribution travels with it (§2.5) | `published-nested.ufx` |
+| The sufficiency list | names this document only (**P19**) | — |
+
+Two things were simplified to keep the core whole. The digest no longer
+leaves out children that lie outside a continuous region: a pin to part
+of an ordinary clock is stale when any child changes, and a timeline
+keeps its precision through plays. And three things the travel part used
+to place in the layers that always travel — support that evidence names,
+earlier revisions pinned as support, summaries — are not yet placed by
+the core's rule, and the travel part says so.
+
+**The second test.** Same brief (`reader-test/INSTRUCTIONS.md`), a fresh
+implementer, the revised core, eleven packs.
+
+| | First test | Second test |
+| --- | --- | --- |
+| Packs opened | 8 of 8 | 11 of 11 |
+| Expected values compared | 311 | 458 |
+| Agreed on the first run | 304 | 456 |
+| Differences that were the text's defect | 4 (the layers) | 0 |
+| Differences that were the vectors' prose | 2 | 0 (two descriptions were vague, now corrected) |
+| Differences in the reader's own check | 1 | 2 |
+| Times it had to read bytes to decide | several | once: the clock's type name |
+| Notes on unclear text | 52 | 52 |
+
+Its judgment: yes, the core can be built from its text alone. Its
+caution: the score overstates the evidence. It made about fifty
+choices of interpretation; the vectors reach perhaps half; a second
+implementer choosing differently elsewhere would also score in full.
+Nothing it was given exercises refusal of a change, `forget`, absent
+chunks, unknown codecs, damaged maps, an anchor to an earlier commit, or
+keyed regions over a list of refs.
+
+**Open in the core after it**, none yet fixed, each owed a vector:
+
+1. Missing chunks: "absent blobs" says they are unavailable; **P11** says
+   anything missing from the content layer is damage, and the content
+   layer includes chunks.
+2. The clock's type name and properties are not tabulated in the core.
+3. The digest: whether `of` and `snapshot` apply at any depth; that the
+   holder of a pin is not an input; the bytes of step 3; detached and
+   multi-axis cases.
+4. A point written with two different boundaries is detached by the
+   letter of **A1**. Both readers followed the letter and questioned it.
+5. Recovery: **P3** asks for an ancestry check "with no index and no
+   scan"; a node that breaks **C1** ends the scan and hides later heads.
+6. Layers: an anchor's `r`; whether removed runs make a change
+   attributing; which map nodes an earlier-commit anchor needs.
+7. How a profile's name appears in `features`; splice written as steps;
+   what conservation does not compare.
+
+**Vector status.** Every group of the core is now *reproduced*. Nothing is
+*confirmed*: both readers are of the model that wrote the specification.
+`python3 reader-test/package.py` builds the archive for an implementer
+of another kind.

@@ -140,8 +140,8 @@ def stream(n, label=b"ufo-test-stream"):
     out = bytearray(); i = 0
     while len(out) < n: out += sha(label + struct.pack("<Q", i)); i += 1
     return bytes(out[:n])
-V["gear"] = {"rule": "G[i] = first 8 bytes, little-endian, of SHA-256('ufo-gear-1' || byte i)",
-             "G": ["%016x" % g for g in GEAR[:4]] + ["..."], "G_255": "%016x" % GEAR[255],
+V["gear"] = {"rule": "G[i] = first 8 bytes, little-endian, of SHA-256('ufo-gear-1' || byte i). Each entry is written here as the number, 16 hexadecimal digits, most significant first. G holds the first four entries",
+             "G": ["%016x" % g for g in GEAR[:4]], "G_255": "%016x" % GEAR[255],
              "sha256_of_table_as_256_little_endian_u64": sha(b"".join(struct.pack("<Q", g) for g in GEAR)).hex()}
 V["blobs"] = []
 def blob_vector(name, data, extra=None):
@@ -158,7 +158,7 @@ blob_vector("65536 zero bytes: no cut point is found, so one chunk of the maximu
 blob_vector("65537 zero bytes: a maximum chunk and a one-byte chunk", bytes(65537))
 big = stream(1 << 20); h1, c1 = blob_vector("1 MiB of the test stream", big, {"stream": STREAM})
 edited = big[:500000] + b"0123456789" + big[500000:]
-h2, c2 = blob_vector("the same with ten bytes inserted at offset 500000", edited)
+h2, c2 = blob_vector("the same with the ten bytes 0123456789 (ASCII) inserted at offset 500000", edited)
 s1, s2 = set(rhash(CHUNK, c) for c in c1), set(rhash(CHUNK, c) for c in c2)
 V["blobs"][-1]["chunks_shared_with_the_unedited_stream"] = len(s1 & s2)
 V["blobs"][-1]["chunks_not_shared"] = len(s2 - s1)

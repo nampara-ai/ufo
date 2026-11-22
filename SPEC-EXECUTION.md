@@ -1,6 +1,6 @@
 # The Universal File Object (UFO) Specification: Execution
 
-**Version 0.8 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
+**Version 0.8 — draft for review. Nothing here is frozen. There is no implementation: only test vectors, throwaway code and test readers.**
 
 This part specifies behavior: the Compute-let, a sandboxed machine carried as an object; how it runs deterministically; code as description; the printer that writes a module's bytes from the description; the ledger; and the tests that gate a change.
 

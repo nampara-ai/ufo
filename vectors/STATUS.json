@@ -8,120 +8,143 @@
   "values": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "values_malformed": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "record_hashes": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "gear": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "blobs": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "object_maps": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "minimal_pack": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "history_pack": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ],
    "note": "all but the seal's signature, which the core does not ask a reader to verify"
   },
   "resolve_sequence": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "resolve_continuous": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "value_kept_outside": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "nested": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ],
    "note": "all but the plain-text faces, which belong to the presentation part"
   },
   "digests": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "published": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "compose_pack": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "merge_readiness": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ],
    "note": "the order of elements only; merging as an operation is not specified"
   },
   "timeline": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ],
-   "note": "the first three commits. The fourth, which cuts the start of a play, is provisional"
+   "note": "the first reader reproduced the first three commits; the second all four"
   },
   "pins": {
-   "status": "provisional",
-   "note": "new in the revision that followed the first reader test; generator and the author's kernel agree"
+   "status": "reproduced",
+   "by": [
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+   ]
   },
   "published_timeline": {
-   "status": "provisional",
-   "note": "new in the revision that followed the first reader test; generator and the author's kernel agree"
+   "status": "reproduced",
+   "by": [
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+   ]
   },
   "published_nested": {
-   "status": "provisional",
-   "note": "new in the revision that followed the first reader test; generator and the author's kernel agree"
+   "status": "reproduced",
+   "by": [
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+   ]
   },
   "printer": {
    "status": "provisional",
@@ -136,12 +159,15 @@
   "provisional/staleness.json": {
    "status": "reproduced",
    "by": [
-    "the independent reader of 2026-11-22, built from the core of version 0.8 alone"
+    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
    ]
   },
   "provisional/layers.json": {
-   "status": "provisional",
-   "note": "recomputed by the rule now in section 2.5"
+   "status": "reproduced",
+   "by": [
+    "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+   ]
   },
   "provisional/projections.json": {
    "status": "provisional",
@@ -151,5 +177,6 @@
    "status": "provisional",
    "note": "the author's kernel only"
   }
- }
+ },
+ "note": "Both readers are instances of the model that wrote the specification. Two of them agreeing does not make a vector confirmed: that needs an implementation from a different model family, or a person."
 }
