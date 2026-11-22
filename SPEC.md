@@ -46,7 +46,7 @@ means the platform a reader runs on: a browser, an operating system.
 
 | Sections | Status in this draft |
 | --- | --- |
-| §1–§4 core, pack, anchors | Complete, with a schema (Appendix C) and byte-level test vectors (Appendix F, `vectors/`). The vectors were produced by one generator and checked by one independent reader written from these sections alone; names and tag numbers provisional |
+| §1–§4 core, pack, anchors | Complete, with a schema (Appendix C) and byte-level test vectors (Appendix F, `vectors/`); names and tag numbers provisional |
 | §5–§7 vocabulary, player, host interface, faces | Complete in structure. The drawing contract (§6.2) and the capability contract (§6.3) are complete; layout semantics need a conformance corpus before freeze. Operation sets: complete for `text`, `objects` and `present`; sketched for `gpu` (Appendix E); to be written for the rest |
 | §8–§11 profiles | Text, asset, derivation, Portal, Chronicle: complete. Compute-let, printer, ledger, summaries: complete in structure, operation tables provisional |
 | §9.4 video and image envelopes | Complete in structure; the `ufo:` scheme and file-name endings provisional |
@@ -3684,15 +3684,18 @@ Rules that are already fixed:
 
 ## Appendix F. Test vectors
 
-The directory `vectors/` beside this document holds byte-level vectors and
-the script that generated them. They are normative: where this text and a
-vector disagree, one of them has a defect, to be reported.
+The directory `vectors/` beside this document holds byte-level vectors.
+They are normative, with this text: where the two disagree, one of them has
+a defect, to be reported. The script that produced them is in
+`tools/vectors/` and is not normative: it is not a reader, a writer or a
+library, nothing may depend on it, and where it disagrees with this text or
+the vectors, it is wrong. The kernel, when it exists, must reproduce every
+vector on its own.
 
 | File | Contents |
 | --- | --- |
 | `vectors/minimal.ufo` | a whole pack of 3451 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
-| `vectors/generate.py` | the generator: conformance tooling, not a reader |
 
 | Group | What is fixed |
 | --- | --- |
@@ -3714,8 +3717,8 @@ Three values, for a first check without opening the files:
 | SHA-256 of the file `minimal.ufo` | `33d731e67c6f28b3319167a8bf4b910a6d57fae2e8980837a6dc911ae2f192ca` |
 
 How far these have been checked: the WebAssembly vectors were validated and
-run in one engine and behave as stated. The pack vectors were read back by
-a reader written independently from §1–§3 and Appendix C. No second
-*writer* exists, so an error shared by this text and the generator would
-not have been caught.
+run in one engine (Node.js) and behave as stated. The other vectors have
+been produced by one script and have not yet been reproduced by any
+independent implementation, so an error shared by this text and that
+script would not have been caught.
 

@@ -12,7 +12,8 @@ every part of it came from.
 | [CORE.md](CORE.md) | The whole format in two pages |
 | [SPEC.md](SPEC.md) | The draft specification, version 0.4 |
 | [RATIONALE.md](RATIONALE.md) | Why the format is shaped as it is |
-| [vectors/](vectors/) | Byte-level test vectors, and the script that generates them |
+| [vectors/](vectors/) | Byte-level test vectors (normative) |
+| [tools/](tools/) | Non-normative tooling |
 | [NAMING.md](NAMING.md) | Candidates for the file-name ending and media type; not yet decided |
 | [ORIENTATION.md](ORIENTATION.md) | Working notes: open problems and the record of design decisions |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How changes are judged |

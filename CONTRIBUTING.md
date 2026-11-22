@@ -40,3 +40,15 @@ An addition to the specification must also pass the deletion test (SPEC
 - Every requirement in the specification must be testable and carry a rule
   label.
 - Define a term once and use it the same way everywhere.
+
+## One implementation, and no accidental second one
+
+- The files in `vectors/` are normative. The script that wrote them,
+  `tools/vectors/generate.py`, is not. If they ever disagree, the
+  specification and the vectors win and the script is fixed.
+- When the kernel exists it must reproduce every vector on its own.
+- The generator must never become a reader, a writer or a library that
+  anything else imports or depends on. A second place where the format's
+  logic lives, kept in step by hand, is exactly the failure this project
+  exists to avoid. The same holds for any future tool: tools call the
+  kernel; they do not re-implement it.

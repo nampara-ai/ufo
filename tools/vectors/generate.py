@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """Generates the UFO conformance test vectors (SPEC.md, Appendix F).
 
-This is conformance tooling, not a reader: it writes fixed examples by the
-rules of SPEC.md sections 1, 2, 4.3 and 11 so that implementations can be
-checked against known bytes. Run from this directory: python3 generate.py
+NON-NORMATIVE. The specification and the files in vectors/ are normative;
+this script is not. If it disagrees with either, this script is wrong.
+
+It is not a reader, a writer or a library. Nothing may import it or depend
+on it, and it must not grow into one: the kernel, when it exists, must
+reproduce every vector on its own, without reference to this file.
+
+Run from the repository root: python3 tools/vectors/generate.py
+It rewrites vectors/vectors.json and vectors/minimal.ufo.
 """
-import hashlib, json, struct
+import hashlib, json, os, struct
+
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "vectors")
 
 def sha(b): return hashlib.sha256(b).digest()
 
@@ -171,7 +179,7 @@ pack += frame(4, struct.pack("<QQQ", len(offsets), 0, index_at) + entries)
 body = hK + struct.pack("<QQQ", index_at, 0, len(pack) + 67)
 head_frame = frame(5, body + sha(body)[:8]); assert len(head_frame) == 67
 pack += head_frame
-open("minimal.ufo", "wb").write(pack)
+open(os.path.join(OUT, "minimal.ufo"), "wb").write(pack)
 V["minimal_pack"] = {
     "file": "minimal.ufo", "length": len(pack), "sha256_of_file": sha(bytes(pack)).hex(),
     "root_hash": hK.hex(), "object_map_root": hM.hex(),
@@ -248,5 +256,5 @@ V["instrumentation"] = [
      "stored_hex": stored_loop.hex(), "instrumented_hex": instr_loop.hex(),
      "behaviour": "spin(3) consumes 2 + 3*6 = 20; with ufo:fuel = 19 it traps out of fuel on entering the third iteration"}]
 
-json.dump(V, open("vectors.json", "w"), indent=1)
+json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)
 print("wrote vectors.json and minimal.ufo:", len(pack), "bytes, root", hK.hex())

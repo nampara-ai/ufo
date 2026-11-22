@@ -243,5 +243,5 @@ recorded so they can be reversed for good reason.
   capabilities are still to be written.
 - The file-name ending is not chosen: `.ufo` is already a font format's.
   Candidates and evidence are in NAMING.md.
-- The test vectors were written by one generator and read back by one
-  independent reader. No second writer exists yet.
+- The test vectors were written by one script. Until an independent
+  implementation reproduces them they prove consistency, not correctness.
