@@ -124,18 +124,31 @@ A **value** is one of:
 | **ref** | the identity of an object in the same universe (§1.5) |
 | **anchor** | a reference to a region of an object at a revision (§4) |
 | **formula** | an expression that computes a value (§5.3) |
+| **indirect** | a stand-in for a value stored in a record of its own (§1.4) |
 
 Values are encoded in CBOR (RFC 8949) using the core deterministic encoding
 requirements of RFC 8949 §4.2.1, so that a value has exactly one encoding.
-Link, ref, anchor and formula are CBOR tags 55460, 55461, 55462 and 55463
-applied to a 32-byte string, a 16-byte string, a map and a list respectively.
-These tag numbers are provisional until registered.
+Link, ref, anchor, formula and indirect are CBOR tags 55460, 55461, 55462,
+55463 and 55464 applied to a 32-byte string, a 16-byte string, a map, a
+list and a 32-byte string respectively. These tag numbers are provisional
+until registered.
+
+Integers are encoded in the shortest form. A float is encoded in the
+shortest of the three IEEE widths that preserves its value exactly; a float
+with an integral value remains a float; negative zero is distinct from
+zero. The *depth* of a value is 1 for the value itself, plus one for each
+list, map or tag it is nested inside. An *entry* is one item of a list or
+one key with its value.
 
 - **[C1]** A reader MUST reject as malformed any encoded value that is not in
-  deterministic form, contains a non-finite float, an indefinite-length item,
-  a duplicate map key, a non-text map key, or nesting deeper than 64 levels.
-  A well-formed item under a tag this specification does not define is an
-  unrecognized value (§1.9): it is preserved and not interpreted.
+  deterministic form; contains a non-finite float, an indefinite-length
+  item, a duplicate map key, a non-text map key, text that is not valid
+  UTF-8, a simple value other than false, true and null, or an integer
+  outside the range above; applies one of the five tags above to content of
+  the wrong kind or length; exceeds a depth of 64; or is followed by
+  further bytes in its record. A well-formed item under any other tag,
+  bignum tags included, is an unrecognized value (§1.9): it is preserved
+  and not interpreted.
 
 *Reason.* CBOR is an Internet Standard with a defined canonical form, a
 byte-string type and compact integers. A canonical text encoding would need
@@ -147,15 +160,19 @@ directly; they read projections (§7.5).
 
 A **record** is an immutable byte string of one of two kinds:
 
-- a **chunk**: raw bytes, at most 2²⁰ bytes;
+- a **chunk**: raw bytes, at least 1 and at most 2²⁰;
 - a **node**: one encoded value that is a map with a text entry `k` naming the
   kind of node.
 
 The hash of a record is SHA-256 over one kind byte (`0x01` chunk, `0x02`
 node) followed by the record's bytes. A record is identified only by its hash.
 
-- **[C2]** A reader MUST verify the hash of every record before using its
-  contents, and MUST treat a mismatch as malformed storage.
+- **[C2]** A record is always obtained by its hash: from a link, an index
+  entry or a head. A reader MUST compute the hash of the bytes it obtained
+  and MUST treat a difference from the hash it asked for as malformed
+  storage. A frame carries no hash of its own; a scan computes each
+  record's hash, and `verify` (§7.5) reports any record reachable from the
+  head that is absent or wrong, and any frame nothing refers to.
 - **[C3]** A reader MUST preserve, when copying or rewriting a universe, every
   record reachable from a retained commit, whether or not it understands the
   record's node kind.
@@ -176,9 +193,11 @@ zero-length blob has no chunks. The blob node is:
 | `chunks` | list of links |
 
 If the stream has at most 1024 chunks, `chunks` lists them in order.
-Otherwise `chunks` lists nodes of kind `blob` that each cover exactly
-1024ⁿ chunks (the last may cover fewer), for the smallest *n* that keeps the
-list at 1024 entries or fewer. The shape of a blob node is therefore a
+Otherwise the stream is divided into consecutive spans of 1024ⁿ chunks,
+the last span holding whatever remains, for the smallest *n* that makes
+1024 spans or fewer; `chunks` lists, in order, the blob node of each span,
+and each of those is the blob node its bytes would have as a stream of
+their own, by this same rule, with its own `len` and `sha256`. The shape of a blob node is therefore a
 function of its bytes alone, and identical streams have identical blob hashes
 in every universe. A reader MUST treat a blob node of any other shape as
 malformed.
@@ -198,15 +217,24 @@ when a large byte stream is edited in the middle, but native content is
 description, not edited byte streams, and blobs are immutable originals.
 
 **Out-of-line values.** Any value inside the properties of an `obj` node
-(§1.5), and nowhere else, MAY be replaced by a link to a node
-`{k: "val", v: value}`. A reader resolves such a link transparently.
-Writers SHOULD move a value out of line when its encoding exceeds 4096 bytes,
-so that changing a small property does not rewrite a large one.
+(§1.5), and nowhere else, MAY be replaced by an *indirect*: the hash of a
+node `{k: "val", v: value}`. A reader resolves an indirect transparently:
+wherever this document speaks of a property's value, it means the value
+with every indirect replaced by what it stands for. The `v` of such a node
+contains no further indirects. A long text or byte string MAY instead be
+stored in pieces: a node `{k: "val", parts: [hash, …]}` naming, in order,
+`val` nodes whose values, all texts or all byte strings, concatenate to the
+value. Writers SHOULD move a value out of line when its encoding exceeds
+4096 bytes, so that changing a small property does not rewrite a large
+one.
 
-A **salted value** is an out-of-line value whose node also carries `salt`: 16
-random bytes. Its hash reveals nothing about a short or guessable value. The
-format uses salted values wherever content may later be withheld from a copy
-(§1.7, §9.3).
+A *link*, by contrast, is a value in its own right: it is never resolved
+transparently. A link names either a blob node or a salted value.
+
+A **salted value** is a node `{k: "val", v: value, salt}` with 16 random
+bytes of salt, always referred to by a link. Its hash reveals nothing about
+a short or guessable value. The format uses salted values wherever content
+may later be withheld from a copy (§1.7, §9.3).
 
 ### 1.5 Objects and revisions
 
@@ -227,7 +255,7 @@ Each state an object passes through is a **revision**, stored as a node:
 | `by` | identity of the change (§1.7) that produced this revision |
 | `salt` | 16 random bytes, fresh for every revision |
 | `p` | the properties |
-| `runs` | for each property that is a sequence (§4.2): its attribution runs (§1.7) |
+| `runs` | map from the name of each sequence property (§1.7) to its attribution runs; omitted when the object has none |
 
 The hash of this node is the **revision hash**. It names one exact state of
 one object and, through `prev`, that object's whole history. Two copies of a
@@ -236,6 +264,10 @@ revision hash, not the number, is what distinguishes them, and every
 reference to a specific revision uses the hash. The salt ensures that the
 hash of an earlier revision, which remains visible in `prev` when the
 revision itself is withheld (§9.3), cannot be used to guess what it held.
+
+A reader checks that a revision's `id` is the identity under which the
+object map lists it and, where `prev` is present, that the previous
+revision has the same `id` and `type` and a `rev` one less.
 
 An **edge** is a property whose value is, or contains, a ref. The property
 name is the relation; the direction is from the object that owns the property
@@ -260,8 +292,9 @@ persistent trie from identity to revision hash, built of `map` nodes.
 A `map` node covering a set of identities that share a prefix of *d* bytes is
 a leaf `{k: "map", e: [[id, link], …]}` sorted by identity if the set has 32
 or fewer members, and otherwise an interior node `{k: "map", c: {…}}` whose
-entries map the byte at position *d*, written as a two-digit lowercase
-hexadecimal key, to the `map` node for that longer prefix. The object map is
+entries map the byte at position *d* of the identity, counting from zero,
+written as a two-digit lowercase hexadecimal key, to the `map` node for
+that longer prefix. Every object is in the map, change objects included. The object map is
 therefore a function of its contents alone: the same set of revisions has the
 same root hash however it was built. A reader MUST treat an object map of
 any other shape as malformed.
@@ -292,7 +325,7 @@ and type `ufo.universe`. Its properties are:
 
 | Property | Value |
 | --- | --- |
-| `lineage` | 16 random bytes fixed in the first commit; shared by every later state and every fork |
+| `lineage` | 16 random bytes fixed in the first commit; shared by every later state and every fork. Required; every other property here is optional |
 | `roots` | map from names to refs: the named entry points |
 | `components` | map from a role — `tools`, `printer`, `shaper`, `rasterizer`, or a prefixed name — to a link or anchor naming the component the universe carries for it (§6.6, §7.4, §11.4) |
 | `faces` | list of refs to face objects (§7.2) |
@@ -320,10 +353,14 @@ the universe: one commit. Its properties are:
 | `actor` | `{who, with}`: the principal (§10.1) who committed the change, and the name and version of the software used |
 | `time` | milliseconds since 1970-01-01T00:00:00Z, as the actor reported it |
 | `origin` | where content introduced by this change came from (§8.5); absent if the change introduces none |
-| `evidence` | list of support links recorded by this change (§8.5) |
-| `decisions` | list of decisions recorded by this change (§8.5) |
-| `attributions` | list of later findings about the origin of content already present (§8.5) |
-| `note` | a salted value: why the change was made, in the actor's words |
+| `evidence` | list of support links recorded by this change (§8.5); optional |
+| `decisions` | list of decisions recorded by this change (§8.5); optional |
+| `attributions` | list of later findings about the origin of content already present (§8.5); optional |
+| `note` | a link to a salted value: why the change was made, in the actor's words; optional |
+
+The change object is created by the act of committing, not by an operation:
+it has no `new`, it does not appear in its own `revs`, its `rev` is 1 and
+its `by` is its own identity.
 
 The **Chronicle** is the chain of commits and their changes, from the current
 commit back to the first.
@@ -331,7 +368,8 @@ commit back to the first.
 An **operation** states one edit. It has a *shape* — which object, which
 property, where, how much — and *content*: what was removed and what was put
 in its place. The shape is written in the operation. The content is always a
-salted value (§1.4). This separation is what allows a copy of a universe to
+link to a salted value (§1.4), and like every link it is not resolved
+transparently: it is how content can be absent while the shape remains. This separation is what allows a copy of a universe to
 keep the shape of its history, so that anchors can still be carried and the
 chain of authorship still checked, while withholding what earlier drafts
 said (§9.3).
@@ -346,11 +384,23 @@ The core operations are:
 | `remap` | `obj`, `axis`, `scale`, `shift` | — | declares that positions on a continuous axis moved (§4.3) |
 | `drop` | `obj` | — | retires the object from the current state |
 
-`key` MAY be a list, naming a path through nested maps. `bias` is `before`
-or `after` and says which neighbor inserted items belong with (§4.3); it
-defaults to `after`. `old` is omitted when nothing was there: a `set` of a
-property that did not exist, a `splice` that deletes nothing. `ins` and
-`val` are omitted likewise when nothing is put.
+For `set`, `key` MAY be a list, naming a path through nested maps; maps
+along the path that do not exist are created, and a map left empty by a
+removal remains. For `splice`, `key` is the name of one property of the
+object. `bias` is `before` or `after` and says which neighbor inserted
+items belong with (§4.3); `after` is the default and is never written.
+`old` is omitted when nothing was there: a `set` of a property that did not
+exist, a `splice` that deletes nothing. `ins` and `val` are omitted
+likewise when nothing is put.
+
+**Sequences.** A property is a *sequence property* if it was created by a
+`splice`. A `splice` on a property that does not exist creates it, empty,
+as a text, a byte string or a list according to what `ins` holds, and then
+applies. Its items are Unicode scalar values, bytes or list items
+respectively; `at`, `del` and `add` count items; `old` and `ins` hold a
+text, a byte string or a list of the items concerned. A `splice` on a
+property created by `set` is refused. A `set` on a sequence property
+replaces all of it and is treated as a `splice` of the whole.
 
 **Order.** Operations apply in the order listed. Each is expressed against
 the state left by the operations before it in the same change: a position in
@@ -358,10 +408,11 @@ the second `splice` on a text counts the characters as the first left them.
 The baseline of the change as a whole, for each object, is the `before`
 hash in `revs`.
 
-**Runs.** For every property that is a sequence, the revision records
-**runs**: a list of `[count, change, offset]` covering the sequence exactly,
-in order, saying for each item which change introduced it and its offset
-among the items that change introduced into that property. Applying a
+**Runs.** For every sequence property, the revision records **runs**: a
+list of `[count, change, offset]` covering the sequence exactly, in order,
+saying for each item which change introduced it and its offset among the
+items that change introduced into that property, counted across the
+change's operations in order. Applying a
 `splice` removes the runs of the deleted items and gives the inserted items
 a run naming the change that contains the splice, or, when that change's
 origin is a copy from the same universe, the runs the items had at their
@@ -369,8 +420,8 @@ source (§8.5). Adjacent runs that continue one another are merged. Runs are
 maintained by the kernel for every sequence of every type; they are how
 every item of every sequence has a known origin.
 
-**Self-anchors.** A property value that is an anchor (§4.1) naming the
-object that owns it, with no revision, is a **self-anchor**: a region of the
+**Self-anchors.** An anchor (§4.1) anywhere within an object's properties
+that names that same object and carries no revision is a **self-anchor**: a region of the
 object's own axes, always expressed against its current revision. Applying
 any operation to an object carries every self-anchor in it by the rules of
 §4.3. This is how structure that lives on a sequence — the spans of a text —
@@ -386,15 +437,18 @@ The **laws of change** follow. They hold for every medium.
 - **[L1] The bytes are the evidence.** A writer MUST compute operations from
   the actual content before and after, never from an account of what was
   changed.
-- **[L2] Anchored.** `revs` MUST name the `before` revision of every object
-  an operation touches, and every `set` and `splice` MUST carry the exact
-  `old` content.
+- **[L2] Anchored.** `revs` MUST list exactly the objects the operations
+  touch, with the `before` revision of each, and every `set` and `splice`
+  that removes or replaces something MUST carry exactly what was there, as
+  `old`.
 - **[L3] Conservation.** Applying a change's operations, in order, to the
   parent commit's objects MUST produce exactly the commit's objects, compared
   as values with out-of-line values resolved, apart from the change object
-  itself and the `rev`, `prev`, `by` and `salt` fields. Runs and
-  self-anchors are part of what is compared: they follow from the operations
-  by the rules above. A reader MUST be able to perform this check for any
+  itself and the `rev`, `prev`, `by` and `salt` fields. Identity, type,
+  properties, runs and self-anchors are all compared; runs and self-anchors
+  follow from the operations by the rules above. The `after` hash of every
+  entry in `revs` MUST be the revision the commit's object map lists. The
+  parent state of the first commit is empty. A reader MUST be able to perform this check for any
   commit whose operation content is present (§7.5 `verify`), and MUST say so
   where it is not.
 - **[L4] Refusal.** A writer MUST reject a change whole if any `before` hash
@@ -424,7 +478,9 @@ changes that touched it therefore link end to end: one's `after` is the
 next one's `before`, up to the current revision. A reader holding only the
 shapes can check that no change to an object is missing from the sequence
 it was given, and each commit names its change by hash, so no change can be
-swapped for another.
+swapped for another. The hashes in `revs` are plain hashes, not links: they
+are for checking the chain and do not make an earlier revision part of
+what a copy must hold.
 
 ### 1.8 References between universes
 
@@ -483,7 +539,7 @@ A pack is an 8-byte signature followed by frames:
 
 ```
 signature = 0x89 "UFO" 0x0D 0x0A 0x1A 0x0A
-frame     = kind (1 byte)  codec (1 byte)  length (unsigned LEB128, shortest form)  payload
+frame     = kind (1 byte)  codec (1 byte)  length (unsigned LEB128, shortest form, below 2⁶³)  payload
 ```
 
 | Kind | Name | Payload |
@@ -496,8 +552,10 @@ frame     = kind (1 byte)  codec (1 byte)  length (unsigned LEB128, shortest for
 | `0x06` | note | what this pack deliberately lacks (§2.5), encoded as a value |
 
 `codec` is `0` for identity or `1` for raw DEFLATE (RFC 1951). With codec
-`1` the payload begins with the decoded length as an unsigned LEB128,
-followed by the compressed bytes. The hash of a record is always taken over
+`1` the payload, whose length the frame states, is the decoded length as an
+unsigned LEB128 followed by one complete DEFLATE stream and nothing after
+it. A length that is not in shortest form makes a frame ill-formed. The
+same record MAY appear in more than one frame. The hash of a record is always taken over
 its decoded bytes. Only chunk and node frames may be compressed. Other
 codecs are features (§1.6) and MUST NOT be used in a travel form (§9.2),
 so that what travels can always be read.
@@ -529,21 +587,25 @@ frame. To commit, a writer:
 Seal and note frames are appended the same way, followed by a head that
 names the same commit as before.
 
-The head frame's payload is exactly 64 bytes:
+The head frame has codec 0 and a payload of exactly 72 bytes:
 
 | Bytes | Field |
 | --- | --- |
 | 32 | hash of the commit this head marks |
+| 8 | offset of the frame holding that commit |
 | 8 | offset of the latest index frame, or 0 |
 | 8 | offset of the previous head frame, or 0 |
 | 8 | length of the pack up to and including this frame |
-| 8 | check: the first 8 bytes of the SHA-256 of the preceding 56 bytes |
+| 8 | check: the first 8 bytes of the SHA-256 of the preceding 64 bytes |
 
-A head frame is 67 bytes in all.
+A head frame is 75 bytes in all: kind `0x05`, codec `0x00`, length `0x48`,
+payload.
 
 - **[P3]** A head is **valid** if its check matches, its length field equals
-  the offset just past it, and the commit record it names is present and
-  passes its hash.
+  the offset just past it, and the frame at its commit offset lies before
+  it and holds a node of kind `commit` whose hash is the one the head
+  names. No index and no scan is needed to check a head. A wrong index
+  offset does not make a head invalid.
 - **[P4]** A writer MUST NOT modify any byte before the last valid head,
   except through compaction (§2.6).
 - **[P5]** A pack has at most one writer at a time. Where a host cannot
@@ -555,17 +617,20 @@ There are no companion files: no journal, no lock file, no sidecar.
 
 ### 2.3 Finding the current state
 
-**The state of a pack is the commit named by the head frame in its final 67
+**The state of a pack is the commit named by the head frame in its final 75
 bytes.** Every reader and every tool starts there.
 
-1. Read the final 67 bytes. If they are a valid head whose length field
-   equals the file's length, that is the current state.
+1. Read the final 75 bytes. If they are a valid head, that is the current
+   state.
 2. Otherwise the last write was interrupted or the file is damaged. Scan
-   frames from the signature forward. A frame is well-formed if its kind,
-   codec and length parse and its payload lies within the file. Stop at the
-   first frame that is not. The current state is the last valid head met.
-   The reader reports how many bytes follow it.
-3. If no valid head is found, the file holds no universe and is malformed.
+   frames from the signature forward. A frame is well-formed if its length
+   parses, its payload lies within the file, and, for the six kinds this
+   document defines, its codec is one the kind allows and its payload has
+   the form that kind requires. Stop at the first frame that is not. The
+   current state is the last valid head met. The reader reports how many
+   bytes lie between that head and the end of the file.
+3. If no valid head is found, no commit was ever completed in this file. It
+   holds no universe, and a reader reports it as malformed.
 
 - **[P6] Always whole.** After a write interrupted at any byte, a reader
   following these steps MUST arrive at the state of the last completed
@@ -573,7 +638,7 @@ bytes.** Every reader and every tool starts there.
   the file and happens only after an interruption.
 - **[P7] No silent truncation.** Before appending to a pack recovered by
   step 2, a writer MUST search the bytes after the recovered head for any
-  67-byte window that is a valid head. If there is none, those bytes are an
+  75-byte window that is a valid head. If there is none, those bytes are an
   interrupted write and the writer truncates them. If there is one, the file
   is damaged in the middle: it is malformed, no writer may append to it, and
   the reader offers what can be salvaged.
@@ -595,8 +660,13 @@ payload is:
 | 8 | offset just past the last frame this index covers |
 | 40 × *n* | entries, each a 32-byte hash and an 8-byte offset, in ascending order of hash |
 
+The payload is exactly 24 + 40 × *n* bytes. A hash here is a record's hash
+as §1.3 defines it; hashes are strictly ascending; where a record appears
+in several frames the entry gives the lowest offset.
+
 An index covers every chunk and node frame between the end of the previous
-index's coverage and the end of its own. When a writer appends an index it
+index's coverage — or the end of the signature, for the first index — and
+the end of its own, which may be the index frame's own offset. When a writer appends an index it
 first merges into it the index before it, repeatedly, for as long as that
 earlier index has no more than twice as many entries as the merged index so
 far. The chain of indexes therefore stays logarithmic in the number of
@@ -696,7 +766,8 @@ as malformed. A writer MUST NOT produce anything exceeding one.
 | Indexes in a chain | 64 |
 | Parents of a commit | 1 |
 
-An index frame is never loaded whole; a reader reads the entries it probes.
+A reader MUST be able to use an index larger than its memory, by reading
+only the entries it probes.
 A frame of unknown kind is skipped unread.
 
 A reader MUST also bound, by its own configuration and never by values read
@@ -745,8 +816,9 @@ platform has.
 Two obligations bind every release of the reference implementation. They
 are requirements on the project, not on files.
 
-- **[P19] The weekend test.** §1.1–§1.6, §2, §3 and Appendix C MUST be
-  sufficient to write that independent reader. The test is run for real
+- **[P19] The weekend test.** §1, §2, §3, §4.1–§4.3 and Appendices C and F
+  MUST be sufficient to write that independent reader, including the
+  conservation check. The test is run for real
   before the format is frozen: someone with no other knowledge of the
   project is given only those sections and the conformance packs with their
   test vectors, and the result must pass every read-only pack test. If it
@@ -1720,7 +1792,7 @@ A text object (`ufo.text`) holds characters and their structure.
 
 | Property | Value |
 | --- | --- |
-| `chars` | the content: one text value, or a list of text values whose concatenation is the content |
+| `chars` | the content: one text value |
 | `spans` | map from span key to span |
 | `syntax` | absent for native text; otherwise the media type of a foreign syntax the characters are written in |
 
@@ -1733,10 +1805,10 @@ it.
 never split a character. Offsets in UTF-8 bytes or UTF-16 code units convert
 to and from them deterministically.
 
-A text may be of any length. A writer MAY store `chars` as a list of pieces,
-each out of line (§1.4), so that an edit rewrites only the piece it touches.
-Where pieces divide carries no meaning: positions, runs, spans and the
-conservation check (**L3**) are all defined on the concatenation.
+A text may be of any length. A writer MAY store `chars` out of line in
+pieces (§1.4), so that an edit rewrites only the piece it touches. Where
+pieces divide carries no meaning: positions, runs, spans and the
+conservation check (**L3**) are all defined on the whole value.
 
 A **span** marks a region of the characters:
 
@@ -3512,18 +3584,20 @@ In CDDL (RFC 8610). `hash` is 32 bytes and `id` is 16.
 hash   = bytes .size 32
 id     = bytes .size 16
 link   = #6.55460(hash)
+indirect = #6.55464(hash)
+salt   = bytes .size 16
 ref    = #6.55461(id)
 anchor = #6.55462({ o: id, ? r: hash, ? a: { * tstr => region },
-                    ? u: hash, ? d: hash, ? s: id })
+                    ? u: hash, ? d: hash, ? s: salt })
 formula = #6.55463([ tstr, * value ])
 region = [ int, int ] / [ number, number ] / [ * (tstr / id) ]
 value  = nil / bool / int / float / tstr / bstr / [ * value ]
-       / { * tstr => value } / link / ref / anchor / formula
+       / { * tstr => value } / link / ref / anchor / formula / indirect
 
 blob   = { k: "blob", len: uint, sha256: hash, chunks: [ * link ] }
-val    = { k: "val", v: value, ? salt: id }
+val    = { k: "val", v: value, ? salt: salt } / { k: "val", parts: [ + hash ] }
 obj    = { k: "obj", id: id, type: tstr, rev: uint, ? prev: link,
-           by: id, salt: id, p: { * tstr => value },
+           by: id, salt: salt, p: { * tstr => value },
            ? runs: { * tstr => [ * [ uint, id, uint ] ] } }
 map    = { k: "map", e: [ * [ id, link ] ] }
        / { k: "map", c: { * tstr => link } }
@@ -3551,7 +3625,11 @@ principal = { ? key: bytes .size 32, ? name: tstr }
 ```
 
 `change-p` is the `p` of an object of type `ufo.change`; in `revs`, an
-object's identity is written as 32 hexadecimal digits.
+object's identity is written as 32 lowercase hexadecimal digits. In these
+schemas `uint` and `int` are within the integer range of §1.2. A key this
+schema does not list is unrecognized and preserved in `obj`, `commit`,
+`val`, `seal`, `note` and in properties; in `map` and `blob` nodes, whose
+shape must be a function of their contents, it is malformed.
 
 The Chronicle's records (§8.5):
 
@@ -3694,16 +3772,30 @@ vector on its own.
 
 | File | Contents |
 | --- | --- |
-| `vectors/minimal.ufo` | a whole pack of 3451 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
+| `vectors/minimal.ufo` | a whole pack of 3459 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
+| `vectors/history.ufo` | a pack of 35723 bytes holding three commits, built to exercise what the first does not (below) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
+
+`history.ufo` extends the first pack. Its second commit, by a model,
+replaces a word in the text (a `splice` that deletes), replaces a property
+(a `set` with `old`), adds an asset whose blob has one chunk, a clock, and
+forty small objects, so that the object map gains an interior node; one
+node frame and the chunk frame are compressed. A frame of unknown kind
+precedes it and a seal follows it, with its own head. Its third commit, by
+a person, inserts a character at the end of the paragraph span with
+`bias: before`, shortens the clock with a `remap`, drops the asset and
+records a decision. The file ends with a chain of two indexes and four
+heads.
 
 | Group | What is fixed |
 | --- | --- |
-| `values` | the encoding of 18 values: integers at the width boundaries, floats at three widths, map key order, the four tags |
+| `values` | the encoding of 20 values: integers at the width boundaries, floats at three widths and negative zero, map key order, the five tags |
+| `values_malformed` | 10 encodings a reader must reject (**C1**) |
 | `record_hashes` | the hash of a chunk and of a node |
-| `blobs` | blob nodes and hashes for 0 bytes, 3 bytes, 2²⁰ and 2²⁰ + 1 zero bytes, and 1 025 MiB of zero bytes, which needs two levels |
+| `blobs` | blob nodes and hashes for 0 bytes, 3 bytes, 2²⁰ and 2²⁰ + 1 zero bytes, 1 025 MiB of zero bytes (two spans), and 2⁴⁰ + 2²⁰ zero bytes (spans of 1024² chunks, the last a one-chunk blob) |
 | `object_maps` | root hashes of maps with 1, 32, 33 and 9 000 entries: a leaf, the largest leaf, the smallest interior node, and three levels |
 | `minimal_pack` | every record of `minimal.ufo` with its offset and hash; the index; the head; the root hash |
+| `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its span and its runs; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; six anchors carried across the commits, on sequence and continuous axes |
 | `carry_sequence` | 15 cases of §4.3's table, including points, deletion of a whole region, and both values of `bias` |
 | `printer` | two printer operations on an empty module, the module bytes they produce, and the hash of each item with the exact bytes hashed |
 | `instrumentation` | three stored modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
@@ -3713,12 +3805,11 @@ Three values, for a first check without opening the files:
 | | |
 | --- | --- |
 | Hash of the chunk `abc` | `1e18834c426d00e57788444cb3ccd62c771b420c095bb0c4e040a8c122c4570d` |
-| Root hash of `minimal.ufo` | `71c1f9490e6d842e308d0e6afd957bcbb1f4877a93928232625c51e10feb79f0` |
-| SHA-256 of the file `minimal.ufo` | `33d731e67c6f28b3319167a8bf4b910a6d57fae2e8980837a6dc911ae2f192ca` |
+| Root hash of `minimal.ufo` | `690728ddb7ecace04db7549572909e8c70911fb2eedd0d66794e786baae7a3f2` |
+| Root hash of `history.ufo` | `319a3a3c160c0ff775e491d053acffb51d7469bcdc941b0f4cfa5b7333f43308` |
 
 How far these have been checked: the WebAssembly vectors were validated and
 run in one engine (Node.js) and behave as stated. The other vectors have
 been produced by one script and have not yet been reproduced by any
 independent implementation, so an error shared by this text and that
 script would not have been caught.
-
