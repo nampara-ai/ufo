@@ -442,8 +442,11 @@ empty by a removal remains. `old` is what was there, and is omitted when
 nothing was; `val` and `ins` are omitted when nothing is put.
 
 **Sequences and elements.** A property created by `splice` is a *sequence
-property*. Its value is a text, a byte string or a list, and its items —
-Unicode scalar values, bytes or list items — are its **elements**. Every
+property*. Its value is a text, a byte string, a list or a count, and its
+items — Unicode scalar values, bytes, list items, or for a count the
+units counted — are its **elements**. A *count* is a non-negative integer:
+a sequence whose elements have identities and no content of their own. It
+is how time is edited (§4.5). Every
 element has a permanent **identity**: the change that inserted it, and a
 number, counted from zero across everything that change inserts, in
 operation order. An element's identity never changes and is never reused.
@@ -467,8 +470,9 @@ A `splice` names elements by identity. `after` is the identity
 start of the sequence; it may be a removed element, and it is omitted when
 nothing is inserted. `del` is a list of runs
 naming elements to remove, each of which MUST not already be removed; `old`
-is their content in sequence order. `ins` is a text, a byte string or a
-list, matching the property; its items become new elements directly after
+is their content in sequence order. `ins` is a text, a byte string, a
+list or a count, matching the property; for a count, `old` and `ins` are
+the numbers of elements removed and inserted; its items become new elements directly after
 `after`. `forget` is a list of runs naming removed elements whose tombstones
 are to be discarded (§1.10); it is refused if any of them is not removed,
 or is named by an anchor in the current revision of any object in the
@@ -1037,7 +1041,7 @@ object declares its own, in `axes` (Appendix A), which is how a described
 space of any dimension — a scene, a map, a volume of measurements — becomes
 addressable.
 
-Time on a continuous axis is an integer count of **flicks**: units of
+Time is an integer count of **flicks**: units of
 1/705 600 000 of a second. Every common frame rate and audio sample rate
 divides one second into a whole number of flicks, so time arithmetic is exact
 and identical on every host. Lengths on spatial axes are floats.
@@ -1087,12 +1091,15 @@ region is clipped to the axis's present extent.
   unchanged in a copy whose history is withheld (§13.3).
 - **[A3]** Two readers resolving the same anchor against the same revision
   MUST obtain the same result.
-- **[A4] Content that moves is anchored where it lives.** A frame carries
-  an anchor through a uniform shift or scale of an axis, and through
-  nothing else. An arrangement along a continuous axis is therefore changed
-  by rearranging children — the clocks of a timeline, the nodes of a scene
-  — never by rewriting positions inside one object, and an asset's own axes
-  never change. A reader that anchors a place for a person anchors it in
+- **[A4] Content that moves is anchored where it lives.** A scale carries
+  an anchor through a uniform shift or scaling of an axis, and through
+  nothing else. Time that is edited is therefore a sequence, whose anchors
+  name elements and survive a cut as anchors in a text survive a deletion
+  (§4.5). Space has no such order: moving one thing in a scene shifts
+  nothing else, so there is nothing for a splice to express. An
+  arrangement in space is changed by moving children — the nodes of a
+  scene — never by rewriting positions inside one object, and an asset's
+  own axes never change. A reader that anchors a place for a person anchors it in
   the innermost object whose own axis covers it: the caption's clock, the
   footage's own time, the node. That anchor follows its content wherever
   the content is moved. A region on the axis of a container names that
@@ -1117,7 +1124,8 @@ The **digest** is the SHA-256 of these bytes, in order:
    whole object it is the object's properties. For a region it is a map
    from each axis the region names to that axis's part:
    - on a sequence axis, a list of two items: the covered items, as a text,
-     a byte string or a list; and a map, from property name to a map from
+     a byte string or a list, or for a count the runs of `seq` that the
+     region covers, each cut to the region and none of them removed; and a map, from property name to a map from
      key to value, of every other entry of the object's map-valued
      properties whose value holds an anchor to this object with a region on
      that axis sharing at least one element with the covered ones — for a
@@ -1187,6 +1195,38 @@ A clock is in one of three modes:
 The time at the top of a presentation is the **root clock**, supplied by the
 reader. The reader MAY drive it from real time, from a scrub position, from a
 recorded log, or picture by picture for export.
+
+**Timelines.** A clock MAY hold `t` as a sequence property whose value is
+a count (§1.7): its elements are flicks. The clock is then a **timeline**.
+Its `t` axis is a sequence axis, its length is the count, and `end` is
+`start` plus that length divided by `rate`. Time on a timeline is edited
+as text is. Adding time is a `splice` that inserts flicks; a cut from the
+middle is a `splice` that removes them; and every anchor to a region of
+`t` names elements, so it stays on the moment it named, moves earlier when
+time before it is cut, and detaches when its own moment is cut (**A1**).
+An element's identity is the change that inserted it and a number, so a
+place in time is, in effect, a stretch of inserted time and an offset into
+it.
+
+What plays is attached to the timeline as spans are attached to a text. A
+timeline's `plays` is a map from a key to `{at, of, offset}`: `at` is an
+anchor to a region of the timeline's own `t`; `of` is a ref to the object
+that plays there; `offset`, zero if absent, is the time in `of` at the
+region's first element. Let that first element be numbered *n₀* by change
+*c*. At an element numbered *n* by the same change, inside the region,
+`of` is present at its own time `offset` + (*n* − *n₀*). At an element of
+any other change it is not present. The time a play shows is thus a
+function of the element's identity, never of its position: when flicks
+are cut from the middle of a play, the numbers on either side of the cut
+no longer run on, and what plays skips exactly what was cut. Time later
+inserted inside a play's region belongs to whatever is placed on it. The
+plays present at one moment are composed in ascending order of key, over
+the clock's children, which are given the position as their time and so
+play through every cut.
+
+- **[T3]** A reader that cuts, trims or extends a timeline for a person
+  does it by `splice` on `t`, and never by rewriting `at` or `offset` of a
+  play it is not otherwise changing.
 
 - **[T1]** No component reads real time. Every component that asks the time
   receives the time of the clock it was placed under.
@@ -1523,7 +1563,7 @@ revised once, with reasons, before anything is frozen.
 | Operations across UFO's own capabilities | 64 | 28 written: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `engine` 6, `text` 3, `present` 2, `blobs` 1. `objects` exposes the projections and actions | seven optional capabilities are unwritten, and count here when they are |
 | Operations of `gpu` | — | 27 sketched (Appendix E) | counted apart: they mirror an outside standard, WebGPU, and are not the format's to keep small |
 | Concepts | 121 | 121 | what a capable newcomer must learn, counted without classification (§6.2): 58 for the core, 63 across the four profiles. The limit is the honest count; a new concept MUST displace one |
-| All defined terms | 172 | 172 | concepts, and the names of parts and statuses. The limit is the honest count; a new term MUST displace one |
+| All defined terms | 174 | 174 | concepts, and the names of parts and statuses. The limit is the honest count; a new term MUST displace one |
 
 ### 6.2 Glossary
 
@@ -1536,12 +1576,12 @@ A word has one meaning throughout the specification.
 
 | Part | Concepts | Parts and statuses | All terms |
 | --- | --- | --- | --- |
-| Core | 58 | 31 | 89 |
+| Core | 58 | 33 | 91 |
 | Presentation | 21 | 11 | 32 |
 | The player | 16 | 2 | 18 |
 | Execution | 12 | 4 | 16 |
 | Travel and trust | 14 | 3 | 17 |
-| **The whole format** | **121** | **51** | **172** |
+| **The whole format** | **121** | **53** | **174** |
 
 The eleven primitives, the four operations, the three kinds of axis and
 the three layouts are counted where they are named: a newcomer learns
@@ -1572,6 +1612,7 @@ different question from the one a newcomer asks.
 | Commit | concept | the record fixing a universe's state and history: parent, object map, change | 1.6 |
 | Compaction | concept | rewriting a pack without what is no longer reachable, every kept hash unchanged | 2.6 |
 | Coordinate space | part | the set of axes an object offers | 4.2 |
+| Count | part | a sequence property whose elements have no content of their own: a non-negative integer | 1.7 |
 | Decision | concept | what a person chose to do about content | 5.4 |
 | Derivation | concept | the record of what an object was made from, how, and by what | 5.3 |
 | Derived | part | having a derivation | 5.3 |
@@ -1607,6 +1648,7 @@ different question from the one a newcomer asks.
 | Pack | concept | the byte format that holds a universe's records: the file | 2 |
 | Person | part | the human using a reader | 0.1 |
 | Pin | concept | an anchor with a digest of what it covered | 4.4 |
+| Play | part | an entry of a timeline that attaches an object to a region of its time | 4.5 |
 | Profile | concept | a versioned set of types, properties and axes, declared as a feature | 5 |
 | Property | part | a named value of an object | 1.5 |
 | Reachable | part | named, directly or through other records, from a commit | 1.3 |
@@ -1623,13 +1665,13 @@ different question from the one a newcomer asks.
 | Root hash | concept | the hash of a commit | 1.6 |
 | Run | part | consecutive elements written as `[change, first, count]` | 1.7 |
 | Scale | concept | on a continuous axis, the mapping from the coordinates anchors are written in to present ones | 4.3 |
-| Sequence property | concept | a property edited by `splice`: a text, a byte string, a list or a track | 1.7 |
+| Sequence property | concept | a property edited by `splice`: a text, a byte string, a list or a count | 1.7 |
 | Signature | part | the fixed bytes that begin a pack | 2.1 |
 | Span | concept | an anchor on a text's elements, with a role and properties | 5.1 |
 | Stale | concept | of a pin: what it covered has changed. Otherwise it is current | 4.4 |
 | State | concept | what a thing holds at one moment: of a universe, its objects at their revisions, fixed by a commit; of a Compute-let, its memory, globals and tables, fixed by a snapshot | 1.6, 12.2 |
+| Timeline | concept | a clock whose time is a sequence of flicks, edited by `splice`, with what plays attached to it as spans are to a text | 4.5 |
 | Tombstone | concept | what a removed element leaves in place, so that what was attached to it can still be placed | 1.7, 1.10 |
-| Track | concept | the value of a clock's `time`: a sequence whose elements are instants, each saying what plays then | 4.5 |
 | Transmutation | concept | described objects that a model made from other objects | 5.3 |
 | Type | part | the name of the kind of an object | 1.5 |
 | Universe | concept | the set of objects reachable from one commit | 1.6 |
@@ -1714,7 +1756,7 @@ op     = { op: "new", obj: id, type: tstr }
            ? forget: [ + [ id, uint, uint ] ] }
        / { op: "drop", obj: id }
 key    = tstr / [ + tstr ]
-sequence = tstr / bstr / [ * value ]
+sequence = tstr / bstr / [ * value ] / uint     ; uint: a count
 principal = { ? key: bytes .size 32, ? name: tstr }
 ```
 
@@ -1832,6 +1874,7 @@ vector on its own.
 | `vectors/minimal.ufx` | a whole pack of 2599 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
 | `vectors/history.ufx` | a pack of 27722 bytes holding three commits, built to exercise what the first does not (below) |
 | `vectors/nested.ufx`, `vectors/linked.ufx` | one universe twice, of 4031 and 2391 bytes: with the records of a second universe that its Portal names, and without them (§1.8). The root hash is the same |
+| `vectors/timeline.ufx` | a pack of 9119 bytes holding three commits of one timeline (§4.5): ten seconds of time with three plays; two seconds cut from the middle; one second inserted |
 | `vectors/module.ufx` | a pack of 3714 bytes holding a described module of two functions (§12.3) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
 
@@ -1861,6 +1904,7 @@ decision. The file ends with a chain of two indexes and four heads.
 | `merge_readiness` | two writers diverging from one text, with insertions at the same place, inside their own earlier insertions and after an element the other removes; the order of elements and the text, identical whichever writer's operations are taken first (§1.10) |
 | `digests` | two pins at the last commit of `history.ufx`, each with its salt, its covered value as bytes, the objects followed and the digest (§4.4): a passage of the text with the span that touches it, and the face object, whose ref to the text is followed |
 | `resolve_continuous` | six regions resolved through a scale: shift, integer rounding of both signs, clipping, detachment, floats |
+| `timeline` | for each commit of `timeline.ufx`: the count, the `seq`, where three anchors and three plays resolve, and at sampled positions the element there and the time of each play present. **Provisional** |
 | `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§8.3) |
 | `printer` | the described module of `module.ufx` — a function with operands folded, a function with a loop, a call, a global and named locals, three exports and a memory — as encoded values, and the 119 bytes the printer makes of it |
 | `instrumentation` | three modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
@@ -1871,7 +1915,7 @@ Three values, for a first check without opening the files:
 | --- | --- |
 | Hash of the chunk `abc` | `1e18834c426d00e57788444cb3ccd62c771b420c095bb0c4e040a8c122c4570d` |
 | Root hash of `minimal.ufx` | `804ec174f46f773d36c1fe7318c999ff21c338b735cb4e5068224725b9cce8bf` |
-| Root hash of `history.ufx` | `d9c0eec863503cdd969209285e1f4db095654bc0f0f46d7bf445566c316727df` |
+| Root hash of `history.ufx` | `821d84843a250c08a1f2b36670e715fd8c1ac1c2f0bcc5ad787277f7b7a76d72` |
 
 How far these have been checked: a second implementation, by the same
 author as the script, opened all five packs, read the expected text from

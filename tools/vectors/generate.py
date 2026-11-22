@@ -344,17 +344,17 @@ pk.index(); pk.head(hK2); len2 = len(pk.b)
 key = ed_keys(SK)[2]; signed = {"commit": hK2, "key": key, "time": 1767229260000, "name": "Test Author"}
 sig = ed_sign(SK, b"ufo-seal-1" + sha(enc(signed)))
 pk.raw(3, enc(dict(signed, signature=sig))); pk.head(hK2); len2s = len(pk.b)
-# commit 3: a person appends "!", inserts and removes "?", trims the clock by setting its frame, drops the asset, accepts commit 2
+# commit 3: a person appends "!", inserts and removes "?", trims the clock by setting its scale, drops the asset, accepts commit 2
 t2 = "Hello, world.!"
 ops = [{"op": "splice", "obj": T, "key": "chars", "after": [C1, 15], "ins": "!"},
        {"op": "splice", "obj": T, "key": "chars", "after": [C3, 0], "ins": "?"},
        {"op": "splice", "obj": T, "key": "chars", "del": [[C3, 1, 1]], "old": "?"},
        {"op": "set", "obj": K, "key": "end", "old": 10 * FL, "val": 8 * FL},
-       {"op": "set", "obj": K, "key": ["frames", "t"], "val": [1, 1, -2 * FL]},
+       {"op": "set", "obj": K, "key": ["scales", "t"], "val": [1, 1, -2 * FL]},
        {"op": "drop", "obj": A}]
 seq3 = seq2 + [[C3, 0, 1], [C3, 1, 1, False]]
 hT3 = revision(pk, T, "ufo.text", 3, C3, 3001, {"chars": t2, "spans": {"p1": SPAN}}, prev=hT2, seq={"chars": seq3})
-hK3o = revision(pk, K, "ufo.clock", 2, C3, 3002, {"start": 0, "end": 8 * FL, "frames": {"t": [1, 1, -2 * FL]}}, prev=hK2o)
+hK3o = revision(pk, K, "ufo.clock", 2, C3, 3002, {"start": 0, "end": 8 * FL, "scales": {"t": [1, 1, -2 * FL]}}, prev=hK2o)
 st = dict(state2); st.update({T: hT3, K: hK3o}); del st[A]
 pub = {"actor": actor, "time": 1767232800000, "origin": {"basis": "witnessed", "by": "person", "who": who},
        "decisions": [{"about": ref(C2), "verdict": "accept", "who": who}]}
@@ -375,7 +375,7 @@ V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file
          "note": "the asset is dropped: absent from this map, present in the previous one"}],
     "identities": {"universe": U.hex(), "text": T.hex(), "face": F.hex(), "asset": A.hex(), "clock": K.hex(),
                    "changes": [C1.hex(), C2.hex(), C3.hex()]},
-    "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end] and frame frames.t",
+    "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end] and scale scales.t",
     "blob": {"hash": hBlob.hex(), "len": len(data), "sha256": sha(data).hex(), "chunks": len(chunks_of(data)),
              "note": "the asset's bytes property is an indirect of kind b to this blob; the same blob is named from the operation that set it, inside the change's work"},
     "seal": {"commit": hK2.hex(), "key": key.hex(), "time": 1767229260000, "name": "Test Author", "signature": sig.hex(),
@@ -422,12 +422,12 @@ cases = [("start", "end"), ([X, 0, 0], [X, 2, 1]), ([X, 2, 1], [X, 3, 0]), ([Y, 
 def bj(b): return b if isinstance(b, str) else [b[0].hex(), b[1], b[2]]
 V["resolve_sequence"] = {"seq": seqj(demo), "cases": [{"from": bj(a), "to": bj(b), "result": resolve(demo, a, b)} for a, b in cases]}
 V["resolve_continuous"] = [
-    {"region": [10, 20], "frame": [1, 1, -5], "extent": [0, 100], "result": [5, 15]},
-    {"region": [10, 21], "frame": [1, 2, 0], "extent": [0, 100], "result": [5, 10], "note": "integers: 21/2 rounds toward negative infinity"},
-    {"region": [-7, 9], "frame": [1, 2, 0], "extent": [-100, 100], "result": [-4, 4], "note": "-7/2 is -4"},
-    {"region": [10, 20], "frame": [3, 1, 0], "extent": [0, 40], "result": [30, 40], "note": "clipped"},
-    {"region": [10, 20], "frame": [1, 1, 50], "extent": [0, 40], "result": "detached"},
-    {"region": [1.5, 2.5], "frame": [3, 2, 1], "extent": [0.0, 10.0], "result": [3.25, 4.75], "note": "floats: x times a, divided by b, plus c"}]
+    {"region": [10, 20], "scale": [1, 1, -5], "extent": [0, 100], "result": [5, 15]},
+    {"region": [10, 21], "scale": [1, 2, 0], "extent": [0, 100], "result": [5, 10], "note": "integers: 21/2 rounds toward negative infinity"},
+    {"region": [-7, 9], "scale": [1, 2, 0], "extent": [-100, 100], "result": [-4, 4], "note": "-7/2 is -4"},
+    {"region": [10, 20], "scale": [3, 1, 0], "extent": [0, 40], "result": [30, 40], "note": "clipped"},
+    {"region": [10, 20], "scale": [1, 1, 50], "extent": [0, 40], "result": "detached"},
+    {"region": [1.5, 2.5], "scale": [3, 2, 1], "extent": [0.0, 10.0], "result": [3.25, 4.75], "note": "floats: x times a, divided by b, plus c"}]
 _b = enc({"n": 1}); _bn = blob_node(len(_b), sha(_b), 0, [(len(_b), rhash(CHUNK, _b))]); _bh = rhash(NODE, _bn); _open = salt(7) + _bh
 V["value_kept_outside"] = {"value": {"map": [["n", 1]]}, "blob_bytes_hex": _b.hex(), "blob_node_hex": _bn.hex(), "blob_hash": _bh.hex(),
     "indirect_hex": enc(Tag(55464, ["v", _bh])).hex(), "veiled": {"salt_hex": salt(7).hex(), "opening_chunk_hex": _open.hex(),
@@ -606,6 +606,83 @@ V["nested"] = {"nested_file": "nested.ufx", "nested_length": len(both.b), "linke
     "linked.ufx": "whole. The same universe, with the same root hash; the commit the anchor names is not in the file, so the other universe is linked. The Portal's target is unavailable and the reader shows its label (O4). Nothing is malformed.",
     "plain_text_face_of_nested.ufx": "A note from another universe:\n> Nested.",
     "plain_text_face_of_linked.ufx": "A note from another universe (ufo:" + nested.hex() + ")"}
+
+# ---- 10. a timeline: time edited as a sequence (section 4.5) ----
+def timeline_pack():
+    pk = Pack(); TU, TK, R1, R2, CAP, NOTE = bytes(16), bytes([0xe1]) * 16, bytes([0xe2]) * 16, bytes([0xe3]) * 16, bytes([0xe4]) * 16, bytes([0xe5]) * 16
+    D1, D2, D3 = (bytes([c]) * 16 for c in (0xd4, 0xd5, 0xd6)); lin = bytes([0x44]) * 16; S = FL
+    def reg(a, b): return anchor({"o": TK, "a": {"t": ["s", a, b]}})
+    plays = {"a": {"at": reg([D1, 0, 0], [D1, 6 * S - 1, 1]), "of": ref(R1)},
+             "b": {"at": reg([D1, 6 * S, 0], "end"), "of": ref(R2), "offset": 2 * S},
+             "c": {"at": reg([D1, 7 * S, 0], [D1, 8 * S - 1, 1]), "of": ref(CAP)}}
+    marks = {"m1": reg([D1, 4 * S, 0], [D1, 5 * S - 1, 1]), "m2": reg([D1, 8 * S, 0], [D1, 9 * S - 1, 1]), "m3": reg([D1, 1 * S, 0], [D1, 6 * S - 1, 1])}
+    cap = "A caption."; roots = {"primary": ref(TK)}
+    pub = lambda t: {"actor": actor, "time": t, "origin": {"basis": "witnessed", "by": "person", "who": who}}
+    st = {}; out = []
+    def clock(rev, by, sl, count, seq, prev=None):
+        return revision(pk, TK, "ufo.clock", rev, by, sl, {"start": 0, "rate": [1, 1], "t": count, "plays": plays}, prev=prev, seq={"t": seq})
+    # commit 1: ten seconds of time, two plays end to end, a caption, three anchors held by a note object
+    seq1 = [[D1, 0, 10 * S]]
+    st[TU] = revision(pk, TU, "ufo.universe", 1, D1, 5001, {"lineage": lin, "roots": roots})
+    st[TK] = clock(1, D1, 5002, 10 * S, seq1)
+    st[R1] = revision(pk, R1, "ufo.raster", 1, D1, 5003, {"label": "first take"})
+    st[R2] = revision(pk, R2, "ufo.raster", 1, D1, 5004, {"label": "second take"})
+    st[CAP] = revision(pk, CAP, "ufo.text", 1, D1, 5005, {"chars": cap}, seq={"chars": [[D1, 10 * S, len(cap)]]})
+    st[NOTE] = revision(pk, NOTE, "org.example.marks", 1, D1, 5006, {"marks": marks})
+    ops = [{"op": "new", "obj": TU, "type": "ufo.universe"}, {"op": "set", "obj": TU, "key": "lineage", "val": lin},
+           {"op": "new", "obj": TK, "type": "ufo.clock"}, {"op": "set", "obj": TK, "key": "start", "val": 0}, {"op": "set", "obj": TK, "key": "rate", "val": [1, 1]},
+           {"op": "splice", "obj": TK, "key": "t", "after": None, "ins": 10 * S},
+           {"op": "new", "obj": R1, "type": "ufo.raster"}, {"op": "set", "obj": R1, "key": "label", "val": "first take"},
+           {"op": "new", "obj": R2, "type": "ufo.raster"}, {"op": "set", "obj": R2, "key": "label", "val": "second take"},
+           {"op": "new", "obj": CAP, "type": "ufo.text"}, {"op": "splice", "obj": CAP, "key": "chars", "after": None, "ins": cap},
+           {"op": "set", "obj": TK, "key": "plays", "val": plays},
+           {"op": "new", "obj": NOTE, "type": "org.example.marks"}, {"op": "set", "obj": NOTE, "key": "marks", "val": marks},
+           {"op": "set", "obj": TU, "key": "roots", "val": roots}]
+    st, _, _, k1 = commit(pk, st, D1, ops, "Ten seconds.", pub(1767225600000), None, 0, 5007); pk.index(); pk.head(k1)
+    # commit 2: seconds 3 and 4 are cut from the middle
+    seq2 = [[D1, 0, 3 * S], [D1, 3 * S, 2 * S, False], [D1, 5 * S, 5 * S]]
+    h1 = st[TK]; st = dict(st); st[TK] = clock(2, D2, 5011, 8 * S, seq2, prev=h1)
+    ops = [{"op": "splice", "obj": TK, "key": "t", "del": [[D1, 3 * S, 2 * S]], "old": 2 * S}]
+    st, _, _, k2 = commit(pk, st, D2, ops, "Cut two seconds from the middle.", pub(1767229200000), k1, 1, 5012); pk.index(); pk.head(k2)
+    # commit 3: one second of new time is inserted inside the second play
+    seq3 = [[D1, 0, 3 * S], [D1, 3 * S, 2 * S, False], [D1, 5 * S, 2 * S], [D3, 0, 1 * S], [D1, 7 * S, 3 * S]]
+    h2 = st[TK]; st = dict(st); st[TK] = clock(3, D3, 5021, 9 * S, seq3, prev=h2)
+    ops = [{"op": "splice", "obj": TK, "key": "t", "after": [D1, 7 * S - 1], "ins": 1 * S}]
+    st, _, _, k3 = commit(pk, st, D3, ops, "One second inserted.", pub(1767232800000), k2, 2, 5013); pk.index(); pk.head(k3)
+    def element_at(seq, p):
+        for r in seq:
+            if len(r) == 3:
+                if p < r[2]: return r[0], r[1] + p
+                p -= r[2]
+        return None
+    def inside(seq, at, p):
+        r = resolve(seq, at[1], at[2]); return r != "detached" and r[0] <= p < r[1]
+    def first(seq, b):       # the first element a region covers, from its start boundary
+        return (b[0], b[1] + b[2])
+    def playing(seq, p):
+        e = element_at(seq, p); res = {}
+        if e is None: return res
+        for k, pl in sorted(plays.items()):
+            at = pl["at"].v["a"]["t"]
+            if not inside(seq, at, p): continue
+            c0, n0 = first(seq, at[1])
+            if e[0] == c0: res[k] = pl.get("offset", 0) + (e[1] - n0)
+        return res
+    commits = []
+    for name, k, seq, count, samples in (("1", k1, seq1, 10 * S, [2 * S, 7 * S + S // 2]), ("2", k2, seq2, 8 * S, [2 * S, 3 * S, 4 * S, 5 * S + S // 2]),
+                                         ("3", k3, seq3, 9 * S, [5 * S + S // 2, 6 * S + S // 2])):
+        commits.append({"commit": k.hex(), "t": count, "seq": seqj(seq),
+            "anchors": {m: resolve(seq, a.v["a"]["t"][1], a.v["a"]["t"][2]) for m, a in sorted(marks.items())},
+            "plays_resolve_to": {m: resolve(seq, pl["at"].v["a"]["t"][1], pl["at"].v["a"]["t"][2]) for m, pl in sorted(plays.items())},
+            "playing_at": [{"position": p, "element": [element_at(seq, p)[0].hex(), element_at(seq, p)[1]], "plays": playing(seq, p)} for p in samples]})
+    return pk, {"file": "timeline.ufx", "length": len(pk.b), "flicks_per_second": S, "clock": TK.hex(),
+        "what": "a clock whose t is a count: ten seconds inserted by one change; then two seconds cut from the middle; then one second inserted by another change. Positions and times are in flicks",
+        "plays": {"a": "seconds 0 to 6 as first inserted, playing the first take from its time 0", "b": "from second 6 to the end, playing the second take from its time 2 s", "c": "second 7, a caption"},
+        "anchors": {"m1": "second 4: cut in commit 2, so detached from then on", "m2": "second 8: moves two seconds earlier after the cut, and one later after the insertion", "m3": "seconds 1 to 5: shortened by the cut"},
+        "rule": "at an element numbered n by change c inside a play's region whose first element is numbered n0 by the same change, the play's object is at time offset + (n - n0); at an element of another change it is not present",
+        "commits": commits}
+tpk, tv = timeline_pack()
+open(os.path.join(OUT, "timeline.ufx"), "wb").write(tpk.b); V["timeline"] = tv
 json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)
 print("minimal.ufx", V["minimal_pack"]["length"], V["minimal_pack"]["root_hash"][:16],
       "| history.ufx", V["history_pack"]["length"], hK3.hex()[:16], "| objects at commit 2:", len(state2))

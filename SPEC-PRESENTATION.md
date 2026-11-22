@@ -179,7 +179,7 @@ The test applied to this draft:
 | Slide | deleted | a pane under a clock |
 | Chart | deleted | data, formulas and paths under `each` |
 | Table view | deleted | a `grid` group under `each` over a data object |
-| Timeline, canvas | deleted | clocks holding children; a pane with `absolute` children |
+| Timeline, canvas | deleted | a clock whose `t` is a sequence, with `plays` (§4.5); a pane with `absolute` children |
 | Scene graph, camera, mesh, material | deleted from the format | data that a surface's Compute-let reads and draws (§7.5) |
 | Edge | deleted | a property holding a ref (§1.5) |
 | Playback settings on a Portal | deleted | looping is a clock's `repeat`; muting is a samples' `gain`; whether time runs unprompted is the clock's mode; controls are the tools' interface (§9.6) |
@@ -354,7 +354,7 @@ page, which block it belongs to, and which line of how many it is.
 | a path, raster or samples; a surface | one row, of its `h`, holding its item |
 | a Portal that states `h` | one row of that height: the target composed at the Portal's width, its rows stacked, then fitted into the Portal's rectangle by `fit` and clipped (**O2**) |
 | a Portal that states no `h` | the rows of its target, composed in the target's universe (§1.8) at the Portal's width: it takes the height they need, as a text does. Where **O4** or **O7** says so, one row showing its label |
-| a clock | one row, as tall as its tallest child: the children present at the time of composition, each composed at the time the clock gives it (§4.5), one over another in list order |
+| a clock | one row, as tall as its tallest child: the children present at the time of composition, each composed at the time the clock gives it (§4.5), one over another in list order; then, for a timeline, the plays present, in ascending order of key |
 
 **A grid's tracks.** `cols` and `rows` are lists of track sizes: a length,
 a fraction `[n, "fr"]`, or `"fit"`. A fixed column has its length. A `fit`
@@ -749,7 +749,7 @@ surface), `x`, `y`, `w`, `h`, `row`, `col`, `span`, `align`, `grow`,
 | Samples | *`source`*: ref to an asset or surface; `gain`; `pan`; `time` |
 | Pane | *`children`*; `w`, `h`; `transform`: six floats; `clip`: a path or boolean; `background`; `scroll` |
 | Group | *`children`*; `layout`: `flow`, `grid` or `absolute`; `direction`; `gap`; `rows`, `cols` (for `grid`); `each`, `as` |
-| Clock | *`children`*; `start`, `end`, `rate`, `offset`, `repeat`, `mode`; `drive` (formula, for `held`) |
+| Clock | *`children`*; `start`, `end`, `rate`, `offset`, `repeat`, `mode`; `drive` (formula, for `held`); for a timeline, `t` (a count, edited by `splice`) and `plays` (map of `{at, of, offset}`) |
 | Portal | §7.8 |
 | Surface | *`computelet`*: ref; *`of`*: ref to the object it presents, if it presents one; `w`, `h`; *`ports`*: map from port name to the surface it connects to; *`children`* |
 | Data | *`cols`*: map from column key to `{label, type, order}`; *`rows`*: map from row key to map from column key to value, each row out of line when large; a cell may hold a formula; `sort`: list of row keys giving the default order; *`axes`*: map from axis name to `{kind, low, high, unit}` for continuous axes the object offers beyond its keyed ones, and *`tables`*: for an object holding several tables, map from table name to `{cols, rows}` |
@@ -783,7 +783,7 @@ to. The continuous axes and their extents are:
 
 | Type | Axis | Extent |
 | --- | --- | --- |
-| Clock | `t` | `start` to `end`, in flicks |
+| Clock | `t` | `start` to `end`, in flicks; for a timeline, a sequence axis over its elements |
 | Pane, group, surface, raster, path, Portal | `x`, `y` | 0 to `w`, 0 to `h` |
 | Raster or samples from a timed source | `t` | 0 to the source's duration, in flicks |
 | Data | those it declares in `axes` | as declared |

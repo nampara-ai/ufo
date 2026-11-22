@@ -556,7 +556,7 @@
  "history_pack": {
   "file": "history.ufx",
   "length": 27722,
-  "sha256_of_file": "5c851d2cc7e1c9c4ab9bebb2b624bf7d24e81473bdac7b641814c0b7f328ab6e",
+  "sha256_of_file": "18b6fddbba483cee9b33476706677ee61516a75e98b51787b0b108a9495379fe",
   "commits": [
    {
     "height": 0,
@@ -617,8 +617,8 @@
    },
    {
     "height": 2,
-    "root_hash": "d9c0eec863503cdd969209285e1f4db095654bc0f0f46d7bf445566c316727df",
-    "object_map_root": "430f508dce014bc82d3bf71f16c79ed5301f55758535f88f1c3c37471a8d40a8",
+    "root_hash": "821d84843a250c08a1f2b36670e715fd8c1ac1c2f0bcc5ad787277f7b7a76d72",
+    "object_map_root": "7e145cefafdd8a54097e33304aa811bea2bac5f9fb20c55f4fabfe8b1d31295b",
     "objects": 47,
     "pack_length_at_first_head": 27722,
     "text": "Hello, world.!",
@@ -661,7 +661,7 @@
      ]
     ],
     "text_revision": "02b143b2518280592db89b7e60982af677203013eb7564a826bf698c36b7023f",
-    "change_revision": "e87ed0f17898097069f72b8060938571a1af15b00a24a97b70cb2b30549d45fb",
+    "change_revision": "14fa2c3d0cc7de952e038d6d95f175c1a1d91698a8c40370a8e0dedfbd083cca",
     "note": "the asset is dropped: absent from this map, present in the previous one"
    }
   ],
@@ -677,7 +677,7 @@
     "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
    ]
   },
-  "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end] and frame frames.t",
+  "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end] and scale scales.t",
   "blob": {
    "hash": "1257b88ef3b53d2a8db011d6a31771895ca9cbd3ae5e58e777c3a0d96b53d784",
    "len": 5000,
@@ -1064,7 +1064,7 @@
     10,
     20
    ],
-   "frame": [
+   "scale": [
     1,
     1,
     -5
@@ -1083,7 +1083,7 @@
     10,
     21
    ],
-   "frame": [
+   "scale": [
     1,
     2,
     0
@@ -1103,7 +1103,7 @@
     -7,
     9
    ],
-   "frame": [
+   "scale": [
     1,
     2,
     0
@@ -1123,7 +1123,7 @@
     10,
     20
    ],
-   "frame": [
+   "scale": [
     3,
     1,
     0
@@ -1143,7 +1143,7 @@
     10,
     20
    ],
-   "frame": [
+   "scale": [
     1,
     1,
     50
@@ -1159,7 +1159,7 @@
     1.5,
     2.5
    ],
-   "frame": [
+   "scale": [
     3,
     2,
     1
@@ -1416,5 +1416,255 @@
   "linked.ufx": "whole. The same universe, with the same root hash; the commit the anchor names is not in the file, so the other universe is linked. The Portal's target is unavailable and the reader shows its label (O4). Nothing is malformed.",
   "plain_text_face_of_nested.ufx": "A note from another universe:\n> Nested.",
   "plain_text_face_of_linked.ufx": "A note from another universe (ufo:1543719d1c533f5e2aa1814296e851987957542f9c390584813bf4d4be4bc79c)"
+ },
+ "timeline": {
+  "file": "timeline.ufx",
+  "length": 9119,
+  "flicks_per_second": 705600000,
+  "clock": "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
+  "what": "a clock whose t is a count: ten seconds inserted by one change; then two seconds cut from the middle; then one second inserted by another change. Positions and times are in flicks",
+  "plays": {
+   "a": "seconds 0 to 6 as first inserted, playing the first take from its time 0",
+   "b": "from second 6 to the end, playing the second take from its time 2 s",
+   "c": "second 7, a caption"
+  },
+  "anchors": {
+   "m1": "second 4: cut in commit 2, so detached from then on",
+   "m2": "second 8: moves two seconds earlier after the cut, and one later after the insertion",
+   "m3": "seconds 1 to 5: shortened by the cut"
+  },
+  "rule": "at an element numbered n by change c inside a play's region whose first element is numbered n0 by the same change, the play's object is at time offset + (n - n0); at an element of another change it is not present",
+  "commits": [
+   {
+    "commit": "42a101a235cf2dac723d1d3a6049f124c1847c81f1300ecb62c13e2b79e63855",
+    "t": 7056000000,
+    "seq": [
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      0,
+      7056000000
+     ]
+    ],
+    "anchors": {
+     "m1": [
+      2822400000,
+      3528000000
+     ],
+     "m2": [
+      5644800000,
+      6350400000
+     ],
+     "m3": [
+      705600000,
+      4233600000
+     ]
+    },
+    "plays_resolve_to": {
+     "a": [
+      0,
+      4233600000
+     ],
+     "b": [
+      4233600000,
+      7056000000
+     ],
+     "c": [
+      4939200000,
+      5644800000
+     ]
+    },
+    "playing_at": [
+     {
+      "position": 1411200000,
+      "element": [
+       "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+       1411200000
+      ],
+      "plays": {
+       "a": 1411200000
+      }
+     },
+     {
+      "position": 5292000000,
+      "element": [
+       "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+       5292000000
+      ],
+      "plays": {
+       "b": 2469600000,
+       "c": 352800000
+      }
+     }
+    ]
+   },
+   {
+    "commit": "65a822e4a78070624105ae84af9ef8af74936461841508d80ea05b95bf0f14b9",
+    "t": 5644800000,
+    "seq": [
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      0,
+      2116800000
+     ],
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      2116800000,
+      1411200000,
+      false
+     ],
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      3528000000,
+      3528000000
+     ]
+    ],
+    "anchors": {
+     "m1": "detached",
+     "m2": [
+      4233600000,
+      4939200000
+     ],
+     "m3": [
+      705600000,
+      2822400000
+     ]
+    },
+    "plays_resolve_to": {
+     "a": [
+      0,
+      2822400000
+     ],
+     "b": [
+      2822400000,
+      5644800000
+     ],
+     "c": [
+      3528000000,
+      4233600000
+     ]
+    },
+    "playing_at": [
+     {
+      "position": 1411200000,
+      "element": [
+       "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+       1411200000
+      ],
+      "plays": {
+       "a": 1411200000
+      }
+     },
+     {
+      "position": 2116800000,
+      "element": [
+       "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+       3528000000
+      ],
+      "plays": {
+       "a": 3528000000
+      }
+     },
+     {
+      "position": 2822400000,
+      "element": [
+       "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+       4233600000
+      ],
+      "plays": {
+       "b": 1411200000
+      }
+     },
+     {
+      "position": 3880800000,
+      "element": [
+       "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+       5292000000
+      ],
+      "plays": {
+       "b": 2469600000,
+       "c": 352800000
+      }
+     }
+    ]
+   },
+   {
+    "commit": "6e17e33622b38441f0276abeadf07a809be6f92b75cb45500c14f03ebed05cc0",
+    "t": 6350400000,
+    "seq": [
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      0,
+      2116800000
+     ],
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      2116800000,
+      1411200000,
+      false
+     ],
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      3528000000,
+      1411200000
+     ],
+     [
+      "d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6",
+      0,
+      705600000
+     ],
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      4939200000,
+      2116800000
+     ]
+    ],
+    "anchors": {
+     "m1": "detached",
+     "m2": [
+      4939200000,
+      5644800000
+     ],
+     "m3": [
+      705600000,
+      2822400000
+     ]
+    },
+    "plays_resolve_to": {
+     "a": [
+      0,
+      2822400000
+     ],
+     "b": [
+      2822400000,
+      6350400000
+     ],
+     "c": [
+      4233600000,
+      4939200000
+     ]
+    },
+    "playing_at": [
+     {
+      "position": 3880800000,
+      "element": [
+       "d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6",
+       352800000
+      ],
+      "plays": {}
+     },
+     {
+      "position": 4586400000,
+      "element": [
+       "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+       5292000000
+      ],
+      "plays": {
+       "b": 2469600000,
+       "c": 352800000
+      }
+     }
+    ]
+   }
+  ]
  }
 }
