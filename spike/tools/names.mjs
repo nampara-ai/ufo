@@ -16,17 +16,23 @@ while (p < b.length) {
     if (id === 11) { for (let c = leb(); c > 0; c--) { const k = leb(); if (k === 0) { while (b[p++] !== 0x0b); } else if (k === 2) { leb(); while (b[p++] !== 0x0b); } const n2 = leb(); segs.push(n2); dataBytes += n2; p += n2; } } }
   p = end;
 }
+// Names are in rustc's v0 mangling: a path is spelled as its segments, each with its length before it.
+// A function is put with the first of these that its name mentions, so an instance of a library
+// generic for one of the kernel's types goes to the library. Functions inlined into another are
+// counted with it: this is good for the allocator, the inflater and what is left of formatting, not for the kernel's own parts.
 const part = n => {
-  const own = /ufo_spike_kernel::(\w+)/.exec(n);
-  if (/^(<?dlmalloc|.*dlmalloc::)/.test(n) || /__rust_(alloc|dealloc|realloc|alloc_zeroed)|__rdl_|__rg_/.test(n)) return 'dlmalloc';
-  if (/miniz_oxide|adler/.test(n)) return 'miniz_oxide';
-  if (/core::fmt|core..fmt|fmt::/.test(n)) return 'core::fmt';
-  if (/panic|core::option::(unwrap|expect)_failed|core::result::unwrap_failed|slice_index|_fail\b|str::slice_error/.test(n)) return 'panic paths';
-  if (own && !/^<?(alloc|core)::/.test(n)) return own[1] + '.rs';
-  if (own) return 'alloc/core generics naming ' + own[1] + '.rs';
-  if (/^<?(alloc|core)::|^<(alloc|core)|alloc::|core::/.test(n)) return 'alloc/core, other';
-  if (/^(mem(cpy|set|move|cmp)|compiler_builtins|__\w+di\d|__mul|__udiv|__umod)/.test(n) || /compiler_builtins/.test(n)) return 'compiler_builtins (memcpy and the like)';
-  return 'exports and other: ' + n;
+  if (/8dlmalloc|__rust_(alloc|dealloc|realloc)|__rdl_|__rg_/.test(n)) return 'dlmalloc';
+  if (/11miniz_oxide|6adler2/.test(n)) return 'miniz_oxide';
+  if (/4core3fmt|5alloc3fmt/.test(n)) return 'core::fmt';
+  if (/4core9panicking|4core6option13(unwrap|expect)_failed|4core6result13unwrap_failed|4core5slice5index|4core3str16slice_error_fail|5alloc7raw_vec12handle_error|5alloc5alloc18handle_alloc_error|rust_begin_unwind|__rust_alloc_error_handler|capacity_overflow|8panicking/.test(n)) return 'panic paths';
+  if (/5alloc11collections5btree/.test(n)) return 'alloc: BTreeMap, BTreeSet';
+  if (/4core5slice4sort/.test(n)) return 'core: sorting';
+  if (/17compiler_builtins|^mem(cpy|set|move|cmp)$/.test(n)) return 'compiler_builtins (memcpy and the like)';
+  const own = /16ufo_spike_kernel\d+([a-z_]+?)(?=\d|[A-Z]|$)/.exec(n);
+  if (/^_R[^C]*Cs\w+_(4core|5alloc)/.test(n) || /^_RI?NvM?s?\w*Nt\w*Cs\w+_(4core|5alloc)/.test(n)) return 'alloc/core, other generics';
+  if (own) return own[1] + '.rs';
+  if (/4core|5alloc/.test(n)) return 'alloc/core, other generics';
+  return 'export: ' + n;
 };
 const by = {}, list = []; let code = 0;
 bodies.forEach((n, i) => { const name = names.get(i + imports) || '(unnamed ' + i + ')'; const k = part(name); by[k] = (by[k] || 0) + n; code += n; list.push([n, k, name]); });

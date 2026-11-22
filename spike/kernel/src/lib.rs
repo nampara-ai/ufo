@@ -60,6 +60,33 @@ mod cut_alloc {
     #[global_allocator]
     static ALLOCATOR: Bump = Bump;
 }
+#[cfg(all(feature = "keep", not(feature = "cut-pack")))]
+#[no_mangle]
+pub unsafe extern "C" fn keep(p: *mut u8, n: usize) -> *const u8 {
+    let q = decode(&Vec::from_raw_parts(p, n, n.max(1))).unwrap_or(V::Null);
+    OUT = encode(&keep_pack(&q).unwrap_or(V::Null));
+    OUT.as_ptr()
+}
+#[cfg(all(feature = "keep", not(feature = "cut-pack")))]
+unsafe fn keep_pack(q: &V) -> Option<V> {
+    let pk = PACK.as_ref()?;
+    let (h, id) = (q.get("h")?.hash()?, q.get("o")?.id()?);
+    Some(match q.get("k")?.i()? {
+        0 => pk.node(&h)?,
+        1 => V::B(pk.blob(&h)?),
+        2 => V::B(pk.record(1, &h)?),
+        3 => pk.resolve(q, 0)?,
+        4 => {
+            let o = pk.object(&h, &id)?;
+            V::L(vec![o.p, o.seq?, V::B(o.rev.to_vec()), V::B(o.by.to_vec()), V::T(o.ty)])
+        }
+        5 => V::Int(boundary(&elements(q)?, q)? as i64),
+        _ => {
+            let (a, b) = pk.frames();
+            V::Int((a.len() + b.len() + pk.unread_tail) as i64)
+        }
+    })
+}
 #[cfg(feature = "cut-values")]
 fn decode(_: &[u8]) -> Option<V> {
     None
