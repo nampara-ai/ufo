@@ -2133,5 +2133,63 @@
     "digest": "33f32cc9e34911c8fa984618d9ab2928160a9f9488206022bb9844b24de4ecc5"
    }
   ]
+ },
+ "published_timeline": {
+  "made_from": "timeline.ufx",
+  "file": "published-timeline.ufx",
+  "length": 3778,
+  "root_hash": "43649a094b329c0f8d7c29c4ee36109378ab444ff070ce6c22e50509c88fbaa4",
+  "content": [
+   "04691c662e578f872ad165a3b85fa09defeb7d8fa14fd719bf0090eb4c5ec75d",
+   "29240c6b113044c0fbe6bd73e1b8253e55c55b3fd7b589a3cfe9b2f7b6621235",
+   "42369cca999a4416092e1865e39684573de4352c0d65a59d2a2baf15f8f6eaf4",
+   "6179453f2d667062ef420f25bd4be314eba4ab7db9f440ba2085ffe9b93d4635",
+   "c8c0057d2a2748c4f96d275aeb8eafbf249ce3ad40669b7988bbe91c75d37cb3",
+   "cd0f4955e7f2cfe2ec23c21feffed7273029c9118ebe740ee0643d34ad9779ed"
+  ],
+  "attribution": [
+   "032be0a5c110db1d6e3f87564c8c084f9a6dfcfaa7c52430728fc6fde88fa2b1",
+   "42a101a235cf2dac723d1d3a6049f124c1847c81f1300ecb62c13e2b79e63855",
+   "43649a094b329c0f8d7c29c4ee36109378ab444ff070ce6c22e50509c88fbaa4",
+   "65a822e4a78070624105ae84af9ef8af74936461841508d80ea05b95bf0f14b9",
+   "6e17e33622b38441f0276abeadf07a809be6f92b75cb45500c14f03ebed05cc0",
+   "8461548d0e901d2b63f12ca31f4f25a5ff11d42daa2caaec630cf3de6097794f",
+   "9f0486e7a87cf210e0bfbfe0978b0cb7ad65559832389813a857cbb9f0e339b4"
+  ],
+  "working_history_records": 20,
+  "content_is": "the current object map; the universe object, the clock, the two takes and the caption. The object holding the marks is not reachable from the universe object and is not live",
+  "attribution_is": "the four commits; the changes d4, d6 and d7, which the clock's current revision names in `by` or in a run of `seq`. The change d5 only removed elements, so nothing present names it: it is working history, and its revision is withheld although its commit names it",
+  "a_reader_of_the_published_copy": {
+   "can": "resolve every play and say what plays at every position, exactly as from the whole pack",
+   "reports": "the revision of change d5 as withheld, not as damage: a commit's change may be absent where the change is not attributing (section 2.5)"
+  }
+ },
+ "published_nested": {
+  "made_from": "nested.ufx",
+  "file": "published-nested.ufx",
+  "length": 2557,
+  "root_hash": "df0fcb0f4aa09c1e539c8041bb51c8e7c47f6457b226f425915da56de1e84cb0",
+  "content": [
+   "16e7240ef93c53f0065e76970115a8082a54246b2b3627a722ed1e7b1851aeaa",
+   "42b36c813e095dda882c4618cbe72ea85abc25265a11bc51113f5b24634574a3",
+   "445f1ac42ed05ba6f87030f4afbb81ce80562482cdd0f7f58dafa3d997f90336",
+   "5b0c239718c6d6da993ea5edac63d6772cc6e46b8f074cded0a574df2bb977f7",
+   "5e7c5879b36809595b3323e9f06fe09963f104be61431c904fb780b277194860",
+   "a2900373977a4fc4c56dfc5bc454073cf4737cddd4b8627d78c211769b2dfabc",
+   "ef125de2b27a7afa1f08b1bd0867705859953279018b3219c36d79bdd360bc85"
+  ],
+  "attribution": [
+   "1543719d1c533f5e2aa1814296e851987957542f9c390584813bf4d4be4bc79c",
+   "2ec91cdbb16d71d317b291c51c4939285a375af271fcaa87819f4917f0d27716",
+   "553e0be1f0c3b185104977f1e33ffe074cb7354643ef673c2643d7e857ef097b",
+   "df0fcb0f4aa09c1e539c8041bb51c8e7c47f6457b226f425915da56de1e84cb0"
+  ],
+  "working_history_records": 6,
+  "content_is": "the outer universe's object map and its three live objects; and, because a live Portal's anchor names a commit that is present, the nested universe's object map, its universe object and its text",
+  "attribution_is": "both commits and both changes: the outer one, and the nested universe's own, so that who wrote the nested text can be said",
+  "a_reader_of_the_published_copy": {
+   "can": "say who wrote 'Nested.': the change d1 of the nested universe, witnessed, by a person, Test Author",
+   "plain_text_of_the_nested_text": "Nested."
+  }
  }
 }

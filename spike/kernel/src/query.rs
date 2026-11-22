@@ -421,76 +421,77 @@ fn reach(pk: &Pack, v: &V, recs: &mut BTreeSet<H>, ids: &mut BTreeSet<Id>, other
         _ => {}
     }
 }
-fn live(pk: &Pack, commit: &H, start: Id, recs: &mut BTreeSet<H>, changes: &mut BTreeSet<Id>, done: &mut BTreeSet<(H, Id)>) {
+/// 2.5: the content and attribution layers of the universe a commit fixes, and of the universes it takes in.
+fn universe_layers(pk: &Pack, commit: &H, also: Option<Id>, content: &mut BTreeSet<H>, attribution: &mut BTreeSet<H>, attributing: &mut Vec<Id>, done: &mut BTreeSet<(H, Id)>) {
     let revs: BTreeMap<Id, H> = objects(pk, commit).into_iter().collect();
-    recs.extend(map_nodes(pk, commit));
-    let mut todo = BTreeSet::from([start]);
+    content.extend(map_nodes(pk, commit));
+    let mut at = Some(*commit);
+    while let Some(h) = at {
+        attribution.insert(h);
+        at = pk.node(&h).and_then(|n| n.get("parents").and_then(|p| p.l().first()).and_then(|p| p.hash()));
+    }
+    let is_change = |i: &Id| revs.get(i).and_then(|r| pk.node(r)).map(|n| n.get("type").and_then(|x| x.s()) == Some("ufo.change")).unwrap_or(false);
+    let mut changes: BTreeSet<Id> = BTreeSet::new();
+    let mut todo = BTreeSet::from([[0u8; 16]]);
+    todo.extend(also);
     let mut other = Vec::new();
     while let Some(i) = todo.pop_first() {
         if !done.insert((*commit, i)) { continue; }
         let Some(rev) = revs.get(&i) else { continue };
         let Some(n) = pk.node(rev) else { continue };
         if n.get("type").and_then(|x| x.s()) == Some("ufo.change") { continue; }
-        recs.insert(*rev);
+        content.insert(*rev);
         if let Some(b) = n.get("by").and_then(|b| b.id()) { changes.insert(b); }
         let mut ids = BTreeSet::new();
-        if let Some(p) = n.get("p") { reach(pk, p, recs, &mut ids, &mut other); }
+        if let Some(p) = n.get("p") { reach(pk, p, content, &mut ids, &mut other); }
         if let Some(seq) = n.get("seq") {
-            reach(pk, seq, recs, &mut BTreeSet::new(), &mut other);
+            reach(pk, seq, content, &mut BTreeSet::new(), &mut other);
             if let Some(V::M(m)) = pk.resolve(seq, 0) {
                 for (_, rs) in m { for r in runs(&rs) { changes.insert(r.c); } }
             }
         }
         todo.extend(ids);
     }
-    for (u, o) in other {
-        if pk.node(&u).is_some() {
-            recs.insert(u);
-            live(pk, &u, o, recs, changes, done);
-            live(pk, &u, [0; 16], recs, changes, done);
+    // changes that hold evidence, decisions or findings
+    for (i, rev) in &revs {
+        if let Some(p) = pk.node(rev).filter(|n| n.get("type").and_then(|x| x.s()) == Some("ufo.change")).and_then(|n| n.get("p").cloned()) {
+            if ["evidence", "decisions", "attributions"].iter().any(|k| p.get(k).is_some()) { changes.insert(*i); }
         }
+    }
+    let mut todo: Vec<Id> = changes.into_iter().collect();
+    let mut seen = BTreeSet::new();
+    while let Some(c) = todo.pop() {
+        if !is_change(&c) || !seen.insert(c) { continue; }
+        let rev = revs[&c];
+        attribution.insert(rev);
+        attributing.push(c);
+        if let Some(V::M(m)) = pk.node(&rev).and_then(|n| n.get("p").cloned()) {
+            for (k, v) in &m {
+                if k == "work" { continue; }
+                let (mut ids, mut o2) = (BTreeSet::new(), Vec::new());
+                reach(pk, v, attribution, &mut ids, &mut o2);
+                todo.extend(ids);
+            }
+        }
+    }
+    for (u, o) in other {
+        if pk.node(&u).is_some() { universe_layers(pk, &u, Some(o), content, attribution, attributing, done); }
     }
 }
 fn layers(pk: &Pack) -> Option<V> {
-    let (mut content, mut changes, mut done) = (BTreeSet::new(), BTreeSet::new(), BTreeSet::new());
-    live(pk, &pk.head, [0; 16], &mut content, &mut changes, &mut done);
-    let revs: BTreeMap<Id, H> = objects(pk, &pk.head).into_iter().collect();
-    let mut attribution = BTreeSet::new();
-    for (h, _) in chain(pk) { attribution.insert(h); }
-    // changes that record evidence, a decision or a finding
-    for (i, rev) in &revs {
-        if let Some(n) = pk.node(rev) {
-            if n.get("type").and_then(|x| x.s()) == Some("ufo.change") {
-                let p = n.get("p");
-                if ["evidence", "decisions", "findings"].iter().any(|k| p.and_then(|p| p.get(k)).is_some()) { changes.insert(*i); }
-            }
-        }
-    }
-    let mut todo: Vec<Id> = changes.iter().cloned().collect();
-    let mut seen = BTreeSet::new();
-    while let Some(c) = todo.pop() {
-        if !seen.insert(c) { continue; }
-        let Some(rev) = revs.get(&c) else { continue };
-        attribution.insert(*rev);
-        let Some(p) = pk.node(rev).and_then(|n| n.get("p").cloned()) else { continue };
-        // a change's own fields outside its node, except its work, travel with it
-        if let V::M(m) = &p {
-            for (k, v) in m {
-                if k == "work" { continue; }
-                let (mut ids, mut other) = (BTreeSet::new(), Vec::new());
-                reach(pk, v, &mut attribution, &mut ids, &mut other);
-                if k == "origin" || k == "decisions" { todo.extend(ids.into_iter().filter(|i| revs.get(i).and_then(|r| pk.node(r)).and_then(|n| n.get("type").and_then(|x| x.s()).map(|s| s == "ufo.change")).unwrap_or(false))); }
-            }
-        }
-    }
+    let (mut content, mut attribution, mut attributing, mut done) = (BTreeSet::new(), BTreeSet::new(), Vec::new(), BTreeSet::new());
+    universe_layers(pk, &pk.head, None, &mut content, &mut attribution, &mut attributing, &mut done);
     let (all, seals) = pk.frames();
+    let present: BTreeSet<H> = all.iter().map(|(_, h, _)| *h).collect();
     let attribution: BTreeSet<H> = attribution.difference(&content).cloned().collect();
     let size = |set: &BTreeSet<H>| all.iter().filter(|(_, h, _)| set.contains(h)).map(|(_, _, n)| *n).sum::<usize>();
-    let history: BTreeSet<H> = all.iter().map(|(_, h, _)| *h).filter(|h| !content.contains(h) && !attribution.contains(h)).collect();
+    let history: BTreeSet<H> = present.iter().filter(|h| !content.contains(*h) && !attribution.contains(*h)).cloned().collect();
     let list = |set: &BTreeSet<H>| V::L(set.iter().map(|h| t(&hex(h))).collect());
     let layer = |set: &BTreeSet<H>| map(vec![("records", V::Int(set.len() as i64)), ("bytes_in_frames", V::Int(size(set) as i64)), ("hashes", list(set))]);
+    attributing.sort();
     Some(map(vec![("content", layer(&content)), ("attribution", layer(&attribution)), ("working_history", layer(&history)),
-        ("seal_frames", V::Int(seals.len() as i64)), ("changes_in_attribution", V::L(seen.iter().filter(|c| revs.contains_key(*c)).map(|c| t(&hex(c))).collect()))]))
+        ("seal_frames", V::Int(seals.len() as i64)), ("attributing_changes", V::L(attributing.iter().map(|c| t(&hex(c))).collect())),
+        ("missing_from_content_or_attribution", V::Int(content.iter().chain(attribution.iter()).filter(|h| !present.contains(*h)).count() as i64))]))
 }
 
 pub fn query(pk: &Pack, q: &V) -> Option<V> {

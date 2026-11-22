@@ -579,7 +579,8 @@ def nested_pair():
         ops = [{"op": "new", "obj": NU, "type": "ufo.universe"}, {"op": "set", "obj": NU, "key": "lineage", "val": lin},
                {"op": "new", "obj": NT, "type": "ufo.text"}, {"op": "splice", "obj": NT, "key": "chars", "after": None, "ins": t},
                {"op": "set", "obj": NU, "key": "roots", "val": r}]
-        return commit(pk, {NU: hU, NT: hT}, NC, ops, None, {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 2003)[3]
+        st_, hC_, hM_, hK_ = commit(pk, {NU: hU, NT: hT}, NC, ops, None, {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 2003)
+        NP.update(inner=st_, inner_commit=hK_, inner_live=[NU, NT], inner_change=NC); return hK_
     def parent(pk, nested):
         of = anchor({"o": NT, "u": nested}); lin = bytes([0x33]) * 16
         pp = {"of": of, "label": "A note from another universe"}; pf = {"of": ref(PP), "medium": "document"}
@@ -590,11 +591,13 @@ def nested_pair():
                {"op": "new", "obj": PP, "type": "ufo.portal"}, {"op": "set", "obj": PP, "key": "of", "val": of}, {"op": "set", "obj": PP, "key": "label", "val": pp["label"]},
                {"op": "new", "obj": PF, "type": "ufo.face"}, {"op": "set", "obj": PF, "key": "of", "val": ref(PP)}, {"op": "set", "obj": PF, "key": "medium", "val": "document"},
                {"op": "set", "obj": bytes(16), "key": "roots", "val": pu["roots"]}, {"op": "set", "obj": bytes(16), "key": "faces", "val": pu["faces"]}]
-        root = commit(pk, {bytes(16): hU, PP: hP, PF: hF}, PC, ops, None, {"actor": actor, "time": 1767312000000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 2014)[3]
+        st_, hC_, hM_, root = commit(pk, {bytes(16): hU, PP: hP, PF: hF}, PC, ops, None, {"actor": actor, "time": 1767312000000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 2014)
+        NP.update(outer=st_, outer_commit=root, outer_live=[bytes(16), PP, PF], outer_change=PC)
         pk.index(); pk.head(root); return root, of
     both = Pack(); nested = child(both); of_nested = [r["hash"] for r in both.log]; root, of = parent(both, nested)
     alone = Pack(); alone.n = 1; root2, _ = parent(alone, nested)   # the veil counter continues as in the first file, so the records are the same
     return both, alone, nested, root, root2, of, of_nested
+NP = {}
 both, alone, nested, root, root2, of, of_nested = nested_pair()
 assert root == root2
 open(os.path.join(OUT, "nested.ufx"), "wb").write(both.b); open(os.path.join(OUT, "linked.ufx"), "wb").write(alone.b)
@@ -831,6 +834,32 @@ _cov = {"t": [[[_D1, 0, 3 * _S]], {"plays": {"a": _play_a}}]}
 V["pins"]["digests"].append({"case": "three seconds of a timeline", "pack": "timeline.ufx", "why": "on a count the covered items are the runs the region covers, cut to it; play a touches them and plays b and c do not; the first take is followed",
     "o": _TK.hex(), "axis": "t", "a": [_D1.hex(), 0, 0], "b": [_D1.hex(), 3 * _S - 1, 1], "salt": salt(7108).hex(), "covered_value_hex": enc(_cov).hex(),
     "followed": [{"id": _R1.hex(), "revision": TL["st"][_R1].hex()}], "digest": digest(salt(7108), _cov, [(_R1, TL["st"][_R1])]).hex()})
+
+# ---- 14. the layers of the other packs (section 2.5), and published copies of them ----
+def map_hashes(state):
+    nodes = []; object_map(sorted(state.items()), out=nodes); return {rhash(NODE, n) for n in nodes}
+def publish(src, content, attribution, head_commit, name):
+    pub = Pack()
+    for h, (kind, rec, codec) in src.recs.items():
+        if h in content or h in attribution: pub.put(kind, rec, codec)
+    pub.raw(6, enc({"history": True})); pub.index(); pub.head(head_commit)
+    open(os.path.join(OUT, name), "wb").write(pub.b); return len(pub.b)
+def layer_vector(src, content, attribution, head_commit, name, content_is, attribution_is, reader):
+    n = publish(src, content, attribution, head_commit, name)
+    return {"made_from": name.replace("published-", ""), "file": name, "length": n, "root_hash": head_commit.hex(),
+            "content": sorted(h.hex() for h in content), "attribution": sorted(h.hex() for h in attribution),
+            "working_history_records": len(set(src.recs) - content - attribution), "content_is": content_is, "attribution_is": attribution_is, "a_reader_of_the_published_copy": reader}
+_tl = TL; _c = map_hashes(_tl["st"]) | {_tl["st"][i] for i in _tl["live"]}; _a = set(_tl["commits"]) | {_tl["st"][i] for i in _tl["changes"]}
+V["published_timeline"] = layer_vector(_tl["pk"], _c, _a, _tl["commits"][-1], "published-timeline.ufx",
+    "the current object map; the universe object, the clock, the two takes and the caption. The object holding the marks is not reachable from the universe object and is not live",
+    "the four commits; the changes d4, d6 and d7, which the clock's current revision names in `by` or in a run of `seq`. The change d5 only removed elements, so nothing present names it: it is working history, and its revision is withheld although its commit names it",
+    {"can": "resolve every play and say what plays at every position, exactly as from the whole pack", "reports": "the revision of change d5 as withheld, not as damage: a commit's change may be absent where the change is not attributing (section 2.5)"})
+_c = map_hashes(NP["outer"]) | {NP["outer"][i] for i in NP["outer_live"]} | map_hashes(NP["inner"]) | {NP["inner"][i] for i in NP["inner_live"]}
+_a = {NP["outer_commit"], NP["inner_commit"], NP["outer"][NP["outer_change"]], NP["inner"][NP["inner_change"]]}
+V["published_nested"] = layer_vector(both, _c, _a, NP["outer_commit"], "published-nested.ufx",
+    "the outer universe's object map and its three live objects; and, because a live Portal's anchor names a commit that is present, the nested universe's object map, its universe object and its text",
+    "both commits and both changes: the outer one, and the nested universe's own, so that who wrote the nested text can be said",
+    {"can": "say who wrote 'Nested.': the change d1 of the nested universe, witnessed, by a person, Test Author", "plain_text_of_the_nested_text": "Nested."})
 json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)
 print("minimal.ufx", V["minimal_pack"]["length"], V["minimal_pack"]["root_hash"][:16],
       "| history.ufx", V["history_pack"]["length"], hK3.hex()[:16], "| objects at commit 2:", len(state2))

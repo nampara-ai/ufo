@@ -80,4 +80,16 @@ let agree = 0, differ = 0; const check = (what, a, b) => { if (same(a, b)) agree
   for (const d of P.digests) { const { case: name, why, salt, covered_value_hex, followed, digest, pack, ...pin } = d;
     const r = (pack ? tl : k).query({ q: 'digest', salt, ...pin });
     check('pins digest: ' + name + ' (covered value)', r.covered_value_hex, covered_value_hex); check('pins digest: ' + name + ' (followed)', r.followed, followed); check('pins digest: ' + name, r.digest, digest); } }
+// ---- the layers of the other packs, and their published copies (section 2.5) ----
+for (const key of ['published_timeline', 'published_nested']) { const P = V[key]; const whole = await open(P.made_from), pub = await open(P.file);
+  const lw = whole.query({ q: 'layers' }), lp = pub.query({ q: 'layers' });
+  check(key + ': content', lw.content.hashes, P.content); check(key + ': attribution', lw.attribution.hashes, P.attribution); check(key + ': working history, count', lw.working_history.records, P.working_history_records);
+  check(key + ': the copy holds nothing else', lp.working_history.records, 0); check(key + ': the copy lacks nothing it needs', lp.missing_from_content_or_attribution, 0);
+  check(key + ': the copy has the same layers', [lp.content.hashes, lp.attribution.hashes], [P.content, P.attribution]);
+  check(key + ': state', pub.query({ q: 'commits' })[0].commit, P.root_hash); }
+{ const pub = await open('published-timeline.ufx'), whole = await open('timeline.ufx'), tv = V.timeline, c = tv.commits[3];
+  const q = { q: 'timeline', clock: tv.clock, positions: c.playing_at.map(p => p.position) };
+  check('published timeline: what plays, as from the whole pack', pub.query(q).playing_at, whole.query(q).playing_at);
+  const pn = await open('published-nested.ufx'); const wn = await open('nested.ufx');
+  check('published nested: plain text', pn.sample({ as: 'text' }).text, wn.sample({ as: 'text' }).text); }
 console.log('agree', agree, 'differ', differ);
