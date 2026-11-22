@@ -1390,6 +1390,7 @@
   ],
   "nested.ufx": "whole. The commit the anchor names is present, so the other universe is nested and each of its records is reachable through the anchor (section 1.3); compaction keeps them. The Portal presents the text 'Nested.'",
   "linked.ufx": "whole. The same universe, with the same root hash; the commit the anchor names is not in the file, so the other universe is linked. The Portal's target is unavailable and the reader shows its label (O4). Nothing is malformed.",
-  "plain_text_face_of_both": "A note from another universe"
+  "plain_text_face_of_nested.ufx": "A note from another universe:\n> Nested.",
+  "plain_text_face_of_linked.ufx": "A note from another universe (ufo:1543719d1c533f5e2aa1814296e851987957542f9c390584813bf4d4be4bc79c)"
  }
 }

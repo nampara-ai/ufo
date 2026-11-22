@@ -46,50 +46,30 @@ means the platform a reader runs on: a browser, an operating system.
 
 | Sections | Status in this draft |
 | --- | --- |
-| §1–§4 core, pack, anchors | Complete, with a schema (Appendix C) and byte-level test vectors (Appendix F, `vectors/`); names and tag numbers provisional |
-| §5–§7 vocabulary, player, host interface, faces | Complete in structure. The drawing contract (§6.2) and the capability contract (§6.3) are complete. Composition (§5.7) is an algorithm for text, vertical flow and pages, exercised in miniature; grid, absolute and inline flow, floats and clocks are stated as rules and not yet as algorithms. Operation sets: complete for `text`, `objects` and `present`; sketched for `gpu` (Appendix E); to be written for the rest. The component behind canonical exports (§7.4) is not chosen |
-| §8–§11 profiles | Text, asset, derivation, Portal, Chronicle: complete. Described code and its printing (§11.3), the two layers of the light cone (§11.7) and the recipe of a derivation (§8.3): complete, and exercised in miniature. Compute-let execution and promotion: complete in structure |
-| §9.4 video and image envelopes | Complete in structure; the `ufo:` scheme and file-name endings provisional |
-| §12 budgets | Numbers are targets set before measurement; the first implementation confirms or revises each with reasons |
-| Timelines, scenes, grids, canvases, conversations | Compositions of the primitives, not profiles; see §5.5 |
+| §1–§4 core, pack, anchors | Complete, with a schema (Appendix C) and byte-level vectors (Appendix F); names and tag numbers provisional |
+| §5–§7 vocabulary, player, faces | The drawing contract and the capability contract are complete. Composition (§5.7) is an algorithm for text, vertical flow and pages; grid, absolute and inline flow, floats and clocks are rules, not yet algorithms. Capability operations are written for `text`, `objects` and `present` and sketched for `gpu` |
+| §8–§11 profiles | Complete; execution and promotion of Compute-lets in structure only |
+| §9.4 video and image envelopes | Complete in structure; the `ufo:` scheme provisional |
+| §12 budgets | Targets set before measurement; one measurement so far, of a miniature |
 
-### 0.3 The design in nine sentences
+What has been exercised, and how, is in [VISION-TRACE.md](VISION-TRACE.md).
 
-1. A **universe** is a set of **objects**. An object has an identity, a type and
-   properties. A property value may refer to another object, to bytes, or to a
-   region inside an object.
-2. Everything is stored as immutable **records** named by the hash of their
-   contents. The state of a universe is one hash. So is its entire history.
-3. Every change to a universe is an object too: a **change**, holding the
-   operations performed, who performed them, where the new content came from,
-   what supports it and what was decided about it. The chain of changes is the
-   Chronicle. A universe moves forward only by extending it, and any other
-   alteration is detectable.
-4. Any location in any object is named by an **anchor**: object, axes, region,
-   revision. There are three kinds of axis — sequence, continuous and keyed —
-   and one rule for each saying how an anchor survives an edit.
-5. What a universe shows is described with eleven **primitives**: text, path,
-   raster, samples, region, group, clock, Portal, surface, data and formula.
-   A document, a chart, a video and an interface are arrangements of these.
-6. One small **kernel**, compiled once to WebAssembly, reads the description
-   and composes it into a list of things to draw and play for a given
-   viewport and moment. The host draws them. Foreign media are decoded by the
-   host; foreign documents are converted once, at the border.
-7. A **face** is any presentation of a universe. It is sampled from the
-   description on demand, carried inside as a stored rendition, or transmuted
-   by AI into new described content with its sources attached.
-8. Programs are objects as well. A **Compute-let** is WebAssembly that runs in
-   a sandbox with no authority except what the person grants. Its code is
-   described like everything else and edited by the same operations; the
-   kernel's **printer** alone turns the description into bytes, and the
-   Chronicle is its ledger.
-9. The file is a **pack**: an append-only sequence of records. Alone, it is
-   the working form. Inside an **envelope** — by default a web page that also
-   carries the player — it is the travel form, and that is how it leaves a
-   reader, with its content and attribution but without its working history
-   unless the person chooses to send that too.
+### 0.3 The design in one paragraph
 
-Everything below is the precise version of those nine sentences.
+A universe is a set of objects, stored as immutable records named by hash,
+so that its state is one hash and so is its whole history. It moves forward
+only by changes, which are objects too and record what was done, by whom
+and from what. Any place in any object is named by an anchor that survives
+edits. What a universe shows is described with eleven primitives; one small
+kernel, compiled once to WebAssembly, composes the description into a list
+of things to draw and play, and the host draws them. A face is any
+presentation of a universe: sampled from the description, carried as a
+stored rendition, or transmuted by AI with its sources attached. Programs
+are described objects as well; they run in a sandbox with no authority but
+what the person grants, and their bytes are printed from the description.
+The file is a pack of records, alone or inside an envelope — by default a
+web page — that also carries the player. Everything below is the precise
+version of this paragraph.
 
 ---
 
@@ -371,14 +351,14 @@ and type `ufo.universe`. Its properties are:
 | --- | --- |
 | `lineage` | 16 random bytes fixed in the first commit; shared by every later state and every fork. Required; every other property here is optional |
 | `roots` | map from names to refs: the named entry points |
-| `components` | map from a role — `tools`, `shaper`, `rasterizer`, or a prefixed name — to an indirect holding the component's bytes, or an anchor naming a universe, that the universe carries for it (§6.6, §7.4) |
+| `components` | map from a role — `tools`, `renderer`, or a prefixed name — to an indirect holding the component's bytes, or an anchor naming a universe, that the universe carries for it (§6.6, §7.4) |
 | `faces` | list of refs to face objects (§7.2) |
 | `features` | map from feature name to `{v: integer, required: boolean}` |
 
 The root named `primary` is the face a reader presents first.
 
 A **feature** names a capability a reader needs in order to interpret part of
-the universe: a profile, a codec, an operation vocabulary.
+the universe: a profile or a codec.
 
 - **[C8]** A reader that lacks a feature marked `required`, at the declared
   version, MUST report that full interpretation is unavailable. It MAY still
@@ -463,10 +443,6 @@ that does not exist creates it, as the kind of value `ins` is. A `splice` on a p
 `set` that gives a sequence property a value, are refused. A `set` with no
 `val` removes a sequence property and its `seq` entry.
 
-Because operations name elements and not positions, an operation means the
-same thing whatever else has changed around it. Merging divergent copies,
-in a later phase, rests on this.
-
 Only this specification defines operations, and these four are all of
 them. Machine code is edited with them too (§11.3). Applications express
 their edits in them.
@@ -516,16 +492,14 @@ down what was done.
 
 ### 1.8 References between universes
 
-An anchor (§4.1) MAY name a commit of another universe. If the records
-reachable from that commit are present in the same file, the other universe
-is **nested**. If they are not, it is **linked**, and the reader may obtain
-them from anywhere, verifying each record by hash. Nesting and linking are
-the same reference; they differ only in which records are at hand, and one
-record decides which: the commit named. If it is in the file, the universe
-is nested: its records are reachable (§1.3), copying and compaction keep
-them, and whatever that commit needs is present or lacking by the rules of
-§2.5 exactly as if a head named it. If it is not, the universe is linked,
-and nothing of it is expected.
+An anchor (§4.1) MAY name a commit of another universe. One record decides
+what that universe is to this file: the commit named. If it is in the file,
+the universe is **nested**: its records are reachable (§1.3), copying and
+compaction keep them, and whatever that commit needs is present or lacking
+by the rules of §2.5, exactly as if a head named it. If it is not, the
+universe is **linked**: nothing of it is expected in the file, and a reader
+may obtain its records from anywhere, verifying each by hash. Nesting and
+linking are the same reference.
 
 A ref is resolved in the universe of the object that holds it. Identities
 are unique only within a universe — every universe object is sixteen zero
@@ -582,14 +556,10 @@ is unchanged; and edits made elsewhere against the earlier state can no
 longer be merged into the compacted one where they name forgotten
 elements.
 
-*The cost, measured on a simulation:* a text first typed as 10 000
-characters, then edited 20 000 times with a mixture of replacements,
-insertions and deletions, ended with 57 771 characters, 131 925 markers and
-a `seq` of about 779 KiB — some thirteen bytes for every character
-present. With every marker forgotten it is about 211 KiB. Most of the
-remainder is the price of knowing which change wrote each stretch of text,
-which the format exists to know. `seq` is kept outside its node, so an
-edit rewrites only the chunks near it (§1.4).
+*The cost.* In a simulation of a heavily edited text, `seq` came to about
+thirteen bytes for every character present with all markers kept, and
+under four with them forgotten ([RATIONALE.md](RATIONALE.md)). `seq` is
+kept outside its node, so an edit rewrites only the chunks near it (§1.4).
 
 **Merging is a later feature; this design is ready for it.** The order of
 a sequence is not an accident of the order in which operations arrived. It
@@ -924,11 +894,9 @@ it can be re-implemented from these pages by one person in a weekend, in
 any language, decades from now, given only SHA-256 and DEFLATE, which every
 platform has.
 
-| Measure | Limit |
-| --- | --- |
-| Pack reading, writing, recovery, index and compaction, in the kernel | 800 lines |
-| Value decoder and encoder, in the kernel | 400 lines |
-| An independent, read-only pack reader that lists, verifies and extracts records | 500 lines in a general-purpose language |
+An independent, read-only pack reader that lists, verifies and extracts
+records is to need no more than 500 lines in a general-purpose language.
+The kernel's own share is budgeted in §12.2.
 
 Two obligations bind every release of the reference implementation. They
 are requirements on the project, not on files.
@@ -1291,12 +1259,10 @@ type the kernel knows.
 | Animation | any of the above with formulas of `time` |
 | Interface | regions, groups, text and paths with `on` handlers setting presentation state |
 | Application, game | a surface |
-| 3D scene | a data object describing the scene; a surface whose Compute-let draws it using the `gpu` capability |
+| 3D scene | a data object in the glTF model, with `x`, `y`, `z` and `t` axes; a surface that names it in `of` and whose Compute-let draws it using the `gpu` capability; children placed by anchors into the scene |
 
-Timelines, scenes, grids and canvases therefore need no new core and no
-profile of their own: each is a documented composition. Conversations are
-text objects whose spans carry speaker and time, with the Chronicle
-recording origin as for any text.
+Conversations are text objects whose spans carry speaker and time, with
+the Chronicle recording origin as for any text.
 
 **Three dimensions, explicitly.** A 3D scene is drawn by a program, and
 everything about it that is content is format data, readable by the kernel
@@ -1323,8 +1289,9 @@ rules: keys persist, and rescaling the scene sets the frames of its axes.
 *Attribution is ordinary.* Each row was set by a change, so `why` on a node
 answers who or what placed it, from what prompt, on what evidence.
 
-*The light cone covers it.* Summaries pin regions of the scene — a table,
-a set of nodes, a volume — and form a tree like any other (§11.7). The
+*The light cone covers it.* Its outline lists its tables and nodes as any
+data object's does, and summaries may pin regions of it — a table, a set
+of nodes, a volume (§11.7). The
 plain-text face of a scene lists its nodes by label in the order of the
 scene's hierarchy (§7.3).
 
@@ -1347,20 +1314,13 @@ The format therefore has no 3D object type, no 3D operation, no 3D
 display-list item and no scene profile, and three dimensions are not
 opaque to it.
 
-**What the removed profiles compose from.** Each medium once planned as a
-profile is fully expressible now:
-
-| Medium | Composes from | Shown in |
-| --- | --- | --- |
-| Timeline (video, audio) | clocks holding rasters, samples, text, paths and Portals for intervals | §14.1 |
-| Grid (tables) | a data object; a `grid` group under `each`; formulas in cells; `propose` handlers for editing | §14.1, §14.4 |
-| Canvas (free layout) | a region with `absolute` children | §14.4 charts |
-| Scene (3D) | a data object in the glTF model with `x`, `y`, `z`, `t` axes; a surface that names it in `of`, with a carried presenter; children placed by anchors into the scene | §14.2, §14.4 |
-| Conversation | a text with spans for speaker and time; origin per turn in the Chronicle | §13.2 |
-
-If any medium is found that these cannot express, the remedy is to restore
-or add a profile, under the deletion test, not to narrow what a universe
-may be.
+**The removed profiles.** Timelines, grids, canvases, scenes and
+conversations were once planned as profiles. Each is a row of the table
+above, and each is worked through in §14: timelines in §14.1, grids in
+§14.1 and §14.4, canvases in the charts of §14.4, scenes in §14.2 and
+§14.4, conversations in §13.2. If any medium is found that these
+compositions cannot express, the remedy is to restore or add a profile,
+under the deletion test, not to narrow what a universe may be.
 
 ### 5.6 Interfaces that edit, and surfaces that hold children
 
@@ -1518,9 +1478,7 @@ Every UFO is presented by a **player** of exactly four parts.
    from another is here, as data.
 
 A base presenter is not a WebAssembly component, because a component that
-only forwarded each item to a host call would be an empty layer. For exports
-that must be identical everywhere, the same display list is instead executed
-by two carried components, a rasterizer and a text shaper (§7.4).
+only forwarded each item to a host call would be an empty layer.
 
 - **[K1] One implementation.** The kernel and every carried component exist
   as one compiled WebAssembly artifact each, identified by hash. The
@@ -1540,8 +1498,8 @@ by two carried components, a rasterizer and a text shaper (§7.4).
   MUST NOT depend on the copy it carries being the one used: a reader that
   holds a component with the same hash uses its own.
 - **[K4] Pay for what you use.** A universe carries only the components its
-  content requires. A universe with no 3D scene carries no scene presenter;
-  one that asks for no canonical export carries no rasterizer. The universe object's
+  content requires. A universe with no 3D scene carries no scene presenter,
+  and no ordinary universe carries a renderer for canonical exports (§7.4). The universe object's
   `components` names those it does carry (§1.6), so that copying and
   compaction keep them.
 
@@ -1622,9 +1580,8 @@ be within 8 of 255. Text items are tested for position and advance, not for
 glyph shapes, which belong to the host's fonts. Input is tested by
 synthetic events against `hit` items.
 
-Exports that must be identical everywhere do not use the host for drawing
-at all: the same display list is executed by the carried rasterizer and
-shaper (§7.4).
+A canonical export does not use the host for drawing at all: the same
+display list is executed by a renderer named by hash (§7.4).
 
 Composition is a projection (§7.1): the display list is never stored.
 
@@ -1708,10 +1665,6 @@ becomes invalid at once, calls on it fail with *revoked*, and the program
 receives a message on the handle's port. A program that held a required
 capability is stopped at the end of its current call and its poster shown.
 
-*Narrowing.* A component that presents another may ask the kernel for a
-handle with a smaller scope and pass that to the child. It can never pass
-a wider one (**H3**).
-
 | Capability | Scope | Gives | If absent or denied | Held by default by |
 | --- | --- | --- | --- | --- |
 | `store` | one pack | read and append its bytes; the exclusive lock | no reader | the kernel only |
@@ -1740,7 +1693,7 @@ returns at least one cluster, so a caller always makes progress. The kernel
 calls it once for each line (§5.7), which leaves every vertical decision to
 the kernel and lets each line have its own width. Where to break, and how
 to shape and order what is on the line, are the host's — or, for a
-canonical export, the carried shaper's (§7.4). `locate`:
+canonical export, the renderer's (§7.4). `locate`:
 given one such line and a horizontal offset, the nearest character
 position. `edit`: mount or unmount the host's editing surface on a
 rectangle with given text (§5.6). The operations of `objects` are the
@@ -1757,8 +1710,9 @@ with the first implementation; the contract above does not wait for them.
   granted is replaced, in place and at its authored size, by its poster and
   a plain statement; one whose optional request is not granted runs
   without it. Nothing is ever left blank or broken.
-- **[H3]** A component holding a capability MAY pass a narrower one to a
-  component it presents, never a broader one. The kernel is the first holder
+- **[H3] Narrowing.** A component holding a capability MAY ask the kernel
+  for a handle with a smaller scope and pass that to a component it
+  presents. It can never pass a broader one. The kernel is the first holder
   and narrows everything it passes on.
 - **[H4]** New capabilities are added to this specification by name, under
   the deletion test (**V3**). Adding one never changes the base functions or
@@ -1922,12 +1876,16 @@ any universe that holds text or data.
 ### 7.3 The plain-text face
 
 The **plain-text face** of an object is its text in reading order, without
-layout or style: for a text, its characters, with each Portal replaced by its
-label; for a group, region or clock, the plain-text faces of its children in
-order (for a clock, in order of start time); for a data object, its rows as
-tab-separated lines, table by table; for a surface, the plain-text face of
-what it presents followed by those of its children; for anything else, its
-label.
+layout or style. It is Unicode text, in lines ended by U+000A.
+
+| Object | Its plain text |
+| --- | --- |
+| a text | one line for each block (§5.7), in order: the block's characters, without those under `marker` spans. A list item's line begins with two spaces for each level above the first, then its marker — `•`, its number and a full stop, or its literal text — and a space. An empty line separates two blocks unless both are list items. An embedded child contributes its own plain text in place: within the line if that is a single line, otherwise as lines of its own |
+| a group, region or clock | the plain text of its children, in order (for a clock, in order of start time), each starting a new line |
+| a Portal | the plain text of what it presents — the object, or the region its anchor names — wherever that is in the file: in this universe or in a nested one (§1.8). Content from another universe is marked: a line holding the Portal's label and a colon, then the content with `> ` before each of its lines. Where the target is in a linked universe that is not at hand, where the chain of **O7** already holds it, or beyond the reader's limit on nesting (§3.1): one line, the Portal's label, followed for a linked universe by a space and `(ufo:` the commit hash in lowercase hexadecimal `)` |
+| a data object | its rows as tab-separated lines, table by table |
+| a surface | the plain text of what it presents, then that of its children |
+| anything else | its label |
 
 - **[S4]** Every reader MUST be able to produce the plain-text face of any
   object. It is what a text editor, a search index, a screen reader and a
@@ -1955,11 +1913,22 @@ There are two **determinism tiers**.
   readers produce equivalent results: the same content, structure, order and
   layout decisions made by the kernel, with glyph shapes and anti-aliasing
   as the host renders them.
-- **Canonical.** An export marked canonical uses a software rasterizer and a
-  text-shaping component, both carried or fetched by content hash, together
-  with fonts embedded in the universe as assets, and takes no input from the
-  host but bytes. **[S5]** The same universe, face and parameters MUST then
-  yield identical bytes on every reader.
+- **Canonical.** A canonical export is reproducible given a named renderer.
+  The **renderer** is a component identified by its hash, like any other
+  (**K3**): a Compute-let that serves `break` in the host's place (§6.3)
+  and executes the display list (§6.2) into pixels and samples, using fonts
+  embedded in the universe as assets and taking nothing from the host but
+  bytes. The export's parameters name the renderer by hash, and the export
+  records it. **[S5]** The same universe, face, parameters and renderer
+  MUST yield identical bytes on every reader; this follows from **M5**.
+
+A renderer is fetched, or carried by a universe that asks for it under
+`components.renderer`, only when a canonical export is requested. It is
+never part of an ordinary file's player, is not counted in the player's
+budgets (§12.2), and nothing else in a reader depends on it. This
+specification defines no rasterizer and no shaping algorithm, and chooses
+no renderer: an existing engine may fill the role, and a different one may
+later, without any file changing its meaning.
 
 An export is a fixed performance. It carries no structure, history or
 behavior, unless it is an envelope (§9.2). Importing an exported file creates
@@ -1983,6 +1952,9 @@ and the agent interface's (§11.8).
 | `recipe(ref)` | for a derived object: its sources with the state of each, how it was made, by what and at whose request (§8.3) |
 | `verify(commit)` | the result of the conservation check and every profile check, by validation class |
 | `sample(face, parameters)` | a face: as text, as a display list, or as an encoded export |
+| `items(ref)` | a module's functions, globals and exports, with name, signature, size, origin and tests (§11.5) |
+| `unit(ref)` | a function: its signature, and its statements one to a line, each with its identity and the change that wrote it |
+| `calls(ref)`, `unit-history(ref)` | which functions call which; the changes that touched a function, newest first |
 
 Projections for agents are dense, regular text designed for a language
 model: one record per line, fields in a fixed order, hashes abbreviated to a
@@ -2324,7 +2296,7 @@ each stretch of elements with one origin: the change, its origin with its
 basis, where it was copied from if it was, the evidence
 whose `claim` covers the run and the current decision. For any other
 property, it returns the same for the change named by `by` in the revision
-that last set it. For an item of a module, see §11.5.
+that last set it.
 
 - **[R8] Every byte has a known origin.** For every byte of content in a
   universe, `why` MUST return a change and its origin: for an element of a
@@ -2454,7 +2426,7 @@ and still readable.
 | Layer | What it is | Travels |
 | --- | --- | --- |
 | **Content** | the current revision of every **live** object — one reachable from the universe object by refs, indirects and anchors, without passing through a change — any earlier revision that a live object pins as something to present or as support for evidence, and the blobs all of those name | always |
-| **Attribution** | for every change that an element or a `by` of a live object names, that an included change's `sources` names, or that records evidence, a decision or a finding about live content: the change object, which holds its actor, time, origin, evidence, decisions and findings (§1.7); the objects its evidence names as support; every commit node; every seal | always |
+| **Attribution** | for every change that an element or a `by` of a live object names, that a live object's `from` names, that an included change's `sources` names, or that records evidence, a decision or a finding about live content: the change object, which holds its actor, time, origin, evidence, decisions and findings (§1.7); the objects its evidence names as support; every commit node; every seal | always |
 | **Working history** | everything else: the `work` of every change — its operations and its note; changes that contributed nothing now present; earlier revisions; earlier object maps; prompts and conversations; objects that are no longer live, and changes that touched only those; summaries whose sources are all working history; earlier Compute-let snapshots | depends on the membrane crossed |
 
 The trail of work is the context for whoever continues it, so who is
@@ -2467,9 +2439,7 @@ receiving decides the default.
   withholds working history by default, and its `note` frame says so
   (§2.5). The person states which they are doing, can change what is
   included either way, and sees the result before it leaves (**E12**).
-  Before publishing, the writer MAY also forget the markers of removed
-  elements that nothing anchors (§1.10), by a recorded change, so that the
-  published copy does not show where deletions were.
+  Markers of removed elements may be forgotten first (§1.10).
 - **[E10] Stubs.** Withholding removes records and nothing else. Every hash
   that names a withheld record stays where it was: in `prev`, in commits, in
   `work`, in `origin.prompt`. The recipient's reader can therefore check
@@ -2673,9 +2643,8 @@ the file.
   identified by its root hash (§11.1), and one capability with a stated
   scope. A reader with nowhere durable to keep grants — a page opened from
   disk — keeps them until the page closes.
-- **[U6]** Before granting, the reader describes the request to the person in
-  plain language, including its scope. Grants are narrow by default, and the
-  person can revoke any grant at any time.
+- **[U6]** Asking, granting, narrowing and revoking follow the contract of
+  §6.3. Grants are narrow by default.
 - **[U7]** A grant made for one root hash carries to a successor only when
   the successor was promoted (§11.6) in this reader with the person's
   approval, and requests nothing new. A file that arrives from elsewhere
@@ -2684,9 +2653,7 @@ the file.
   token: an encoded value `{issuer, audience, capability, scope, expires,
   parent}` signed as a seal is, where `parent` is the hash of the token it
   derives from. A token MUST be equal to or narrower than its parent. No
-  shared secret is involved. Within one reader, a component passes a
-  narrower capability to a child it presents by asking the kernel for a new
-  handle with a smaller scope (**H3**).
+  shared secret is involved. Within one reader, **H3** applies.
 - **[U9]** The reader's own checks — record hashes, conservation where
   content is present, fuel metering, seal verification, permission
   enforcement, the limits of §3.1 — cannot be disabled or weakened by
@@ -2784,9 +2751,9 @@ carried as an object. It is four things that computing has kept apart:
 A Compute-let runs live wherever it is presented: alone, as the primary
 face of a universe; inside a document, a video or a scene, through a Portal;
 or inside another Compute-let's surface (§5.6). It may contain other
-Compute-lets. There is no source tree: its machine code is described
-(§11.3), the kernel's printer makes its bytes (§11.4), and the ledger is
-the record of why it is as it is (§11.5).
+Compute-lets. Its machine code is described (§11.3), the kernel's printer
+makes its bytes (§11.4), and the ledger is the record of why it is as it
+is (§11.5).
 
 Its properties are its **manifest**:
 
@@ -2809,11 +2776,9 @@ A Compute-let has one module. Larger programs are composed, not linked: a
 Compute-let presents others as children of its surface (§5.6) and exchanges
 messages with them over ports.
 
-Every program a universe carries is a Compute-let, including a text shaper,
-a rasterizer and any carried presenter. Those that were compiled by an
-ordinary toolchain are carried modules (§11.3): one asset, whose origin is
-`tool` and names the compiler, and whose ledger is that one entry. They run
-under the same sandbox and the same metering.
+Every program a universe carries is a Compute-let, including a renderer
+(§7.4) and any carried presenter, whether its module is described or
+carried (§11.3).
 
 - **[M1]** A Compute-let sees only the base host functions and the
   capabilities in its manifest that have been granted. Nothing else exists
@@ -2914,9 +2879,11 @@ their source from its own memory (§6.2).
 
 ### 11.3 Code is description
 
-A program's machine code is described, like everything else in a universe,
-and its bytes are made from the description. There is no source tree, and
-there are no stored bytes for a description to drift from.
+A program's machine code is described, like everything else in a universe.
+Its bytes are a face of that description (§7.1): sampled from it by a pure,
+deterministic function, and so always verifiable against it, as an image is
+a face of a document. There is no source tree, no build step, and no ledger
+apart from the Chronicle.
 
 A **module** object (`ufo.module`) holds:
 
@@ -2972,9 +2939,11 @@ Every statement is an element (§1.7). It has a permanent identity, names
 the change that inserted it, and through that change has an origin (§8.5).
 Code is therefore edited with `splice`, as text is: a fix to one statement
 is an operation on one statement, and its record is the statement removed
-and the statement put in its place. An anchor addresses statements by a
-region on `body` and survives edits around them (§4.3). A module offers the
-keyed axis `funcs`.
+and the statement put in its place. Statements are always addressed by
+their identities, never by number: a number moves with every edit above
+it, and an identity does not. An anchor addresses statements by a region on
+`body` and survives edits around them (§4.3). A module offers the keyed
+axis `funcs`.
 
 **Printing.** A module's bytes are a function of its description:
 
@@ -2987,6 +2956,12 @@ keyed axis `funcs`.
   are in the order of their keys in the encoded map (§1.2): by length of
   name, then by bytes. A function's or global's index is its position in
   that order.
+- An imported function is an entry of the import section: module name
+  `ufo:host/1`, the field name its `import` gives, and its type.
+- A global's initial value is a constant of its type. A data segment is
+  active, at offset `i32.const` *at*. A `table`, if present, is one table
+  of function references of exactly the list's length, filled by one active
+  element segment at offset 0.
 - Locals are declared as the code section encodes them: one entry for each
   run of consecutive locals of one type.
 - A body is its statements printed in order, then `end`.
@@ -2995,10 +2970,6 @@ keyed axis `funcs`.
   integer constant a signed LEB128 in shortest form. A bare integer or an
   `i32.const` from 2³¹ to 2³² − 1 stands for the same 32 bits read as
   signed.
-
-A reader holds no bytes for a described module and a writer supplies none.
-A derived store (§3.4) MAY keep printed bytes, under the digest (§4.4) of
-the module.
 
 - **[N1]** Before running a described module, the kernel prints it and
   checks that the result is a valid WebAssembly module within the
@@ -3040,31 +3011,25 @@ foreign syntax (**X3**), it is not edited in place.
   instructions in the same order as the original. The asset remains.
 
 *Reason.* An earlier draft stored a module's bytes and changed them through
-a second vocabulary of printer operations. That needed keys for the parts
-of a module, a hash computed with keys substituted for indices, a check
-that replayed every operation ever made, a printer carried as a program of
-its own, and a whole function body sent again for every change to it.
-Measured on models maintaining a small program, the last of these was
-what every subject remarked on, and replacing it with statement-level
-edits cut what a maintenance job had to state by a factor of 2.7 with no
-loss of correctness. All of that mechanism is replaced here by what the
-core already had: objects, sequences, the four operations, digests.
-[RATIONALE.md](RATIONALE.md) has the measurements and what they do not
-show.
+a second vocabulary of operations, which needed keys for the parts of a
+module, hashes with keys in place of indices, a replay of all history to
+verify, and a whole function sent again for each change. The core already
+had what replaces all of it. [RATIONALE.md](RATIONALE.md) has the
+measurements that decided it.
 
 ### 11.4 The printer
 
 The **printer** is the function of §11.3 that turns a described module into
-bytes. It is part of the kernel, and it is the only writer of module bytes:
-no reader, writer, agent or application supplies bytes for a described
-module, and what a reader runs is what the kernel printed and then
-instrumented (**M4**). A model never types bytes. It writes statements,
-and the kernel refuses a change whose module would not validate (**N3**).
-
-A model or a person edits code through the same `propose` as any content
-(§11.8), reading it through `unit`, which shows a function's statements one
-to a line, each with its identity and the change that wrote it, and
-addressing statements by those identities.
+bytes. It is part of the kernel, there is one implementation of it (**K1**),
+and it is the only writer of module bytes: no reader, writer, agent or
+application supplies bytes for a described module, and what a reader runs
+is what the kernel printed and then instrumented (**M4**). A reader stores
+no bytes for a described module; a derived store (§3.4) MAY keep them,
+under the module's digest. A model never types bytes. It reads a function
+through `unit`, one statement to a line, each with its identity and the
+change that wrote it; it writes statements through `propose`, as it would
+any content (§11.8); and the kernel refuses a change whose module would not
+validate (**N3**).
 
 ### 11.5 The ledger
 
@@ -3083,13 +3048,8 @@ For each function, and for each statement of it, the ledger answers:
 | What has run it? | evidence of kind `exercised-by`, from the same to a recorded replay |
 | What was decided? | decisions about that change |
 
-Projections of code, in addition to those of §7.5: `items` (a module's
-functions, globals and exports, one per line, with name, signature, size,
-origin and tests); `unit(ref)` (a function: its signature and its
-statements); `calls` (which functions call which); `unit-history(ref)` (the
-changes that touched a function, newest first). Search covers name,
-signature, digest, call relationships, prompt text, test coverage and
-revision.
+The projections of code are in §7.5. Search covers name, signature,
+digest, call relationships, prompt text, test coverage and revision.
 
 ### 11.6 Tests and promotion
 
@@ -3229,8 +3189,8 @@ unavailable rather than stale.
 
 ### 11.8 The agent interface
 
-The projections of §7.5 and §11.5 and the actions below are functions of
-the kernel, so every reader has them. A reader of rung 3 also offers them
+The projections of §7.5 and the actions below are functions of the
+kernel, so every reader has them. A reader of rung 3 also offers them
 to outside agents as tools under the Model Context Protocol:
 
 | Action | Effect |
@@ -3244,15 +3204,15 @@ to outside agents as tools under the Model Context Protocol:
 | `refresh(object)` | make a derived object again from its recipe (**D3**) |
 | `export(face, parameters)` | sample and encode a face |
 
-Projections show every element of a sequence that is not a text or a byte
-string — a statement, an item of a list — with its identity, and show
-characters and bytes by position at the revision named in the header. An
-operation in `propose` may name elements either way: by identity, or by
-positions together with the revision they were read at, which the kernel
-turns into identities using that revision. An edit made against a reading
-that is a little out of date therefore lands on the elements that were
-read, or is refused (**L4**) if they are gone; it never lands on whatever
-now stands at the same position.
+Projections show a statement, or an item of any list that is a sequence,
+with its identity, and an operation names it by that identity. Characters
+and bytes are too many to show one by one: projections show them by
+position at the revision named in the header, and an operation may name
+them by positions together with that revision, which the kernel turns into
+identities using it. Either way, an edit made against a reading that is a
+little out of date lands on the elements that were read, or is refused
+(**L4**) if they are gone; it never lands on whatever now stands in the
+same place.
 
 - **[I1]** An agent sees a universe only through the kernel, and so sees
   exactly what a person's reader sees.
@@ -3307,7 +3267,7 @@ These limits change only on measurement.
 | Tools universe (§6.6), as carried | 24 KiB | description only; no code |
 | Web envelope holding one paragraph | 192 KiB | compressed kernel in base64 (128 KiB), binding, tools universe, static face, pack |
 | Web envelope for each worked example of §14 | reported | no limit yet; measured and published with the first implementation |
-| Printer, as a part of the kernel | 16 KiB | it is a function of the kernel, within the kernel's limits above; it measured 14 KiB in miniature |
+| Printer, as a part of the kernel | 16 KiB | it is a function of the kernel, within the kernel's limits above; it measured 11 KiB in miniature |
 | Implementations of any piece of format, layout or media logic in the project's readers | exactly 1 | **K1** |
 | Names of object types, properties, profiles, operations or foreign document formats appearing in a binding or native shell | 0 | **K2**; found by searching its source |
 
@@ -3324,19 +3284,18 @@ happens:
 | Projections, search, difference, actions, undo | 1 500 |
 | Printing, module checking, instrumentation, promotion | 1 200 |
 
-**Measured once, in miniature.** A throwaway kernel of 1 613 lines — values,
-hashing, the pack with its index and recovery, blobs, the object map,
-sequences; composition of text into lines, rows and pages; the plain-text
-face; Portals into nested universes; the printer — compiled, without the
-standard library and after a size-optimising pass, to 78.4 KiB and 37.5 KiB
-compressed. Of that, 4.2 KiB is an allocator and 11.1 KiB a borrowed
-inflater; the rest is about 40 bytes of WebAssembly for each line of Rust.
-At that density the two kernel limits above do not agree: 256 KiB holds
-about 6 150 lines, and 10 000 lines would be about 407 KiB. The miniature
-was not written for size. This section records the disagreement and
-changes neither number; the byte limit is the one a file pays for. Its web
-binding was 79 lines and 3.0 KiB compressed, for half of the drawing
-contract's items and one host function.
+**Measured once, in miniature.** A throwaway kernel of 1 613 lines — the
+storage layer, composition of text into lines, rows and pages, the
+plain-text face, nested universes and the printer — compiled, without the
+standard library and after a size-optimising pass, to 78.4 KiB. Leaving
+out an inflater it borrowed, which is the host's to supply (§6.3), it was
+67.3 KiB: an allocator of 4.2 KiB, and about 40 bytes of WebAssembly for
+each line of Rust. At that density the two limits above disagree: 256 KiB
+holds about 6 400 lines, and 10 000 lines would be about 396 KiB. The
+miniature was not written for size. This section records the disagreement
+and changes neither number. Its web binding was 79 lines and 3.0 KiB
+compressed, for half of the drawing contract's items and one host
+function.
 
 ### 12.3 Behavior
 
@@ -3348,7 +3307,7 @@ contract's items and one host function.
 | Tool calls for an agent to find and explain the origin of a unit of machine code, entering at `overview` | 3 + the depth of the outline | `overview`, one `expand` per level, `why`, `text` |
 | Share of the universe an agent expands to do so | reported | must fall as the universe grows |
 | Reopened universe has the same root hash on every reader tested | always | |
-| Canonical export bytes identical on every reader tested | always | **S5** |
+| Canonical export bytes identical on every reader tested, for one renderer | always | **S5** |
 
 The conformance suite tests the one kernel against every labeled rule in
 this document, and includes: malformed and hostile packs; the fuzzing of
@@ -4147,27 +4106,11 @@ Byte-level test vectors for this schema are in Appendix F.
 
 ## Appendix D. Checklist for any change to this design
 
-Applied in review to every proposed addition to this specification, the
-kernel, a presenter or a binding. A "yes" to any of the first six means
-stop and redesign.
-
-1. Does it implement something that already exists elsewhere in the system,
-   in another language or another component?
-2. Does it add a decoder, converter or format-specific path to the kernel?
-3. Does it store the same content more than once in different forms?
-4. Does it add a plugin, adapter or extension point where a composition of
-   existing primitives would serve?
-5. Does it teach a binding or native shell anything about a medium,
-   document or application?
-6. Does it carry components into files that do not use them?
-7. Can it be expressed as data, a formula, or a composition instead?
-8. Does it make the system easier or harder to explain on one page?
-9. Will a universe that does not need it pay any cost for its existence?
-10. If it were deleted, what would actually break, and could that be
-    handled at the border instead?
-
-A simplification must also pass the opposite test: it may remove mechanism,
-never reach. Whoever removes a concept shows what it now composes from and
+The ten questions asked of every proposed addition to this specification,
+the kernel, a presenter or a binding are in
+[CONTRIBUTING.md](CONTRIBUTING.md), with the deletion test (**V3**). One
+rule binds simplifications too: a simplification may remove mechanism,
+never reach. Whoever removes a concept shows what it now composes from, and
 that every worked example of §14 still works.
 
 ## Appendix E. Accelerated graphics, sketched
@@ -4200,7 +4143,7 @@ Rules that are already fixed:
 - Results on screen are not required to be bit-identical between hosts.
   Where they must be — a canonical export (§7.4), or a test with
   `expect.draws` — the reader uses a software implementation of the same
-  operations, carried as a component, and `read`.
+  operations, which is part of the renderer (§7.4), and `read`.
 - Shader source travels as data in the Compute-let and is given to the
   host to compile. This is the one place a Compute-let hands a host code
   that is not WebAssembly; the host's own validation of WGSL is the
@@ -4249,7 +4192,7 @@ decision. The file ends with a chain of two indexes and four heads.
 | `resolve_sequence` | a sequence with removed elements, and nine regions resolved against it (§4.3) |
 | `merge_readiness` | two writers diverging from one text, with insertions at the same place, inside their own earlier insertions and after an element the other removes; the order of elements and the text, identical whichever writer's operations are taken first (§1.10) |
 | `resolve_continuous` | six regions resolved through a frame: shift, integer rounding of both signs, clipping, detachment, floats |
-| `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, and how a reader classifies each file |
+| `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§7.3) |
 | `printer` | the described module of `module.ufx` — a function with operands folded, a function with a loop, a call, a global and named locals, three exports and a memory — as encoded values, and the 119 bytes the printer makes of it |
 | `instrumentation` | three stored modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
 
@@ -4261,16 +4204,10 @@ Three values, for a first check without opening the files:
 | Root hash of `minimal.ufx` | `804ec174f46f773d36c1fe7318c999ff21c338b735cb4e5068224725b9cce8bf` |
 | Root hash of `history.ufx` | `d9c0eec863503cdd969209285e1f4db095654bc0f0f46d7bf445566c316727df` |
 
-How far these have been checked. A second implementation — the throwaway
-kernel of the measurement spike, in another language, by the same author as
-the script — opened all five packs by the rules of §2; read the expected
-text from `minimal.ufx` and `history.ufx`; presented the nested text from
-`nested.ufx` and the Portal's label from `linked.ufx`; and printed the
-module of `module.ufx` to exactly the bytes recorded. It did not check
-conservation, seals, the shape of object maps or blob trees, or the
-resolution vectors. The WebAssembly vectors, the printed module included,
-were validated and run in one engine (Node.js) and behave as stated. The
-seal's signature was verified there too, and the chunking table and the
-chunk boundaries of the one-mebibyte stream were recomputed there from this
-text. No vector has yet been reproduced by an implementer who did not write
-this document.
+How far these have been checked: a second implementation, by the same
+author as the script, opened all five packs, read the expected text from
+the first two, presented the nested text and the linked label, and printed
+the module to the bytes recorded. The WebAssembly vectors were run in one
+engine and the seal verified there. Nothing else has been reproduced, and
+no vector has been reproduced by anyone who did not write this document.
+[VISION-TRACE.md](VISION-TRACE.md) keeps the account.

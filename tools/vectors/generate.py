@@ -589,7 +589,8 @@ V["nested"] = {"nested_file": "nested.ufx", "nested_length": len(both.b), "linke
     "records_of_the_outer_universe": [r["hash"] for r in alone.log],
     "nested.ufx": "whole. The commit the anchor names is present, so the other universe is nested and each of its records is reachable through the anchor (section 1.3); compaction keeps them. The Portal presents the text 'Nested.'",
     "linked.ufx": "whole. The same universe, with the same root hash; the commit the anchor names is not in the file, so the other universe is linked. The Portal's target is unavailable and the reader shows its label (O4). Nothing is malformed.",
-    "plain_text_face_of_both": "A note from another universe"}
+    "plain_text_face_of_nested.ufx": "A note from another universe:\n> Nested.",
+    "plain_text_face_of_linked.ufx": "A note from another universe (ufo:" + nested.hex() + ")"}
 json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)
 print("minimal.ufx", V["minimal_pack"]["length"], V["minimal_pack"]["root_hash"][:16],
       "| history.ufx", V["history_pack"]["length"], hK3.hex()[:16], "| objects at commit 2:", len(state2))

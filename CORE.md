@@ -119,11 +119,14 @@ pages: open, universal, and independent of any application.
     pinned to its sources. *Transmuted*: new description written by a model
     through the format's `derive` action, pinned to its sources, with a
     *recipe* — sources, model, prompt, parameters — from which it is made
-    again in one step when they change. A universe
-    lists its faces, made or offered. Every object has a plain-text face.
-    An export is a face sampled with stated parameters; live presentation
-    uses the host's text rendering, and canonical exports are
-    byte-identical everywhere.
+    again in one step when they change. A universe lists its faces, made or
+    offered. Every object has a plain-text face, which keeps paragraph
+    breaks and list markers and includes, marked, the text of universes
+    nested in the file. An export is a face sampled with stated parameters.
+    Live presentation uses the host's text rendering; a canonical export is
+    reproducible given a renderer named by its hash, a component fetched
+    only when such an export is asked for and never part of an ordinary
+    file's player.
 17. **Onboard tools.** Kernel functions — overview, search, history, why,
     diff, verify, expand, recipe, propose, try, derive, refresh, undo,
     export — and an interface
@@ -150,7 +153,8 @@ pages: open, universal, and independent of any application.
     own vocabulary, each an element with an identity and an origin, edited
     by the same four operations as text. The printer, a function of the
     kernel, alone writes module bytes from the description,
-    deterministically; nothing is stored twice. Every statement traces to
+    deterministically: the bytes are a face of the code, always verifiable
+    against it, and nothing is stored twice. Every statement traces to
     its prompt, model and tests. A program compiled elsewhere is carried as
     an asset and lifted to description when it is first maintained.
     Behavior changes while running: tests in force before the change gate a

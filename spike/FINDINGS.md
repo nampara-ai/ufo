@@ -620,6 +620,12 @@ for size — it clones values freely and uses general-purpose collections —
 so a kernel written with the limit in mind should do better than 40, by an
 amount this spike cannot say.
 
+The specification gives inflating to the host (SPEC §6.3, `inflate`), so
+the borrowed inflater should not be counted against the kernel at all.
+Without it the miniature is 68 901 bytes (67.3 KiB), 256 KiB holds about
+6 400 lines, and 10 000 lines would be about 396 KiB. The specification
+quotes these.
+
 ## 8. Why small packs are heavy
 
 A module of 981 bytes of WebAssembly, held as description in a pack, took

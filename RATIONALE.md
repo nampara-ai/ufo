@@ -326,13 +326,18 @@ opened real packs, including the normative vectors, and presented one small
 universe as plain text, as a scrolling view and as pages, with a text from
 a nested universe shown through a Portal. It needed an algorithm the
 specification did not have (now §5.7) and a different `break` (now §6.3).
-It compiled to about 50 bytes per line, at which the kernel's line budget
-and byte budget cannot both hold; the specification records the
-disagreement and waits for a better measurement.
+Built without the standard library and passed through a size optimiser, it
+came to 78.4 KiB, about 40 bytes for each line of its own code. At that
+density the kernel's line budget and byte budget cannot both hold; the
+specification records the disagreement, and the byte budget is the one
+expected to stand.
 
 **The printer.** The same kernel printed six described modules to bytes
 identical to a second implementation's, and the specification's vector to
-bytes assembled by hand. The printer added 14 KiB to the kernel.
+bytes assembled by hand. The printer added about 11 KiB to the kernel. The
+second implementation was the trial's own, in another language; it is
+deleted with the rest of the spike, and the kernel's printer is the only
+one there will be.
 
 **The light cone.** On a corpus of 199 000 characters in four universes,
 models answered three questions through four projections. With the
@@ -351,22 +356,33 @@ Not shown by any of this: anything at scale; grids, floats, clocks, audio,
 video or 3D; a second person's implementation; a model writing summaries;
 a real model transmuting.
 
+The cost of keeping markers was measured on a simulation: a text first
+typed as 10 000 characters, then edited 20 000 times with a mixture of
+replacements, insertions and deletions, ended with 57 771 characters,
+131 925 markers and a `seq` of about 779 KiB — some thirteen bytes for
+every character present. With every marker forgotten it is about 211 KiB.
+Most of the remainder is the price of knowing which change wrote each
+stretch of text, which the format exists to know.
+
+
 ## Where the design departs from first intentions
 
 Four choices differ from what the project first set out to do. They are
 recorded so they can be reversed for good reason.
 
-- **Code is described, and its bytes are printed.** The first intention was
-  that a Compute-let's bytes be the only stored artifact and the only
-  authority, changed by structured operations to a printer and explained by
-  a ledger of those operations. What is stored now is the description —
-  the same instructions, in the same order, as values with names and
-  identities — and the bytes are a function of it. What runs is still only
-  what the printer made; there is still no source tree and no language but
-  WebAssembly's; the ledger still says why each part is as it is, now for
-  each statement and not only for each function. What changed is which of
-  two equivalent forms is kept. The earlier design is specification version
-  0.6, and can be restored whole.
+- **Code is described, and its bytes are a face of the description.** The
+  first intention was worded as "the bytes are the only artifact", changed
+  by structured operations to a printer and explained by a ledger of those
+  operations. What that wording was rejecting was a human source tree:
+  files, a build, a language written for people. The principle is now
+  stated as what it meant. Code is description; a module's bytes are a
+  deterministic face of that description, printed by a pure function and
+  always verifiable against it, exactly as an image is a face of a
+  document. There is still no human source tree, no build step and no
+  separate ledger mechanism: the Chronicle is the ledger, now for each
+  statement and not only for each function. The project's owner approved
+  the change on the evidence of the trial described above. The earlier
+  design is specification version 0.6.
 
 - **Base presenters are the host, not WebAssembly components.** The first
   intention was that every presenter be compiled once and run everywhere. A

@@ -31,7 +31,10 @@ these. A "yes" to any of the first six means stop and redesign.
     at the border instead?
 
 An addition to the specification must also pass the deletion test (SPEC
-§5.4, rule V3) and restate the budgets of SPEC §12.
+§5.4, rule V3) and restate the budgets of SPEC §12. A simplification must
+pass the opposite test: it may remove mechanism, never reach. Whoever
+removes a concept shows what it now composes from, and that every worked
+example of SPEC §14 still works.
 
 ## Standards
 

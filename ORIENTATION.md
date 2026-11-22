@@ -705,3 +705,34 @@ Fixes this round, classified:
 happens. The additions are the algorithms the owner asked the spike to
 invent, and most replace prose that claimed more than it specified; but
 the count is the count, and the document is now 9% longer than it was.
+
+## 16. Decisions after the spike (owner, 2026-11-22)
+
+1. **Printer redesign: approved.** The brief's wording, "the bytes are the
+   only artifact", is superseded by its intent: code is description; a
+   module's bytes are a deterministic face of that description, printed by
+   a pure function and always verifiable against it. No human source tree,
+   no build step, no separate ledger mechanism. Statements are addressed
+   by their permanent identities. The trial's JavaScript printers are
+   deleted with the spike; the kernel's printer is the only implementation.
+2. **Kernel budgets: not yet decided.** Measured with the reductions asked
+   for (`spike/FINDINGS.md` §7): 78.4 KiB, about 40 bytes a line. The owner
+   expects the byte limit of 256 KiB to stand and the line limit to be set
+   from measured density. Neither is changed.
+3. **Canonical exports: reproducible given a named renderer** identified by
+   its hash; a component fetched or carried only when such an export is
+   requested, never part of an ordinary file's player. No engine chosen
+   (SPEC §7.4).
+4. **Licensing: decided and applied** (§14).
+5. **Plain-text face:** nested universes in the pack contribute their text,
+   marked, to the reader's depth limit; linked ones show label and
+   reference; paragraph breaks and list markers are kept (SPEC §7.3).
+6. **"Added" over "simplified" accepted for that round**; the specification
+   was then read end to end and tightened: 43 675 words before, and the
+   count after is in the round's report.
+7. **Per-object overhead recorded** (`spike/FINDINGS.md` §8); no change.
+
+Next, in order: the cold re-review of the tightened specification with the
+updated VISION-TRACE.md; then, after the owner's review, the strict
+spec-first reader test; then a spike on the thinnest row, the self-opening
+web envelope.
