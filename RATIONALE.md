@@ -184,11 +184,10 @@ full. Each is recorded here so it can be challenged.
 | Invention | Existing options, and what each misses | SPEC |
 | --- | --- | --- |
 | **The pack** | *SQLite*: no canonical bytes to hash or sign; its engine in every file. *Git packfiles*: delta compression and a separate index file make a weekend reader impossible; not built for one growing file. *ZIP*: no content addressing; central directory rewritten on every change. *CAR (IPLD)*: content-addressed, but no commit trailer, crash recovery or index. | §2, §3 |
-| **Operations split into shape and salted content** | *Git shallow clones* drop history wholesale, with its authorship. *Redaction* breaks hashes. Nothing kept an edit history verifiable, and anchors resolvable, while withholding what the edits said. | §1.7, §9.3 |
-| **Three kinds of axis with one survival rule each** | *W3C Web Annotation selectors* re-find text by quoting it, which is matching. *Media Fragments* address time and space but say nothing about edits. *Operational transformation and CRDT positions* cover sequences only. Nothing covered text, time, space and tables with one model that never guesses. | §4 |
+| **Permanent element identities in every sequence** | *Position-based edit logs* (and this project's own first drafts) needed four interlocking mechanisms to keep attribution and structure attached to an edited sequence: runs, self-carried regions, an insertion bias and history replay. *Automerge* and *Peritext* show the better decomposition: give every element a permanent identity and attach everything to identities. Those systems are replication libraries with their own storage and no notion of attribution, evidence or a hashed, sealed history; the idea is taken, the format is not. Here an element's identity is the change that inserted it and a number, so identity is attribution, and removed elements stay as markers so anchors can always be placed. | §1.7, §4.3 |
+| **Work kept apart from attribution** | *Git shallow clones* drop history wholesale, with its authorship. *Redaction* breaks hashes. A change keeps who and what in the object and the operations in one salted blob beside it, so a copy can withhold what earlier drafts said and still verify authorship. | §1.7, §9.3 |
+| **Three kinds of axis, each resolved without history** | *W3C Web Annotation selectors* re-find text by quoting it, which is matching. *Media Fragments* address time and space but say nothing about edits. *Operational transformation* replays history. Here a sequence region names elements, a continuous region is mapped through a frame the object holds, and a keyed region names keys: all three resolve against the current state alone and never guess. | §4 |
 | **Pins and one staleness test** | Build systems track staleness of files, not regions; document formats do not track it at all. A pin's digest follows references, so a pin to a container notices a change in anything it shows. | §4.4, §8.3 |
-| **Runs and self-anchors in the core** | Attribution systems for text live inside one editor and know about paragraphs. Putting per-item runs and self-carried regions in the core gives every sequence of every medium span-level attribution and structure that stays put, with no knowledge of text. | §1.7 |
-| **Insertion bias on a splice** | Editors resolve "which side does typed text join" with caret affinity that is never recorded. One field on the operation makes the answer part of history and deterministic for every reader. | §4.3 |
 | **The change as an object, with origin, evidence and decision apart** | *Version control* records who committed, not who or what wrote each span, on what evidence, with what human decision. *C2PA* attests to whole assets after the fact, not to spans as they are written. *Track changes* is per application and lost on export. | §1.7, §8.5 |
 | **Origin with a basis: witnessed, inferred, unknown** | Attribution systems either assert authorship or stay silent. None distinguishes what was recorded at the moment from what was worked out later. | §8.5 |
 | **Eleven primitives and a display list** | *HTML and CSS* are a full description language, but far too large to interpret in a small kernel, and their meaning is whatever a browser version does. *SVG* has no flow layout, data or time model worth the name. *PDF* is depiction. *Scene and timeline formats* each cover one medium. | §5, §6.2 |
@@ -231,6 +230,37 @@ standard, or break in real tooling.
 The brand mark and default file icon is a flying saucer. It is a visual
 mark only — in icons, documentation and branding — and never appears in the
 ending, the media type or any identifier of the format.
+
+## What unifying sequences and stored values cost and bought
+
+Two unifications were made after independent readers kept finding gaps in
+the same places.
+
+*Sequences.* Removed: runs as a mechanism, self-anchors, the insertion
+bias, per-change lists of revisions, the `remap` operation, the split of an
+operation into shape and content, and every rule for carrying an anchor
+through history. Added: element identities, boundaries, and a frame on
+continuous axes. An anchor is now resolved from the current revision alone.
+
+It costs three things. Removed elements are kept as markers for good, so a
+heavily edited sequence carries a record of its deletions (compact — three
+or four small numbers per run — but permanent, and visible in a published
+copy as "something was removed here by this change"). Finding an element by
+identity means searching the runs, which readers will index. And an anchor
+is larger: two element identities instead of two integers.
+
+It buys the later collaborative phase for nothing: operations already name
+elements, which is what merging concurrent edits requires.
+
+*Stored values.* There were three ways for a value to live outside its
+node: a transparent stand-in, a salted record for content that might be
+withheld, and pieces for long texts. There is now one: a blob holding a
+salt and the value. Blobs were already chunked and already withholdable.
+The stand-in keeps its own tag, because a property must still be able to
+hold a link to a file's bytes that is *not* resolved; what went is a node
+kind and two sets of rules. The cost is that a value kept outside is
+rewritten whole, in chunks of up to a mebibyte, when it changes, and that
+identical values no longer share storage, because each has its own salt.
 
 ## Where the design departs from first intentions
 

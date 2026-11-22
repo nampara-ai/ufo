@@ -83,19 +83,20 @@ be registered later.)
 - *Magic number(s):* the first eight bytes are
   `89 55 46 4F 0D 0A 1A 0A` (0x89, "UFO", CR, LF, 0x1A, LF)
 - *File extension(s):* .ufx
-- *Macintosh file type code(s):* none. Uniform type identifier, provisional:
-  `io.github.nampara-ai.ufx`, conforming to `public.data` and
+- *Macintosh file type code(s):* none. Uniform type identifier:
+  `ai.nampara.ufx`, conforming to `public.data` and
   `public.composite-content`
 
 **Person and email address to contact for further information:** *to be
-supplied*
+supplied by the project owner; an address at nampara.ai*
 
 **Intended usage:** COMMON
 
 **Restrictions on usage:** none
 
-**Author:** *to be supplied*
+**Author:** *to be supplied by the project owner; an address at nampara.ai*
 
-**Change controller:** *to be supplied*
+**Change controller:** *to be supplied by the project owner; an address at
+nampara.ai*
 
 **Provisional registration?** *to be decided by the project owner*

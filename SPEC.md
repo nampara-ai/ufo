@@ -1,6 +1,6 @@
 # The Universal File Object (UFO) Specification
 
-**Version 0.4 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
+**Version 0.5 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
 
 This document specifies the UFO format: a single file that holds a universe of
 described meaning, carries the small player and tools that present and edit
@@ -124,7 +124,7 @@ A **value** is one of:
 | **ref** | the identity of an object in the same universe (§1.5) |
 | **anchor** | a reference to a region of an object at a revision (§4) |
 | **formula** | an expression that computes a value (§5.3) |
-| **indirect** | a stand-in for a value stored in a record of its own (§1.4) |
+| **indirect** | a stand-in for a value stored outside the node, in a blob (§1.4) |
 
 Values are encoded in CBOR (RFC 8949) using the core deterministic encoding
 requirements of RFC 8949 §4.2.1, so that a value has exactly one encoding.
@@ -179,7 +179,7 @@ node) followed by the record's bytes. A record is identified only by its hash.
   record reachable from a retained commit, whether or not it understands the
   record's node kind.
 
-The node kinds the core defines are `blob`, `val`, `obj`, `map` and `commit`.
+The node kinds the core defines are `blob`, `obj`, `map` and `commit`.
 
 ### 1.4 Blobs
 
@@ -218,32 +218,30 @@ partial travel forms all depend on. Content-defined chunking would save space
 when a large byte stream is edited in the middle, but native content is
 description, not edited byte streams, and blobs are immutable originals.
 
-**Out-of-line values.** Any value inside the properties of an `obj` node
-(§1.5), and nowhere else, MAY be replaced by an *indirect*: the hash of a
-node `{k: "val", v: value}`. A reader resolves an indirect transparently:
-wherever this document speaks of a property's value, it means the value
-with every indirect replaced by what it stands for. The `v` of such a node
-contains no further indirects. A long text or byte string MAY instead be
-stored in pieces: a node `{k: "val", parts: [hash, …]}` naming, in order,
-`val` nodes whose values, all texts or all byte strings, concatenate to the
-value. Writers SHOULD move a value out of line when its encoding exceeds
-4096 bytes, so that changing a small property does not rewrite a large
-one.
+**Values kept outside a node.** Any value inside the properties of an `obj`
+node (§1.5) MAY be stored outside the node, as a blob whose bytes are 16
+random bytes of salt followed by the value's encoding. In the node it is
+replaced by an *indirect*: the hash of that blob. A reader resolves an
+indirect transparently: wherever this document speaks of a property's
+value, it means the value with every indirect replaced by what it stands
+for. A value kept outside contains no further indirects.
 
-A *link*, by contrast, is a value in its own right: it is never resolved
-transparently. Within the structure of nodes, links name records of every
-kind: a previous revision, an object map, a change, a parent commit, a
-chunk. Within properties and operations, a link names either a blob node
-or a salted value.
+That is the only way a value lives outside its node, and it serves three
+needs at once. A large value does not bloat its node, and needs no chunking
+of its own, because a blob is already stored in chunks. Changing a small
+property does not rewrite a large one; writers SHOULD move a value outside
+when its encoding exceeds 4096 bytes. And because of the salt, the hash
+reveals nothing about a short or guessable value, which matters when a copy
+withholds the blob (§9.3).
 
-A record is **reachable** from another if a chain of links, indirects and
-`parts` hashes leads to it. Plain hashes elsewhere — in `revs`, in a seal,
-in a head — do not make a record reachable.
+A *link*, by contrast, names a blob as bytes — the content of a file — and
+is a value in its own right, never resolved transparently. Within the
+structure of nodes, links also name records of other kinds: a previous
+revision, an object map, a change, a parent commit, a chunk.
 
-A **salted value** is a node `{k: "val", v: value, salt}` with 16 random
-bytes of salt, always referred to by a link. Its hash reveals nothing about
-a short or guessable value. The format uses salted values wherever content
-may later be withheld from a copy (§1.7, §9.3).
+A record is **reachable** from another if a chain of links and indirects
+leads to it. Plain hashes elsewhere — in a seal, in a head — do not make a
+record reachable.
 
 ### 1.5 Objects and revisions
 
@@ -264,7 +262,7 @@ Each state an object passes through is a **revision**, stored as a node:
 | `by` | identity of the change (§1.7) that produced this revision |
 | `salt` | 16 random bytes, fresh for every revision |
 | `p` | the properties |
-| `runs` | map from the name of each sequence property (§1.7) to its attribution runs; omitted when the object has none |
+| `seq` | map from the name of each sequence property to the identities of its elements (§1.7); omitted when the object has none |
 
 The hash of this node is the **revision hash**. It names one exact state of
 one object and, through `prev`, that object's whole history. Two copies of a
@@ -285,6 +283,8 @@ MUST be able to answer "which objects refer to this one" (§7.5).
 
 Type and property names are case-sensitive. Names beginning `ufo.` are
 reserved for this specification. Other parties MUST use a reverse-DNS prefix
+of a domain they control: this project's own extensions and examples use
+`ai.nampara.`, and an application such as Cursive uses its own
 (`io.cursive.note`).
 
 - **[C6]** A writer that changes some properties of an object MUST carry every
@@ -359,129 +359,103 @@ the universe: one commit. Its properties are:
 
 | Property | Value |
 | --- | --- |
-| `ops` | list of operations |
-| `revs` | map from the identity of each object the change touched to `[before, after]`: its revision hash before the change (null if the change created it) and after (null if the change dropped it) |
+| `work` | an indirect (§1.4) to `{ops, note}`: the operations, and optionally why the change was made, in the actor's words |
 | `actor` | `{who, with}`: the principal (§10.1) who committed the change, and the name and version of the software used |
 | `time` | milliseconds since 1970-01-01T00:00:00Z, as the actor reported it |
 | `origin` | where content introduced by this change came from (§8.5); absent if the change introduces none |
 | `evidence` | list of support links recorded by this change (§8.5); optional |
 | `decisions` | list of decisions recorded by this change (§8.5); optional |
 | `attributions` | list of later findings about the origin of content already present (§8.5); optional |
-| `note` | a link to a salted value: why the change was made, in the actor's words; optional |
+
+Everything that says what earlier content was — the operations and the note
+— is in `work`, one value kept outside the node. A copy of a universe can
+therefore withhold it whole and keep everything that says who and what made
+the content that is there (§9.3).
 
 The change object is created by the act of committing, not by an operation:
-it has no `new`, it does not appear in its own `revs`, its `rev` is 1 and
-its `by` is its own identity.
+it has no `new`, its `rev` is 1 and its `by` is its own identity.
 
 The **Chronicle** is the chain of commits and their changes, from the current
 commit back to the first.
 
-An **operation** states one edit. It has a *shape* — which object, which
-property, where, how much — and *content*: what was removed and what was put
-in its place. The shape is written in the operation. The content is always a
-link to a salted value (§1.4), and like every link it is not resolved
-transparently: it is how content can be absent while the shape remains. This separation is what allows a copy of a universe to
-keep the shape of its history, so that anchors can still be carried and the
-chain of authorship still checked, while withholding what earlier drafts
-said (§9.3).
+An **operation** states one edit to the parent commit's state. There are
+four:
 
-The core operations are:
+| `op` | Fields | Effect |
+| --- | --- | --- |
+| `new` | `obj`, `type` | creates an object with no properties |
+| `set` | `obj`, `key`, `old`, `val` | sets property `key` to `val`; absent `val` removes it |
+| `splice` | `obj`, `key`, `after`, `del`, `old`, `ins` | in the sequence at `key`, removes the elements `del` (whose content is `old`) and inserts the items `ins` after the element `after` |
+| `drop` | `obj` | retires the object from the current state |
 
-| `op` | Shape | Content | Effect |
-| --- | --- | --- | --- |
-| `new` | `obj`, `type` | — | creates an object with no properties |
-| `set` | `obj`, `key` | `old`, `val` | sets property `key` to `val`; absent `val` removes it |
-| `splice` | `obj`, `key`, `at`, `del`, `add`, `bias` | `old`, `ins` | in the sequence at `key`, replaces the `del` items at position `at` (which are `old`) with the `add` items of `ins` |
-| `remap` | `obj`, `axis`, `scale`, `shift`, `extent` | — | declares that positions on a continuous axis moved, and the axis's extent afterward (§4.3) |
-| `drop` | `obj` | — | retires the object from the current state |
+Operations apply in the order listed, each to the state left by those
+before it. For `set`, `key` MAY be a list, naming a path through nested
+maps; maps along the path that do not exist are created, and a map left
+empty by a removal remains. `old` is what was there, and is omitted when
+nothing was; `val` and `ins` are omitted when nothing is put.
 
-For `set`, `key` MAY be a list, naming a path through nested maps; maps
-along the path that do not exist are created, and a map left empty by a
-removal remains. For `splice`, `key` is the name of one property of the
-object. `bias` is `before` or `after` and says which neighbor inserted
-items belong with (§4.3); `after` is the default and is never written.
-`old` is omitted when nothing was there: a `set` of a property that did not
-exist, a `splice` that deletes nothing. `ins` and `val` are omitted
-likewise when nothing is put.
+**Sequences and elements.** A property created by `splice` is a *sequence
+property*. Its value is a text, a byte string or a list, and its items —
+Unicode scalar values, bytes or list items — are its **elements**. Every
+element has a permanent **identity**: the change that inserted it, and a
+number, counted from zero across everything that change inserts, in
+operation order. An element's identity never changes and is never reused.
+Everything that attaches to part of a sequence — an anchor, a span, an
+attribution — attaches to element identities, never to positions (§4).
 
-**Sequences.** A property is a *sequence property* if it was created by a
-`splice`. A `splice` on a property that does not exist creates it, empty,
-as a text, a byte string or a list according to what `ins` holds, and then
-applies. Its items are Unicode scalar values, bytes or list items
-respectively; `at`, `del` and `add` count items; `old` and `ins` hold a
-text, a byte string or a list of the items concerned. A `splice` on a
-property created by `set` is refused, as is a `splice` with no `ins` on a
-property that does not exist. A `set` that gives a sequence property a
-value is refused: its content changes only by `splice`. A `set` with no
-`val` removes it, with its runs. A reader knows a property is a sequence
-property because the revision's `runs` has an entry for it, which is kept,
-as an empty list, while the property is empty.
+For each sequence property the revision records, in `seq`, the identities
+of its elements in order, as a list of runs. A run is
+`[change, first, count]`: *count* elements with consecutive numbers from
+*first*, inserted by *change*. A fourth item, `false`, marks the run as
+**removed**: its elements hold no content and stay where they were, as
+markers, so that whatever was attached to them can still be placed. The
+runs not marked removed, in order, account for the property's items
+exactly. Runs are an encoding and nothing more: two adjacent runs with the
+same change, consecutive numbers and the same state MUST be written as one.
+A reader knows a property is a sequence property because `seq` has an
+entry for it.
 
-**Order.** Operations apply in the order listed. Each is expressed against
-the state left by the operations before it in the same change: a position in
-the second `splice` on a text counts the characters as the first left them.
-The baseline of the change as a whole, for each object, is the `before`
-hash in `revs`.
+A `splice` names elements by identity. `after` is the identity
+`[change, number]` of the element the new items follow, or null for the
+start of the sequence; it may be a removed element, and it is omitted when
+nothing is inserted. `del` is a list of runs
+naming elements to remove, each of which MUST not already be removed; `old`
+is their content in sequence order. `ins` is a text, a byte string or a
+list, matching the property; its items become new elements directly after
+`after`. A `splice` on a property that does not exist creates it, as the
+kind of value `ins` is. A `splice` on a property created by `set`, and a
+`set` that gives a sequence property a value, are refused. A `set` with no
+`val` removes a sequence property and its `seq` entry.
 
-**Runs.** For every sequence property, the revision records **runs**: a
-list of `[count, change, offset]` covering the sequence exactly, in order,
-saying for each item which change introduced it and its offset among the
-items that change introduced into that property: a count kept for each
-change, object and property, advancing with every item the change's
-operations insert, in order, whether or not a later operation of the same
-change removes it. Applying a
-`splice` removes the runs of the deleted items and gives the inserted items
-a run naming the change that contains the splice. The one exception is a
-copy: when the change's `origin` has `copied`, an anchor to a region of a
-sequence in this universe, the inserted items take, in order, the runs
-that region had at the anchor's revision (§8.5). Two adjacent runs are
-merged when they name the same change and the second's offset is the
-first's offset plus its count. Runs are
-maintained by the kernel for every sequence of every type; they are how
-every item of every sequence has a known origin.
-
-**Self-anchors.** An anchor (§4.1) anywhere within an object's properties
-that names that same object and carries neither a revision nor another
-universe is a **self-anchor**: a region of the
-object's own axes, always expressed against its current revision. Applying
-any operation to an object carries every self-anchor in it by the rules of
-§4.3. This is how structure that lives on a sequence — the spans of a text —
-stays in place as the sequence is edited, without the core knowing what the
-sequence means.
+Because operations name elements and not positions, an operation means the
+same thing whatever else has changed around it. Merging divergent copies,
+in a later phase, rests on this.
 
 Only this specification defines operations. The printer's operations
 (§11.4) are the one further vocabulary; they are verified by replaying them
-with the printer. Applications express their edits in the five above.
+with the printer. Applications express their edits in the four above.
 
 The **laws of change** follow. They hold for every medium.
 
 - **[L1] The bytes are the evidence.** A writer MUST compute operations from
   the actual content before and after, never from an account of what was
   changed.
-- **[L2] Anchored.** `revs` MUST list exactly the objects the operations
-  touch, with the `before` revision of each, and every `set` and `splice`
-  that removes or replaces something MUST carry exactly what was there, as
-  `old`. `old` is compared by value with what was there — for a path, the
-  value at the end of the path — never by the hash of the record that
-  holds it.
+- **[L2] Anchored.** Every operation applies to the parent commit's state,
+  and every `set` and `splice` that removes or replaces something MUST carry
+  exactly what was there, as `old`, compared by value.
 - **[L3] Conservation.** Applying a change's operations, in order, to the
-  parent commit's objects MUST produce exactly the commit's objects, compared
-  as values with out-of-line values resolved, apart from the change object
-  itself and the `rev`, `prev`, `by` and `salt` fields. Identity, type,
-  properties, runs and self-anchors are all compared; runs and self-anchors
-  follow from the operations by the rules above. The `after` hash of every
-  entry in `revs` MUST be the revision the commit's object map lists; each
-  touched object's new revision MUST have `rev` one more than before,
-  `prev` equal to its `before`, and `by` naming this change; and every
-  object not in `revs` MUST have the revision it had in the parent. The
-  parent state of the first commit is empty. A reader MUST be able to perform this check for any
-  commit whose operation content is present (§7.5 `verify`), and MUST say so
-  where it is not.
-- **[L4] Refusal.** A writer MUST reject a change whole if any `before` hash
-  is not the object's current revision, an `old` does not match the content
-  found, a count does not match the content, a range lies outside the
-  sequence, an object named does not exist, or an operation targets a change
-  object other than by creating the change itself. Nothing is applied in
+  parent commit's objects MUST produce exactly the commit's objects:
+  identity, type, properties with indirects resolved, and `seq`. Each object
+  the operations touched has a new revision with `rev` one more than
+  before, `prev` naming the revision before, and `by` naming this change;
+  every other object has the revision it had; the change object is added.
+  The parent state of the first commit is empty. A reader MUST be able to
+  perform this check for any commit whose `work` is present (§7.5
+  `verify`), and MUST say so where it is not.
+- **[L4] Refusal.** A writer MUST reject a change whole if an `old` does not
+  match what is there, an element named by `after` or `del` is not in the
+  sequence, an element in `del` is already removed, an object named does
+  not exist, or an operation targets a change object. Nothing is applied in
   part and nothing is repaired.
 - **[L5] No silent reconstruction.** Origin is *witnessed* when the writer
   records it as the content is introduced. An origin established in any
@@ -498,15 +472,11 @@ The **laws of change** follow. They hold for every medium.
 
 A commit whose change fails L3 is **inconsistent** (§1.9).
 
-**Checking a chain without its content.** Each change states, in `revs`, the
-revision every touched object had before and after. For any object, the
-changes that touched it therefore link end to end: one's `after` is the
-next one's `before`, up to the current revision. A reader holding only the
-shapes can check that no change to an object is missing from the sequence
-it was given, and each commit names its change by hash, so no change can be
-swapped for another. The hashes in `revs` are plain hashes, not links: they
-are for checking the chain and do not make an earlier revision part of
-what a copy must hold.
+*Reason for making the change an object.* Recording history then needs no
+second mechanism. A change can be anchored to, cited, summarized, searched
+and signed like anything else, and context accumulates as a side effect of
+work by construction: the only way to move a universe forward is to write
+down what was done.
 
 ### 1.8 References between universes
 
@@ -533,7 +503,7 @@ separately:
 | Class | Meaning | Reader behavior |
 | --- | --- | --- |
 | **malformed** | the bytes break a container, encoding or hash rule | refuse the affected records; never present them as content |
-| **inconsistent** | well-formed records break a law of change or a profile rule (a failed conservation check, runs that do not cover their sequence) | refuse to present or extend the affected state; offer the last consistent commit |
+| **inconsistent** | well-formed records break a law of change or a profile rule (a failed conservation check, a `seq` that does not account for its sequence) | refuse to present or extend the affected state; offer the last consistent commit |
 | **unavailable** | well-formed, but needs a feature, codec or record this reader does not have, including a record the sender withheld (§9.3) | preserve; present what can be presented; say what is missing and why |
 | **unrecognized** | an object type, property, node kind, tagged value or operation this reader does not interpret | preserve untouched; show an inspectable placeholder |
 
@@ -740,10 +710,9 @@ says about itself.
 
 - **Withheld history** (§9.3). A missing record is *withheld* if it is
   reachable only through references that §9.3 defines as working history:
-  the `prev` of a revision, the content of an operation, a change's `note`,
-  the object map of a commit other than the head, an origin's `prompt`, or
-  an entry of the head's object map for an object that is not live and not
-  part of attribution.
+  the `prev` of a revision, a change's `work`, the object map of a commit
+  other than the head, an origin's `prompt`, or an entry of the head's
+  object map for an object that is not live and not part of attribution.
 - **Absent blobs.** A pack MAY omit the chunks of large blobs. It then
   carries a `note` frame listing, for each, `{blob, len, hints}`: the blob
   hash, its length and zero or more locations where the chunks may be
@@ -890,129 +859,103 @@ The reasons for choosing a pack over an embedded database are in
 
 ### 4.1 Anchors
 
-An **anchor** refers to a region inside an object, at a revision. It is a map:
+An **anchor** refers to a region inside an object. It is a map:
 
 | Key | Value | Presence |
 | --- | --- | --- |
 | `o` | object identity | required |
-| `r` | revision hash the region is expressed against | required, except in a self-anchor (§1.7) |
 | `a` | map from axis name to region on that axis (§4.2) | absent means the whole object |
+| `r` | hash of the revision the anchor was made at | optional; required in a pin |
 | `u` | commit hash of another universe (§1.8) | absent means this universe |
 | `d`, `s` | digest of the anchored content, and its salt (§4.4) | present makes the anchor a **pin** |
 
 Everything that attaches one thing to another uses an anchor: a Portal's
-placement, an attribution, a citation, a comment, a transclusion, the sources
-of a derivation, the scope of a summary, the resource of a permission.
+placement, a span of a text, an attribution, a citation, a comment, a
+transclusion, the sources of a derivation, the scope of a summary, the
+resource of a permission.
 
 ### 4.2 Axes
 
 A coordinate space is the set of named **axes** an object offers. Each axis
-is one of three kinds, and each is bound to a property of the object. The
-core defines the kinds; a profile only declares which axes its objects have
-and which property each is bound to.
+is one of three kinds. The core defines the kinds; a profile only declares
+which axes its objects have.
 
-| Kind | Bound to | Positions | A region is | Examples |
-| --- | --- | --- | --- | --- |
-| **sequence** | a sequence property (§1.7); the axis has the property's name | integers 0…n, between the items | `["s", start, end]`, start ≤ end | characters of a text, bytes of an asset |
-| **continuous** | an extent the object's type declares (Appendix A), or a data object declares in `axes` | numbers along the extent: integers for time, in flicks; floats otherwise | `["c", low, high]`, low ≤ high | time, width, height |
-| **keyed** | a property that is a map, or a list of refs in which no object appears twice; the axis has the property's name | the map's keys, or the identities listed | `["k", key, …]` | rows and columns of a table, children of a group, functions of a module |
+| Kind | Bound to | A region is | Examples |
+| --- | --- | --- | --- |
+| **sequence** | a sequence property (§1.7); the axis has the property's name | `["s", from, to]`: two boundaries | characters of a text, bytes of an asset |
+| **continuous** | an extent the object's type declares (Appendix A), or a data object declares in `axes` | `["c", low, high]`, low ≤ high, in the axis's base coordinates | time, width, height |
+| **keyed** | a property that is a map, or a list of refs in which no object appears twice; the axis has the property's name | `["k", key, …]` | rows and columns of a table, children of a group, functions of a module |
 
 A region states its own kind in its first element, so that an anchor can
-be carried by a reader that knows nothing of the object's type.
+be resolved by a reader that knows nothing of the object's type.
+
+A **boundary** on a sequence axis is a place between elements, named by an
+element: `[change, number, 0]` is the place just before that element, and
+`[change, number, 1]` the place just after it. `"start"` and `"end"` are
+the two ends of the sequence. A region whose two boundaries are the same is
+a point: a caret.
 
 A region over several axes is their product: a rectangle of a frame for a
-span of time is a region on `t`, `x` and `y`. A region MAY have zero extent:
-`[s, s]` is a point — a caret, an instant.
-
-A coordinate space may have any number of axes of each kind. Space in three
-dimensions is three continuous axes, `x`, `y` and `z`, and is as much a part
-of the anchor model as a line of text: a volume is a region on all three, a
-moment in an animated scene adds `t`, and a part of the scene is a key.
-Every object declares the axes it offers. The primitives' axes are fixed by
-§5.1; a data object declares its own, in `axes` (Appendix A), which is how a
-described space of any dimension — a scene, a map, a volume of
-measurements — becomes addressable.
+span of time is a region on `t`, `x` and `y`. A coordinate space may have
+any number of axes of each kind. Space in three dimensions is three
+continuous axes, `x`, `y` and `z`, and is as much a part of the anchor
+model as a line of text: a volume is a region on all three, a moment in an
+animated scene adds `t`, and a part of the scene is a key. Every object
+declares the axes it offers. The primitives' axes are fixed by §5.1; a data
+object declares its own, in `axes` (Appendix A), which is how a described
+space of any dimension — a scene, a map, a volume of measurements — becomes
+addressable.
 
 Time on a continuous axis is an integer count of **flicks**: units of
 1/705 600 000 of a second. Every common frame rate and audio sample rate
 divides one second into a whole number of flicks, so time arithmetic is exact
 and identical on every host. Lengths on spatial axes are floats.
 
-### 4.3 How anchors survive edits
+### 4.3 Resolving an anchor
 
-To use an anchor made against revision *A* at a later revision *B* of the
-same object, a reader **carries** it. It takes the changes that touched the
-object, from the one whose `before` is *A* to the one whose `after` is *B*
-(§1.7 `revs`), and applies the shape of each of their operations on that
-object in order.
+An anchor is resolved against a revision of its object — normally the
+current one — and that revision alone. No history is consulted and nothing
+is replayed. An anchor made long ago and one made now are resolved the same
+way.
 
-**Sequence axis.** A `splice` at position *p* removes *m* items and inserts
-*n*. For a region `[s, e]`:
+**Sequence axis.** The position of a boundary is the number of elements not
+removed that come before it in `seq`. For a boundary that names a removed
+element, before and after give the same position. A region covers the
+elements between its two boundaries. Because a boundary is fixed to an
+element, what is later inserted at the edge of a region falls inside or
+outside it according to which element the boundary names: a region whose
+end is "before the element that follows" takes in what is typed at its
+end, and one whose end is "after its last element" does not. Whoever makes
+the anchor chooses.
 
-| Boundary | Where it was | Where it goes |
-| --- | --- | --- |
-| start *s* | *s* < *p* | unchanged |
-| | *p* ≤ *s* < *p + m* | *p + n* |
-| | *s* ≥ *p + m* | *s + n − m* |
-| end *e* | *e* ≤ *p* | unchanged |
-| | *p* < *e* ≤ *p + m* | *p* |
-| | *e* > *p + m* | *e + n − m* |
+**Continuous axis.** An object MAY hold, in a property `frames`, for any of
+its continuous axes, three integers `[a, b, c]` with *a* and *b* positive:
+the axis's *frame*, mapping base coordinates to current ones. A position
+*x* in base coordinates is now at *x·a/b + c*; with integer positions the
+division rounds toward negative infinity. An axis with no frame has the
+frame `[1, 1, 0]`. A change that moves everything on an axis — trimming the
+start of a recording, rescaling a drawing — sets the frame in the same
+change, as an ordinary `set`, and regions follow with no further act. A
+region is clipped to the axis's present extent.
 
-If the start is then greater than the end, both become the end. In words: a
-region keeps what survives of what it covered and never takes in what was
-inserted at its edge or in place of its edge; content inserted strictly
-inside it is inside it. A point follows the same table and stays before
-anything inserted at it.
+**Keyed axis.** A region resolves to those of its keys that are present.
 
-For a self-anchor (§1.7), and only when the splice deletes nothing
-(*m* = 0), the operation's `bias` changes one row of the table. With
-`bias: before`, an end equal to *p* moves to *p + n*, so the insertion
-joins the region that ended there. With `bias: after` — which is what an
-operation with no `bias` has — a start equal to *p* stays at *p*, so the
-insertion joins the region that begins there. Anchors that are not
-self-anchors ignore `bias`.
+- **[A1]** A region is **detached** if, on some axis, it resolves to
+  nothing: a sequence region with different boundaries and no element left
+  between them, or whose property or elements are not there; a continuous
+  region wholly outside the extent; a keyed region none of whose keys is
+  present; or any region of an object that has been dropped. A reader MUST
+  report a detached anchor as detached and MUST NOT move it to
+  similar-looking content.
+- **[A2]** Resolution is a function of the anchor and the revision alone.
+  It needs no earlier revision and no operation, and therefore works
+  unchanged in a copy whose history is withheld (§9.3).
+- **[A3]** Two readers resolving the same anchor against the same revision
+  MUST obtain the same result.
 
-A `set` that removes the property an axis is bound to, or a `drop` of the
-object, leaves every region on it detached.
-
-**Continuous axis.** For a `remap` with `scale` *a/b*, two positive
-integers, and `shift` *t*, every position *x* becomes *x·a/b + t*. An
-integer position stays an integer: the product is divided rounding toward
-negative infinity, then *t*, an integer, is added. A float position is
-computed in binary64 as *x* times *a*, divided by *b*, plus *t*. The
-operation's `extent`, `[low, high]`, is the axis's extent after the change;
-a region carried partly outside it is clipped to it, and one left wholly
-outside it is detached. Trimming five seconds from the start of a
-recording is a remap with scale 1/1 and a shift of minus five seconds. A `remap` is the writer's statement of how positions moved;
-it is emitted in the same change as the `set` operations that moved them. A
-writer that omits it leaves anchors where they were.
-
-**Keyed axis.** A key is unchanged for as long as it exists. A region loses
-the keys that have been removed.
-
-- **[A1]** A region that had extent and is left with none on some axis, or a
-  keyed region left with no keys, is **detached**. A reader MUST report a
-  detached anchor as detached, with the last revision at which it was
-  attached, and MUST NOT move it to similar-looking content.
-- **[A2]** If *B* does not descend from *A*, or the changes between them are
-  absent, the anchor is **unresolved** at *B*. A reader MUST NOT resolve it
-  by matching content. Carrying needs only the shapes of operations, so it
-  works where the content of history has been withheld (§9.3), and the
-  `revs` of the changes show that none is missing (§1.7).
-- **[A3]** Carrying is deterministic: two readers carrying the same anchor
-  across the same revisions MUST obtain the same region.
-
-These rules are the whole of anchor survival for every medium. The printer's
-operations (§11.4) state their effect in the same terms.
-
-Carrying costs work in proportion to the changes made to the object since
-the anchor's revision. Readers keep the list of changes per object in a
-derived store (**P21**), and a writer MAY re-express an anchor it owns
-against the current revision whenever it edits the object that holds it.
-
-A move — a cut and a paste — is a deletion and an insertion. Attribution
-survives it, because the pasted items keep their runs (§1.7). Anchors to the
-moved items detach; they are not carried across the move.
+A move — a cut and a paste — removes elements and inserts new ones.
+Attribution follows the new elements (§8.5). Anchors to the old elements
+detach; they do not follow the move.
 
 ### 4.4 Pins and staleness
 
@@ -1035,8 +978,8 @@ stale when its data does.
 A **pin** is an anchor that records the digest its region had when the pin
 was made, in `d`, together with 16 random bytes of salt, in `s`; the digest
 is taken over the salt followed by the content, so that a pin to a short
-passage does not reveal it. A pin is **current** if, carried to the object's
-current revision, its region is attached and has the same digest; and, where
+passage does not reveal it. A pin is **current** if, resolved against the
+object's current revision, its region is attached and has the same digest; and, where
 what it pins is itself derived (§8.3), that derivation is current.
 Otherwise it is **stale**.
 
@@ -1259,7 +1202,7 @@ or any other table. To a place: a region on `x`, `y`, `z`. To a time: a
 region on `t`. A comment on a doorway, evidence for the dimensions of a
 beam, a summary of the east wing and a decision about a material are all
 ordinary anchors to the scene object, and survive edits by the ordinary
-rules: keys persist, and rescaling the scene is a `remap`.
+rules: keys persist, and rescaling the scene sets the frames of its axes.
 
 *Attribution is ordinary.* Each row was set by a change, so `why` on a node
 answers who or what placed it, from what prompt, on what evidence.
@@ -1321,8 +1264,9 @@ therefore description, with no Compute-let.
 accepts text entry. The host supplies the editing surface it already has —
 caret, selection, input methods, accessibility — through the `text`
 capability and reports each committed edit as an input event `edit` giving
-the range replaced and the text that replaced it. The kernel checks the
-range against the current revision and turns it into a `splice`. The host
+the range replaced and the text that replaced it. The kernel turns the
+range into the identities of the elements concerned and submits a
+`splice`. The host
 knows it is editing a run of text and nothing more (**K2**).
 
 **Children of a surface.** A surface MAY have `children`, a keyed map of
@@ -1847,34 +1791,34 @@ A text object (`ufo.text`) holds characters and their structure.
 | `spans` | map from span key to span |
 | `syntax` | absent for native text; otherwise the media type of a foreign syntax the characters are written in |
 
-The `chars` axis is a sequence whose items are Unicode scalar values. A
-position is a count of scalar values from the start. Like every sequence,
-`chars` has runs (§1.7): each character names the change that introduced
-it.
+`chars` is a sequence property (§1.7): its elements are Unicode scalar
+values, each with a permanent identity that names the change that
+introduced it. A position, where one is shown to a person or an agent, is a
+count of scalar values from the start.
 
 *Reason for scalar values.* They are independent of any encoding and can
 never split a character. Offsets in UTF-8 bytes or UTF-16 code units convert
 to and from them deterministically.
 
-A text may be of any length. A writer MAY store `chars` out of line in
-pieces (§1.4), so that an edit rewrites only the piece it touches. Where
-pieces divide carries no meaning: positions, runs, spans and the
-conservation check (**L3**) are all defined on the whole value.
+A text may be of any length; a long one is kept outside its node (§1.4).
 
 A **span** marks a region of the characters:
 
 | Field | Value |
 | --- | --- |
-| `at` | a self-anchor (§1.7) on `chars` |
+| `at` | an anchor to a region of this text's `chars` (§4.2) |
 | `kind` | `block` or `inline` |
 | `role` | semantic role: `paragraph`, `heading`, `item`, `quote`, `code`, `emphasis`, `strong`, `link`, `embed`, `marker`, or a prefixed name, which readers treat as an opaque label |
 | other fields | properties: `level`, style properties (Appendix A), `href` (an anchor), `child` (a ref) |
 
-Because `at` is a self-anchor, every splice carries every span, as part of
-applying the operation. The operation's `bias` says which neighbor typed
-characters join: text typed at the end of a paragraph belongs to that
-paragraph when the writer says `before`, and to the next when it says
-`after`.
+A span's region is fixed to elements, so it stays in place however the text
+around it is edited, with no work by anyone (§4.3). By convention a block
+span begins just before its first element and ends just before the first
+element of whatever follows it, or at `end`; text typed at the end of a
+paragraph therefore joins that paragraph. An inline span chooses for
+itself whether text typed at its end joins it. Where a writer means
+otherwise — text typed at the very start of a paragraph — it moves the
+boundary in the same change, with a `set`.
 
 Block spans do not partially overlap one another: any two are disjoint or
 nested. Blocks are separated by their spans, not by characters: `chars`
@@ -1886,8 +1830,8 @@ syntax and are not presented. An `embed` span covers exactly one U+FFFC
 OBJECT REPLACEMENT CHARACTER and names, in `child`, the object presented at
 that position — a Portal, or a group such as a table.
 
-- **[X1]** A reader MUST check that the runs of `chars` cover it exactly and
-  that every span lies within it before presenting or editing a text. On
+- **[X1]** A reader MUST check that the `seq` of `chars` accounts for it
+  exactly before presenting or editing a text. On
   failure the text is inconsistent (§1.9): it is not presented, edited or
   saved as though it were the document. No separate digest is stored: the
   hash of the revision already fixes the characters (**C2**).
@@ -1970,7 +1914,7 @@ its own identity, distinct from what it presents.
 
 | Property | Value |
 | --- | --- |
-| `of` | what is presented: a ref (the object, as it now is); an anchor (a region of it, carried to the current revision, so that it follows edits); a pin (exactly the revision pinned, which never changes beneath the Portal); or an anchor into another universe (§1.8) |
+| `of` | what is presented: a ref (the object, as it now is); an anchor (a region of it as it now is, so that it follows edits); a pin (exactly the revision pinned, which never changes beneath the Portal); or an anchor into another universe (§1.8) |
 | `face` | preferred face of the target: a ref to a face object or a `medium` hint; absent lets the reader choose |
 | `place` | how it sits in the parent: `inline`, `block`, `float-start`, `float-end` (in a flow); by `x`, `y`, order (in an `absolute` group); by cell (in a `grid`); by `at`, an anchor into the space its parent surface presents (§5.6) |
 | `w`, `h` | authored size |
@@ -1997,10 +1941,10 @@ the clock it is placed under (§4.5).
 - **[O5] One drop, one owner.** Content dropped over nested Portals is claimed
   by exactly one: the deepest that accepts it.
 - **[O6] No stale binding.** An import started for a Portal names that
-  Portal's identity and revision; the change that binds the result gives
-  that revision as the Portal's `before`. If the Portal no longer
-  exists or has changed target when the import completes, **L4** refuses the
-  binding; the imported asset remains in the universe, unreferenced.
+  Portal's identity and the target it had; the change that binds the
+  result gives that target as `old`. If the Portal no longer exists or has
+  changed target when the import completes, **L4** refuses the binding; the
+  imported asset remains in the universe, unreferenced.
 - **[O7] Guarded nesting.** A reader tracks the chain of objects currently
   being presented, by revision hash and across universes. An object already
   on the chain is shown as a link, not expanded. The limits of **C13** apply.
@@ -2041,7 +1985,7 @@ the change that introduced the content:
 | `tool` | for `tool`: name and version of the deterministic process |
 | `asked` | for `model` and `tool`: the principal at whose request it ran |
 | `copied` | an anchor to the region this content was copied from |
-| `first` | written by the kernel for a copy within the same universe: the identity of the change that introduced the copied value |
+| `sources` | written by the kernel for a copy within the same universe: for what this change inserted, in order, `[count, change]` naming the changes that first introduced it |
 | `method` | for `inferred`: the name of the method that established the origin, and its parameters |
 | `confidence` | for `inferred`, where the method yields one: a number from 0 to 1, or the method's own grade |
 | `parameters` | map: whatever else is needed to describe the contribution |
@@ -2070,11 +2014,14 @@ inconsistent (§1.9).
 
 Where the source is in the same universe, the kernel resolves the origin
 when the change is committed, while the source is certainly present, so
-that the answer never depends on history that may later be withheld: for
-items of a sequence, the copied items keep the runs they had at the source
-(§1.7); for any other value, the kernel records in `origin.first` the
-identity of the change that introduced the value. Moving text by cut and
-paste therefore keeps every character's attribution.
+that the answer never depends on history that may later be withheld. It
+writes `origin.sources`: a list of `[count, change]` saying, for the
+elements this change inserted, in order — or with a count of 1 for a value
+that is not a sequence — which change first introduced what was copied,
+following earlier copies back to their beginning. The copied elements are
+new elements with identities of their own; their attribution is read
+through `sources`. Moving text by cut and paste therefore keeps every
+character's attribution.
 
 Where the source is in another universe, the origin is the origin of the
 region named there, found by following the anchor when that universe is at
@@ -2135,20 +2082,19 @@ the commit that recorded it is covered by a seal.
 - **[R6]** A decision changes no origin and certifies no accuracy. Accepted
   content from a model remains content from a model.
 - **[R7]** The current decision about content is the latest decision in the
-  Chronicle whose `about`, carried forward, covers it. Earlier decisions
-  remain.
+  Chronicle whose `about` covers it. Earlier decisions remain.
 
 **Attribution** is the answer to "where did this come from", and it is read,
-never reconstructed (**L5**). For a region of text, `why` returns, for each
-run in the region: the change, its origin with its basis, any chain of
-copies, the evidence
+never reconstructed (**L5**). For a region of a sequence, `why` returns, for
+each stretch of elements with one origin: the change, its origin with its
+basis, where it was copied from if it was, the evidence
 whose `claim` covers the run and the current decision. For any other
 property, it returns the same for the change named by `by` in the revision
 that last set it. For an item of a module, see §11.5.
 
 - **[R8] Every byte has a known origin.** For every byte of content in a
-  universe, `why` MUST return a change and its origin: for a character, by
-  its run; for any other property value, by the revision that set it; for a
+  universe, `why` MUST return a change and its origin: for an element of a
+  sequence, by its identity; for any other property value, by the revision that set it; for a
   byte of a blob, by the change that first referred to the blob; for an item
   of a module, by its `by`; for a derived byte of a module, "computed by the
   printer" from named items (**N5**). The bytes of records
@@ -2273,8 +2219,8 @@ and still readable.
 | Layer | What it is | Travels |
 | --- | --- | --- |
 | **Content** | the current revision of every **live** object — one reachable from the universe object by refs, links and anchors, without passing through a change — any earlier revision that a live object pins as something to present or as support for evidence, and the blobs all of those name | always |
-| **Attribution** | for every change that touched a live object, is named by a run or a `by` of one, or records evidence, a decision or a finding about one: the change object, which holds its actor, time, origin, evidence, decisions, findings, `revs` and the shapes of its operations (§1.7); the objects its evidence names as support; every commit node; every seal | always |
-| **Working history** | everything else: the content of operations (what was removed, inserted or set, and each change's note); earlier revisions; earlier object maps; prompts and conversations; objects that are no longer live, and changes that touched only those; summaries whose sources are all working history; earlier Compute-let snapshots | depends on the membrane crossed |
+| **Attribution** | for every change that an element or a `by` of a live object names, that an included change's `sources` names, or that records evidence, a decision or a finding about live content: the change object, which holds its actor, time, origin, evidence, decisions and findings (§1.7); the objects its evidence names as support; every commit node; every seal | always |
+| **Working history** | everything else: the `work` of every change — its operations and its note; changes that contributed nothing now present; earlier revisions; earlier object maps; prompts and conversations; objects that are no longer live, and changes that touched only those; summaries whose sources are all working history; earlier Compute-let snapshots | depends on the membrane crossed |
 
 The trail of work is the context for whoever continues it, so who is
 receiving decides the default.
@@ -2288,15 +2234,13 @@ receiving decides the default.
   included either way, and sees the result before it leaves (**E12**).
 - **[E10] Stubs.** Withholding removes records and nothing else. Every hash
   that names a withheld record stays where it was: in `prev`, in commits, in
-  operations, in `origin.prompt`. The recipient's reader can therefore
-  check the whole commit chain and every seal; check that each change it
-  holds is the one its commit names; check from `revs` that no change to any
-  live object is missing; carry every anchor (**A2**); and answer `why` for
-  all content present, since runs and `origin.first` never point into
-  withheld records (§8.5). It cannot run the conservation check on changes
-  whose content is withheld, and says so (**L3**): for those changes it
-  knows who changed what, where and how much, on the word of whoever sealed
-  the chain, and not what the change said.
+  `work`, in `origin.prompt`. The recipient's reader can therefore check
+  the whole commit chain and every seal; check that each change it holds is
+  the one its commit names; resolve every anchor, since resolution needs
+  no history (**A2**); and answer `why` for all content present, since
+  element identities and `origin.sources` never point into withheld
+  records (§8.5). It cannot run the conservation check on a change whose
+  `work` is withheld, and says so (**L3**).
 - **[E11] Withheld is not missing.** A reader MUST present a withheld record
   as withheld by the sender — "prompt withheld" — and never as damaged,
   absent by accident, or nonexistent.
@@ -2325,9 +2269,9 @@ choosing to publish, and **E12** shows it to them.
 
 - The names, keys, times and software of everyone who changed a live
   object, and the identifiers of the models used.
-- How many edits each object received, where in it, and how large they
-  were; the names of properties and the keys of table rows, columns and
-  spans that were ever edited, including ones since removed.
+- For each sequence, how much each change contributed that has since been
+  removed, and where it sat: removed elements remain as markers (§1.7).
+  What they said is not there.
 - The notes on evidence and decisions, the parameters of origins, and any
   fields an application added to changes.
 - The objects that evidence names as support, in full, including sources
@@ -2339,7 +2283,8 @@ choosing to publish, and **E12** shows it to them.
 
 It does not reveal what any earlier draft, prompt or deleted passage said.
 Those are named only by hashes of salted records (§1.4, §1.5), and pins
-are salted (§4.4). A person who needs to reveal less than this starts a
+are salted (§4.4). It reveals nothing of what the operations were: not
+which properties were edited, not how often, not in what order. A person who needs to reveal less than this starts a
 new universe from an export (§2.6).
 
 ### 9.4 Video and image envelopes
@@ -2404,7 +2349,7 @@ logic, and a reader MUST NOT register anything broader.
 
 | Key | Value |
 | --- | --- |
-| `UTTypeIdentifier` | `io.github.nampara-ai.ufx` (provisional: it becomes the project's own reverse-DNS name when the project has a domain) |
+| `UTTypeIdentifier` | `ai.nampara.ufx` |
 | `UTTypeDescription` | UFO file |
 | `UTTypeConformsTo` | `public.data`, `public.composite-content` |
 | `UTTypeTagSpecification` | `public.filename-extension`: `ufx`; `public.mime-type`: `application/vnd.ufx` |
@@ -2567,7 +2512,7 @@ composition: the formula bound (**F2**) and the display-list bound (§3.1).
 Runaway or hostile programs: fuel, memory limits and the sandbox (§11.2).
 Hostile nested universes: read-only, isolated state, no inherited authority
 (**O8**, §5.3, **O10**). Self-granted authority: **U5**, **U7**. Forged
-history: the commit chain and `revs` (§1.7), seals (§10.2). Tests weakened
+history: the commit chain (§1.6), seals (§10.2). Tests weakened
 to pass a change: **G1**. What a published copy reveals: §9.3.
 
 **Known and accepted.** The lineage links every copy of a universe. Hashes
@@ -2988,16 +2933,16 @@ revised once, with reasons, before anything is frozen.
 | Primitives | 11 | 11 | these sufficed for all four worked examples (§14) |
 | Layout rules | 3 | 3 | two candidates were deleted (§5.4) |
 | Axis kinds | 3 | 3 | every anchor in §14 uses one of them |
-| Core operations | 5 | 5 | |
-| Node kinds | 5 | 5 | |
+| Core operations | 5 | 4 | `remap` became a property |
+| Node kinds | 5 | 4 | values kept outside a node are blobs |
 | Frame kinds | 6 | 6 | |
 | Formula operators | 64 | 51 | a spreadsheet's essentials; anything larger is a Compute-let |
 | Base host functions | 12 | 10, plus 2 exports | small enough to implement identically on every host |
 | Capabilities | 20 | 16 | each is something only a host can provide (**H4**) |
 | Operations across all capabilities | 64 | 32 written or sketched: `text` 3, `present` 2, `gpu` 27 (Appendix E); `objects` reuses the projections and actions | the rest are unwritten; the count is part of the interface's true size |
 | Printer operations | 16 | 12 | |
-| Concepts | 40 | 38 | what a newcomer must learn; each is justified in §16, and a new concept must displace one |
-| All defined terms, including names for compositions and structural terms | 130 | 125 | the full total of §16's three tables |
+| Concepts | 40 | 39 | what a newcomer must learn; each is justified in §16, and a new concept must displace one |
+| All defined terms, including names for compositions and structural terms | 130 | 127 | the full total of §16's three tables |
 
 ### 12.2 Size of the player
 
@@ -3024,8 +2969,8 @@ happens:
 | Part of the kernel | Lines |
 | --- | --- |
 | Hashing, values, pack, recovery, index, compaction | 1 300 |
-| Objects, object map, blobs, changes, conservation, runs | 1 300 |
-| Anchors, carrying, pins, digests, derivations, travel layers | 1 000 |
+| Objects, object map, blobs, changes, conservation, sequences | 1 300 |
+| Anchors, resolution, pins, digests, derivations, travel layers | 1 000 |
 | Formulas, including arithmetic that must be identical everywhere | 1 200 |
 | Layout, composition, clocks, hit testing, presentation state, pagination | 2 500 |
 | Projections, search, difference, actions, undo | 1 500 |
@@ -3048,8 +2993,8 @@ this document, and includes: malformed and hostile packs; the fuzzing of
 **P20** and its corpus; writes interrupted at every byte offset of a commit
 (**P6**); corruption by bit flips, truncation and swapped ranges; compaction
 with every hash compared before and after (**P13**); the weekend test
-(**P19**); refused changes of every kind named in **L4**; anchor carrying
-across long edit histories, with and without operation content; and a
+(**P19**); refused changes of every kind named in **L4**; anchors resolved
+after long edit histories; and a
 travel form with working history withheld, checked for what it reveals and
 what it still verifies (**E10**). Independent implementations, when they
 exist, are measured against the same suite.
@@ -3085,7 +3030,7 @@ residual field or the reverse, only the portable fact is stored.
 | Cursive record | In a UFO |
 | --- | --- |
 | Note source (Markdown) | a text with `syntax` `text/markdown`; `chars` is the source, exactly; spans derived by Cursive's parser, with `marker` spans over markup (§8.1) |
-| Attribution segment `[from, to)` in editor positions | not stored; it is the `runs` of the text. Cursive converts between its positions and character positions using its own parse of the same source |
+| Attribution segment `[from, to)` in editor positions | not stored; it is the `seq` of the text, whose elements name their changes. Cursive converts between its positions and character positions using its own parse of the same source |
 | Generation record: prompt, model, operation, conversation, original and generated text | one change. `origin` is `{basis: witnessed, by: model, model, prompt, context, asked, parameters}`; the prompt and conversation are text objects; the generated text is the `ins` of the change's splices; the original text is their `old` |
 | Parent and derived-from generation ids | `origin.context` pins to the earlier changes; which is which is kept in `io.cursive.lineage` on the change |
 | Retrieved sources, with bibliographic fields and content hash | objects of type `io.cursive.source` holding those fields; evidence of kind `consulted` from the generated region to each (**R3**) |
@@ -3097,7 +3042,7 @@ residual field or the reverse, only the portable fact is stored.
 | Acceptance, unacceptance | decisions with verdict `accept` and `retract` about the generation's change (**R6**, **R7**) |
 | Generation deleted with a review action | the splice that removes the text, with a decision of verdict `reject` or `revise` |
 | Generation declined before entering the document | the generated text kept as a text object referenced by nothing in the document, its change carrying a decision of verdict `reject` |
-| Source-edit ledger entry: baseline hash, old text, contexts, replacement | a splice: `at`, `old`, `ins`, with the baseline in the change's `revs`. The context fields exist to locate an edit unambiguously; `at` against the baseline already does |
+| Source-edit ledger entry: baseline hash, old text, contexts, replacement | a splice: the elements removed, `old`, `ins`, applied to the parent commit. The context fields exist to locate an edit unambiguously; element identities already do |
 | Shadow workspace result | the change computed from the shadow's bytes against the baseline (**L1**); the agent session is the `actor` |
 | Version, with label and source | a commit whose change carries `io.cursive.version` with the label and source. Every commit is restorable, but only these are Cursive's versions |
 | Snapshot, by content hash | a revision, by revision hash |
@@ -3115,7 +3060,7 @@ residual field or the reverse, only the portable fact is stored.
 
 ### 13.4 Reading back, and the test
 
-Cursive rebuilds its records from the Chronicle: segments from `runs`,
+Cursive rebuilds its records from the Chronicle: segments from `seq`,
 generation records from changes with model origin, acceptance state by
 **R7**, versions from commits.
 
@@ -3202,8 +3147,8 @@ on `t` covering the chapter, and a pin to the matching region of `transcript`.
 `top.parts` lists the chapters. Because a digest follows refs (§4.4), a
 chapter summary goes stale when any caption or the footage within it
 changes, and `top` goes stale when a chapter does. Trimming the video's start by ten seconds is
-a `remap` on `t`; every chapter pin carries by the continuous rule and stays
-attached.
+a `set` of the clock's frame on `t`; every chapter pin resolves through the
+frame and stays attached.
 
 **Export.** A standard video file is `video` sampled over 0 to 20 min at a
 frame rate; `info-surface` is run frame by frame from its snapshot (**M5**),
@@ -3243,8 +3188,8 @@ fuel set per call. Nothing else.
 - *Space is addressable.* A design note in `design` links to "the ledge
   above the second door" by an anchor to `level-1` with a region on `x`,
   `y`, `z`, and to a spawn point by its key on `nodes`. A cut-scene is
-  cited by a region on `t`. These carry through edits to the level like any
-  anchors; rescaling the level is a `remap`.
+  cited by a region on `t`. These hold through edits to the level like any
+  anchors; rescaling the level sets its frames.
 - *What sits in the world is data, with attribution and summaries.* The
   terminal showing the manual is `terminal-portal`, an object whose
   `place.at` names the node it sits on. Every node of every level was set
@@ -3447,7 +3392,7 @@ tested.
 ## 16. Glossary
 
 Every defined term of this document is in one of three tables. There are
-125 in all: 38 concepts, 22 names for compositions, and 65 structural
+127 in all: 39 concepts, 20 names for compositions, and 68 structural
 terms.
 
 **Concepts.** What a newcomer must learn. A concept is listed here only if
@@ -3468,6 +3413,7 @@ says why not.
 | Decision | what a person chose to do about content | one of three facts that must never merge | 8.5 |
 | Derivation | the record of what an object was made from, and how | basis of staleness for every derived thing | 8.3 |
 | Display list | what the kernel composes for presenters to draw and play | the contract between kernel and host | 6.2 |
+| Element | one item of a sequence, with a permanent identity | what attribution, anchors and spans attach to; the basis of later merging | 1.7 |
 | Envelope | a file valid in a common format that carries a pack | how a universe reaches software that does not know the format | 9.2 |
 | Evidence | what supports content | one of three facts that must never merge | 8.5 |
 | Face | a presentation of a universe: sampled, carried or transmuted | what a person actually opens | 7.1 |
@@ -3479,7 +3425,7 @@ says why not.
 | Kernel | the one program that reads, verifies and composes a universe | the single implementation everything else relies on | 6.1 |
 | Membrane | a boundary between universes, with rules for what crosses | what makes unlimited nesting and linking safe; decides what travels | 10.4 |
 | Object | an identity with a type and properties | the unit of content | 1.5 |
-| Operation | one edit, with a shape and separately held content | what conservation and anchor carrying are computed from | 1.7 |
+| Operation | one edit to the parent commit's state | what conservation is computed from | 1.7 |
 | Origin | who or what contributed content: witnessed, inferred or unknown | one of three facts that must never merge | 8.5 |
 | Pack | the byte format holding a universe's records | the file | 2.1 |
 | Pin | an anchor that records the digest of what it covers | the staleness test | 4.4 |
@@ -3512,10 +3458,8 @@ the second column says how.
 | Light cone | the summary tree |
 | Rendition | an asset with a derivation |
 | Root | an entry in the universe object's `roots` |
-| Run | a record, on a sequence, of which change introduced which items |
-| Self-anchor | an anchor to the object that holds it, kept current by every operation |
 | Snapshot | a blob of Compute-let state |
-| Span | a self-anchor on a text with a role and properties |
+| Span | an anchor on a text's elements, with a role and properties |
 | Transclusion | a Portal whose target is a region of another object |
 | Transmutation | described objects with a derivation whose `how` is `transmute` |
 | Unit | a module item that is a function, named by key and hash |
@@ -3525,7 +3469,7 @@ the second column says how.
 | Tools universe | a nested universe that is the interface to the kernel's functions |
 
 **Structural terms.** Words for the parts of records and for the states
-things can be in, each defined where it is first used: chunk, node, value, link, ref, out-of-line value, salted value, frame, head, index, note, signature (of a pack), offset, identity, type, property, revision hash, root hash, object map, universe object, lineage, shape and content (of an operation), bias, region, digest, flick, basis (witnessed, inferred, unknown), finding, malformed, inconsistent, unavailable, unrecognized, whole, live, withheld, detached, unresolved, current, stale, carrying, compaction, presentation state, player, base presenter, port, manifest, module, item, key, derived bytes, fuel, test, test change, promotion, static face, plain-text head, envelope template, mark, sharing, publishing, export, determinism tier, occurrence.
+things can be in, each defined where it is first used: chunk, node, value, link, ref, indirect, frame (of a pack), head, index, note, signature (of a pack), offset, reachable, identity, type, property, sequence property, run, removed (of an element), boundary, revision hash, root hash, object map, universe object, lineage, work (of a change), region, frame (of an axis), digest, flick, basis (witnessed, inferred, unknown), finding, malformed, inconsistent, unavailable, unrecognized, whole, live, withheld, detached, current, stale, compaction, presentation state, player, base presenter, drawing contract, port, manifest, module, item, key, derived bytes, fuel, test, test change, promotion, static face, plain-text head, envelope template, mark, sharing, publishing, export, determinism tier, occurrence.
 
 ---
 
@@ -3535,7 +3479,7 @@ All lengths are in the units of the enclosing region. Colors are sRGB with
 alpha, as four floats from 0 to 1. Properties in *italics* say what a thing
 is and MUST NOT be formulas (§5.1); all others may be.
 
-**Common to all:** `label`, `role`, `lang`, `opacity`, `visible`, `on` (map
+**Common to all:** `frames` (§4.3), `label`, `role`, `lang`, `opacity`, `visible`, `on` (map
 from an input event name — `press`, `enter`, `leave`, `key`, `change` — to
 `{set: state name, to: formula}`, `{propose: operations}` (§5.6), or
 `{deliver: true}` for surfaces), `from` (§8.3).
@@ -3654,7 +3598,7 @@ passed back, exactly as written, as an argument to another projection.
 | `content` | an anchor, then `type` |
 | `object` | `id` `type` `rev` (number) `r` (revision hash) `by` |
 | `prop` | `key` then `value`, or `len` and `kind` when large |
-| `run` | the region, then `change` `basis` [`by`] [`who`] [`model`] [`tool`] [`asked`] [`prompt`] [`method`] [`confidence`] `sealed` (boolean) |
+| `run` | a stretch of elements with one origin: the region, as positions, then `change` `basis` [`by`] [`who`] [`model`] [`tool`] [`asked`] [`prompt`] [`method`] [`confidence`] `sealed` (boolean) |
 | `value` | `key` then the same fields as `run` from `change` on |
 | `copied` | `from` (anchor) `basis` |
 | `finding` | `change` `basis` and the origin fields, as in `run` |
@@ -3664,7 +3608,7 @@ passed back, exactly as written, as an argument to another projection.
 | `text` | the anchor, `chars` (count), then `s` |
 | `hit` | the anchor, `type`, `s` (up to 80 characters around the match) |
 | `change` | `id` `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of identities) [`note`] |
-| `op` | `op` `obj` [`key`] [`at`] [`del`] [`add`] [`bias`] [`axis`] [`scale`] [`shift`] then `old` and `new`, each a value or `withheld` |
+| `op` | `op` `obj` [`key`] [`after`] [`del`] then `old` and `new`, each a value; where the change's `work` is withheld, one record `op withheld` |
 | `check` | `rule` (a label of this document) `scope` `result` (`pass`, `fail`, `skipped`) [`reason`] |
 | `issue` | `class` (of §1.9) `record` `rule` `s` |
 | `item` | for `sample`: the display-list item as fields. For `items`: `key` `kind` `index` `name` `hash` `size` `by` `basis` `tests` (count) [`signature`] |
@@ -3691,22 +3635,25 @@ In CDDL (RFC 8610). `hash` is 32 bytes and `id` is 16.
 ```
 hash   = bytes .size 32
 id     = bytes .size 16
-link   = #6.55460(hash)
-indirect = #6.55464(hash)
 salt   = bytes .size 16
-ref    = #6.55461(id)
-anchor = #6.55462({ o: id, ? r: hash, ? a: { * tstr => region },
-                    ? u: hash, ? d: hash, ? s: salt })
-formula = #6.55463([ tstr, * value ])
-region = [ "s", uint, uint ] / [ "c", number, number ] / [ "k", * (tstr / id) ]
-value  = nil / bool / int / float / tstr / bstr / [ * value ]
-       / { * tstr => value } / link / ref / anchor / formula / indirect
+link     = #6.55460(hash)
+ref      = #6.55461(id)
+anchor   = #6.55462({ o: id, ? a: { * tstr => region }, ? r: hash,
+                      ? u: hash, ? d: hash, ? s: salt })
+formula  = #6.55463([ tstr, * value ])
+indirect = #6.55464(hash)   ; hash of a blob whose bytes are a salt (16 bytes)
+                            ; followed by the encoding of the value
+region   = [ "s", boundary, boundary ] / [ "c", number, number ]
+         / [ "k", * (tstr / id) ]
+boundary = "start" / "end" / [ id, uint, 0 / 1 ]   ; change, number, before / after
+value    = nil / bool / int / float / tstr / bstr / [ * value ]
+         / { * tstr => value } / link / ref / anchor / formula / indirect
 
 blob   = { k: "blob", len: uint, sha256: hash, chunks: [ * link ] }
-val    = { k: "val", v: value, ? salt: salt } / { k: "val", parts: [ + hash ] }
 obj    = { k: "obj", id: id, type: tstr, rev: uint, ? prev: link,
            by: id, salt: salt, p: { * tstr => value },
-           ? runs: { * tstr => [ * [ uint, id, uint ] ] } }
+           ? seq: { * tstr => [ * run ] } }
+run    = [ id, uint, uint ] / [ id, uint, uint, false ]   ; change, first, count; false = removed
 map    = { k: "map", e: [ * [ id, link ] ] }
        / { k: "map", c: { * tstr => link } }
 commit = { k: "commit", v: 1, parents: [ ? link ], objects: link,
@@ -3719,29 +3666,28 @@ seal   = { commit: hash, key: bytes .size 32, time: uint,
 note   = { ? history: bool,
            ? blobs: [ * { blob: hash, len: uint, hints: [ * tstr ] } ] }
 
-change-p = { ops: [ * op ], revs: { * tstr => [ hash / nil, hash / nil ] },
+change-p = { work: indirect,
              actor: { who: principal, with: { name: tstr, version: tstr } },
              time: uint, ? origin: origin, ? evidence: [ * evidence ],
-             ? decisions: [ * decision ], ? attributions: [ * finding ],
-             ? note: link }
+             ? decisions: [ * decision ], ? attributions: [ * finding ] }
+work   = { ops: [ * op ], ? note: tstr }
 op     = { op: "new", obj: id, type: tstr }
-       / { op: "set", obj: id, key: key, ? old: link, ? val: link }
-       / { op: "splice", obj: id, key: tstr, at: uint, del: uint, add: uint,
-           ? bias: "before" / "after", ? old: link, ? ins: link }
-       / { op: "remap", obj: id, axis: tstr, scale: [ uint, uint ], shift: int / float,
-           extent: [ number, number ] }
+       / { op: "set", obj: id, key: key, ? old: value, ? val: value }
+       / { op: "splice", obj: id, key: tstr, ? after: [ id, uint ] / nil,
+           ? del: [ + [ id, uint, uint ] ], ? old: sequence, ? ins: sequence }
        / { op: "drop", obj: id }
 key    = tstr / [ + tstr ]
+sequence = tstr / bstr / [ * value ]
 principal = { ? key: bytes .size 32, ? name: tstr }
 ```
 
-`change-p` is the `p` of an object of type `ufo.change`; in `revs`, an
-object's identity is written as 32 lowercase hexadecimal digits. In these
-schemas `uint` and `int` are within the integer range of §1.2. A key this
-schema does not list is unrecognized and preserved in `obj`, `commit`,
-`val`, `seal`, `note` and in properties; in `map` and `blob` nodes, whose
-shape must be a function of their contents, it is malformed. Values are
-compared exactly: an integer is never equal to a float.
+`change-p` is the `p` of an object of type `ufo.change`, and `work` is the
+value its indirect stands for. In these schemas `uint` and `int` are within
+the integer range of §1.2. A key this schema does not list is unrecognized
+and preserved in `obj`, `commit`, `seal`, `note`, `work` and in properties;
+in `map` and `blob` nodes, whose shape must be a function of their
+contents, it is malformed. Values are compared exactly: an integer is never
+equal to a float.
 
 The Chronicle's records (§8.5):
 
@@ -3750,7 +3696,7 @@ origin   = { basis: "witnessed" / "inferred" / "unknown",
              ? by: "person" / "model" / "tool", ? who: principal,
              ? model: tstr, ? prompt: ref, ? context: [ * anchor ],
              ? tool: { name: tstr, version: tstr }, ? asked: principal,
-             ? copied: anchor, ? first: id, ? method: { name: tstr, * tstr => value },
+             ? copied: anchor, ? sources: [ * [ uint, id ] ], ? method: { name: tstr, * tstr => value },
              ? confidence: float / tstr, ? parameters: { * tstr => value } }
 evidence = { claim: anchor, support: anchor, kind: tstr, ? note: tstr }
 decision = { about: anchor / ref, verdict: tstr, who: principal, ? note: tstr }
@@ -3884,33 +3830,33 @@ vector on its own.
 
 | File | Contents |
 | --- | --- |
-| `vectors/minimal.ufx` | a whole pack of 3463 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
-| `vectors/history.ufx` | a pack of 36827 bytes holding three commits, built to exercise what the first does not (below) |
+| `vectors/minimal.ufx` | a whole pack of 2531 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
+| `vectors/history.ufx` | a pack of 27538 bytes holding three commits, built to exercise what the first does not (below) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
 
 `history.ufx` extends the first pack. Its second commit, by a model,
-replaces a word in the text (a `splice` that deletes), replaces a property
-(a `set` with `old`), adds an asset whose blob has one chunk, a clock, and
-forty small objects, so that the object map gains an interior node; one
-node frame and the chunk frame are compressed. A frame of unknown kind
-precedes it and a seal follows it, with its own head. Its third commit, by
-a person, inserts a character at the end of the paragraph span with
-`bias: before`, then inserts and deletes a second character, shortens the
-clock with a `remap`, drops the asset and records a decision. One object's
-property is stored out of line, as an indirect. The file ends with a chain of two indexes and four
-heads.
+replaces a word in the text (a `splice` that removes eight elements and
+inserts five), replaces a property (a `set` with `old`), adds an asset
+whose blob has one chunk, a clock, and forty small objects, so that the
+object map gains an interior node; one node frame and one chunk frame are
+compressed, and one property is kept outside its node. A frame of unknown
+kind precedes it and a seal follows it, with its own head. Its third
+commit, by a person, appends a character, inserts and removes another,
+shortens the clock and sets its frame, drops the asset and records a
+decision. The file ends with a chain of two indexes and four heads.
 
 | Group | What is fixed |
 | --- | --- |
-| `values` | the encoding of 20 values: integers at the width boundaries, floats at three widths and negative zero, map key order, the five tags |
+| `values` | the encoding of 20 values, each given both as a description and as bytes: integers at the width boundaries, floats at three widths and negative zero, map key order, the five tags, the three kinds of region |
 | `values_malformed` | 10 encodings a reader must reject (**C1**) |
 | `record_hashes` | the hash of a chunk and of a node |
+| `value_kept_outside` | a value, its salt, the blob that holds it and the indirect that names it (§1.4) |
 | `blobs` | blob nodes and hashes for 0 bytes, 3 bytes, 2²⁰ and 2²⁰ + 1 zero bytes, 1 025 MiB of zero bytes (two spans), and 2⁴⁰ + 2²⁰ zero bytes (spans of 1024² chunks, the last a one-chunk blob) |
 | `object_maps` | root hashes of maps with 1, 32, 33 and 9 000 entries: a leaf, the largest leaf, the smallest interior node, and three levels |
 | `minimal_pack` | every record of `minimal.ufx` with its offset and hash; the index; the head; the root hash. Removing its last byte leaves no valid head |
-| `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its span and its runs; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; eight anchors carried across the commits, on sequence and continuous axes, including clipping, detachment and a dropped object |
-| `carry_continuous` | six cases of §4.3's continuous rule: shift, integer rounding of both signs, clipping, detachment, floats |
-| `carry_sequence` | 15 cases of §4.3's table, including points, deletion of a whole region, and both values of `bias` |
+| `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its `seq`, and what its span resolves to; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; ten anchors resolved at the last commit, on sequence and continuous axes, including a replaced word, a point at a removed element, clipping, and a dropped object |
+| `resolve_sequence` | a sequence with removed elements, and nine regions resolved against it (§4.3) |
+| `resolve_continuous` | six regions resolved through a frame: shift, integer rounding of both signs, clipping, detachment, floats |
 | `printer` | two printer operations on an empty module, the module bytes they produce, and the hash of each item with the exact bytes hashed |
 | `instrumentation` | three stored modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
 
@@ -3919,8 +3865,8 @@ Three values, for a first check without opening the files:
 | | |
 | --- | --- |
 | Hash of the chunk `abc` | `1e18834c426d00e57788444cb3ccd62c771b420c095bb0c4e040a8c122c4570d` |
-| Root hash of `minimal.ufx` | `c224935f3791367907b4aa853d2fcb3837993e495947d9b001903d0162802825` |
-| Root hash of `history.ufx` | `c18d5d6713415ef92590b845d4d4c0e49ca9eaa4085aab6bd6f5c719b9a2cc16` |
+| Root hash of `minimal.ufx` | `436e32c28816d157d28040e6a332473f8e982022755d57e7c59aa79af81311ff` |
+| Root hash of `history.ufx` | `3c5f9cccd9203e95453eedd520d9916a781f4b5419f6f2db3cf754c1fdd4cb12` |
 
 How far these have been checked: the WebAssembly vectors were validated and
 run in one engine (Node.js) and behave as stated. The other vectors have

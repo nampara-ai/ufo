@@ -71,7 +71,7 @@ vals = [("null", None), ("true", True), ("int 0", 0), ("int 23", 23), ("int 24",
         ("float 100000.0", 100000.0), ("float -0.0", -0.0), ("text", "héllo"), ("bytes", b"\x00\xff"),
         ("list", [1, "a", [True]]), ("map sorted by encoded key", {"b": 1, "aa": 2, "a": 3}),
         ("link", link(bytes(32))), ("ref", ref(bytes(range(16)))),
-        ("anchor", anchor({"o": bytes(range(16)), "a": {"chars": ["s", 0, 5]}})),
+        ("anchor", anchor({"o": bytes(range(16)), "a": {"chars": ["s", [bytes([0xc1]) * 16, 0, 0], "end"], "t": ["c", 0, 705600000], "rows": ["k", "q3"]}})),
         ("formula", Tag(55463, ["+", 1, ["get", ref(bytes(16)), "w"]])),
         ("indirect", Tag(55464, bytes([0xee]) * 32))]
 def describe(v):
@@ -92,8 +92,8 @@ V["values_malformed"] = [{"name": n, "hex": h} for n, h in (
 # ---- 2. record hashes -----------------------------------------------------------
 V["record_hashes"] = [
     {"kind": "chunk", "bytes_hex": b"abc".hex(), "hash": rhash(CHUNK, b"abc").hex()},
-    {"kind": "node", "value": '{k: "val", v: "abc"}', "bytes_hex": enc({"k": "val", "v": "abc"}).hex(),
-     "hash": rhash(NODE, enc({"k": "val", "v": "abc"})).hex()}]
+    {"kind": "node", "value": '{k: "map", e: []}', "bytes_hex": enc({"k": "map", "e": []}).hex(),
+     "hash": rhash(NODE, enc({"k": "map", "e": []})).hex()}]
 
 # ---- 3. blobs -------------------------------------------------------------------
 MIB = 1 << 20
@@ -195,7 +195,7 @@ class Pack:
     """Accumulates frames for one example file. Not a general writer."""
     def __init__(self):
         self.b = bytearray(b"\x89UFO\r\n\x1a\n"); self.off = {}; self.pending = []; self.index_at = 0
-        self.head_at = 0; self.covered = 8; self.index_sizes = []; self.log = []; self.n = 0
+        self.head_at = 0; self.index_sizes = []; self.log = []; self.n = 0
     def put(self, kind, rec, codec=0):
         h = rhash(kind, rec)
         if h not in self.off:
@@ -205,8 +205,11 @@ class Pack:
             self.b += frame(kind, rec, codec)
         return h
     def node(self, v, codec=0): return self.put(NODE, enc(v), codec)
-    def sval(self, v):
-        self.n += 1; return link(self.node({"k": "val", "v": v, "salt": salt(self.n)}))
+    def blob(self, data, codec=0):
+        return self.put(NODE, blob_node(len(data), sha(data), [self.put(CHUNK, data, codec)] if data else []))
+    def outside(self, v):
+        """A value kept outside its node (section 1.4): a blob of salt followed by the encoding."""
+        self.n += 1; return Tag(55464, self.blob(salt(self.n) + enc(v)))
     def raw(self, kind, payload): self.b += frame(kind, payload)
     def index(self):
         ents = sorted((h, self.off[h]) for h in self.pending); prev = self.index_at
@@ -214,19 +217,22 @@ class Pack:
             prev_ents, _, prevprev = self.index_sizes.pop(); ents = sorted(ents + prev_ents); prev = prevprev
         at = len(self.b)
         self.raw(4, struct.pack("<QQQ", len(ents), prev, at) + b"".join(h + struct.pack("<Q", o) for h, o in ents))
-        self.index_sizes.append((ents, len(ents), prev)); self.index_at = at; self.pending = []; self.covered = at
+        self.index_sizes.append((ents, len(ents), prev)); self.index_at = at; self.pending = []
     def head(self, commit):
         body = commit + struct.pack("<QQQQ", self.off[commit], self.index_at, self.head_at, len(self.b) + 75)
         f = frame(5, body + sha(body)[:8]); assert len(f) == 75
         self.head_at = len(self.b); self.b += f; return f
 
-def revision(pk, i, typ, rev, by, sl, p, prev=None, runs=None, codec=0):
+def revision(pk, i, typ, rev, by, sl, p, prev=None, seq=None, codec=0):
     n = {"k": "obj", "id": i, "type": typ, "rev": rev, "by": by, "salt": salt(sl), "p": p}
     if prev: n["prev"] = link(prev)
-    if runs: n["runs"] = runs
+    if seq: n["seq"] = seq
     return pk.node(n, codec)
-def commit(pk, state, change_id, change_p, parent, height, sl):
-    hC = revision(pk, change_id, "ufo.change", 1, change_id, sl, change_p)
+def commit(pk, state, change_id, ops, note, public, parent, height, sl):
+    work = {"ops": ops}
+    if note: work["note"] = note
+    cp = dict(public, work=pk.outside(work))
+    hC = revision(pk, change_id, "ufo.change", 1, change_id, sl, cp)
     state = dict(state); state[change_id] = hC
     nodes = []; hM = object_map(sorted(state.items()), out=nodes)
     for n in nodes: pk.put(NODE, n)
@@ -236,34 +242,33 @@ def commit(pk, state, change_id, change_p, parent, height, sl):
 U, T, F = bytes(16), bytes([0xa1]) * 16, bytes([0xfa]) * 16
 C1, C2, C3 = (bytes([c]) * 16 for c in (0xc1, 0xc2, 0xc3))
 A, K = bytes([0xaa]) * 16, bytes([0xcc]) * 16
-who = {"name": "Test Author"}; actor = {"who": who, "with": {"name": "ufo-vectors", "version": "0.4"}}
+who = {"name": "Test Author"}; actor = {"who": who, "with": {"name": "ufo-vectors", "version": "0.5"}}
 lineage = bytes([0x11]) * 16
-def span(a, b): return {"at": anchor({"o": T, "a": {"chars": ["s", a, b]}}), "kind": "block", "role": "paragraph"}
+# a block span: begins just before its first element, ends at the end of the sequence (section 8.1)
+SPAN = {"at": anchor({"o": T, "a": {"chars": ["s", [C1, 0, 0], "end"]}}), "kind": "block", "role": "paragraph"}
 roots, faces, feats = {"primary": ref(F)}, [ref(F)], {"ufo.text": {"v": 1, "required": True}}
 
 def genesis(pk):
     t0 = "Hello, universe."
     ops = [{"op": "new", "obj": U, "type": "ufo.universe"},
-           {"op": "set", "obj": U, "key": "lineage", "val": pk.sval(lineage)},
+           {"op": "set", "obj": U, "key": "lineage", "val": lineage},
            {"op": "new", "obj": T, "type": "ufo.text"},
-           {"op": "splice", "obj": T, "key": "chars", "at": 0, "del": 0, "add": len(t0), "ins": pk.sval(t0)},
-           {"op": "set", "obj": T, "key": ["spans", "p1"], "val": pk.sval(span(0, 16))},
+           {"op": "splice", "obj": T, "key": "chars", "after": None, "ins": t0},
+           {"op": "set", "obj": T, "key": ["spans", "p1"], "val": SPAN},
            {"op": "new", "obj": F, "type": "ufo.face"},
-           {"op": "set", "obj": F, "key": "of", "val": pk.sval(ref(T))},
-           {"op": "set", "obj": F, "key": "medium", "val": pk.sval("document")},
-           {"op": "set", "obj": U, "key": "roots", "val": pk.sval(roots)},
-           {"op": "set", "obj": U, "key": "faces", "val": pk.sval(faces)},
-           {"op": "set", "obj": U, "key": "features", "val": pk.sval(feats)}]
+           {"op": "set", "obj": F, "key": "of", "val": ref(T)},
+           {"op": "set", "obj": F, "key": "medium", "val": "document"},
+           {"op": "set", "obj": U, "key": "roots", "val": roots},
+           {"op": "set", "obj": U, "key": "faces", "val": faces},
+           {"op": "set", "obj": U, "key": "features", "val": feats}]
     hU = revision(pk, U, "ufo.universe", 1, C1, 1001, {"lineage": lineage, "roots": roots, "faces": faces, "features": feats})
-    hT = revision(pk, T, "ufo.text", 1, C1, 1002, {"chars": t0, "spans": {"p1": span(0, 16)}}, runs={"chars": [[16, C1, 0]]})
+    hT = revision(pk, T, "ufo.text", 1, C1, 1002, {"chars": t0, "spans": {"p1": SPAN}}, seq={"chars": [[C1, 0, 16]]})
     hF = revision(pk, F, "ufo.face", 1, C1, 1003, {"of": ref(T), "medium": "document"})
-    cp = {"ops": ops, "revs": {U.hex(): [None, hU], T.hex(): [None, hT], F.hex(): [None, hF]}, "actor": actor,
-          "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}, "note": pk.sval("First commit.")}
-    state, hC, hM, hK = commit(pk, {U: hU, T: hT, F: hF}, C1, cp, None, 0, 1004)
+    pub = {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}
+    state, hC, hM, hK = commit(pk, {U: hU, T: hT, F: hF}, C1, ops, "First commit.", pub, None, 0, 1004)
     pk.index(); hd = pk.head(hK)
     return state, dict(root=hK, map=hM, change=hC, universe=hU, text=hT, face=hF, head=hd)
 
-# minimal.ufx: one commit
 pk = Pack(); _, g = genesis(pk)
 open(os.path.join(OUT, "minimal.ufx"), "wb").write(pk.b)
 V["minimal_pack"] = {"file": "minimal.ufx", "length": len(pk.b), "sha256_of_file": sha(bytes(pk.b)).hex(),
@@ -273,77 +278,74 @@ V["minimal_pack"] = {"file": "minimal.ufx", "length": len(pk.b), "sha256_of_file
     "records": pk.log, "index_offset": pk.index_at, "head_hex": g["head"].hex(), "hex": bytes(pk.b).hex(),
     "state_after_removing_last_byte": "no valid head: no commit was ever completed; malformed (section 2.3, step 3)"}
 
-# history.ufx: three commits, exercising what minimal.ufx does not
 pk = Pack(); state, g = genesis(pk); len1 = len(pk.b)
 pk.raw(0x7f, b"a frame of unknown kind: skipped and preserved")
 # commit 2: a model replaces a word; a property is replaced; an asset, a clock and 40 small objects appear
 t1 = "Hello, world."
 data = (b"The quick brown fox jumps over the lazy dog.\n" * 120)[:5000]
-hChunk = pk.put(CHUNK, data, codec=1)
-hBlob = pk.put(NODE, blob_node(len(data), sha(data), [hChunk]))
+hBlob = pk.blob(data, codec=1); hChunk = rhash(CHUNK, data)
 FL = 705600000
 items = [(sha(b"item" + struct.pack("<I", i))[:16], i) for i in range(40)]
-ops = [{"op": "splice", "obj": T, "key": "chars", "at": 7, "del": 8, "add": 5, "old": pk.sval("universe"), "ins": pk.sval("world")},
-       {"op": "set", "obj": F, "key": "medium", "old": pk.sval("document"), "val": pk.sval("text")},
+LONG = "kept outside its node " * 12
+ops = [{"op": "splice", "obj": T, "key": "chars", "after": [C1, 6], "del": [[C1, 7, 8]], "old": "universe", "ins": "world"},
+       {"op": "set", "obj": F, "key": "medium", "old": "document", "val": "text"},
        {"op": "new", "obj": A, "type": "ufo.asset"},
-       {"op": "set", "obj": A, "key": "bytes", "val": pk.sval(link(hBlob))},
-       {"op": "set", "obj": A, "key": "media", "val": pk.sval("text/plain")},
+       {"op": "set", "obj": A, "key": "bytes", "val": link(hBlob)},
+       {"op": "set", "obj": A, "key": "media", "val": "text/plain"},
        {"op": "new", "obj": K, "type": "ufo.clock"},
-       {"op": "set", "obj": K, "key": "start", "val": pk.sval(0)},
-       {"op": "set", "obj": K, "key": "end", "val": pk.sval(10 * FL)}]
+       {"op": "set", "obj": K, "key": "start", "val": 0},
+       {"op": "set", "obj": K, "key": "end", "val": 10 * FL}]
 for i, n in items:
-    ops += [{"op": "new", "obj": i, "type": "io.example.item"}, {"op": "set", "obj": i, "key": "n", "val": pk.sval(n)}]
-LONG = "out of line " * 20
-ops.append({"op": "set", "obj": items[0][0], "key": "long", "val": pk.sval(LONG)})
-hLong = pk.node({"k": "val", "v": LONG})
-hT2 = revision(pk, T, "ufo.text", 2, C2, 2001, {"chars": t1, "spans": {"p1": span(0, 13)}}, prev=state[T],
-               runs={"chars": [[7, C1, 0], [5, C2, 0], [1, C1, 15]]}, codec=1)
+    ops += [{"op": "new", "obj": i, "type": "ai.nampara.example.item"}, {"op": "set", "obj": i, "key": "n", "val": n}]
+ops.append({"op": "set", "obj": items[0][0], "key": "long", "val": LONG})
+seq2 = [[C1, 0, 7], [C2, 0, 5], [C1, 7, 8, False], [C1, 15, 1]]
+hT2 = revision(pk, T, "ufo.text", 2, C2, 2001, {"chars": t1, "spans": {"p1": SPAN}}, prev=state[T], seq={"chars": seq2}, codec=1)
 hF2 = revision(pk, F, "ufo.face", 2, C2, 2002, {"of": ref(T), "medium": "text"}, prev=state[F])
 hA = revision(pk, A, "ufo.asset", 1, C2, 2003, {"bytes": link(hBlob), "media": "text/plain"})
 hK2o = revision(pk, K, "ufo.clock", 1, C2, 2004, {"start": 0, "end": 10 * FL})
-revs = {T.hex(): [state[T], hT2], F.hex(): [state[F], hF2], A.hex(): [None, hA], K.hex(): [None, hK2o]}
 st = dict(state); st.update({T: hT2, F: hF2, A: hA, K: hK2o})
 for n_, (i, n) in enumerate(items):
     props = {"n": n}
-    if n_ == 0: props["long"] = Tag(55464, hLong)        # stored out of line: an indirect
-    st[i] = revision(pk, i, "io.example.item", 1, C2, 2100 + n_, props); revs[i.hex()] = [None, st[i]]
-cp = {"ops": ops, "revs": revs, "actor": actor, "time": 1767229200000,
-      "origin": {"basis": "witnessed", "by": "model", "model": "example-model-1", "asked": who}, "note": pk.sval("Shorter greeting.")}
-state2, hC2, hM2, hK2 = commit(pk, st, C2, cp, g["root"], 1, 2005)
+    if n_ == 0: props["long"] = pk.outside(LONG)          # stored outside the node
+    st[i] = revision(pk, i, "ai.nampara.example.item", 1, C2, 2100 + n_, props)
+pub = {"actor": actor, "time": 1767229200000, "origin": {"basis": "witnessed", "by": "model", "model": "example-model-1", "asked": who}}
+state2, hC2, hM2, hK2 = commit(pk, st, C2, ops, "Shorter greeting.", pub, g["root"], 1, 2005)
 pk.index(); pk.head(hK2); len2 = len(pk.b)
 key = ed_keys(SK)[2]; signed = {"commit": hK2, "key": key, "time": 1767229260000, "name": "Test Author"}
 sig = ed_sign(SK, b"ufo-seal-1" + sha(enc(signed)))
 pk.raw(3, enc(dict(signed, signature=sig))); pk.head(hK2); len2s = len(pk.b)
-# commit 3: a person appends a character at a span's end with bias "before", trims the clock, drops the asset, accepts commit 2
+# commit 3: a person appends "!", inserts and removes "?", trims the clock by setting its frame, drops the asset, accepts commit 2
 t2 = "Hello, world.!"
-ops = [{"op": "splice", "obj": T, "key": "chars", "at": 13, "del": 0, "add": 1, "bias": "before", "ins": pk.sval("!")},
-       {"op": "splice", "obj": T, "key": "chars", "at": 14, "del": 0, "add": 1, "ins": pk.sval("?")},   # no bias: not joined to the span
-       {"op": "splice", "obj": T, "key": "chars", "at": 14, "del": 1, "add": 0, "old": pk.sval("?")},   # a splice that only deletes
-       {"op": "set", "obj": K, "key": "end", "old": pk.sval(10 * FL), "val": pk.sval(8 * FL)},
-       {"op": "remap", "obj": K, "axis": "t", "scale": [1, 1], "shift": -2 * FL, "extent": [0, 8 * FL]},
+ops = [{"op": "splice", "obj": T, "key": "chars", "after": [C1, 15], "ins": "!"},
+       {"op": "splice", "obj": T, "key": "chars", "after": [C3, 0], "ins": "?"},
+       {"op": "splice", "obj": T, "key": "chars", "del": [[C3, 1, 1]], "old": "?"},
+       {"op": "set", "obj": K, "key": "end", "old": 10 * FL, "val": 8 * FL},
+       {"op": "set", "obj": K, "key": ["frames", "t"], "val": [1, 1, -2 * FL]},
        {"op": "drop", "obj": A}]
-hT3 = revision(pk, T, "ufo.text", 3, C3, 3001, {"chars": t2, "spans": {"p1": span(0, 14)}}, prev=hT2,
-               runs={"chars": [[7, C1, 0], [5, C2, 0], [1, C1, 15], [1, C3, 0]]})
-hK3o = revision(pk, K, "ufo.clock", 2, C3, 3002, {"start": 0, "end": 8 * FL}, prev=hK2o)
+seq3 = seq2 + [[C3, 0, 1], [C3, 1, 1, False]]
+hT3 = revision(pk, T, "ufo.text", 3, C3, 3001, {"chars": t2, "spans": {"p1": SPAN}}, prev=hT2, seq={"chars": seq3})
+hK3o = revision(pk, K, "ufo.clock", 2, C3, 3002, {"start": 0, "end": 8 * FL, "frames": {"t": [1, 1, -2 * FL]}}, prev=hK2o)
 st = dict(state2); st.update({T: hT3, K: hK3o}); del st[A]
-cp = {"ops": ops, "revs": {T.hex(): [hT2, hT3], K.hex(): [hK2o, hK3o], A.hex(): [hA, None]}, "actor": actor, "time": 1767232800000,
-      "origin": {"basis": "witnessed", "by": "person", "who": who},
-      "decisions": [{"about": ref(C2), "verdict": "accept", "who": who}]}
-state3, hC3, hM3, hK3 = commit(pk, st, C3, cp, hK2, 2, 3003)
+pub = {"actor": actor, "time": 1767232800000, "origin": {"basis": "witnessed", "by": "person", "who": who},
+       "decisions": [{"about": ref(C2), "verdict": "accept", "who": who}]}
+state3, hC3, hM3, hK3 = commit(pk, st, C3, ops, None, pub, hK2, 2, 3003)
 pk.index(); pk.head(hK3)
 open(os.path.join(OUT, "history.ufx"), "wb").write(pk.b)
+def seqj(q): return [[r[0].hex()] + r[1:] for r in q]
+def B(c, n, side): return [c.hex(), n, side]
 V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file": sha(bytes(pk.b)).hex(),
     "commits": [
         {"height": 0, "root_hash": g["root"].hex(), "object_map_root": g["map"].hex(), "objects": 4, "pack_length_at_first_head": len1,
-         "text": "Hello, universe.", "span_p1": [0, 16], "runs": [[16, C1.hex(), 0]]},
+         "text": "Hello, universe.", "span_p1_resolves_to": [0, 16], "seq": seqj([[C1, 0, 16]])},
         {"height": 1, "root_hash": hK2.hex(), "object_map_root": hM2.hex(), "objects": len(state2), "pack_length_at_first_head": len2,
-         "text": t1, "span_p1": [0, 13], "runs": [[7, C1.hex(), 0], [5, C2.hex(), 0], [1, C1.hex(), 15]],
-         "text_revision": hT2.hex(), "change_revision": hC2.hex(), "note": "its object map has an interior node; one node frame and the chunk frame use codec 1"},
+         "text": t1, "span_p1_resolves_to": [0, 13], "seq": seqj(seq2), "text_revision": hT2.hex(), "change_revision": hC2.hex(),
+         "note": "its object map has an interior node; one node frame and one chunk frame use codec 1; one property is kept outside its node"},
         {"height": 2, "root_hash": hK3.hex(), "object_map_root": hM3.hex(), "objects": len(state3), "pack_length_at_first_head": len(pk.b),
-         "text": t2, "span_p1": [0, 14], "runs": [[7, C1.hex(), 0], [5, C2.hex(), 0], [1, C1.hex(), 15], [1, C3.hex(), 0]],
-         "text_revision": hT3.hex(), "change_revision": hC3.hex(), "note": "the asset is dropped: absent from this map, present in the previous one"}],
+         "text": t2, "span_p1_resolves_to": [0, 14], "seq": seqj(seq3), "text_revision": hT3.hex(), "change_revision": hC3.hex(),
+         "note": "the asset is dropped: absent from this map, present in the previous one"}],
     "identities": {"universe": U.hex(), "text": T.hex(), "face": F.hex(), "asset": A.hex(), "clock": K.hex(),
                    "changes": [C1.hex(), C2.hex(), C3.hex()]},
+    "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end] and frame frames.t",
     "blob": {"hash": hBlob.hex(), "len": len(data), "sha256": sha(data).hex(), "chunk_hash": hChunk.hex()},
     "seal": {"commit": hK2.hex(), "key": key.hex(), "time": 1767229260000, "name": "Test Author", "signature": sig.hex(),
              "signed_bytes_hex": (b"ufo-seal-1" + sha(enc(signed))).hex(), "secret_key_note": "RFC 8032 section 7.1, test 1"},
@@ -355,42 +357,49 @@ V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file
         {"truncate_to": len2s, "state": hK2.hex(), "bytes_after_head": 0, "writer": "valid by step 1"},
         {"truncate_to": len2s - 1, "state": hK2.hex(), "bytes_after_head": len2s - 1 - len2, "writer": "the seal's head is torn: truncate; the seal frame is lost"},
         {"truncate_to": len1 + 10, "state": g["root"].hex(), "bytes_after_head": 10, "writer": "truncate"}],
-    "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end]",
-    "anchors_carried": [
-        {"anchor": {"o": T.hex(), "r": g["text"].hex(), "a": {"chars": ["s", 7, 15]}}, "to_revision": hT3.hex(), "result": "detached"},
-        {"anchor": {"o": T.hex(), "r": g["text"].hex(), "a": {"chars": ["s", 0, 5]}}, "to_revision": hT3.hex(), "result": ["s", 0, 5]},
-        {"anchor": {"o": T.hex(), "r": g["text"].hex(), "a": {"chars": ["s", 15, 16]}}, "to_revision": hT3.hex(), "result": ["s", 12, 13]},
-        {"anchor": {"o": T.hex(), "r": hT2.hex(), "a": {"chars": ["s", 0, 13]}}, "to_revision": hT3.hex(), "result": ["s", 0, 13],
-         "note": "not a self-anchor, so bias does not extend it"},
-        {"anchor": {"o": K.hex(), "r": hK2o.hex(), "a": {"t": ["c", 3 * FL, 5 * FL]}}, "to_revision": hK3o.hex(), "result": ["c", 1 * FL, 3 * FL]},
-        {"anchor": {"o": K.hex(), "r": hK2o.hex(), "a": {"t": ["c", 0, 3 * FL]}}, "to_revision": hK3o.hex(), "result": ["c", 0, 1 * FL],
-         "note": "clipped to the extent the remap states"},
-        {"anchor": {"o": K.hex(), "r": hK2o.hex(), "a": {"t": ["c", 0, 1 * FL]}}, "to_revision": hK3o.hex(), "result": "detached",
-         "note": "left wholly outside the extent"},
-        {"anchor": {"o": A.hex(), "r": hA.hex()}, "to_revision": None, "result": "detached", "note": "the object was dropped"}]}
+    "anchors_resolved_at_commit_3": [
+        {"anchor": {"o": T.hex(), "a": {"chars": ["s", B(C1, 7, 0), B(C1, 14, 1)]}}, "result": "detached", "note": "the word that was replaced"},
+        {"anchor": {"o": T.hex(), "a": {"chars": ["s", B(C1, 0, 0), B(C1, 4, 1)]}}, "result": [0, 5]},
+        {"anchor": {"o": T.hex(), "a": {"chars": ["s", B(C1, 15, 0), B(C1, 15, 1)]}}, "result": [12, 13]},
+        {"anchor": {"o": T.hex(), "a": {"chars": ["s", "start", B(C1, 15, 1)]}}, "result": [0, 13], "note": "ends after the full stop: what was typed after it is outside"},
+        {"anchor": {"o": T.hex(), "a": {"chars": ["s", "start", "end"]}}, "result": [0, 14]},
+        {"anchor": {"o": T.hex(), "a": {"chars": ["s", B(C1, 10, 1), B(C1, 10, 1)]}}, "result": [12, 12], "note": "a point at a removed element: still attached"},
+        {"anchor": {"o": K.hex(), "a": {"t": ["c", 3 * FL, 5 * FL]}}, "result": [1 * FL, 3 * FL]},
+        {"anchor": {"o": K.hex(), "a": {"t": ["c", 0, 3 * FL]}}, "result": [0, 1 * FL], "note": "clipped to the extent"},
+        {"anchor": {"o": K.hex(), "a": {"t": ["c", 0, 1 * FL]}}, "result": "detached", "note": "wholly outside the extent"},
+        {"anchor": {"o": A.hex()}, "result": "detached", "note": "the object was dropped"}]}
 
-# ---- 7. carrying a sequence region (section 4.3) ---------------------------------------
-def carry(s, e, p, m, n, bias=None):
-    had = s != e
-    s2 = s if s < p else (p + n if s < p + m else s + n - m)
-    e2 = e if e <= p else (p if e <= p + m else e + n - m)
-    if bias == "before" and m == 0 and e == p: e2 = p + n
-    if bias == "after" and m == 0 and s == p: s2 = p
-    if s2 > e2: s2 = e2
-    return [s2, e2, "detached" if (s2 == e2 and had) else "attached"]
-cases = [(5, 10, 0, 0, 3, None), (5, 10, 5, 0, 3, None), (5, 10, 10, 0, 3, None), (5, 10, 7, 0, 3, None),
-         (5, 10, 3, 4, 1, None), (5, 10, 8, 4, 1, None), (5, 10, 5, 5, 2, None), (5, 10, 2, 20, 0, None),
-         (5, 10, 6, 2, 9, None), (7, 7, 7, 0, 4, None), (7, 7, 5, 4, 0, None),
-         (5, 10, 10, 0, 3, "before"), (5, 10, 5, 0, 3, "after"), (5, 10, 5, 0, 3, "before"), (5, 10, 10, 0, 3, "after")]
-V["carry_sequence"] = [{"region": [s, e], "splice": {"at": p, "del": m, "add": n}, "self_anchor": b is not None,
-                        "bias": b, "result": carry(s, e, p, m, n, b)} for s, e, p, m, n, b in cases]
-V["carry_continuous"] = [
-    {"region": [10, 20], "remap": {"scale": [1, 1], "shift": -5, "extent": [0, 100]}, "result": [5, 15, "attached"]},
-    {"region": [10, 21], "remap": {"scale": [1, 2], "shift": 0, "extent": [0, 100]}, "result": [5, 10, "attached"], "note": "integers: 21/2 rounds toward negative infinity"},
-    {"region": [-7, 9], "remap": {"scale": [1, 2], "shift": 0, "extent": [-100, 100]}, "result": [-4, 4, "attached"], "note": "-7/2 is -4"},
-    {"region": [10, 20], "remap": {"scale": [3, 1], "shift": 0, "extent": [0, 40]}, "result": [30, 40, "attached"], "note": "clipped"},
-    {"region": [10, 20], "remap": {"scale": [1, 1], "shift": 50, "extent": [0, 40]}, "result": "detached"},
-    {"region": [1.5, 2.5], "remap": {"scale": [3, 2], "shift": 0.25, "extent": [0.0, 10.0]}, "result": [2.5, 4.0, "attached"], "note": "floats"}]
+# ---- 7. resolving regions (section 4.3) ------------------------------------------------
+X, Y = bytes([0x01]) * 16, bytes([0x02]) * 16
+demo = [[X, 0, 3], [Y, 0, 2, False], [X, 3, 2], [Y, 2, 1]]     # live: X0 X1 X2 X3 X4 Y2 ; removed: Y0 Y1 after X2
+def pos(seq, b):
+    if b == "start": return 0
+    if b == "end": return sum(r[2] for r in seq if len(r) == 3)
+    c, n, side = b; p = 0
+    for r in seq:
+        live = len(r) == 3
+        if r[0] == c and r[1] <= n < r[1] + r[2]:
+            return p + ((n - r[1]) + side if live else 0)
+        if live: p += r[2]
+    return None
+def resolve(seq, a, b):
+    pa, pb = pos(seq, a), pos(seq, b)
+    if pa is None or pb is None: return "detached"
+    return "detached" if (pa >= pb and a != b) else [pa, pb]
+cases = [("start", "end"), ([X, 0, 0], [X, 2, 1]), ([X, 2, 1], [X, 3, 0]), ([Y, 0, 0], [Y, 1, 1]), ([Y, 0, 0], [X, 3, 1]),
+         ([X, 4, 1], "end"), ([Y, 1, 1], [Y, 1, 1]), ([X, 3, 0], [X, 3, 0]), ([X, 9, 0], "end")]
+def bj(b): return b if isinstance(b, str) else [b[0].hex(), b[1], b[2]]
+V["resolve_sequence"] = {"seq": seqj(demo), "cases": [{"from": bj(a), "to": bj(b), "result": resolve(demo, a, b)} for a, b in cases]}
+V["resolve_continuous"] = [
+    {"region": [10, 20], "frame": [1, 1, -5], "extent": [0, 100], "result": [5, 15]},
+    {"region": [10, 21], "frame": [1, 2, 0], "extent": [0, 100], "result": [5, 10], "note": "integers: 21/2 rounds toward negative infinity"},
+    {"region": [-7, 9], "frame": [1, 2, 0], "extent": [-100, 100], "result": [-4, 4], "note": "-7/2 is -4"},
+    {"region": [10, 20], "frame": [3, 1, 0], "extent": [0, 40], "result": [30, 40], "note": "clipped"},
+    {"region": [10, 20], "frame": [1, 1, 50], "extent": [0, 40], "result": "detached"},
+    {"region": [1.5, 2.5], "frame": [3, 2, 1], "extent": [0.0, 10.0], "result": [3.25, 4.75], "note": "floats: x times a, divided by b, plus c"}]
+_ov = salt(7) + enc("abc"); _on = blob_node(len(_ov), sha(_ov), [rhash(CHUNK, _ov)])
+V["value_kept_outside"] = {"value": "abc", "salt_hex": salt(7).hex(), "blob_bytes_hex": _ov.hex(), "blob_node_hex": _on.hex(),
+                           "indirect_hex": enc(Tag(55464, rhash(NODE, _on))).hex()}
 
 # ---- 8. printer and instrumentation (section 11) ------------------------------------------
 def vec(xs): return leb(len(xs)) + b"".join(xs)
