@@ -360,6 +360,7 @@ and type `ufo.universe`. Its properties are:
 | `roots` | map from names to refs: the named entry points |
 | `components` | map from a role — `tools`, `renderer`, or a prefixed name — to an indirect holding the component's bytes, or an anchor naming a universe, that the universe carries for it (§6.6, §7.4) |
 | `faces` | list of refs to face objects (§7.2) |
+| `summaries` | map from an object's identity, in lowercase hexadecimal, to a list of refs to the summaries whose scope lies in that object (§11.7). The kernel keeps it as `derive` writes them |
 | `features` | map from feature name to `{v: integer, required: boolean}` |
 
 The root named `primary` is the face a reader presents first.
@@ -1685,7 +1686,10 @@ whose first element names its kind. The schema is in Appendix C.
 
 Every item MAY also carry `src`, the anchor of the description it came
 from, and `label` and `role`, from which the binding builds the host's
-accessibility tree. A binding does not interpret `src`; it hands it back
+accessibility tree. `role` is one of `heading`, `paragraph`, `list`,
+`item`, `link`, `button`, `image`, `table`, `row`, `cell`, `input` and
+`region`, which every host's accessibility interface has, with `level` for
+a heading or an item; any other role reaches the host as a plain label. A binding does not interpret `src`; it hands it back
 with input, so that anything on screen can be traced to its object and from
 there to its origin (§7.5 `why`).
 
@@ -2556,8 +2560,8 @@ against the HTML Standard as it stood on the date of this specification
 
 1. The doctype, then a comment of at most 512 bytes — the **plain-text
    head** — giving in plain words the title, the fact that this is a UFO,
-   the date of export, and one sentence on how to open it. It is written in
-   ASCII, with any run of hyphens in the title reduced to one.
+   the date of export, and one sentence on how to open it. It is UTF-8
+   text, with any run of hyphens in the title reduced to one.
 2. A `head` whose first element declares the character encoding, followed
    by the title and a content security policy that permits only the
    envelope's own scripts, identified by hash, and WebAssembly compilation,
@@ -2580,9 +2584,18 @@ Other components the universe needs are records in the pack (**K4**).
 
 The fixed parts of this document — everything but the title, the static
 face, the pack and the kernel — are an **envelope template**: bytes with
-named gaps, carried in the tools universe as an asset. To write an envelope
-the kernel fills the gaps. The kernel therefore contains no HTML, and no
-binding contains envelope-writing logic. Reading is the reverse and also
+four gaps, in that order. The binding supplies it: in a web envelope, the
+fixed parts of the very page it is running in, the binding included;
+elsewhere, a copy the reader holds. To write an envelope the kernel fills
+the gaps. The kernel therefore contains no HTML, a binding contains no
+envelope-writing logic, and nothing travels twice.
+
+Finding a pack inside a file is the one thing the kernel knows about three
+foreign containers: a pair of markers in HTML text, a box in ISO media, a
+chunk in PNG. It is admitted under **V3** because it cannot be data or
+composition — it happens before any universe is open — and it is not
+decoding (**B1**): nothing of the container is interpreted but where the
+pack begins and ends. Reading is the reverse and also
 the kernel's: given the bytes of any file, the kernel finds the pack — at
 the start of a working form, between the markers of a web envelope, in the
 box or chunk of §9.4 — so a binding never parses an envelope (**K2**).
@@ -2600,7 +2613,11 @@ box or chunk of §9.4 — so a binding never parses an envelope (**K2**).
   nothing else: bytes after the end of a page are part of the page, so it
   cannot also be an archive.
 - **[E4] Self-sufficient.** A web envelope requires nothing but a browser:
-  no network, no installation, no account.
+  no network, no installation, no account. A browser, here, is one that
+  offers WebAssembly with 64-bit integers passed to and from script, script
+  modules, a two-dimensional canvas, and decompression of raw DEFLATE
+  streams. The conformance suite names the versions of the common browsers
+  from which that holds.
 - **[E5] Saving.** From a web envelope, saving produces a new travel-form
   file, containing the extended pack, which the person downloads or shares.
   Where the host offers the `files` capability, the reader MAY write the
@@ -2643,7 +2660,7 @@ and still readable.
 
 | Layer | What it is | Travels |
 | --- | --- | --- |
-| **Content** | the current revision of every **live** object — one reachable from the universe object by refs, indirects and anchors, without passing through a change — any earlier revision that a live object pins as something to present or as support for evidence, and the blobs all of those name | always |
+| **Content** | the current revision of every **live** object — one reachable from the universe object by refs, indirects and anchors, without passing through a change — what a live object's anchor names in an earlier commit (§1.8), any earlier revision that a live object pins as support for evidence, and the blobs all of those name | always |
 | **Attribution** | for every change that an element or a `by` of a live object names, that a live object's `from` names, that an included change's `sources` names, or that records evidence, a decision or a finding about live content: the change object, which holds its actor, time, origin, evidence, decisions and findings (§1.7); the objects its evidence names as support; every commit node; every seal | always |
 | **Working history** | everything else: the `work` of every change — its operations and its note; changes that contributed nothing now present; earlier revisions; earlier object maps; prompts and conversations; objects that are no longer live, and changes that touched only those; summaries whose sources are all working history; earlier Compute-let snapshots | depends on the membrane crossed |
 
@@ -3399,10 +3416,18 @@ when it last changed, by which actor and with what basis; and, if it is
 derived, whether it is stale. A universe is shown with its count of objects
 by type, the times of its first and last changes, and its actors.
 
+A text with one heading or none is outlined by its blocks, and what comes
+before a first heading is a part of its own. For a region of a sequence,
+"last changed" is the latest change that inserted an element in it; a
+removal shows only in the time of the object as a whole.
+
 An outline lists at most 64 parts. Where there are more, consecutive parts
-are shown in ranges of up to 64, and ranges of ranges, so that every reply
-is bounded and any part is reached in a number of steps logarithmic in the
-number of parts. Sizes and times are totals over what lies beneath a part;
+are shown 64 to a range, and ranges 64 to a range of ranges, each range
+with the labels of its first and last parts, their number and the total of
+their sizes, so that every reply is bounded and any part is reached in a
+number of steps logarithmic in the number of parts. A universe's other
+objects are in order of type name, then label, then identity. `history` is
+bounded the same way: the 64 newest changes, then older ones in ranges. Sizes and times are totals over what lies beneath a part;
 a reader MAY keep them in a derived store (§3.4) under revision hashes,
 which a commit changes only along the path it touched.
 
@@ -3417,9 +3442,16 @@ another universe. Beyond `from` it has:
 | `paragraph`, `page` | optionally, texts of at most 800 and 4 000 characters |
 
 A summary belongs to a scope by its pins, and to nothing else: the tree is
-the outline's. Wherever an outline shows a part, it shows beside it the
-`line` of the summary whose sources are exactly that part, if there is one
-— the most recently written, if several — and whether it is current.
+the outline's. The universe object lists every summary in `summaries`
+(§1.6), under the object its first source names, so that an object's
+summaries are found without a search, and travel as content (§9.3).
+Wherever an outline shows a part, it shows beside it the `line` of the
+summary whose first source resolves, in the current revision, to exactly
+that part — the most recently written, if several — and whether it is
+current. A summary of a scope that is no part of the outline — a stretch
+of a recording's time, a passage that a new heading has since divided — is
+shown with the smallest part that contains it, with its own anchor, so
+that nothing written drops out of view.
 
 - *Who writes them.* Any writer that has a model, through `derive`
   (§11.8): a reader, when the person asks or has asked that it be done
@@ -3449,7 +3481,11 @@ the outline's. Wherever an outline shows a part, it shows beside it the
   no parts, `text` returns its content. An observer can therefore always go
   from the whole at low resolution to any part at full resolution, with or
   without summaries, and the cost of doing so depends on the path taken,
-  not on the size of the universe.
+  not on the size of the universe. That is the cost to whoever is reading.
+  A reader computing an outline must total what lies beneath each part: a
+  pass over it the first time, and nothing afterward where it keeps the
+  totals (§3.4). A page opened from disk keeps them only while it is
+  open.
 
 A navigation structure that does not follow the structure of the work — an
 index by theme across many documents — is not a kind of summary. It is a
@@ -3542,7 +3578,7 @@ These limits change only on measurement.
 | Binding source, per host | 600 lines | readable in minutes; this now includes executing the drawing contract (§6.2) |
 | Web binding, as shipped | 16 KiB | |
 | Tools universe (§6.6), as carried | 24 KiB | description only; no code |
-| Web envelope holding one paragraph | 256 KiB | the compressed kernel in base64 (171 KiB at its limit), binding, tools universe, static face, pack |
+| Web envelope holding one paragraph | 256 KiB | the compressed kernel in base64 (171 KiB at its limit), the binding, the tools universe inside the pack in base64 (32 KiB), the static face, the rest of the pack |
 | Web envelope for each worked example of §14 | reported | no limit yet; measured and published with the first implementation |
 | Printer, as a part of the kernel | 16 KiB | it is a function of the kernel, within the kernel's limits above; it measured 11 KiB in miniature |
 | Implementations of any piece of format, layout or media logic in the project's readers | exactly 1 | **K1** |
@@ -3575,9 +3611,10 @@ for is what travels, and what travels is the compressed kernel: 128 KiB,
 firm. At 48%, that is about 267 KiB compiled, so 256 KiB is the guidance
 for the compiled size and is not policed separately. At 40 bytes a line,
 6 000 lines compile to about 239 KiB and compress to about 115 KiB, inside
-both. In base64 a kernel at its compressed limit is 171 KiB, which with a
-binding of 16 KiB and a tools universe of 24 KiB leaves about 45 KiB of a
-256 KiB envelope for the static face, the template and the pack. Before
+both. In base64 a kernel at its compressed limit is 171 KiB. The tools
+universe travels inside the pack, so its 24 KiB are 32 KiB in the page.
+With a binding of 16 KiB that leaves about 37 KiB of a 256 KiB envelope
+for the static face, the page's fixed text and the rest of the pack. Before
 this was measured the limits were 10 000 lines, 256 KiB compiled, 96 KiB
 compressed and a 192 KiB envelope, and they did not agree with one
 another. The miniature's web binding was 79 lines and 3.0 KiB compressed,
@@ -3892,7 +3929,9 @@ origins. It has expanded one branch of the outline, a few passages of
 two studies and ninety seconds of one transcript. The other studies were
 seen only as single lines in step 1. `search` remains available as a
 shortcut; the light cone does not depend on it. A miniature of this
-example, with one corpus and three studies, has been run: see
+example, with one corpus and three studies, has been run on a stand-in — an
+object model outside the kernel, with summaries written by a script and
+not by a model: see
 [RATIONALE.md](RATIONALE.md).
 
 If a supporting passage has changed since the conclusion was written, its
@@ -4262,6 +4301,24 @@ passed back, exactly as written, as an argument to another projection.
 | `unit` | `id` `name` `signature` `r` `statements` (count) |
 | `stmt` | `e` (the statement's identity) `change` `depth` (of the blocks enclosing it) `s` (the statement, in the JSON spelling of its value, with functions shown by name) |
 | `call` | `from` `to` (identities) `count` |
+
+**Queries.** `search` takes a map with any of: `text`; `type`; `hash` (of a
+record, a blob or a unit); `basis`; `by`; `actor`; `model`; `after` and
+`before` (times); `calls` (a function); and `in`, an anchor to search
+within. Every field given must match. It returns the 64 best hits, then
+the rest in ranges, as an outline does (§11.7).
+
+**What an agent writes.** The arguments of an action (§11.8) are JSON. A
+value is spelled: `null`, `true`, `false`; a number with no fraction or
+exponent for an integer, and with one for a float; a string for a text; an
+array for a list; an object for a map. An object with one key beginning
+`$` spells the other kinds: `{"$ref": "o:3f9a12c4"}`; `{"$anchor": "…"}`,
+holding an anchor as projections write one; `{"$element":
+"o:d2c417e9.12"}`; `{"$bytes": "68656c6c6f"}`, in hexadecimal;
+`{"$formula": […]}`. A change is `{ops, origin, evidence, decisions,
+note}`, its operations having the fields Appendix C names. Projections use
+the same spelling wherever they show a value, and add `name` to a `$ref`
+whose object has one; a `name` given back is ignored.
 
 An example:
 
