@@ -1,0 +1,163 @@
+
+== desktop Chromium, file://
+  [passed] opened: the file runs its own kernel under its policy — state 092acf577819a704
+  [passed] opened: no console errors or warnings
+  [passed] opened: no request but for the file itself — 1 request
+  [passed] opened: the page gives itself back byte for byte as its own template — 155979 characters
+  [passed] two faces: document face drawn
+  [passed] two faces: pages face drawn
+  [passed] two faces: text face shown
+  [passed] edit: nothing in the working universe acts
+  [passed] edit: a paragraph changed through the tools, as Ada Tester
+  [passed] edit: the new text shows in the document and text faces
+  [passed] edit: why names the new change, by=person, and the name — run chars=[423,497] change=o:8daa3572 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] saved: a new .ufx.html comes down — compose-edited.ufx.html, 163234 bytes
+  [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state f721a76084301eed
+  -- the saved file, edited and saved again
+  [passed] opened: the saved file runs its own kernel under its policy — state f721a76084301eed
+  [passed] opened: no console errors or warnings
+  [passed] opened: no request but for the file itself — 1 request
+  [passed] opened: the page gives itself back byte for byte as its own template — 163234 characters
+  [passed] two faces: document face drawn
+  [passed] two faces: pages face drawn
+  [passed] two faces: text face shown
+  [passed] edit: nothing in the working universe acts
+  [passed] edit: a paragraph changed through the tools, as Ben Second
+  [passed] edit: the new text shows in the document and text faces
+  [passed] edit: why names the new change, by=person, and the name — run chars=[621,682] change=o:5d82aa74 basis=witnessed by=person who="Ben Second" sealed=false
+  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 170030 bytes
+  [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 3ba0eed9ca448df1
+
+== Chromium, http origin
+  [passed] opened: the file runs its own kernel under its policy — state f721a76084301eed
+  [passed] opened: no console errors or warnings
+  [passed] opened: no request but for the file itself — 1 request
+  [passed] opened: the page gives itself back byte for byte as its own template — 163234 characters
+  [passed] two faces: document face drawn
+  [passed] two faces: pages face drawn
+  [passed] two faces: text face shown
+  [passed] edit: nothing in the working universe acts
+  [passed] edit: a paragraph changed through the tools, as Ada Tester
+  [passed] edit: the new text shows in the document and text faces
+  [passed] edit: why names the new change, by=person, and the name — run chars=[423,485] change=o:a1c37862 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 169990 bytes
+  [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state ba2e0a6d5eace021
+  -- the saved file, edited and saved again
+  [passed] opened: the saved file runs its own kernel under its policy — state ba2e0a6d5eace021
+  [passed] opened: no console errors or warnings
+  [passed] opened: no request but for the file itself — 1 request
+  [passed] opened: the page gives itself back byte for byte as its own template — 169990 characters
+  [passed] two faces: document face drawn
+  [passed] two faces: pages face drawn
+  [passed] two faces: text face shown
+  [passed] edit: nothing in the working universe acts
+  [passed] edit: a paragraph changed through the tools, as Ben Second
+  [passed] edit: the new text shows in the document and text faces
+  [passed] edit: why names the new change, by=person, and the name — run chars=[609,670] change=o:a08088b7 basis=witnessed by=person who="Ben Second" sealed=false
+  [passed] saved: a new .ufx.html comes down — compose-edited-3.ufx.html, 178146 bytes
+  [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state f7890663c115d13b
+  [passed] sent on: the saved file opens, is edited, saved and reopened from http://127.0.0.1:42377
+      browser-edit-1.ufx f721a76084301eed {'records_in_file_hashed': 17, 'record_frames': 17, 'records_reachable_and_verified': 17, 'records_fetched_by_hash_and_verified': 17, 'content': 5, 'attribution': 4, 'working_history': 8} whole
+         universe f721a7608430 the pack's own universe [(0, 'ok', 5), (1, 'ok', 6)]
+      browser-edit-2.ufx 3ba0eed9ca448df1 {'records_in_file_hashed': 24, 'record_frames': 24, 'records_reachable_and_verified': 24, 'records_fetched_by_hash_and_verified': 24, 'content': 5, 'attribution': 6, 'working_history': 13} whole
+         universe 3ba0eed9ca44 the pack's own universe [(0, 'ok', 5), (1, 'ok', 6), (2, 'ok', 7)]
+      browser-http-edit-3.ufx f7890663c115d13b {'records_in_file_hashed': 31, 'record_frames': 31, 'records_reachable_and_verified': 31, 'records_fetched_by_hash_and_verified': 31, 'content': 5, 'attribution': 8, 'working_history': 18} whole
+         universe f7890663c115 the pack's own universe [(0, 'ok', 5), (1, 'ok', 6), (2, 'ok', 7), (3, 'ok', 8)]
+  [passed] sent on: the independent reader accepts the pack made in the browser — browser-edit-1.ufx: 2 commits, conservation ok ok; browser-edit-2.ufx: 3 commits, conservation ok ok ok; browser-http-edit-3.ufx: 4 commits, conservation ok ok ok ok
+
+== scripts off (Chromium, javaScriptEnabled: false)
+  [passed] static face: the original shows the title, the text and what to do
+  [passed] static face: the saved file shows the title, the text and what to do
+
+== iPhone 14 emulated in Chromium, file://
+  [passed] opened: the file runs its own kernel under its policy — state 092acf577819a704
+  [passed] opened: no console errors or warnings
+  [passed] opened: no request but for the file itself — 1 request
+  [passed] opened: the page gives itself back byte for byte as its own template — 155979 characters
+  [passed] two faces: document face drawn
+  [passed] two faces: pages face drawn
+  [passed] two faces: text face shown
+  [passed] edit: nothing in the working universe acts
+  [passed] edit: a paragraph changed through the tools, as Ada Tester
+  [passed] edit: the new text shows in the document and text faces
+  [passed] edit: why names the new change, by=person, and the name — run chars=[423,497] change=o:dd11770b basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] saved: a new .ufx.html comes down — compose-edited.ufx.html, 163234 bytes
+  [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state cb37e6e3e8b09513
+  -- the saved file, edited and saved again
+  [passed] opened: the saved file runs its own kernel under its policy — state cb37e6e3e8b09513
+  [passed] opened: no console errors or warnings
+  [passed] opened: no request but for the file itself — 1 request
+  [passed] opened: the page gives itself back byte for byte as its own template — 163234 characters
+  [passed] two faces: document face drawn
+  [passed] two faces: pages face drawn
+  [passed] two faces: text face shown
+  [passed] edit: nothing in the working universe acts
+  [passed] edit: a paragraph changed through the tools, as Ben Second
+  [passed] edit: the new text shows in the document and text faces
+  [passed] edit: why names the new change, by=person, and the name — run chars=[621,682] change=o:96266eb4 basis=witnessed by=person who="Ben Second" sealed=false
+  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 170030 bytes
+  [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 05a97f3f42111d4c
+
+== Pixel 7 emulated in Chromium, file://
+  [passed] opened: the file runs its own kernel under its policy — state 092acf577819a704
+  [passed] opened: no console errors or warnings
+  [passed] opened: no request but for the file itself — 1 request
+  [passed] opened: the page gives itself back byte for byte as its own template — 155979 characters
+  [passed] two faces: document face drawn
+  [passed] two faces: pages face drawn
+  [passed] two faces: text face shown
+  [passed] edit: nothing in the working universe acts
+  [passed] edit: a paragraph changed through the tools, as Ada Tester
+  [passed] edit: the new text shows in the document and text faces
+  [passed] edit: why names the new change, by=person, and the name — run chars=[423,497] change=o:dd4ef1ce basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] saved: a new .ufx.html comes down — compose-edited.ufx.html, 163234 bytes
+  [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 863c29f3fef8c096
+  -- the saved file, edited and saved again
+  [passed] opened: the saved file runs its own kernel under its policy — state 863c29f3fef8c096
+  [passed] opened: no console errors or warnings
+  [passed] opened: no request but for the file itself — 1 request
+  [passed] opened: the page gives itself back byte for byte as its own template — 163234 characters
+  [passed] two faces: document face drawn
+  [passed] two faces: pages face drawn
+  [passed] two faces: text face shown
+  [passed] edit: nothing in the working universe acts
+  [passed] edit: a paragraph changed through the tools, as Ben Second
+  [passed] edit: the new text shows in the document and text faces
+  [passed] edit: why names the new change, by=person, and the name — run chars=[621,682] change=o:ee98ea7f basis=witnessed by=person who="Ben Second" sealed=false
+  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 170030 bytes
+  [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 48df9a5ae5da31f0
+
+== dense variant, desktop Chromium, file://
+  [passed] dense: opened, edited, saved, reopened with the same state — state 45a1273891304025, saved 149175 bytes
+  decode time in the page, median of 30 (Chromium, this machine): {"base64":{"kernel":{"bytes":85624,"ms":3.6},"pack":{"bytes":9339,"ms":0.4}},"dense":{"kernel":{"bytes":85624,"ms":2},"pack":{"bytes":9339,"ms":0.2},"encodeKernelMs":5.03}}
+
+== validators
+  [passed] valid: Nu HTML Checker, as made — 0 errors; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
+  [passed] valid: html-validate, as made — no messages
+  [passed] valid: Nu HTML Checker, saved by the page — 0 errors; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
+  [passed] valid: html-validate, saved by the page — no messages
+  [passed] valid: Nu HTML Checker, saved twice — 0 errors; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
+  [passed] valid: html-validate, saved twice — no messages
+  [passed] valid: Nu HTML Checker, dense — 0 errors; 3 × warning: Text run is not in Unicode Normalization Form C. ; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
+  [passed] valid: html-validate, dense — no messages
+
+step | desktop Chromium, file:// | Chromium, http origin | scripts off | iPhone 14 emulated in Chromium, file:// | Pixel 7 emulated in Chromium, file:// | dense variant, desktop Chromium, file:// | validators
+opened | passed | passed | not attempted | passed | passed | not attempted | not attempted
+two faces | passed | passed | not attempted | passed | passed | not attempted | not attempted
+edit | passed | passed | not attempted | passed | passed | not attempted | not attempted
+saved | passed | passed | not attempted | passed | passed | not attempted | not attempted
+reopened | passed | passed | not attempted | passed | passed | not attempted | not attempted
+sent on | passed | passed | not attempted | not attempted | not attempted | not attempted | not attempted
+static face | not attempted | not attempted | passed | not attempted | not attempted | not attempted | not attempted
+dense | not attempted | not attempted | not attempted | not attempted | not attempted | passed | not attempted
+valid | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | passed
+
+all passed

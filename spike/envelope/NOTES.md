@@ -187,3 +187,221 @@ added, and the library sort and tree maps are still unused.
 Lines (`git diff --numstat`, and `wc -l` for new files): `write.rs` 401
 new; `pack.rs` +102 −2; `lib.rs` +60 −2; `layout.rs` +49 −3;
 `binding.mjs` +10; `roundtrip.mjs` 100 and `more-edits.mjs` 48 new.
+
+## 2026-11-22: the web envelope (pieces 3 and 4 of PLAN.md)
+
+What was added: `make.mjs` (writes `name.ufx.html`; `--dense` for the
+denser carriage of ENCODING.md), `page.html` and `page.css` (the fixed
+markup and style), `shell.mjs` (the reader shell: faces, the edit box,
+saving), `dense.mjs`, `test.mjs` (Playwright, Chromium only),
+`encoding-measure.mjs`, `phone/` (a kit for testing on real phones, which
+was not done here). `binding.mjs` gained `unbase64`, `base64`, `paint`,
+`boxes`, `textAt`: plumbing for a page, nothing of the format.
+
+**Tested only in headless Chromium** on Linux: desktop from `file://`,
+from an `http://127.0.0.1` origin, and Chromium emulating an iPhone 14 and
+a Pixel 7 (viewport, touch, user agent). No Safari, no WebKit, no Firefox,
+no real phone. `navigator.share` was not exercised.
+
+### How the page is put together
+
+In order: doctype; the plain-text head (a comment: title, what the file
+is, date, how to open); `head` with charset, title, the policy, viewport,
+one `style`; the static face; the player's empty markup, hidden; the pack,
+the tools pack and the kernel as script data blocks; one module script
+(the binding, then the shell). The policy as shipped:
+
+    default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval';
+    style-src 'sha256-…'; base-uri 'none'; form-action 'none'
+
+Nothing else was needed in Chromium: the download through `a[download]`
+with a `blob:` address, canvas, WebAssembly and `DecompressionStream` all
+work under it, from `file://` and from `http:`. `test.mjs` checks that an
+inline script put into the page does not run, that `fetch` is refused, and
+that the page makes no request but for itself.
+
+### How saving works: the page as its own template
+
+A page opened from `file://` cannot read its own bytes; what it has is the
+document as parsed. So `make.mjs` writes the page **exactly as the HTML
+serialisation algorithm would write it back**, and the first thing the
+script does, before it touches the document, is take
+`<!DOCTYPE html>` + the comment + `documentElement.outerHTML`. That string
+is the file, byte for byte (asserted in the test for the file as made, as
+saved, and saved twice). It is cut at four pairs of delimiters — `title`,
+the static face's `h1`, the static face's `pre`, the pack's `script` — and
+saving joins the pieces round a new static face and the new pack in
+base64, with the date in the head comment replaced. The kernel text, the
+tools text, the style and the script are carried inside the fixed pieces
+untouched, so the hashes in the policy still match and a saved file is a
+full envelope that saves again.
+
+What "exactly as serialised" costs the exporter: attributes in double
+quotes; `hidden=""`, not `hidden`; no `<` or `>` in attribute values
+(serialisers now escape them; older ones did not); `&nbsp;` for U+00A0 and
+`&amp; &lt; &gt;` in text; no white space between `<html>` and `<head>`,
+none after `</body>`, no final line break (the parser drops the first and
+moves the others into `body`); the line breaks after the doctype and the
+comment are written by the shell, since the parser drops them; a `pre`
+whose text does not begin with a line break.
+
+### Where SPEC-TRAVEL 13.2 and SPEC-PLAYER 9 did not work as written, or did not decide
+
+1. **"Bytes with four gaps, in that order"** (title, static face, pack,
+   kernel). Counted in the page: the title stands in three places (the
+   plain-text head, `title`, the static face, which must show it to be of
+   use); the date of export is a fifth thing that changes; and the kernel
+   is not a gap for a page saving itself (same kernel), only for an
+   exporter carrying a newer one (**E8**). The plain-text head is listed
+   among neither the fixed parts nor the gaps.
+2. **"The binding supplies it: the fixed parts of the very page it is
+   running in."** True only if the exporter writes the page in serialised
+   form, as above; the text does not say so, and a page written any other
+   valid way cannot give itself back. It also has to be taken before any
+   script changes the document, and anything else that changes the
+   document first (a browser extension, a previewer's injected style)
+   would end up in every later copy. Not tested: whether Safari serialises
+   identically.
+3. **"To write an envelope the kernel fills the gaps … a binding contains
+   no envelope-writing logic."** The kernel has no such export. The shell
+   does it: about ten lines that know four pairs of delimiters, escape
+   text for HTML, and base64 the pack. For the kernel to do it, it would
+   have to escape text for HTML (the title and the static face), which is
+   knowledge of HTML that "the kernel therefore contains no HTML" rules
+   out; or the escaping stays in the binding, and then the binding is
+   writing part of the envelope.
+4. **Read-back (E1).** The binding gives the kernel the pack's script
+   text and `find_pack` decodes all of it at once; "reads bytes on request
+   by decoding the base64 group that holds them" is not built. At open the
+   pack therefore exists as the script's text, as decoded bytes, and as
+   the kernel's copy. The kernel's own text also exists twice (the script
+   element and the template string).
+5. **The kernel's base64 is decoded by the binding** (`atob`); the kernel
+   cannot decode itself, and the text does not say who does. "Labeled with
+   the hash of the uncompressed component" names no attribute
+   (`data-sha256` here) and does not say whether a binding must check it.
+   It is checked where `crypto.subtle` exists, which is not on a plain
+   `http:` origin other than localhost.
+6. **The policy.** "Permits only the envelope's own scripts, identified by
+   hash": the static face and the player also need a style sheet, which
+   needs its own hash (or `style` attributes, which a hash cannot allow).
+   The data blocks need no hash because they are not executed. A policy in
+   a `meta` cannot say `frame-ancestors` or `sandbox`.
+   `'wasm-unsafe-eval'` is a newer keyword; a browser that does not know
+   it refuses WebAssembly under this policy. **E4**'s list of what a
+   browser must offer does not mention it, nor canvas text metrics
+   (`fontBoundingBoxAscent`), nor downloading a `blob:`.
+7. **The tools universe is carried beside the pack**, in a second data
+   block of type `application/x-ufo-tools`, not inside the pack under
+   `components.tools` as 9.6 and 13.2 have it. A deviation of the spike.
+8. **The static face's order.** 13.2 puts the document's text first and
+   the explanation after it. A previewer shows the top of the page, and
+   under a long document the instruction would never be seen; here the
+   explanation comes first. 13.2 also does not give the static face the
+   title.
+9. **"With its instruction for opening the file in the browser."** There
+   may be no such instruction to give on a phone: as far as is known, iOS
+   offers no way to open a web page stored on the phone in Safari. The
+   static face here says so and suggests a link or a computer. Untested;
+   `phone/PHONE-TEST.md` is how to find out.
+10. **The plain-text head** needs more than "any run of hyphens in the
+    title reduced to one" to be a valid comment: it may not begin with `>`
+    or `->`, hold `<!--` or `--!>`, or end with `<!-`. Here `<` and `>`
+    are taken out of the title as well.
+11. **E2: "a reader MUST check" that the root hash is preserved.** There
+    is nothing in the envelope to check it against: the hash is stated
+    only by the pack. The page shows the state it found; the test
+    compares.
+12. **E5 names no file name** for what is saved. Here: the page's own name
+    with `-edited`, then `-edited-2`, and so on.
+13. **E12, "show what will travel", before any export:** not built. The
+    tools pack's Save acts `export` at once.
+14. **K6, "it adds no code to the binding".** As built, the shell holds
+    all of the tools' meaning: a store for what handlers `set`; that
+    `face` chooses the `as` of `sample`; that `editing` makes a tap choose
+    a block and open a box; asking for a name; calling `propose`; and
+    `export`. That is most of its 76 lines. The tools universe cannot show
+    its own state (which face is on), so the shell underlines every tool
+    whose handler would set what is already so, found by asking `press`
+    for each tool's handler, which works only because `press` does
+    nothing. And nothing turns editing off: the handler is
+    `{set: "editing", to: true}`.
+15. **An edit replaces the whole paragraph.** The box holds the block's
+    text and Done proposes one splice over all of it, so after changing
+    one word `why` attributes the whole paragraph to the editor. 9.6 and
+    the `text` capability speak of committed edits of a caret, and **L1**
+    of operations computed from before and after; neither says who reduces
+    a replaced block to what actually changed, the kernel or the host.
+    (NOTES above, item 4, is the same question from the kernel's side.)
+16. **`time` and `random` are arguments of `propose`**, not the host
+    interface's `time()` and `random()` (9.3); the kernel imports only
+    `host_measure`.
+17. **Hit testing is in the binding** (`boxes`, `textAt`: which text item
+    lies under a point), though 11.1 lists hit testing with composition in
+    the kernel. The kernel has no export for it. The binding's version
+    knows only item positions; it hands the item's `src` back to the
+    kernel.
+18. **One canvas for the whole face.** Fine for this document. A long one
+    exceeds what a phone allows a canvas (a limit of about 16.7 million
+    pixels is commonly cited for iOS: about 4 800 CSS pixels of height at
+    this width and density). A real binding draws the rows in view.
+19. **Lines and pages depend on the device.** `measure` is the host's, so
+    the same universe breaks lines, and therefore pages, differently on
+    two devices. Nothing is wrong by the text; "page 3" is not the same
+    place everywhere.
+20. **Budgets (11.1).** The script as shipped is 18 302 bytes, over the
+    16 KiB for "the web binding, as shipped": the binding proper is
+    10 529 and the shell 7 774, unminified with comments (7 274 gzipped).
+    11.1 does not say whether a shell counts, or whether shipped means
+    minified. Lines: binding 119 (100 without blank and comment lines),
+    shell 89 (76), against 600; but these are long lines.
+21. **The Nu HTML Checker and the policy.** It warns that each data block
+    "violates Content Security Policy" (they are not scripts to a
+    browser), and it compares hashes against the script and style text
+    *trimmed*, so a script that begins or ends with a line break is
+    reported though browsers accept it. The page now has no line break at
+    either end of its script and style. Warnings, not errors.
+22. **Nothing drawn is accessible.** The faces are canvas; the static
+    face, which is real text, is hidden once the player runs.
+
+### Results
+
+`node spike/envelope/test.mjs` (output kept in
+`spike/out/envelope-test-output.txt`): opened, three faces, a paragraph
+edited through the tools with `why` naming the change, `by=person` and the
+name, saved by the page, reopened with the same state, edited and saved
+again, and reopened again — on desktop Chromium from `file://`, from an
+`http:` origin, and in the two phone emulations with touch; the static
+face with scripts off; the dense variant. Nothing in the working universe
+carries `press`, `press` of a working span key gives null, and a tap on
+the document with editing off does nothing.
+
+The independent reader (`readertest2`, copied, not modified) on the packs
+taken out of three files saved by the browser: state by the final head,
+equal to what the page showed; every record reachable and verified; index
+without problems; conservation `ok` for every commit, including the ones
+made in the browser; nothing reported.
+
+Validity: Nu HTML Checker 26.11.20 (Java 21): 0 errors on the envelope as
+made, as saved, and saved twice; three warnings each, item 21.
+html-validate 11.21 with its recommended rules less `attribute-empty-style`
+(which asks for `hidden` where the serialised form is `hidden=""`): no
+messages.
+
+### Size of the envelope of `compose.ufx`
+
+| Part | Bytes |
+| --- | ---: |
+| Kernel: 183 191 optimised, 85 624 deflated, in base64 | 114 168 |
+| Pack: 9 339 bytes, in base64 | 12 452 |
+| Tools pack: 3 919 bytes, in base64 | 5 228 |
+| Script: binding 10 529, shell 7 774 | 18 302 |
+| Static face: the document's text, escaped | 1 135 |
+| Style | 1 742 |
+| Fixed text: plain-text head, `head`, the explanation, the player's markup, tags | 2 966 |
+| **Total** | **155 993** |
+
+152 KiB against 256 KiB for an envelope of one paragraph (this document is
+about a page). After one edit the saved file is 163 248 bytes: each edit
+here appends about 5.4 KB to the pack (records, an index, a head), which
+is 7.2 KB in base64.

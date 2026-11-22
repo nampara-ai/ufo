@@ -1,0 +1,30 @@
+{
+ "file": "spike/out/compose.ufx.html",
+ "dense": false,
+ "total": 155993,
+ "gzip": 103057,
+ "kernel": {
+  "wasm": 183191,
+  "deflated": 85624,
+  "carried": 114168,
+  "sha256": "bf620c3874ff4fd2703bde7f4f738e24837b521cf724a9c76297b8a2d816862e"
+ },
+ "pack": {
+  "bytes": 9339,
+  "carried": 12452
+ },
+ "tools": {
+  "bytes": 3919,
+  "carried": 5228
+ },
+ "script": {
+  "bytes": 18302,
+  "binding": 10529,
+  "shell": 7774,
+  "gzip": 7274
+ },
+ "staticText": 1135,
+ "style": 1742,
+ "fixed": 2966,
+ "csp": "default-src 'none'; script-src 'sha256-bdL8yYw6sQ6KjGFypUKnzKja71ObXgRFUdw48YRW2ZQ=' 'wasm-unsafe-eval'; style-src 'sha256-lbIvOAYUk93aaxilm3zdK00HXHxRpgBl3LALhdiI618='; base-uri 'none'; form-action 'none'"
+}

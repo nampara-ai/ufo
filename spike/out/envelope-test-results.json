@@ -1,0 +1,67 @@
+{
+ "results": {
+  "desktop Chromium, file://": {
+   "opened": "passed",
+   "two faces": "passed",
+   "edit": "passed",
+   "saved": "passed",
+   "reopened": "passed",
+   "sent on": "passed"
+  },
+  "Chromium, http origin": {
+   "opened": "passed",
+   "two faces": "passed",
+   "edit": "passed",
+   "saved": "passed",
+   "reopened": "passed",
+   "sent on": "passed"
+  },
+  "scripts off": {
+   "static face": "passed"
+  },
+  "iPhone 14 emulated in Chromium, file://": {
+   "opened": "passed",
+   "two faces": "passed",
+   "edit": "passed",
+   "saved": "passed",
+   "reopened": "passed"
+  },
+  "Pixel 7 emulated in Chromium, file://": {
+   "opened": "passed",
+   "two faces": "passed",
+   "edit": "passed",
+   "saved": "passed",
+   "reopened": "passed"
+  },
+  "dense variant, desktop Chromium, file://": {
+   "dense": "passed"
+  },
+  "validators": {
+   "valid": "passed"
+  }
+ },
+ "timing": {
+  "base64": {
+   "kernel": {
+    "bytes": 85624,
+    "ms": 3.6
+   },
+   "pack": {
+    "bytes": 9339,
+    "ms": 0.4
+   }
+  },
+  "dense": {
+   "kernel": {
+    "bytes": 85624,
+    "ms": 2
+   },
+   "pack": {
+    "bytes": 9339,
+    "ms": 0.2
+   },
+   "encodeKernelMs": 5.08
+  }
+ },
+ "failures": 0
+}

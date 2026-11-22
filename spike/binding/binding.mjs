@@ -95,3 +95,25 @@ export function draw(g, list) {
   }
 }
 export const canvasMeasure = g => (piece, s) => { g.direction = piece.dir; g.font = fontOf(piece); const m = g.measureText(s); return { adv: m.width, asc: m.fontBoundingBoxAscent, desc: m.fontBoundingBoxDescent }; };
+// ---- plumbing for a page: nothing below knows what the items mean ----
+export const unbase64 = t => Uint8Array.from(atob(t.trim()), c => c.charCodeAt(0));
+export const base64 = b => { let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(s); };
+// Draws a list on a canvas of w by h units, `zoom` CSS pixels to the unit, at the device's own pixel density.
+export function paint(canvas, list, w, h, zoom = 1) {
+  const r = (globalThis.devicePixelRatio || 1) * zoom; canvas.width = Math.ceil(w * r); canvas.height = Math.ceil(h * r); canvas.style.width = w * zoom + 'px'; canvas.style.height = h * zoom + 'px';
+  const g = canvas.getContext('2d'); g.setTransform(r, 0, 0, r, 0, 0); draw(g, list); return g;
+}
+// The text items of a list with the boxes they occupy, in the list's coordinates (transforms without rotation).
+export function* boxes(list) {
+  const st = [[1, 0, 0, 1, 0, 0]];
+  for (const [kind, it] of list) { const m = st[st.length - 1];
+    if (kind === 'push') { const n = it.m || [1, 0, 0, 1, 0, 0]; st.push([m[0] * n[0], 0, 0, m[3] * n[3], m[0] * n[4] + m[4], m[3] * n[5] + m[5]]); }
+    else if (kind === 'pop') st.pop();
+    else if (kind === 'text') yield [it, m[0] * it.x + m[4], m[3] * (it.y - it.size) + m[5], m[0] * (it.x + it.adv) + m[4], m[3] * (it.y + it.size * 0.3) + m[5]]; }
+}
+// The text item at a point, among those `want` accepts: one whose line the point is on (or within `slop` of), the nearest across.
+export function textAt(list, x, y, want = () => true, slop = 10) {
+  let best = null, d = Infinity;
+  for (const [it, x0, y0, x1, y1] of boxes(list)) { if (!want(it)) continue; const dy = Math.max(y0 - y, 0, y - y1), dx = Math.max(x0 - x, 0, x - x1); if (dy <= slop && dy * 1e4 + dx < d) { d = dy * 1e4 + dx; best = it; } }
+  return best;
+}
