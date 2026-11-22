@@ -1,9 +1,13 @@
-// Runs the kernel's line breaking (and bidi) against the Unicode 16.0 conformance files in ucd/.
+// Runs the kernel's line breaking and bidirectional ordering against the Unicode 16.0 conformance
+// files. They are not kept in the repository: put LineBreakTest.txt (from ucd/auxiliary/),
+// BidiCharacterTest.txt and BidiTest.txt in ucd/ here, with EastAsianWidth.txt for gen_linebreak.mjs.
+// They are at https://www.unicode.org/Public/16.0.0/ucd/ and, the same files, in
+// https://github.com/unicode-org/unicodetools under unicodetools/data/ucd/16.0.0/.
 // Build first: cd ../kernel && cargo build --release --target wasm32-unknown-unknown --features conformance --target-dir ../tools/target
 import fs from 'fs';
 const here = new URL('.', import.meta.url);
 const wasm = fs.readFileSync(new URL('target/wasm32-unknown-unknown/release/ufo_spike_kernel.wasm', here));
-const ex = (await WebAssembly.instantiate(wasm, { 'ufo:host/1': { host_measure: () => 0, host_break: () => 0 } })).instance.exports;
+const ex = (await WebAssembly.instantiate(wasm, { 'ufo:host/1': { host_measure: () => 0 } })).instance.exports;
 const mem = () => new Uint8Array(ex.memory.buffer);
 const call = (f, bytes) => { const p = ex.alloc(bytes.length); mem().set(bytes, p); const o = f(p, bytes.length); return mem().slice(o, o + ex.out_len()); };
 {

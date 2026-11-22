@@ -1,0 +1,2417 @@
+{
+ "status": "provisional: produced by the specification author's throwaway kernel; not yet reproduced by an independent implementation",
+ "what": "the composition (SPEC-PRESENTATION 7.7), pagination and plain-text face (8.3) of the universe in vectors/compose.ufx",
+ "pack": {
+  "file": "compose.ufx",
+  "sha256": "b6d514a293fef29961d2b5c5d67af6edeec76ee788b816c94a02ea90d35783f2"
+ },
+ "measure": {
+  "what": "the host's reply to every `measure` request (SPEC-PLAYER 9.3) is synthetic: no font is involved",
+  "advance": "the advance of a piece up to an offset is (the number of Unicode scalar values up to that offset) × size × f, where f is 0.6 if the piece's font list contains \"monospace\", otherwise 0.55 if its weight is 700 or more, otherwise 0.5",
+  "ascent": "0.8 × size",
+  "descent": "0.2 × size"
+ },
+ "numbers": "lengths are IEEE 754 doubles as the kernel computed them, rounded here to six decimal places. In a row, x and y are from the row's top left; y is the baseline. `top` is where a view puts the row: each row below the last by its gap, the first at 0",
+ "rows": "`block` is a number the kernel gave the block the row belongs to, of no meaning but to tell blocks apart; `line` is the row's place among the block's `lines`, from 0; `may_end_page` is false for the rows of a heading; `marker` marks a list item's marker, which has no characters of the text",
+ "unicode": "line breaking by UAX #14 and levels by UAX #9, with the data of Unicode 16.0",
+ "document_face": {
+  "width": 480,
+  "height": 935.2,
+  "row_count": 29,
+  "rows": [
+   {
+    "top": 0,
+    "gap": 22.4,
+    "height": 44.8,
+    "may_end_page": false,
+    "block": 1,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "The Quarterly Review",
+      "x": 0,
+      "y": 32,
+      "size": 32,
+      "weight": 700,
+      "slant": false,
+      "advance": 352,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 56,
+    "gap": 11.2,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 2,
+    "line": 0,
+    "lines": 3,
+    "text": [
+     {
+      "s": "Revenue grew in ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 128,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     },
+     {
+      "s": "every region",
+      "x": 128,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": true,
+      "advance": 96,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     },
+     {
+      "s": " this quarter, and ",
+      "x": 224,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 152,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     },
+     {
+      "s": "for the ",
+      "x": 376,
+      "y": 16,
+      "size": 16,
+      "weight": 700,
+      "slant": false,
+      "advance": 70.4,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 78.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 2,
+    "line": 1,
+    "lines": 3,
+    "text": [
+     {
+      "s": "first time",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 700,
+      "slant": false,
+      "advance": 88,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     },
+     {
+      "s": " the growth came mostly from customers who had ",
+      "x": 88,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 376,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 100.8,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 2,
+    "line": 2,
+    "lines": 3,
+    "text": [
+     {
+      "s": "been with us for more than a year.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 272,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 145.6,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 3,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "•",
+      "x": 9.6,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 8,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": true
+     },
+     {
+      "s": "First point, short.",
+      "x": 24,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 152,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 173.6,
+    "gap": 5.6,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 4,
+    "line": 0,
+    "lines": 2,
+    "text": [
+     {
+      "s": "•",
+      "x": 9.6,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 8,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": true
+     },
+     {
+      "s": "Second point, which runs long enough to need a second ",
+      "x": 24,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 432,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 196,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 4,
+    "line": 1,
+    "lines": 2,
+    "text": [
+     {
+      "s": "line at the width used here.",
+      "x": 24,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 224,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 224,
+    "gap": 5.6,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 5,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "1.",
+      "x": 25.6,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 16,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": true
+     },
+     {
+      "s": "A numbered step.",
+      "x": 48,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 128,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 252,
+    "gap": 5.6,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 6,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "2.",
+      "x": 25.6,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 16,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": true
+     },
+     {
+      "s": "Another numbered step.",
+      "x": 48,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 176,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 280,
+    "gap": 5.6,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 7,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "•",
+      "x": 9.6,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 8,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": true
+     },
+     {
+      "s": "Third point.",
+      "x": 24,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 96,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 308,
+    "gap": 5.6,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 8,
+    "line": 0,
+    "lines": 2,
+    "text": [
+     {
+      "s": "What gets measured gets managed, and what gets explained ",
+      "x": 16,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 456,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 330.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 8,
+    "line": 1,
+    "lines": 2,
+    "text": [
+     {
+      "s": "gets trusted.",
+      "x": 16,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 104,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 375.2,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 9,
+    "line": 0,
+    "lines": 2,
+    "text": [
+     {
+      "s": "total = sum(rows)",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 163.2,
+      "font": [
+       "monospace"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 397.6,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 9,
+    "line": 1,
+    "lines": 2,
+    "text": [
+     {
+      "s": "print(total)",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 115.2,
+      "font": [
+       "monospace"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 442.4,
+    "gap": 22.4,
+    "height": 33.6,
+    "may_end_page": false,
+    "block": 10,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "Method",
+      "x": 0,
+      "y": 24,
+      "size": 24,
+      "weight": 700,
+      "slant": false,
+      "advance": 79.2,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 487.2,
+    "gap": 11.2,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 11,
+    "line": 0,
+    "lines": 2,
+    "text": [
+     {
+      "s": "Every figure in this section was taken from the ledger at ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 464,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 509.6,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 11,
+    "line": 1,
+    "lines": 2,
+    "text": [
+     {
+      "s": "the close of the quarter and has not been adjusted since.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 456,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 554.4,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 12,
+    "line": 0,
+    "lines": 3,
+    "text": [
+     {
+      "s": "Where a number differs from the one reported last time, the ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 480,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 576.8,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 12,
+    "line": 1,
+    "lines": 3,
+    "text": [
+     {
+      "s": "difference is explained beside it and the earlier value is ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 472,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 599.2,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 12,
+    "line": 2,
+    "lines": 3,
+    "text": [
+     {
+      "s": "kept.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 40,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 644,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 13,
+    "line": 0,
+    "lines": 2,
+    "text": [
+     {
+      "s": "Nothing here is a forecast. The next section says what the ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 472,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 666.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 13,
+    "line": 1,
+    "lines": 2,
+    "text": [
+     {
+      "s": "team expects, and why, and how sure it is.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 336,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 711.2,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 14,
+    "line": 0,
+    "lines": 2,
+    "text": [
+     {
+      "s": "Readers who want the detail behind a line can open it: each ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 480,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 733.6,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 14,
+    "line": 1,
+    "lines": 2,
+    "text": [
+     {
+      "s": "row leads back to the entries it was summed from.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 392,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 778.4,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 15,
+    "line": 0,
+    "lines": 2,
+    "text": [
+     {
+      "s": "The appendix lists what was left out and the reason for each ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 488,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 800.8,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 15,
+    "line": 1,
+    "lines": 2,
+    "text": [
+     {
+      "s": "omission, so that nothing is absent by accident.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 384,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 845.6,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 16,
+    "line": 0,
+    "lines": 2,
+    "text": [
+     {
+      "s": "Corrections are welcome and are recorded with the name of ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 464,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 868,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 16,
+    "line": 1,
+    "lines": 2,
+    "text": [
+     {
+      "s": "whoever made them and the evidence they gave.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 360,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 912.8,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 17,
+    "line": 0,
+    "lines": 1,
+    "text": []
+   }
+  ]
+ },
+ "pages_face": {
+  "page": [
+   320,
+   400
+  ],
+  "margins": [
+   24,
+   24,
+   24,
+   24
+  ],
+  "width": 272,
+  "height_available": 352,
+  "page_count": 4,
+  "pages": [
+   {
+    "page": 1,
+    "first_row": 0,
+    "last_row": 10,
+    "row_count": 11
+   },
+   {
+    "page": 2,
+    "first_row": 11,
+    "last_row": 21,
+    "row_count": 11
+   },
+   {
+    "page": 3,
+    "first_row": 22,
+    "last_row": 33,
+    "row_count": 12
+   },
+   {
+    "page": 4,
+    "first_row": 34,
+    "last_row": 44,
+    "row_count": 11
+   }
+  ],
+  "rows_note": "rows are numbered from 0 in the list below, which is the text composed at this face's width; they are not the rows of the document face",
+  "row_count": 45,
+  "rows": [
+   {
+    "top": 0,
+    "gap": 22.4,
+    "height": 44.8,
+    "may_end_page": false,
+    "block": 1,
+    "line": 0,
+    "lines": 2,
+    "text": [
+     {
+      "s": "The Quarterly ",
+      "x": 0,
+      "y": 32,
+      "size": 32,
+      "weight": 700,
+      "slant": false,
+      "advance": 246.4,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 44.8,
+    "gap": 0,
+    "height": 44.8,
+    "may_end_page": false,
+    "block": 1,
+    "line": 1,
+    "lines": 2,
+    "text": [
+     {
+      "s": "Review",
+      "x": 0,
+      "y": 32,
+      "size": 32,
+      "weight": 700,
+      "slant": false,
+      "advance": 105.6,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 100.8,
+    "gap": 11.2,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 2,
+    "line": 0,
+    "lines": 5,
+    "text": [
+     {
+      "s": "Revenue grew in ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 128,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     },
+     {
+      "s": "every region",
+      "x": 128,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": true,
+      "advance": 96,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     },
+     {
+      "s": " this ",
+      "x": 224,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 48,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 123.2,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 2,
+    "line": 1,
+    "lines": 5,
+    "text": [
+     {
+      "s": "quarter, and ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 104,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     },
+     {
+      "s": "for the first time",
+      "x": 104,
+      "y": 16,
+      "size": 16,
+      "weight": 700,
+      "slant": false,
+      "advance": 158.4,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     },
+     {
+      "s": " ",
+      "x": 262.4,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 8,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 145.6,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 2,
+    "line": 2,
+    "lines": 5,
+    "text": [
+     {
+      "s": "the growth came mostly from ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 224,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 168,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 2,
+    "line": 3,
+    "lines": 5,
+    "text": [
+     {
+      "s": "customers who had been with us for ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 280,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 190.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 2,
+    "line": 4,
+    "lines": 5,
+    "text": [
+     {
+      "s": "more than a year.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 136,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 235.2,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 3,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "•",
+      "x": 9.6,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 8,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": true
+     },
+     {
+      "s": "First point, short.",
+      "x": 24,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 152,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 263.2,
+    "gap": 5.6,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 4,
+    "line": 0,
+    "lines": 3,
+    "text": [
+     {
+      "s": "•",
+      "x": 9.6,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 8,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": true
+     },
+     {
+      "s": "Second point, which runs long ",
+      "x": 24,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 240,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 285.6,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 4,
+    "line": 1,
+    "lines": 3,
+    "text": [
+     {
+      "s": "enough to need a second line at ",
+      "x": 24,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 256,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 308,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 4,
+    "line": 2,
+    "lines": 3,
+    "text": [
+     {
+      "s": "the width used here.",
+      "x": 24,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 160,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 336,
+    "gap": 5.6,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 5,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "1.",
+      "x": 25.6,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 16,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": true
+     },
+     {
+      "s": "A numbered step.",
+      "x": 48,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 128,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 364,
+    "gap": 5.6,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 6,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "2.",
+      "x": 25.6,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 16,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": true
+     },
+     {
+      "s": "Another numbered step.",
+      "x": 48,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 176,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 392,
+    "gap": 5.6,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 7,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "•",
+      "x": 9.6,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 8,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": true
+     },
+     {
+      "s": "Third point.",
+      "x": 24,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 96,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 420,
+    "gap": 5.6,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 8,
+    "line": 0,
+    "lines": 3,
+    "text": [
+     {
+      "s": "What gets measured gets ",
+      "x": 16,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 192,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 442.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 8,
+    "line": 1,
+    "lines": 3,
+    "text": [
+     {
+      "s": "managed, and what gets ",
+      "x": 16,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 184,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 464.8,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 8,
+    "line": 2,
+    "lines": 3,
+    "text": [
+     {
+      "s": "explained gets trusted.",
+      "x": 16,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 184,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 509.6,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 9,
+    "line": 0,
+    "lines": 2,
+    "text": [
+     {
+      "s": "total = sum(rows)",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 163.2,
+      "font": [
+       "monospace"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 532,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 9,
+    "line": 1,
+    "lines": 2,
+    "text": [
+     {
+      "s": "print(total)",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 115.2,
+      "font": [
+       "monospace"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 576.8,
+    "gap": 22.4,
+    "height": 33.6,
+    "may_end_page": false,
+    "block": 10,
+    "line": 0,
+    "lines": 1,
+    "text": [
+     {
+      "s": "Method",
+      "x": 0,
+      "y": 24,
+      "size": 24,
+      "weight": 700,
+      "slant": false,
+      "advance": 79.2,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 621.6,
+    "gap": 11.2,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 11,
+    "line": 0,
+    "lines": 4,
+    "text": [
+     {
+      "s": "Every figure in this section was ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 264,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 644,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 11,
+    "line": 1,
+    "lines": 4,
+    "text": [
+     {
+      "s": "taken from the ledger at the close ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 280,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 666.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 11,
+    "line": 2,
+    "lines": 4,
+    "text": [
+     {
+      "s": "of the quarter and has not been ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 256,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 688.8,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 11,
+    "line": 3,
+    "lines": 4,
+    "text": [
+     {
+      "s": "adjusted since.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 120,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 733.6,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 12,
+    "line": 0,
+    "lines": 4,
+    "text": [
+     {
+      "s": "Where a number differs from the ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 256,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 756,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 12,
+    "line": 1,
+    "lines": 4,
+    "text": [
+     {
+      "s": "one reported last time, the ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 224,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 778.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 12,
+    "line": 2,
+    "lines": 4,
+    "text": [
+     {
+      "s": "difference is explained beside it ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 272,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 800.8,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 12,
+    "line": 3,
+    "lines": 4,
+    "text": [
+     {
+      "s": "and the earlier value is kept.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 240,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 845.6,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 13,
+    "line": 0,
+    "lines": 4,
+    "text": [
+     {
+      "s": "Nothing here is a forecast. The ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 256,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 868,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 13,
+    "line": 1,
+    "lines": 4,
+    "text": [
+     {
+      "s": "next section says what the team ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 256,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 890.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 13,
+    "line": 2,
+    "lines": 4,
+    "text": [
+     {
+      "s": "expects, and why, and how sure it ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 272,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 912.8,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 13,
+    "line": 3,
+    "lines": 4,
+    "text": [
+     {
+      "s": "is.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 24,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 957.6,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 14,
+    "line": 0,
+    "lines": 4,
+    "text": [
+     {
+      "s": "Readers who want the detail behind ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 280,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 980,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 14,
+    "line": 1,
+    "lines": 4,
+    "text": [
+     {
+      "s": "a line can open it: each row leads ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 280,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1002.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 14,
+    "line": 2,
+    "lines": 4,
+    "text": [
+     {
+      "s": "back to the entries it was summed ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 272,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1024.8,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 14,
+    "line": 3,
+    "lines": 4,
+    "text": [
+     {
+      "s": "from.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 40,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1069.6,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 15,
+    "line": 0,
+    "lines": 4,
+    "text": [
+     {
+      "s": "The appendix lists what was left ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 264,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1092,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 15,
+    "line": 1,
+    "lines": 4,
+    "text": [
+     {
+      "s": "out and the reason for each ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 224,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1114.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 15,
+    "line": 2,
+    "lines": 4,
+    "text": [
+     {
+      "s": "omission, so that nothing is ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 232,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1136.8,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 15,
+    "line": 3,
+    "lines": 4,
+    "text": [
+     {
+      "s": "absent by accident.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 152,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1181.6,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 16,
+    "line": 0,
+    "lines": 4,
+    "text": [
+     {
+      "s": "Corrections are welcome and are ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 256,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1204,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 16,
+    "line": 1,
+    "lines": 4,
+    "text": [
+     {
+      "s": "recorded with the name of whoever ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 272,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1226.4,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 16,
+    "line": 2,
+    "lines": 4,
+    "text": [
+     {
+      "s": "made them and the evidence they ",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 256,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1248.8,
+    "gap": 0,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 16,
+    "line": 3,
+    "lines": 4,
+    "text": [
+     {
+      "s": "gave.",
+      "x": 0,
+      "y": 16,
+      "size": 16,
+      "weight": 400,
+      "slant": false,
+      "advance": 40,
+      "font": [
+       "serif"
+      ],
+      "dir": "ltr",
+      "marker": false
+     }
+    ]
+   },
+   {
+    "top": 1293.6,
+    "gap": 22.4,
+    "height": 22.4,
+    "may_end_page": true,
+    "block": 17,
+    "line": 0,
+    "lines": 1,
+    "text": []
+   }
+  ]
+ },
+ "pagination_cases": [
+  {
+   "page": [
+    320,
+    152
+   ],
+   "margins": [
+    24,
+    24,
+    24,
+    24
+   ],
+   "height_available": 104,
+   "page_count": 15,
+   "pages": [
+    {
+     "page": 1,
+     "first_row": 0,
+     "last_row": 1
+    },
+    {
+     "page": 2,
+     "first_row": 2,
+     "last_row": 4,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 3,
+     "first_row": 5,
+     "last_row": 7
+    },
+    {
+     "page": 4,
+     "first_row": 8,
+     "last_row": 11
+    },
+    {
+     "page": 5,
+     "first_row": 12,
+     "last_row": 13,
+     "rows_that_fit_but_were_moved_on": 2
+    },
+    {
+     "page": 6,
+     "first_row": 14,
+     "last_row": 16
+    },
+    {
+     "page": 7,
+     "first_row": 17,
+     "last_row": 18,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 8,
+     "first_row": 19,
+     "last_row": 21
+    },
+    {
+     "page": 9,
+     "first_row": 22,
+     "last_row": 23,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 10,
+     "first_row": 24,
+     "last_row": 27
+    },
+    {
+     "page": 11,
+     "first_row": 28,
+     "last_row": 31
+    },
+    {
+     "page": 12,
+     "first_row": 32,
+     "last_row": 35
+    },
+    {
+     "page": 13,
+     "first_row": 36,
+     "last_row": 39
+    },
+    {
+     "page": 14,
+     "first_row": 40,
+     "last_row": 43
+    },
+    {
+     "page": 15,
+     "first_row": 44,
+     "last_row": 44
+    }
+   ]
+  },
+  {
+   "page": [
+    320,
+    184
+   ],
+   "margins": [
+    24,
+    24,
+    24,
+    24
+   ],
+   "height_available": 136,
+   "page_count": 11,
+   "pages": [
+    {
+     "page": 1,
+     "first_row": 0,
+     "last_row": 2
+    },
+    {
+     "page": 2,
+     "first_row": 3,
+     "last_row": 7
+    },
+    {
+     "page": 3,
+     "first_row": 8,
+     "last_row": 12
+    },
+    {
+     "page": 4,
+     "first_row": 13,
+     "last_row": 16
+    },
+    {
+     "page": 5,
+     "first_row": 17,
+     "last_row": 18,
+     "rows_that_fit_but_were_moved_on": 2
+    },
+    {
+     "page": 6,
+     "first_row": 19,
+     "last_row": 23
+    },
+    {
+     "page": 7,
+     "first_row": 24,
+     "last_row": 27,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 8,
+     "first_row": 28,
+     "last_row": 31,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 9,
+     "first_row": 32,
+     "last_row": 35,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 10,
+     "first_row": 36,
+     "last_row": 39,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 11,
+     "first_row": 40,
+     "last_row": 44
+    }
+   ]
+  },
+  {
+   "page": [
+    320,
+    228
+   ],
+   "margins": [
+    24,
+    24,
+    24,
+    24
+   ],
+   "height_available": 180,
+   "page_count": 8,
+   "pages": [
+    {
+     "page": 1,
+     "first_row": 0,
+     "last_row": 4
+    },
+    {
+     "page": 2,
+     "first_row": 5,
+     "last_row": 10
+    },
+    {
+     "page": 3,
+     "first_row": 11,
+     "last_row": 16
+    },
+    {
+     "page": 4,
+     "first_row": 17,
+     "last_row": 21,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 5,
+     "first_row": 22,
+     "last_row": 27
+    },
+    {
+     "page": 6,
+     "first_row": 28,
+     "last_row": 33,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 7,
+     "first_row": 34,
+     "last_row": 39
+    },
+    {
+     "page": 8,
+     "first_row": 40,
+     "last_row": 44
+    }
+   ]
+  },
+  {
+   "page": [
+    320,
+    356
+   ],
+   "margins": [
+    24,
+    24,
+    24,
+    24
+   ],
+   "height_available": 308,
+   "page_count": 5,
+   "pages": [
+    {
+     "page": 1,
+     "first_row": 0,
+     "last_row": 7,
+     "rows_that_fit_but_were_moved_on": 2
+    },
+    {
+     "page": 2,
+     "first_row": 8,
+     "last_row": 18
+    },
+    {
+     "page": 3,
+     "first_row": 19,
+     "last_row": 27,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 4,
+     "first_row": 28,
+     "last_row": 37,
+     "rows_that_fit_but_were_moved_on": 1
+    },
+    {
+     "page": 5,
+     "first_row": 38,
+     "last_row": 44
+    }
+   ]
+  }
+ ],
+ "plain_text_face": "The Quarterly Review\n\nRevenue grew in every region this quarter, and for the first time the growth came mostly from customers who had been with us for more than a year.\n\n• First point, short.\n• Second point, which runs long enough to need a second line at the width used here.\n  1. A numbered step.\n  2. Another numbered step.\n• Third point.\n\nWhat gets measured gets managed, and what gets explained gets trusted.\n\ntotal = sum(rows)\nprint(total)\n\nMethod\n\nEvery figure in this section was taken from the ledger at the close of the quarter and has not been adjusted since.\n\nWhere a number differs from the one reported last time, the difference is explained beside it and the earlier value is kept.\n\nNothing here is a forecast. The next section says what the team expects, and why, and how sure it is.\n\nReaders who want the detail behind a line can open it: each row leads back to the entries it was summed from.\n\nThe appendix lists what was left out and the reason for each omission, so that nothing is absent by accident.\n\nCorrections are welcome and are recorded with the name of whoever made them and the evidence they gave.\n\n\n"
+}

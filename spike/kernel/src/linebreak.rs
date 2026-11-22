@@ -4,11 +4,34 @@ pub use crate::linebreak_data::*;
 use alloc::vec;
 use alloc::vec::Vec;
 
+/// A table of a property, unpacked: for each run of scalar values, its first shifted left 8, and its value.
+pub fn unpack(runs: &[u8]) -> Vec<u32> {
+    let (mut out, mut c, mut i) = (Vec::new(), 0u32, 0);
+    while i < runs.len() {
+        let mut shift = 0;
+        while runs[i] & 128 != 0 {
+            c += ((runs[i] & 127) as u32) << shift;
+            shift += 7;
+            i += 1;
+        }
+        c += (runs[i] as u32) << shift;
+        out.push(c << 8 | runs[i + 1] as u32);
+        i += 2;
+    }
+    out
+}
+pub fn lookup(table: &[u32], c: char) -> u8 {
+    table[table.partition_point(|r| *r <= (c as u32) << 8 | 0xff) - 1] as u8
+}
+static mut TABLE: Vec<u32> = Vec::new();
 /// A character's table value: its class after LB1 in bits 0 to 5, and two flags.
 pub fn value(c: char) -> u8 {
-    let key = (c as u32) << 8 | 0xff;
-    let i = RUNS.partition_point(|r| *r <= key);
-    RUNS[i.saturating_sub(1)] as u8
+    unsafe {
+        if TABLE.is_empty() {
+            TABLE = unpack(&RUNS);
+        }
+        lookup(&TABLE, c)
+    }
 }
 pub fn class(c: char) -> u8 {
     value(c) & 63

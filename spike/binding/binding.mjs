@@ -1,5 +1,5 @@
 // Throwaway spike binding for the web. It knows encoded values, the kernel's four exports,
-// one host function (text break) and the eight display-list items. It knows no medium.
+// one host function (text measure) and the eight display-list items. It knows no medium.
 // ---- encoded values (SPEC 1.2), as much as a binding needs ----
 export function decode(b) {
   let p = 0; const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
@@ -39,12 +39,15 @@ function half(v) {
   if (e >= -24 && e < -14) { const sh = 13 + (-14 - e), full = 0x800000 | m; if ((full & ((1 << sh) - 1)) === 0) return s | (full >>> sh); }
   return null;
 }
-const FLOATS = new Set(['adv', 'asc', 'desc', 'width', 'w']);   // fields the contract types as float
+const FLOATS = new Set(['adv', 'asc', 'desc', 'w']);   // fields the contract types as float
 // ---- the kernel ----
 export async function start(wasmBytes, measure) {
   let ex; const mem = () => new Uint8Array(ex.memory.buffer);
   const give = bytes => { const p = ex.alloc(bytes.length); mem().set(bytes, p); return p; };
-  const imports = { 'ufo:host/1': { host_break(req, n, out, cap) { const r = encode(breakLine(decode(mem().slice(req, req + n)), measure)); if (r.length > cap) return 0; mem().set(r, out); return r.length; } } };
+  // the text capability's `measure` (PLAYER 9.3): the advance of a piece up to each offset, its ascent and descent.
+  // measure(piece, text) -> { adv, asc, desc } comes from the host's own text facilities; breaking lines is the kernel's.
+  const answer = ({ piece, at }) => { const cps = [...piece.s], whole = measure(piece, piece.s); return { adv: at.map(o => measure(piece, cps.slice(0, o).join('')).adv), asc: whole.asc, desc: whole.desc }; };
+  const imports = { 'ufo:host/1': { host_measure(req, n, out, cap) { const r = encode(answer(decode(mem().slice(req, req + n)))); if (r.length > cap) return 0; mem().set(r, out); return r.length; } } };
   ex = (await WebAssembly.instantiate(wasmBytes, imports)).instance.exports;
   return {
     open: pack => ex.open(give(pack), pack.length) === 1,
@@ -52,27 +55,6 @@ export async function start(wasmBytes, measure) {
     query: q => { const b = encode(q); const p = ex.query(give(b), b.length); return decode(mem().slice(p, p + ex.out_len())); },
     sample: params => { const q = encode(params); const p = ex.sample(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); },
   };
-}
-// ---- the text capability's `break`: how much of these runs fits in this width ----
-// measure(run, text) -> { adv, asc, desc } comes from the host's own text facilities.
-function breakLine(req, measure) {
-  const { runs, from, width } = req; let [r, off] = from; const frags = []; let x = 0, asc = 0, desc = 0, any = false;
-  while (r < runs.length) {
-    const cps = [...runs[r].s]; let i = off, last = off, lastAdv = 0, fits = true;
-    // break opportunities: after each run of spaces (the host's line-breaking rules would go here)
-    while (i < cps.length) {
-      let j = i; while (j < cps.length && cps[j] !== ' ') j++; while (j < cps.length && cps[j] === ' ') j++;
-      const m = measure(runs[r], cps.slice(off, j).join('').replace(/ +$/, ''));
-      if (x + m.adv > width && (any || last > off)) { fits = false; break; }
-      const full = measure(runs[r], cps.slice(off, j).join(''));
-      last = j; lastAdv = full.adv; asc = Math.max(asc, full.asc); desc = Math.max(desc, full.desc); i = j;
-      if (x + m.adv > width) { fits = false; break; }   // a single word wider than the line: it goes alone
-    }
-    if (last > off) { frags.push({ run: r, from: off, to: last, adv: lastAdv }); x += lastAdv; any = true; }
-    if (!fits) return { frags, asc, desc, to: last < cps.length ? [r, last] : [r + 1, 0] };
-    r++; off = 0;
-  }
-  return { frags, asc, desc, to: [runs.length, 0] };
 }
 // ---- the drawing contract (SPEC 6.2) on a 2D canvas ----
 const css = c => `rgba(${c.slice(0, 3).map(x => Math.round(x * 255))},${c[3]})`;
@@ -87,4 +69,4 @@ export function draw(g, list) {
     // raster, samples, surface and hit are not needed by the spike's universe and are not written
   }
 }
-export const canvasMeasure = g => (run, s) => { g.font = fontOf(run); const m = g.measureText(s); return { adv: m.width, asc: m.fontBoundingBoxAscent, desc: m.fontBoundingBoxDescent }; };
+export const canvasMeasure = g => (piece, s) => { g.direction = piece.dir; g.font = fontOf(piece); const m = g.measureText(s); return { adv: m.width, asc: m.fontBoundingBoxAscent, desc: m.fontBoundingBoxDescent }; };

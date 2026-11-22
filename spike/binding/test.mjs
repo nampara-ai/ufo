@@ -1,6 +1,6 @@
 import fs from 'fs'; import { start } from './binding.mjs';
 const wasm = fs.readFileSync(new URL('../kernel/target/wasm32-unknown-unknown/release/ufo_spike_kernel.wasm', import.meta.url));
-const fake = (run, s) => ({ adv: [...s].length * run.size * (run.weight >= 700 ? 0.55 : 0.5), asc: run.size * 0.8, desc: run.size * 0.2 });
+const fake = (piece, s) => ({ adv: [...s].length * piece.size * (piece.font.includes('monospace') ? 0.6 : piece.weight >= 700 ? 0.55 : 0.5), asc: piece.size * 0.8, desc: piece.size * 0.2 });
 for (const f of process.argv.slice(2)) {
   const k = await start(wasm, fake); const ok = k.open(new Uint8Array(fs.readFileSync(f))); console.log(f, 'opens:', ok); if (!ok) continue;
   const tx = k.sample({ as: 'text' }); console.log('--- text face'); console.log(tx && tx.text);

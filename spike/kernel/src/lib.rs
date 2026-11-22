@@ -21,8 +21,8 @@ use value::*;
 
 #[link(wasm_import_module = "ufo:host/1")]
 extern "C" {
-    /// The `text` capability's `break`: request and reply are encoded values.
-    fn host_break(req: *const u8, n: usize, out: *mut u8, cap: usize) -> usize;
+    /// The `text` capability's `measure` (PLAYER 9.3): request and reply are encoded values.
+    fn host_measure(req: *const u8, n: usize, out: *mut u8, cap: usize) -> usize;
 }
 static mut PACK: Option<Pack> = None;
 static mut OUT: Vec<u8> = Vec::new();
@@ -46,14 +46,15 @@ pub unsafe extern "C" fn out_len() -> usize {
 }
 fn host(req: &V) -> Option<V> {
     let r = encode(req);
-    let mut buf = vec![0u8; 16384];
-    let n = unsafe { host_break(r.as_ptr(), r.len(), buf.as_mut_ptr(), buf.len()) };
+    let mut buf = vec![0u8; 64 + 9 * req.get("at").map_or(0, |a| a.l().len())];
+    let n = unsafe { host_measure(r.as_ptr(), r.len(), buf.as_mut_ptr(), buf.len()) };
     decode(buf.get(..n)?)
 }
 fn rect(x: f64, y: f64, w: f64, h: f64) -> V {
     V::L(vec![V::F(x), V::F(y), V::F(w), V::F(h)])
 }
-/// Samples the primary face. Parameters, an encoded map: `as` ("text", "view", "pages"), `w`.
+/// Samples the primary face. Parameters, an encoded map: `as` ("text", "view", "rows", "pages"), `w`,
+/// and `detail` to have the rows of pages too.
 #[no_mangle]
 pub unsafe extern "C" fn sample(p: *mut u8, n: usize) -> *const u8 {
     let params = decode(&Vec::from_raw_parts(p, n, n.max(1))).unwrap_or(V::Null);
@@ -81,7 +82,7 @@ unsafe fn run(params: &V) -> Option<V> {
         plain(pk, &root, &of(&primary)?, &mut s, 0);
         return Some(map(vec![("text", V::T(s))]));
     }
-    let mut cx = Ctx { pk, root, chain: Vec::new(), blocks: 0, brk: &host };
+    let mut cx = Ctx { pk, root, chain: Vec::new(), blocks: 0, measure: &host };
     let mut list = Vec::new();
     if mode == "pages" {
         let f = face("pages").unwrap_or(primary);
@@ -101,9 +102,15 @@ unsafe fn run(params: &V) -> Option<V> {
             list.push(V::L(vec![t("pop")]));
         }
         let n = pages.len() as f64;
-        return Some(map(vec![("list", V::L(list)), ("w", V::F(pw)), ("h", V::F(n * ph + (n - 1.0).max(0.0) * gap)), ("pages", V::Int(pages.len() as i64)), ("rows", V::Int(rows.len() as i64))]));
+        let breaks = pages.iter().map(|(a, b)| V::L(vec![V::Int(*a as i64), V::Int(*b as i64)])).collect();
+        let detail = if params.get("detail").is_some() { rows_value(&rows) } else { V::Null };
+        return Some(map(vec![("list", V::L(list)), ("w", V::F(pw)), ("h", V::F(n * ph + (n - 1.0).max(0.0) * gap)), ("pages", V::Int(pages.len() as i64)), ("rows", V::Int(rows.len() as i64)), ("breaks", V::L(breaks)), ("detail", detail)]));
     }
     let w = params.get("w").and_then(|w| w.f()).unwrap_or(600.0);
+    if mode == "rows" {
+        // the rows of the primary face composed at exactly `w`, before they are stacked
+        return Some(map(vec![("detail", rows_value(&compose(&mut cx, &root, &of(&primary)?, w)))]));
+    }
     let pad = 24.0;
     let rows = compose(&mut cx, &root, &of(&primary)?, w - 2.0 * pad);
     let h = stack(&rows, pad, pad, &mut list) + pad;

@@ -4,9 +4,14 @@ pub use crate::bidi_data::*;
 use alloc::vec;
 use alloc::vec::Vec;
 
+static mut TABLE: Vec<u32> = Vec::new();
 pub fn class(c: char) -> u8 {
-    let key = (c as u32) << 8 | 0xff;
-    RUNS[RUNS.partition_point(|r| *r <= key).saturating_sub(1)] as u8
+    unsafe {
+        if TABLE.is_empty() {
+            TABLE = crate::linebreak::unpack(&RUNS);
+        }
+        crate::linebreak::lookup(&TABLE, c)
+    }
 }
 /// X9: characters the rules after it do not see.
 pub fn removed(t: u8) -> bool {
@@ -229,11 +234,10 @@ fn resolve(s: &[char], orig: &[u8], t: &mut [u8], lv: &mut [u8], seq: &[usize], 
             }
             stack.push((b.1 as u32, k));
         } else if let Some(j) = stack.iter().rposition(|x| x.0 == c) {
-            pairs.push((stack[j].1, k));
+            pairs.insert(pairs.partition_point(|p| p.0 < stack[j].1), (stack[j].1, k));
             stack.truncate(j);
         }
     }
-    pairs.sort();
     for &(a, b) in &pairs {
         let mut d = ON;
         for k in a + 1..b {

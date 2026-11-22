@@ -15,3 +15,17 @@ Build and run:
 
     cd spike/kernel && cargo build --release --target wasm32-unknown-unknown
     node spike/vectors.mjs
+
+Composition (SPEC-PRESENTATION §7.7): the kernel breaks lines itself (UAX #14,
+`kernel/src/linebreak.rs`) and orders them (UAX #9, `kernel/src/bidi.rs`), and asks its
+host only to `measure`. `node spike/compose-vectors.mjs` writes
+`vectors/provisional/composition.json` with a synthetic measure function.
+`COMPOSITION-NOTES.md` lists every place where §7.7 and §8.3 did not decide what the
+kernel should do, and what the two algorithms cost in size.
+
+The Unicode tables are generated, and the two algorithms checked against the Unicode
+16.0 conformance files, by the scripts in `tools/` (see the head of each):
+
+    cd spike/tools && npm install && node gen_linebreak.mjs && node gen_bidi.mjs
+    cd ../kernel && cargo build --release --target wasm32-unknown-unknown --features conformance --target-dir ../tools/target
+    cd ../tools && node conformance.mjs

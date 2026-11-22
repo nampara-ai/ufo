@@ -1,6 +1,8 @@
-// From description to display list: blocks, lines, rows, pages. The plain-text face.
+// From description to display list (SPEC-PRESENTATION 7.7): blocks, pieces, lines, rows, pages.
+// The plain-text face (8.3). Line breaking and bidirectional ordering are the kernel's own.
 use crate::pack::*;
 use crate::value::*;
+use crate::{bidi, linebreak as lb};
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec;
@@ -11,7 +13,7 @@ pub struct Row {
     pub h: f64,
     pub gap: f64, // space wanted above it; dropped at the top of a page
     pub items: Vec<V>,
-    pub keep: bool, // must not be the last row on a page
+    pub keep: bool, // may not end a page
     pub block: u32,
     pub line: u32,
     pub lines: u32,
@@ -24,18 +26,18 @@ struct Style {
     color: V,
     font: V,
     line: f64,
-}
-struct Run {
-    s: String,
-    st: Style,
-    pos: usize, // live position of its first character in the text
+    align: u8, // 0 start, 1 center, 2 end
+    dir: u8,   // 0 left to right, 1 right to left, 2 auto
+    deco: u8,  // 0 none, 1 underline, 2 strike
+    start: f64, // indents, on the side lines start from and on the other
+    end: f64,
 }
 pub struct Ctx<'a> {
     pub pk: &'a Pack,
     pub root: H,
     pub chain: Vec<(H, Id)>,
     pub blocks: u32,
-    pub brk: &'a dyn Fn(&V) -> Option<V>,
+    pub measure: &'a dyn Fn(&V) -> Option<V>,
 }
 fn fl(x: f64) -> V {
     V::F(x)
@@ -43,10 +45,15 @@ fn fl(x: f64) -> V {
 fn black() -> V {
     V::L(vec![fl(0.0), fl(0.0), fl(0.0), fl(1.0)])
 }
+fn plain_style() -> Style {
+    Style { size: 16.0, weight: 400, slant: false, color: black(), font: V::L(vec![t("serif")]), line: 1.4, align: 0, dir: 0, deco: 0, start: 0.0, end: 0.0 }
+}
+/// A row of the reader's own words, where an object cannot be presented.
 fn label_row(cx: &mut Ctx, s: &str, w: f64) -> Vec<Row> {
-    let st = Style { size: 13.0, weight: 400, slant: true, color: V::L(vec![fl(0.4), fl(0.4), fl(0.4), fl(1.0)]), font: V::L(vec![t("sans-serif")]), line: 1.4 };
-    let runs = vec![Run { s: String::from(s), st, pos: 0 }];
-    lines(cx, &runs, w, 0.0, None)
+    let st = Style { size: 13.0, slant: true, color: V::L(vec![fl(0.4), fl(0.4), fl(0.4), fl(1.0)]), font: V::L(vec![t("sans-serif")]), ..plain_style() };
+    let cs: Vec<char> = s.chars().collect();
+    let n = cs.len();
+    lines(cx, &Seg { cs, st: vec![0; n], pos: vec![0; n], bx: vec![None; n] }, &[st.clone()], &st, false, w, None).0
 }
 
 pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
@@ -59,8 +66,8 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
     };
     cx.chain.push((*uni, *id));
     let rows = match o.ty.as_str() {
-        "ufo.text" => text_rows(cx, uni, &o, None, w).unwrap_or_else(|| label_row(cx, "(inconsistent text: not presented)", w)),
-        "ufo.group" | "ufo.region" => {
+        "ufo.text" => text_rows(cx, uni, &o, None, w).unwrap_or_else(|| label_row(cx, "(inconsistent text: not presented)", w)), // step 1
+        "ufo.group" | "ufo.pane" => {
             let gap = o.p.get("gap").and_then(|g| g.f()).unwrap_or(0.0);
             let mut rows = Vec::new();
             for c in o.p.get("children").map(|c| c.l()).unwrap_or(&[]) {
@@ -141,19 +148,19 @@ struct Span<'a> {
     role: &'a str,
     v: &'a V,
 }
+/// Step 2: the spans that resolve, in key order.
 fn spans<'a>(o: &'a Obj, els: &[El]) -> Vec<Span<'a>> {
     let mut out = Vec::new();
     if let Some(V::M(m)) = o.p.get("spans") {
-        // the map is in key order, which is the order the rules of 8.1 use for ties
         for (_, v) in m {
             let Some(reg) = v.get("at").and_then(|a| a.tag(ANCHOR)).and_then(|a| a.get("a")).and_then(|a| a.get("chars")) else { continue };
             let r = reg.l();
             if r.len() != 3 {
                 continue;
             }
-            let (Some(a), Some(b)) = (boundary(els, &r[1]), boundary(els, &r[2])) else { continue }; // detached: not presented
+            let (Some(a), Some(b)) = (boundary(els, &r[1]), boundary(els, &r[2])) else { continue }; // detached: takes no part
             let block = v.get("kind").and_then(|k| k.s()) == Some("block");
-            if a < b || block {
+            if a < b || (block && a == b) {
                 out.push(Span { a, b, block, role: v.get("role").and_then(|r| r.s()).unwrap_or(""), v });
             }
         }
@@ -179,26 +186,46 @@ fn restyle(st: &mut Style, v: &V) {
     if let Some(x) = v.get("line").and_then(|x| x.f()) {
         st.line = x;
     }
+    let word = |k: &str, of: [&str; 3], to: &mut u8| {
+        if let Some(i) = v.get(k).and_then(|x| x.s()).and_then(|x| of.iter().position(|o| *o == x)) {
+            *to = i as u8;
+        }
+    };
+    word("align", ["start", "center", "end"], &mut st.align);
+    word("direction", ["ltr", "rtl", "auto"], &mut st.dir);
+    word("decoration", ["none", "underline", "strike"], &mut st.deco);
 }
 const HEADING: [f64; 6] = [2.0, 1.5, 1.25, 1.1, 1.0, 1.0];
-
-/// A text, or a region of one, as rows (the algorithm of SPEC 5.7).
-fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Option<Vec<Row>> {
-    let chars: Vec<char> = o.p.get("chars")?.s()?.chars().collect();
-    let els = elements(o.seq.as_ref()?.get("chars")?)?;
-    let live: Vec<&El> = els.iter().filter(|e| e.live).collect();
-    if live.len() != chars.len() {
-        return None; // X1
+fn level(s: &Span) -> usize {
+    s.v.get("level").and_then(|l| l.i()).unwrap_or(1).max(1) as usize
+}
+/// A span's part in a style: the defaults of its role (Appendix A), then its own properties.
+fn role_style(st: &mut Style, s: &Span, text: &Style) {
+    match s.role {
+        "heading" => {
+            st.size = text.size * HEADING[level(s).min(6) - 1];
+            st.weight = 700;
+        }
+        "item" => st.start += level(s) as f64 * 1.5 * text.size,
+        "quote" => {
+            st.start += text.size;
+            st.end += text.size;
+        }
+        "code" => st.font = V::L(vec![t("monospace")]),
+        "emphasis" => st.slant = true,
+        "strong" => st.weight = 700,
+        _ => {}
     }
-    let sp = spans(o, &els);
-    let (ra, rb) = match region {
-        Some(r) if r.l().len() == 3 => (boundary(&els, &r.l()[1])?, boundary(&els, &r.l()[2])?),
-        _ => (0, chars.len()),
-    };
-    let mut base = Style { size: 16.0, weight: 400, slant: false, color: black(), font: V::L(vec![t("serif")]), line: 1.4 };
-    restyle(&mut base, &o.p);
-    let line1 = base.size * base.line;
-    // step 1: the innermost block span over each character
+    restyle(st, s.v);
+}
+/// A block: the characters `a` to `b` whose innermost block span is `span`, or an empty span.
+struct Blk {
+    span: Option<usize>,
+    a: usize,
+    b: usize,
+}
+/// Step 3: the blocks of the characters `ra` to `rb`, in order.
+fn blocks(sp: &[Span], ra: usize, rb: usize) -> Vec<Blk> {
     let inner = |i: usize| -> Option<usize> {
         let mut best: Option<usize> = None;
         for (k, s) in sp.iter().enumerate() {
@@ -208,133 +235,205 @@ fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Opti
         }
         best
     };
-    let mut rows: Vec<Row> = Vec::new();
-    let mut after = 0.0f64; // space the previous block wants below it
-    let mut count = 0i64; // numbering of consecutive items
-    let mut i = ra;
-    while i < rb {
-        let b = inner(i);
-        let mut e = i + 1;
+    let mut empty: Vec<usize> = Vec::new(); // by place, then by key
+    for k in (0..sp.len()).filter(|&k| sp[k].block && sp[k].a == sp[k].b && ra <= sp[k].a && sp[k].a <= rb) {
+        empty.insert(empty.partition_point(|&e| sp[e].a <= sp[k].a), k);
+    }
+    let (mut out, mut i) = (Vec::new(), ra);
+    loop {
+        // an empty block comes before the first block that begins at or after its place
+        let n = empty.iter().take_while(|&&k| sp[k].a <= i || i >= rb).count();
+        out.extend(empty.drain(..n).map(|k| Blk { span: Some(k), a: sp[k].a, b: sp[k].a }));
+        if i >= rb {
+            return out;
+        }
+        let (b, mut e) = (inner(i), i + 1);
         while e < rb && inner(e) == b {
             e += 1;
         }
-        // step 2: the block's style and spacing
-        let mut st = base.clone();
-        let (mut before, mut indent, mut keep, mut marker) = (0.0, 0.0, false, None);
-        let below;
-        if let Some(k) = b {
-            let s = &sp[k];
-            let level = s.v.get("level").and_then(|l| l.i()).unwrap_or(1).clamp(1, 6);
-            match s.role {
-                "heading" => {
-                    st.size = base.size * HEADING[level as usize - 1];
-                    st.weight = 700;
-                    before = line1;
-                    below = line1 * 0.5;
-                    keep = true;
-                }
-                "item" => {
-                    indent = level as f64 * 1.5 * base.size;
-                    count += 1;
-                    marker = Some(match s.v.get("marker").and_then(|m| m.s()) {
-                        Some("number") => {
-                            let mut d = String::new();
-                            let mut n = count;
-                            while n > 0 {
-                                d.insert(0, (b'0' + (n % 10) as u8) as char);
-                                n /= 10;
-                            }
-                            d.push('.');
-                            d
-                        }
-                        Some("bullet") | None => String::from("\u{2022}"),
-                        Some(other) => String::from(other),
-                    });
-                    below = line1 * 0.25;
-                }
-                "quote" => {
-                    indent = base.size;
-                    below = line1;
-                }
-                "code" => {
-                    st.font = V::L(vec![t("monospace")]);
-                    below = line1;
-                }
-                _ => below = line1,
-            }
-            if s.role != "item" {
-                count = 0;
-            }
-            restyle(&mut st, s.v);
-        } else {
-            below = line1;
-            count = 0;
+        out.push(Blk { span: b, a: i, b: e });
+        i = e;
+    }
+}
+/// Step 7: for each block that is a list item, its level and its marker's text.
+fn markers(sp: &[Span], bl: &[Blk]) -> Vec<Option<(usize, String)>> {
+    let mut counts: Vec<Option<i64>> = Vec::new(); // the number of the latest item of each level
+    let mut out = Vec::new();
+    for b in bl {
+        let s = b.span.map(|k| &sp[k]);
+        if s.map(|s| s.role) == Some("heading") {
+            counts.clear();
         }
-        // step 3: runs of one style, broken at block-level embeds
-        let mut runs: Vec<Run> = Vec::new();
-        let mut first = true;
-        let flush = |cx: &mut Ctx, runs: &mut Vec<Run>, rows: &mut Vec<Row>, first: &mut bool, marker: &mut Option<String>| {
-            if runs.is_empty() {
+        let Some(s) = s.filter(|s| s.role == "item") else {
+            out.push(None);
+            continue;
+        };
+        let lvl = level(s);
+        let n = match counts.get(lvl - 1) {
+            Some(Some(c)) => c + 1,
+            _ => s.v.get("start").and_then(|x| x.i()).unwrap_or(1),
+        };
+        counts.truncate(lvl - 1); // an item ends the counts of deeper levels
+        counts.resize(lvl - 1, None);
+        counts.push(Some(n));
+        out.push(Some((lvl, match s.v.get("marker").and_then(|m| m.s()) {
+            Some("number") => {
+                let (mut d, mut n) = (String::from("."), n.max(0));
+                loop {
+                    d.insert(0, (b'0' + (n % 10) as u8) as char);
+                    n /= 10;
+                    if n == 0 {
+                        break d;
+                    }
+                }
+            }
+            Some("bullet") | None => String::from("\u{2022}"),
+            Some(other) => String::from(other),
+        })));
+    }
+    out
+}
+fn inline<'a, 'b>(sp: &'b [Span<'a>]) -> Vec<&'b Span<'a>> {
+    let mut v: Vec<&Span> = Vec::new(); // by start, then by key
+    for s in sp.iter().filter(|s| !s.block) {
+        v.insert(v.partition_point(|e| e.a <= s.a), s);
+    }
+    v
+}
+fn child_of(s: &Span) -> Option<Id> {
+    s.v.get("child").and_then(|c| c.tag(REF)).and_then(|c| c.id())
+}
+
+/// A text, or a region of one, as rows: the steps of 7.7.
+fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Option<Vec<Row>> {
+    let chars: Vec<char> = o.p.get("chars")?.s()?.chars().collect();
+    let els = elements(o.seq.as_ref()?.get("chars")?)?;
+    let live: Vec<&El> = els.iter().filter(|e| e.live).collect();
+    if live.len() != chars.len() {
+        return None; // X1
+    }
+    let sp = spans(o, &els);
+    let inl = inline(&sp);
+    let (ra, rb) = match region {
+        Some(r) if r.l().len() == 3 => (boundary(&els, &r.l()[1])?, boundary(&els, &r.l()[2])?),
+        _ => (0, chars.len()),
+    };
+    let mut text = plain_style();
+    restyle(&mut text, &o.p);
+    let line1 = text.size * text.line;
+    let bl = blocks(&sp, ra, rb);
+    let marks = markers(&sp, &bl);
+    let mut rows: Vec<Row> = Vec::new();
+    let mut asked = 0.0f64; // space the block before asked after itself
+    for (blk, mark) in bl.iter().zip(&marks) {
+        // step 4: the block's style; steps 8: its spacing
+        let mut st = text.clone();
+        let (mut before, mut after, mut keep, mut code) = (0.0, line1, false, false);
+        if let Some(k) = blk.span {
+            let s = &sp[k];
+            let encloses = |j: usize| {
+                let e = &sp[j];
+                e.block && j != k && if s.a == s.b { e.a < s.a && s.a < e.b } else { e.a <= s.a && s.b <= e.b && ((e.a, e.b) != (s.a, s.b) || j > k) }
+            };
+            let mut chain: Vec<usize> = Vec::new(); // outermost first
+            for j in (0..sp.len()).filter(|&j| encloses(j)) {
+                let at = chain.iter().position(|&x| (sp[j].a, sp[x].b, x) < (sp[x].a, sp[j].b, j)).unwrap_or(chain.len());
+                chain.insert(at, j);
+            }
+            chain.push(k);
+            for j in chain {
+                role_style(&mut st, &sp[j], &text);
+            }
+            (before, after, keep, code) = match s.role {
+                "heading" => (line1, line1 * 0.5, true, false),
+                "item" => (0.0, line1 * 0.25, false, false),
+                "paragraph" | "quote" => (0.0, line1, false, false),
+                r => (0.0, 0.0, false, r == "code"),
+            };
+        }
+        // step 5: the characters presented, each with its style, cut where a child is a block
+        let mut styles: Vec<Style> = Vec::new();
+        let mut g = Seg::default();
+        let mut out: Vec<Row> = Vec::new();
+        let mut mark = mark.as_ref();
+        let mut flush = |cx: &mut Ctx, g: &mut Seg, styles: &[Style], out: &mut Vec<Row>| {
+            if g.cs.is_empty() {
                 return;
             }
-            let mk = marker.take().map(|m| (m, st.clone()));
-            let mut r = lines(cx, runs, w, indent, Some((uni, &o.id, &live)));
-            if let (Some((m, mst)), Some(row)) = (mk, r.first_mut()) {
-                marker_item(cx, row, &m, &mst, indent);
+            let (mut r, base, rtl) = lines(cx, g, styles, &st, code, w, Some((uni, &o.id, &live)));
+            if let Some((_, m)) = mark.take() {
+                marker_item(cx, &mut r[0], m, &st, Some(base), w, rtl);
             }
-            for row in r.iter_mut() {
-                row.keep = keep;
-            }
-            if let Some(row) = r.first_mut() {
-                row.gap = if *first { after.max(before) } else { 0.0 };
-            }
-            *first = false;
-            rows.append(&mut r);
-            runs.clear();
+            out.append(&mut r);
+            *g = Seg::default();
         };
-        for p in i..e {
-            let mut cs = st.clone();
-            let mut skip = false;
-            let mut child: Option<Id> = None;
-            for s in sp.iter().filter(|s| !s.block && s.a <= p && p < s.b) {
-                match s.role {
-                    "emphasis" => cs.slant = true,
-                    "strong" => cs.weight = 700,
-                    "marker" => skip = true,
-                    "embed" => child = s.v.get("child").and_then(|c| c.tag(REF)).and_then(|c| c.id()),
-                    _ => {}
+        for p in blk.a..blk.b {
+            let (mut cs, mut left_out, mut child) = (st.clone(), false, None);
+            for s in inl.iter().filter(|s| s.a <= p && p < s.b) {
+                left_out |= s.role == "markup";
+                if s.role == "embed" {
+                    child = child_of(s);
                 }
-                restyle(&mut cs, s.v);
+                role_style(&mut cs, s, &text);
             }
-            if skip {
+            if left_out {
                 continue;
             }
+            let mut bx = None;
             if let Some(cid) = child {
-                flush(cx, &mut runs, &mut rows, &mut first, &mut marker);
-                let mut r = compose(cx, uni, &cid, w - indent);
-                if let Some(row) = r.first_mut() {
-                    row.gap = row.gap.max(if first { after.max(before) } else { line1 * 0.5 });
+                let c = cx.pk.object(uni, &cid);
+                let prop = |k: &str| c.as_ref().and_then(|c| c.p.get(k));
+                if prop("place").and_then(|x| x.s()) == Some("inline") {
+                    let dim = |k: &str| prop(k).and_then(|x| x.f()).unwrap_or(0.0);
+                    bx = Some((cid, dim("w"), dim("h")));
+                } else {
+                    flush(cx, &mut g, &styles, &mut out);
+                    for mut row in compose(cx, uni, &cid, w - st.start - st.end) {
+                        row.items.insert(0, V::L(vec![t("push"), map(vec![("m", V::L(vec![fl(1.0), fl(0.0), fl(0.0), fl(1.0), fl(st.start), fl(0.0)]))])]));
+                        row.items.push(V::L(vec![t("pop")]));
+                        out.push(row);
+                    }
+                    continue;
                 }
-                first = false;
-                rows.append(&mut r);
-                continue;
             }
-            match runs.last_mut() {
-                Some(r) if r.st == cs => r.s.push(chars[p]),
-                _ => runs.push(Run { s: String::from(chars[p]), st: cs, pos: p }),
+            let si = styles.iter().position(|x| *x == cs).unwrap_or(styles.len());
+            if si == styles.len() {
+                styles.push(cs);
             }
+            g.cs.push(chars[p]);
+            g.st.push(si);
+            g.pos.push(p);
+            g.bx.push(bx);
         }
-        flush(cx, &mut runs, &mut rows, &mut first, &mut marker);
-        after = below;
-        i = e;
+        flush(cx, &mut g, &styles, &mut out);
+        if out.is_empty() {
+            // an empty block: a row one line high
+            cx.blocks += 1;
+            out.push(Row { h: st.size * st.line, gap: 0.0, items: Vec::new(), keep: false, block: cx.blocks, line: 0, lines: 1 });
+        }
+        if let Some((_, m)) = mark.take() {
+            marker_item(cx, &mut out[0], m, &st, None, w, st.dir == 1);
+        }
+        // step 8
+        out[0].gap = out[0].gap.max(before).max(asked);
+        asked = after;
+        for mut row in out {
+            row.keep |= keep;
+            rows.push(row);
+        }
     }
     Some(rows)
 }
-fn run_value(r: &Run) -> V {
-    map(vec![("s", V::T(r.s.clone())), ("font", r.st.font.clone()), ("size", fl(r.st.size)), ("weight", V::Int(r.st.weight)), ("slant", V::Bool(r.st.slant))])
+/// Asks the host what a piece measures (PLAYER 9.3): its advance up to each offset, its ascent and descent.
+fn measure(cx: &Ctx, s: &[char], st: &Style, rtl: bool, at: &[usize]) -> (Vec<f64>, f64, f64) {
+    let piece = map(vec![("s", V::T(s.iter().collect())), ("font", st.font.clone()), ("size", fl(st.size)), ("weight", V::Int(st.weight)), ("slant", V::Bool(st.slant)), ("dir", t(if rtl { "rtl" } else { "ltr" }))]);
+    let rep = (cx.measure)(&map(vec![("piece", piece), ("at", V::L(at.iter().map(|&a| V::Int(a as i64)).collect()))])).unwrap_or(V::Null);
+    let f = |v: Option<&V>| v.and_then(|x| x.f()).unwrap_or(0.0);
+    let adv = rep.get("adv").map(|a| a.l()).unwrap_or(&[]);
+    ((0..at.len()).map(|k| f(adv.get(k))).collect(), f(rep.get("asc")), f(rep.get("desc")))
 }
-fn text_item(s: &str, x: f64, y: f64, st: &Style, adv: f64, src: Option<V>) -> V {
-    let mut m = vec![("s", t(s)), ("x", fl(x)), ("y", fl(y)), ("font", st.font.clone()), ("size", fl(st.size)), ("weight", V::Int(st.weight)), ("color", st.color.clone()), ("dir", t("ltr")), ("adv", fl(adv))];
+fn text_item(s: &[char], x: f64, y: f64, st: &Style, adv: f64, rtl: bool, src: Option<V>) -> V {
+    let mut m = vec![("s", V::T(s.iter().collect())), ("x", fl(x)), ("y", fl(y)), ("font", st.font.clone()), ("size", fl(st.size)), ("weight", V::Int(st.weight)), ("color", st.color.clone()), ("dir", t(if rtl { "rtl" } else { "ltr" })), ("adv", fl(adv))];
     if st.slant {
         m.push(("slant", V::Bool(true)));
     }
@@ -343,66 +442,178 @@ fn text_item(s: &str, x: f64, y: f64, st: &Style, adv: f64, src: Option<V>) -> V
     }
     V::L(vec![t("text"), map(m)])
 }
-fn marker_item(cx: &mut Ctx, row: &mut Row, m: &str, st: &Style, indent: f64) {
-    let run = Run { s: String::from(m), st: st.clone(), pos: 0 };
-    let req = map(vec![("runs", V::L(vec![run_value(&run)])), ("from", V::L(vec![V::Int(0), V::Int(0)])), ("width", fl(1e9))]);
-    let Some(rep) = (cx.brk)(&req) else { return };
-    let adv = rep.get("frags").and_then(|f| f.l().first()).and_then(|f| f.get("adv")).and_then(|a| a.f()).unwrap_or(0.0);
-    // the marker shares the first line's baseline
-    let y = row.items.first().and_then(|it| it.l().get(1)).and_then(|m| m.get("y")).and_then(|y| y.f()).unwrap_or(row.h);
-    row.items.insert(0, text_item(m, indent - adv - st.size * 0.4, y, st, adv, None));
+/// Step 7: a list item's marker, on the baseline of the row, ending 0.4 of its size before the indent.
+/// Where the row has no baseline (an empty item), the marker's own measure gives one.
+fn marker_item(cx: &mut Ctx, row: &mut Row, m: &str, st: &Style, base: Option<f64>, w: f64, rtl: bool) {
+    let cs: Vec<char> = m.chars().collect();
+    let (adv, asc, desc) = measure(cx, &cs, st, rtl, &[cs.len()]);
+    let y = base.unwrap_or((row.h - asc - desc) / 2.0 + asc);
+    let x = if rtl { w - st.start + st.size * 0.4 } else { st.start - st.size * 0.4 - adv[0] };
+    row.items.insert(0, text_item(&cs, x, y, st, adv[0], rtl, None));
 }
-/// Step 4: lines. The host says how much of the runs fits in a width; the kernel places it.
-fn lines(cx: &mut Ctx, runs: &[Run], w: f64, indent: f64, from: Option<(&H, &Id, &Vec<&El>)>) -> Vec<Row> {
-    let rv = V::L(runs.iter().map(run_value).collect());
-    let mut rows = Vec::new();
-    let (mut r, mut off) = (0usize, 0usize);
+
+/// What step 6 sets in lines: presented characters, each with the index of its style, its position in
+/// the text, and its box if it stands for an inline child.
+#[derive(Default)]
+struct Seg {
+    cs: Vec<char>,
+    st: Vec<usize>,
+    pos: Vec<usize>,
+    bx: Vec<Option<(Id, f64, f64)>>,
+}
+struct Piece {
+    a: usize,
+    b: usize,
+    st: usize,
+    rtl: bool,
+    adv: Vec<f64>, // the advance up to each offset that has been asked for
+}
+/// The advance of the pieces' characters from `s` to `q`.
+fn width(pieces: &[Piece], s: usize, q: usize) -> f64 {
+    pieces.iter().filter(|p| p.a < q && p.b > s).map(|p| p.adv[q.min(p.b) - p.a] - p.adv[s.max(p.a) - p.a]).sum()
+}
+/// Step 6. Returns the rows, the first row's baseline, and whether its line runs right to left.
+fn lines(cx: &mut Ctx, g: &Seg, styles: &[Style], bst: &Style, code: bool, w: f64, from: Option<(&H, &Id, &[&El])>) -> (Vec<Row>, f64, bool) {
+    let (cs, n) = (&g.cs, g.cs.len());
+    // levels, one paragraph of UAX #9 at a time
+    let (mut lv, mut para) = (Vec::new(), Vec::new());
+    while lv.len() < n {
+        let a = lv.len();
+        let e = cs[a..].iter().position(|&c| bidi::class(c) == bidi::B).map_or(n, |k| a + k + 1);
+        let (l, base) = bidi::levels(&cs[a..e], bst.dir);
+        para.resize(e, base);
+        lv.extend(l);
+    }
+    // opportunities
+    let ends = |c: char| if code { c == '\n' || c == '\u{2028}' } else { matches!(lb::class(c), lb::BK | lb::CR | lb::LF | lb::NL) };
+    let mut brk = lb::breaks(cs);
+    for p in 1..n {
+        if code {
+            brk[p] = if ends(cs[p - 1]) { lb::MUST } else { lb::NO };
+        }
+    }
+    // pieces: one style and one direction; a character that ends a line is in none
+    let mut pieces: Vec<Piece> = Vec::new();
+    for i in (0..n).filter(|&i| !ends(cs[i])) {
+        let rtl = lv[i] & 1 == 1;
+        match pieces.last_mut() {
+            Some(p) if p.b == i && p.st == g.st[i] && p.rtl == rtl && g.bx[i].is_none() && g.bx[i - 1].is_none() => p.b = i + 1,
+            _ => pieces.push(Piece { a: i, b: i + 1, st: g.st[i], rtl, adv: Vec::new() }),
+        }
+    }
+    // fill: each piece measured up to each opportunity in it, with and without the spaces before it
+    let strip = |q: usize| (0..q).rev().find(|&k| !ends(cs[k]) && lb::class(cs[k]) != lb::SP).map_or(0, |k| k + 1);
+    let mut need = vec![false; n + 1];
+    for q in (1..=n).filter(|&q| brk[q] != lb::NO) {
+        need[q] = true;
+        need[strip(q)] = true;
+    }
+    let ask = |cx: &Ctx, p: &mut Piece, at: Vec<usize>| match g.bx[p.a] {
+        Some(b) => p.adv = vec![0.0, b.1],
+        None => {
+            p.adv.resize(p.b - p.a + 1, 0.0);
+            let (adv, _, _) = measure(cx, &cs[p.a..p.b], &styles[p.st], p.rtl, &at);
+            for (k, &o) in at.iter().enumerate() {
+                p.adv[o] = adv[k];
+            }
+        }
+    };
+    for p in pieces.iter_mut() {
+        let at = (1..=p.b - p.a).filter(|&o| need[p.a + o] || p.a + o == p.b).collect();
+        ask(cx, p, at);
+    }
+    let avail = w - bst.start - bst.end;
     cx.blocks += 1;
-    let block = cx.blocks;
-    while r < runs.len() {
-        let req = map(vec![("runs", rv.clone()), ("from", V::L(vec![V::Int(r as i64), V::Int(off as i64)])), ("width", fl((w - indent).max(1.0)))]);
-        let Some(rep) = (cx.brk)(&req) else { break };
-        let (asc, desc) = (rep.get("asc").and_then(|a| a.f()).unwrap_or(0.0), rep.get("desc").and_then(|a| a.f()).unwrap_or(0.0));
-        let mut h = 0.0f64;
-        let mut items = Vec::new();
-        let frags = rep.get("frags").map(|f| f.l()).unwrap_or(&[]);
-        for f in frags {
-            if let Some(k) = f.get("run").and_then(|k| k.i()) {
-                if let Some(run) = runs.get(k as usize) {
-                    h = h.max(run.st.size * run.st.line);
+    let (mut rows, mut first, mut s) = (Vec::<Row>::new(), (0.0, bst.dir == 1), 0);
+    while s < n {
+        let (mut q, mut opp) = (None, None);
+        for p in s + 1..=n {
+            if brk[p] != lb::NO {
+                opp = opp.or(Some(p));
+                if width(&pieces, s, strip(p).max(s)) <= avail {
+                    q = Some(p);
+                }
+                if brk[p] == lb::MUST {
+                    break;
                 }
             }
         }
-        let base = (h - (asc + desc)) / 2.0 + asc;
-        let mut x = indent;
-        for f in frags {
-            let (Some(k), Some(a), Some(b), Some(adv)) = (f.get("run").and_then(|k| k.i()), f.get("from").and_then(|k| k.i()), f.get("to").and_then(|k| k.i()), f.get("adv").and_then(|k| k.f())) else { continue };
-            let Some(run) = runs.get(k as usize) else { continue };
-            let s: String = run.s.chars().skip(a as usize).take((b - a) as usize).collect();
-            let anchor = match from {
-                Some((uni, id, live)) if b > a => match (live.get(run.pos + a as usize), live.get(run.pos + b as usize - 1)) {
-                    (Some(e0), Some(e1)) => Some(src(cx, uni, id, Some((e0, e1)))),
-                    _ => None,
-                },
-                _ => None,
-            };
-            items.push(text_item(&s, x, base, &run.st, adv, anchor));
-            x += adv;
+        let opp = opp.unwrap_or(n);
+        if q.is_none() && !code {
+            // the first opportunity is too far: the last place before it that fits
+            for p in pieces.iter_mut().filter(|p| p.a < opp && p.b > s) {
+                let at = (s.max(p.a) + 1 - p.a..=opp.min(p.b) - p.a).collect();
+                ask(cx, p, at);
+            }
+            let ok = |p: usize| p == opp || !matches!(lb::class(cs[p]), lb::CM | lb::ZWJ);
+            q = (s + 1..opp).rev().find(|&p| ok(p) && width(&pieces, s, p) <= avail).or((s + 1..=opp).find(|&p| ok(p)));
         }
-        rows.push(Row { h, gap: 0.0, items, keep: false, block, line: rows.len() as u32, lines: 0 });
-        let to = rep.get("to").map(|t| t.l()).unwrap_or(&[]);
-        let (nr, no) = (to.first().and_then(|x| x.i()).unwrap_or(runs.len() as i64) as usize, to.get(1).and_then(|x| x.i()).unwrap_or(0) as usize);
-        if (nr, no) <= (r, off) {
-            break; // a host that makes no progress cannot make the kernel loop
+        let q = q.unwrap_or(opp);
+        // fragments: of one piece and one level, in visual order
+        let mut lvl = lv[s..q].to_vec();
+        bidi::reset(&cs[s..q], &mut lvl, para[s]);
+        let mut fr: Vec<(usize, usize, usize)> = Vec::new(); // from, to, piece
+        for (k, p) in pieces.iter().enumerate().filter(|(_, p)| p.a < q && p.b > s) {
+            for i in s.max(p.a)..q.min(p.b) {
+                match fr.last_mut() {
+                    Some(f) if f.2 == k && lvl[f.0 - s] == lvl[i - s] => f.1 = i + 1,
+                    _ => fr.push((i, i + 1, k)),
+                }
+            }
         }
-        r = nr;
-        off = no;
+        let (mut h, mut asc, mut desc, mut advs) = (0.0f64, 0.0f64, 0.0f64, Vec::new());
+        for &(a, b, k) in &fr {
+            let st = &styles[pieces[k].st];
+            if let Some((_, bw, bh)) = g.bx[a] {
+                advs.push(bw);
+                h = h.max(bh);
+            } else {
+                let (adv, x, y) = measure(cx, &cs[a..b], st, lvl[a - s] & 1 == 1, &[b - a]);
+                advs.push(adv[0]);
+                h = h.max(st.size * st.line);
+                asc = asc.max(x);
+                desc = desc.max(y);
+            }
+        }
+        if fr.is_empty() {
+            h = bst.size * bst.line;
+        }
+        let base = (h - asc - desc) / 2.0 + asc;
+        let total: f64 = advs.iter().sum();
+        let spare = (avail - total).max(0.0) * bst.align as f64 / 2.0;
+        let rtl = para[s] == 1;
+        let mut x = if rtl { bst.end + avail - total - spare } else { bst.start + spare };
+        let levels: Vec<u8> = fr.iter().map(|f| lvl[f.0 - s]).collect();
+        let mut items = Vec::new();
+        for k in bidi::order(&levels) {
+            let (a, b, st) = (fr[k].0, fr[k].1, &styles[pieces[fr[k].2].st]);
+            match (g.bx[a], from) {
+                (Some((cid, bw, bh)), Some((uni, _, _))) => {
+                    stack(&compose(cx, uni, &cid, bw), x, base - bh, &mut items);
+                }
+                _ => {
+                    let anchor = from.map(|(uni, id, live)| src(cx, uni, id, Some((live[g.pos[a]], live[g.pos[b - 1]]))));
+                    items.push(text_item(&cs[a..b], x, base, st, advs[k], levels[k] & 1 == 1, anchor));
+                    if st.deco > 0 {
+                        let y = base + st.size * if st.deco == 1 { 0.1 } else { -0.3 };
+                        let d = V::L(vec![V::L(vec![t("M"), fl(x), fl(y)]), V::L(vec![t("L"), fl(x + advs[k]), fl(y)])]);
+                        items.push(V::L(vec![t("path"), map(vec![("d", d), ("stroke", st.color.clone()), ("width", fl(st.size * 0.06))])]));
+                    }
+                }
+            }
+            x += advs[k];
+        }
+        if rows.is_empty() {
+            first = (base, rtl);
+        }
+        rows.push(Row { h, gap: 0.0, items, keep: false, block: cx.blocks, line: rows.len() as u32, lines: 0 });
+        s = q;
     }
-    let n = rows.len() as u32;
+    let count = rows.len() as u32;
     for row in rows.iter_mut() {
-        row.lines = n;
+        row.lines = count;
     }
-    rows
+    (rows, first.0, first.1)
 }
 
 /// Rows stacked from `y`, as display-list items.
@@ -420,42 +631,43 @@ pub fn stack(rows: &[Row], x: f64, mut y: f64, out: &mut Vec<V>) -> f64 {
     }
     y
 }
-/// Pagination (SPEC 5.7): which rows go on which page, for a content height.
+/// Rows as a value, for whoever wants them before they are stacked: each with the top a view gives it.
+pub fn rows_value(rows: &[Row]) -> V {
+    let mut y = 0.0;
+    V::L(rows.iter().enumerate().map(|(k, r)| {
+        y += if k > 0 { r.gap } else { 0.0 };
+        let v = map(vec![("top", fl(y)), ("h", fl(r.h)), ("gap", fl(r.gap)), ("keep", V::Bool(r.keep)), ("block", V::Int(r.block as i64)), ("line", V::Int(r.line as i64)), ("lines", V::Int(r.lines as i64)), ("items", V::L(r.items.clone()))]);
+        y += r.h;
+        v
+    }).collect())
+}
+/// Pages (7.7): which rows go on which page, for the height available on a page.
 pub fn paginate(rows: &[Row], height: f64) -> Vec<(usize, usize)> {
     let mut pages = Vec::new();
     let mut i = 0;
     while i < rows.len() {
-        let (mut y, mut j) = (0.0, i);
-        while j < rows.len() {
-            let add = if j == i { 0.0 } else { rows[j].gap } + rows[j].h;
-            if j > i && y + add > height {
+        // 1: rows while they fit; the first is taken whatever its height
+        let (mut y, mut taken) = (rows[i].h, i + 1);
+        while taken < rows.len() && y + rows[taken].gap + rows[taken].h <= height {
+            y += rows[taken].gap + rows[taken].h;
+            taken += 1;
+        }
+        // 2: move back, while a row is left that could move
+        let mut j = taken;
+        while j > i && j < rows.len() {
+            let first = j - rows[j].line as usize; // the first line of row j's block
+            if rows[j - 1].keep {
+                j -= 1; // (a)
+            } else if rows[j - 1].block == rows[j].block && (rows[j].lines <= 3 || j - first.max(i) < 2) {
+                j = first.max(i); // (b): a short block, or fewer than two lines left behind
+            } else if rows[j - 1].block == rows[j].block && rows[j].line + 1 == rows[j].lines {
+                j -= 1; // (b): only the last line would move
+            } else {
                 break;
             }
-            y += add;
-            j += 1;
         }
-        if j < rows.len() {
-            let mut k = j;
-            loop {
-                let was = k;
-                while k > i && rows[k - 1].keep {
-                    k -= 1; // a heading is not left at the foot of a page
-                }
-                if k > i && rows[k].block == rows[k - 1].block {
-                    let (line, total) = (rows[k].line as usize, rows[k].lines as usize);
-                    if total <= 3 || line < 2 {
-                        k -= line.min(k - i); // too short to split, or would leave one line behind
-                    } else if total - line < 2 {
-                        k -= 1; // would carry one line over
-                    }
-                }
-                if k == was {
-                    break;
-                }
-            }
-            if k > i {
-                j = k;
-            }
+        if j == i {
+            j = taken; // 3
         }
         pages.push((i, j));
         i = j;
@@ -463,51 +675,116 @@ pub fn paginate(rows: &[Row], height: f64) -> Vec<(usize, usize)> {
     pages
 }
 
-/// The plain-text face (7.3).
+/// The plain-text face (8.3), in lines each ended by U+000A.
 pub fn plain(pk: &Pack, uni: &H, id: &Id, out: &mut String, depth: u32) {
     let Some(o) = pk.object(uni, id) else { return };
-    let label = |out: &mut String| {
-        if let Some(l) = o.p.get("label").and_then(|l| l.s()) {
-            out.push_str(l);
+    let children = |out: &mut String| {
+        for c in o.p.get("children").map(|c| c.l()).unwrap_or(&[]) {
+            if let (true, Some(cid)) = (depth < 16, c.tag(REF).and_then(|x| x.id())) {
+                plain(pk, uni, &cid, out, depth + 1);
+            }
         }
     };
+    let label = |out: &mut String| {
+        out.push_str(o.p.get("label").and_then(|l| l.s()).unwrap_or(""));
+        out.push('\n');
+    };
     match o.ty.as_str() {
-        "ufo.text" => {
-            let (Some(chars), Some(els)) = (o.p.get("chars").and_then(|c| c.s()), o.seq.as_ref().and_then(|s| s.get("chars")).and_then(elements)) else { return };
-            let sp = spans(&o, &els);
-            let mut starts: Vec<usize> = sp.iter().filter(|s| s.block).flat_map(|s| [s.a, s.b]).collect();
-            starts.sort();
-            for (p, c) in chars.chars().enumerate() {
-                if p > 0 && starts.binary_search(&p).is_ok() {
+        "ufo.text" => plain_text(pk, uni, &o, None, out, depth),
+        "ufo.group" | "ufo.pane" | "ufo.pane" | "ufo.clock" => children(out),
+        "ufo.portal" => {
+            let Some(of) = o.p.get("of").filter(|_| depth < 16) else { return label(out) };
+            if let Some(cid) = of.tag(REF).and_then(|x| x.id()) {
+                return plain(pk, uni, &cid, out, depth + 1);
+            }
+            let Some((a, cid)) = of.tag(ANCHOR).and_then(|a| Some((a, a.get("o")?.id()?))) else { return label(out) };
+            let target = a.get("u").and_then(|u| u.hash()).unwrap_or(*uni);
+            let mut s = String::new();
+            if pk.node(&target).is_none() {
+                // a linked universe: the label and the commit
+                out.push_str(o.p.get("label").and_then(|l| l.s()).unwrap_or(""));
+                out.push_str(" (ufo:");
+                for b in target {
+                    out.push_str(core::str::from_utf8(&[b"0123456789abcdef"[(b >> 4) as usize], b"0123456789abcdef"[(b & 15) as usize]]).unwrap_or(""));
+                }
+                out.push_str(")\n");
+            } else if let (Some(region), Some(text)) = (a.get("a").and_then(|r| r.get("chars")), pk.object(&target, &cid)) {
+                plain_text(pk, &target, &text, Some(region), &mut s, depth + 1);
+            } else {
+                plain(pk, &target, &cid, &mut s, depth + 1);
+            }
+            if target == *uni {
+                out.push_str(&s);
+            } else if pk.node(&target).is_some() {
+                // content of another universe is marked
+                out.push_str(o.p.get("label").and_then(|l| l.s()).unwrap_or(""));
+                out.push_str(":\n");
+                for l in s.lines() {
+                    out.push_str("> ");
+                    out.push_str(l);
                     out.push('\n');
                 }
-                let mut shown = true;
-                for s in sp.iter().filter(|s| !s.block && s.a <= p && p < s.b) {
-                    if s.role == "marker" {
-                        shown = false;
-                    }
-                    if s.role == "embed" {
-                        shown = false;
-                        if let (true, Some(cid)) = (depth < 16, s.v.get("child").and_then(|c| c.tag(REF)).and_then(|c| c.id())) {
-                            plain(pk, uni, &cid, out, depth + 1);
-                        }
-                    }
-                }
-                if shown {
-                    out.push(c);
-                }
             }
         }
-        "ufo.group" | "ufo.region" | "ufo.clock" => {
-            for (k, c) in o.p.get("children").map(|c| c.l()).unwrap_or(&[]).iter().enumerate() {
-                if let (true, Some(cid)) = (depth < 16, c.tag(REF).and_then(|x| x.id())) {
-                    if k > 0 && !out.is_empty() && !out.ends_with('\n') {
+        _ => label(out),
+    }
+}
+fn plain_text(pk: &Pack, uni: &H, o: &Obj, region: Option<&V>, out: &mut String, depth: u32) {
+    let (Some(chars), Some(els)) = (o.p.get("chars").and_then(|c| c.s()), o.seq.as_ref().and_then(|s| s.get("chars")).and_then(elements)) else { return };
+    let chars: Vec<char> = chars.chars().collect();
+    let sp = spans(o, &els);
+    let inl = inline(&sp);
+    let (ra, rb) = match region.map(|r| r.l()) {
+        Some(r) if r.len() == 3 => (boundary(&els, &r[1]).unwrap_or(0), boundary(&els, &r[2]).unwrap_or(0)),
+        _ => (0, chars.len()),
+    };
+    let bl = blocks(&sp, ra, rb.min(chars.len()));
+    let mut was_item = None;
+    for (b, mark) in bl.iter().zip(markers(&sp, &bl)) {
+        if was_item.is_some() && was_item != Some(true) || was_item.is_some() && mark.is_none() {
+            out.push('\n'); // an empty line between blocks, unless both are list items
+        }
+        was_item = Some(mark.is_some());
+        let mut start = out.len(); // where the line being written begins
+        if let Some((level, m)) = mark {
+            for _ in 1..level {
+                out.push_str("  ");
+            }
+            out.push_str(&m);
+            out.push(' ');
+        }
+        let mut ended = false; // the line was ended by a child's lines
+        for p in b.a..b.b {
+            let over = |role: &str| inl.iter().filter(|s| s.a <= p && p < s.b && s.role == role).last();
+            if over("markup").is_some() {
+            } else if let Some(cid) = over("embed").and_then(|s| child_of(s)) {
+                let mut s = String::new();
+                if depth < 16 {
+                    plain(pk, uni, &cid, &mut s, depth + 1);
+                }
+                if s.ends_with('\n') {
+                    s.pop();
+                }
+                if s.contains('\n') {
+                    // more than one line: lines of its own
+                    if out.len() > start {
                         out.push('\n');
                     }
-                    plain(pk, uni, &cid, out, depth + 1);
+                    out.push_str(&s);
+                    out.push('\n');
+                    start = out.len();
+                    ended = true;
+                } else {
+                    out.push_str(&s);
+                    ended = false;
                 }
+            } else {
+                out.push(chars[p]);
+                ended = false;
             }
         }
-        _ => label(out), // a Portal is replaced by its label
+        if !ended {
+            out.push('\n');
+        }
     }
 }
