@@ -121,7 +121,7 @@ A **value** is one of:
 | list | an ordered sequence of values |
 | map | text keys to values, keys unique |
 | **ref** | the identity of an object in the same universe (§1.5) |
-| **anchor** | a reference to a region of an object at a revision (§4) |
+| **anchor** | a reference to an object, or to a region of one (§4) |
 | **formula** | an expression that computes a value (§5.3) |
 | **indirect** | a stand-in for a value stored outside the node, in a blob (§1.4) |
 
@@ -254,7 +254,7 @@ node by an **indirect**, `[kind, hash]`:
 | --- | --- | --- |
 | `"b"` | raw bytes | that byte string |
 | `"t"` | UTF-8 | that text |
-| `"v"` | the encoding of a value | that value, which contains no further indirects |
+| `"v"` | the encoding of a value | that value; it may itself contain indirects, to a depth a reader bounds (**C13**) |
 
 A reader resolves an indirect transparently: wherever this document speaks
 of a property's value, it means the value with every indirect replaced by
@@ -598,7 +598,7 @@ go directly after `after`, because the newest commit has the highest rank.
 For two lines of history that diverged, the union of their operations
 gives one tree and one set of removals, and therefore one sequence,
 whichever line is taken first. Appendix F has vectors: two writers insert
-at the same place, insert inside each other's insertions, and remove what
+at the same place, each insert inside their own earlier insertions, and remove what
 the other is inserting after, and the two orders of merging produce the
 same result.
 
@@ -1019,10 +1019,14 @@ end, and one whose end is "after its last element" does not. Whoever makes
 the anchor chooses.
 
 **Continuous axis.** An object MAY hold, in a property `frames`, for any of
-its continuous axes, three integers `[a, b, c]` with *a* and *b* positive:
+its continuous axes, a list `[a, b, c]` — *a* and *b* positive integers, *c* an integer, or a
+float on an axis whose positions are floats:
 the axis's *frame*, mapping base coordinates to current ones. A position
 *x* in base coordinates is now at *x·a/b + c*; with integer positions the
-division rounds toward negative infinity. An axis with no frame has the
+division rounds toward negative infinity. Whoever makes an anchor from a
+current position *y* writes the base position *(y − c)·b/a*, rounded the
+same way; an anchor made from a position and resolved at once may
+therefore land one unit below it, and never above. An axis with no frame has the
 frame `[1, 1, 0]`. A change that moves everything on an axis — trimming the
 start of a recording, rescaling a drawing — sets the frame in the same
 change, as an ordinary `set`, and regions follow with no further act. A
@@ -2648,7 +2652,7 @@ Its properties are its **manifest**:
 | Property | Value |
 | --- | --- |
 | `module` | pin to its module object (§11.3) |
-| `requests` | list of `{capability, scope, required, why}`; `why` is plain language for the person |
+| `requests` | list of requests, each `{capability, scope, required, why, without}` as §6.3 defines |
 | `tests` | list of pins to test objects (§11.6) |
 | `axes` | the axes its surface offers to anchors, if any beyond `x`, `y`, `t`: each with a name and a kind (§4.2) |
 | `state` | the latest snapshot (§11.2): a byte string, kept outside the node |
@@ -3495,7 +3499,7 @@ says why not.
 
 | Concept | Meaning | Why it cannot be removed | § |
 | --- | --- | --- | --- |
-| Anchor | a reference to a region of an object at a revision | the one way anything attaches to anything | 4.1 |
+| Anchor | a reference to an object or a region of one | the one way anything attaches to anything | 4.1 |
 | Axis | a named dimension of an object: sequence, continuous or keyed | defines what a region is and how it survives edits | 4.2 |
 | Binding | the host-specific code connecting the kernel to a host | the only part that differs by host; must be named to be kept empty of domain logic | 6.1 |
 | Blob | an immutable byte stream stored as chunks | range reads and identity of large bytes | 1.4 |
@@ -3953,7 +3957,7 @@ decision. The file ends with a chain of two indexes and four heads.
 | `minimal_pack` | every record of `minimal.ufx` with its offset and hash; the index; the head; the root hash. Removing its last byte leaves no valid head |
 | `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its `seq`, and what its span resolves to; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; ten anchors resolved at the last commit, on sequence and continuous axes, including a replaced word, a point at a removed element, clipping, and a dropped object |
 | `resolve_sequence` | a sequence with removed elements, and nine regions resolved against it (§4.3) |
-| `merge_readiness` | two writers diverging from one text, with insertions at the same place, inside each other's insertions and after an element the other removes; the order of elements and the text, identical whichever writer's operations are taken first (§1.10) |
+| `merge_readiness` | two writers diverging from one text, with insertions at the same place, inside their own earlier insertions and after an element the other removes; the order of elements and the text, identical whichever writer's operations are taken first (§1.10) |
 | `resolve_continuous` | six regions resolved through a frame: shift, integer rounding of both signs, clipping, detachment, floats |
 | `printer` | two printer operations on an empty module, the module bytes they produce, and the hash of each item with the exact bytes hashed |
 | `instrumentation` | three stored modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |

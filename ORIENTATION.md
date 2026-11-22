@@ -503,3 +503,111 @@ NAMING.md records the decision, the candidates and the dated checks. A
 draft media type registration is in `registration/` and has not been
 submitted. Section 10's note that naming was undecided is superseded.
 
+
+## 13. The strict spec-first reader test: abandoned
+
+A third independent reader test, stricter than the first two (build from
+the text first; consult vectors only to check), was started in the
+background against the text as it stood before the unification of
+sequences and stored values. It stopped without a report when usage credits
+ran out. It is abandoned and will not be re-run: the text it was reading is
+two versions old (pre-0.5), and most of what it could have found was
+overtaken by the unification. Its partial reader was not harvested for the
+same reason. The strict test will be run fresh, on the post-spike text,
+after the cold re-review.
+
+Consequence, stated plainly: the unified storage design (versions 0.5 and
+0.6) has not been read by any independent implementer. VISION-TRACE.md says
+so.
+
+## 14. Licensing: a proposal, not yet decided
+
+Nothing has been changed. The repository is still under the MIT License as
+a whole. This section is a proposal for the owner's decision.
+
+**The problem with the present state.** MIT grants copyright permission and
+says nothing about patents. For a format meant to be implemented by
+strangers for decades, the question an implementer's counsel asks is not
+"may I copy the text" but "can anyone who helped write this later assert a
+patent against my reader". MIT does not answer it. PDF answered it only in
+2008, with Adobe's public patent licence alongside ISO 32000; before that,
+every independent implementation carried the risk.
+
+**Proposed structure.**
+
+| What | Licence | Why |
+| --- | --- | --- |
+| Code: the future kernel, bindings, tools, `tools/vectors/` | Apache-2.0 | express patent grant from every contributor, covering their contributions; grant ends for anyone who sues over the work |
+| Test vectors, `vectors/` | Apache-2.0 | they will be copied into every implementation's test suite; the same grant should go with them |
+| Specification and its companions: SPEC, CORE, RATIONALE, VISION-TRACE, NAMING, registration draft | Open Web Foundation Final Specification Agreement (OWFa 1.0) | a copyright licence plus a promise not to assert patent claims *necessary to implement the specification*, against any implementation, by anyone — not only against users of this project's code |
+| The name and the saucer mark | no licence; a short trademark and conformance policy later | so "reads UFO" can mean something; neither licence above covers names |
+
+**Why two instruments.** Apache-2.0's grant covers a contributor's
+contribution *as embodied in this project's code*. It does not clearly
+cover a clean-room reader written from the specification, which is exactly
+the implementation the format most needs to protect. The OWFa promise is
+about the specification itself and reaches every implementation of it.
+Conversely the OWFa is not a software licence. Each covers what the other
+does not.
+
+**Tradeoffs and alternatives.**
+
+- *Apache-2.0 alone versus MIT/Apache-2.0 dual (the Rust convention).*
+  Apache-2.0 is incompatible with GPLv2-only projects; dual licensing
+  removes that at the cost of letting a user choose MIT and so take the
+  code without the patent grant and without the retaliation clause. For a
+  standard's reference kernel I would accept the GPLv2 limitation and use
+  Apache-2.0 alone; the specification's own promise protects GPLv2
+  implementers who write their own code.
+- *OWFa versus the Community Specification License 1.0* (Joint Development
+  Foundation). The Community Specification License was written for
+  specifications developed in a git repository: it bundles the copyright
+  licence, a patent licence that attaches when a contribution is merged or
+  a version is approved, and a ready governance template. It is the more
+  complete package and needs no separate signing step. The OWFa is older,
+  shorter, better known to counsel at large companies, and was designed so
+  that a specification can later be handed to a formal standards body
+  (several W3C and other standards began under it). It binds only those
+  who sign it, so it needs a contributor agreement (the OWF CLA 1.0) from
+  everyone whose text is merged. Either is defensible. The OWFa is the
+  lighter commitment now; the Community Specification License is the better
+  fit if outside contributors are expected soon.
+- *Creative Commons (CC BY 4.0) for the specification.* Familiar, but it
+  licenses copyright only and expressly excludes patents. Not adequate on
+  its own.
+- *Non-assertion versus royalty-free licence.* The OWFa lets a signer
+  choose between a non-assertion promise and a royalty-free licence on
+  reasonable terms. The promise is simpler for implementers: nothing to
+  request, nothing to sign.
+- *Scope of the promise.* It covers only claims that are unavoidable when
+  implementing the specification's required parts. Optional capabilities,
+  and anything a carried Compute-let does, are outside it. That is normal
+  and should be said in the README.
+- *Defensive termination.* Apache-2.0 ends the patent grant for a party
+  that sues over the work; the OWFa promise is likewise suspended against a
+  party that asserts a necessary claim. Both discourage attack; neither
+  protects against a patent holder who never contributed. No licence can.
+
+**What a decision requires.**
+
+1. The licence is granted by whoever holds the rights: the owner
+   personally or a legal entity. For a format that claims independence from
+   any application, the signer of the OWFa should be the entity that will
+   steward the format, and eventually a neutral home.
+2. Changing now is cheap: there is one rights holder and no outside
+   contribution. Every merged outside contribution makes it harder.
+3. CONTRIBUTING.md gains a contribution rule: inbound equals outbound for
+   code (Apache-2.0 section 5), and a signed-off agreement to the
+   specification's terms for text.
+4. Each file states which licence covers it; LICENSE is replaced by the
+   Apache-2.0 text, with the specification agreement beside it.
+5. This is a legal instrument with long consequences. I am not a lawyer;
+   the choice between the OWFa and the Community Specification License, and
+   the identity of the signer, deserve an hour of counsel's time before the
+   repository draws attention.
+
+**Recommendation.** Apache-2.0 for code and vectors; OWFa 1.0 with the
+non-assertion option for the specification; a contributor agreement in
+CONTRIBUTING.md; trademark policy deferred but the name reserved in the
+README. Reconsider the Community Specification License when the first
+outside contributor to the specification appears.

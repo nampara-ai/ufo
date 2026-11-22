@@ -10,7 +10,7 @@ every part of it came from.
 | Document | What it is |
 | --- | --- |
 | [CORE.md](CORE.md) | The whole format in two pages |
-| [SPEC.md](SPEC.md) | The draft specification, version 0.4 |
+| [SPEC.md](SPEC.md) | The draft specification, version 0.6 |
 | [RATIONALE.md](RATIONALE.md) | Why the format is shaped as it is |
 | [VISION-TRACE.md](VISION-TRACE.md) | Each element of the vision: where it is specified, what has tested it, and how solid it is |
 | [vectors/](vectors/) | Byte-level test vectors (normative) |
