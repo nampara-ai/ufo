@@ -1163,3 +1163,57 @@ breakdown is good to about a tenth.
 Recommended: option 1 now, with option 2 in reserve and option 3 as the
 design to turn to if, with formulas and the rest written, the measured
 kernel still crowds the limit.
+
+## 23. Decisions on the kernel's size, and what "done" means for the envelope (owner, 2026-11-22)
+
+**Size.** The two mechanical changes are made and measured. The inflater
+leaves the kernel: inflating is the host's. Nightly compiler flags are
+rejected, even in reserve: a kernel is named by its hash in every file,
+so anyone must be able to rebuild those exact bytes from source with a
+stable toolchain; that is now a requirement of the budgets section. The
+line budget is set from the density measured after those changes. The
+limit stays at 128 KiB compressed. Queries and projections, the heaviest
+and newest parts, are in scope for the simplification pass.
+
+**The planned escape route**, not designed and with no specification text
+until it is needed: if the full kernel still crowds the limit once
+formulas and the write path exist, parts of it are carried only by files
+that need them — the printer by files with code, the agent's projections
+where an agent or the tools ask — in keeping with the founding rule that
+a file carries only the components its content requires. The firm limit
+would then bind what every file carries.
+
+**The envelope spike's acceptance test** is the founding one. On a clean
+machine and a clean phone, with nothing installed but a browser, a
+received file can be: opened; read in at least two faces; edited through
+its onboard tools, one paragraph changed with attribution recorded;
+saved as a new travel-form file; reopened identically; sent on. Each
+step is reported passed, failed or not attempted, per platform. Opening
+alone is not the milestone.
+
+Phones are reported as a person meets them: on an iPhone, the Files app,
+Mail and Messages attachments, Safari and a hosted copy, saying exactly
+what is seen on each, and the static face must give clear next steps
+wherever scripts do not run. Android likewise where one can be reached.
+
+The onboard tools appear in the spike in minimal form: subject handoff,
+one edit through the normal gate, save.
+
+**Independence.** The next independent reader is to come from a different
+model family. The owner is running the outside package with another
+model; "confirmed" waits for its result.
+
+**During the spike the documents do not grow.** Findings go to the
+spike's notes. The specification changes only where a vector or a
+running test comes with the change.
+
+**Future milestones, recorded and not begun.**
+
+1. *The maintenance-cost benchmark.* A real program of meaningful size
+   with a planted bug, maintained once as a conventional codebase and
+   once as a UFO with its Chronicle and outline. The tokens spent finding
+   the bug are measured apart from those spent fixing it.
+2. *A real-model transmutation.* One face derived by an actual model
+   through `derive` and `refresh`, replacing the stand-in.
+3. *The light cone inside the kernel*, run on a pack, replacing the
+   object model written for the first spike.
