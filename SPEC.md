@@ -31,7 +31,10 @@ words, and rules that carry a label such as **[C3]**. A labeled rule is a
 requirement in full, whether or not it uses one of those words; where it is
 written in the indicative, it states what every conforming reader and writer
 does. Everything else is explanation. The conformance suite tests every
-labeled rule.
+labeled rule that a file, or a run of the kernel, can show. A few rules
+bind what a writer or a reader does where no file records it — **L1**,
+**L5**, **M9**, **R2**, **E12**, **H6** — and can be tested only where a
+harness watches the software at work. They are obligations all the same.
 
 Every term is defined once, in **bold**. §16 lists them all, in three
 tables: the concepts a newcomer must learn, the names given to compositions
@@ -162,8 +165,12 @@ The node kinds the core defines are `blob`, `obj`, `map` and `commit`. Where
 a node names another record it does so by that record's hash, in a place
 the node's schema fixes (Appendix C). A record is **reachable** from
 another if a chain leads to it of such hashes, of indirects (§1.4), and of
-the commits that anchors name in other universes, where those commits are
-present (§1.8).
+the commits that anchors name, where those commits are present (§1.8). An
+anchor counts wherever a value holds one: in properties, in values kept
+outside a node, and in operations whose `work` is present. In a node of a
+kind this document does not define, every 32-byte string is taken to name a
+record, if such a record is present, so that what an unknown node needs is
+kept with it (**C3**).
 
 ### 1.4 Blobs
 
@@ -438,7 +445,8 @@ is their content in sequence order. `ins` is a text, a byte string or a
 list, matching the property; its items become new elements directly after
 `after`. `forget` is a list of runs naming removed elements whose markers
 are to be discarded (§1.10); it is refused if any of them is not removed,
-or is named by an anchor anywhere in the universe. A `splice` on a property
+or is named by an anchor in the current revision of any object in the
+object map. A `splice` on a property
 that does not exist creates it, as the kind of value `ins` is. A `splice` on a property created by `set`, and a
 `set` that gives a sequence property a value, are refused. A `set` with no
 `val` removes a sequence property and its `seq` entry.
@@ -466,8 +474,9 @@ The **laws of change** follow. They hold for every medium.
   `verify`), and MUST say so where it is not.
 - **[L4] Refusal.** A writer MUST reject a change whole if an `old` does not
   match what is there, an element named by `after` or `del` is not in the
-  sequence, an element in `del` is already removed, an object named does
-  not exist, or an operation targets a change object. Nothing is applied in
+  sequence, an element in `del` is already removed, a `forget` is not
+  allowed, an object named does not exist, or an operation targets a change
+  object. Nothing is applied in
   part and nothing is repaired.
 - **[L5] No silent reconstruction.** Origin is *witnessed* when the writer
   records it as the content is introduced. An origin established in any
@@ -505,6 +514,20 @@ A ref is resolved in the universe of the object that holds it. Identities
 are unique only within a universe — every universe object is sixteen zero
 bytes — so whatever follows a reference into another universe carries that
 universe along, and names an object there by commit and identity together.
+
+**An earlier state of the same universe.** An anchor's `u` MAY name an
+earlier commit of the universe that holds it. It then names the object as
+it was at that commit, together with everything it referred to then, which
+is the one way to fix a composite thing exactly: a pin fixes one revision
+of one object (§4.4). What such an anchor needs — the revisions, at that
+commit, of the object named and of every object it reaches by refs, and
+their blobs — is content (§9.3) and is kept where other history is
+withheld. The rest of that commit's object map is not required.
+
+**Editing a nested universe** is done in the file that nests it. The new
+commit of the nested universe, and the change in the nesting universe that
+moves its reference to that commit, are appended together and take effect
+with one head (§2.2).
 
 - **[C9]** A reference to another universe always names a commit hash and so
   can never be redirected. A newer commit of the same lineage is offered to
@@ -583,6 +606,10 @@ whichever line is taken first. Appendix F has vectors: two writers insert
 at the same place, each insert inside their own earlier insertions, and remove what
 the other is inserting after, and the two orders of merging produce the
 same result.
+
+An element's parent is recorded in the `work` of the change that inserted
+it, so only copies that hold working history can take part in a merge. A
+published copy without it says so.
 
 What remains for the merge feature is everything else: what a merge commit
 records, how two `set` operations on one property are reconciled, and how
@@ -781,7 +808,12 @@ by where the missing record is referenced from, not by anything the pack
 says about itself.
 
 - **Linked universes** (§1.8). A commit named only by an anchor's `u` may
-  be missing; the universe it fixes is then linked.
+  be missing; the universe it fixes is then linked. A `note` frame MAY list
+  such commits under `links`, each `{commit, hints}`: zero or more
+  locations where the records of that universe may be found. A component
+  named by hash and not carried (**K3**) is listed the same way, under
+  `blobs`. A hint carries no authority (**C11**): whatever is fetched is
+  verified by hash.
 
 - **Withheld history** (§9.3). A missing record is *withheld* if it is
   reachable only through references that §9.3 defines as working history:
@@ -901,7 +933,7 @@ The kernel's own share is budgeted in §12.2.
 Two obligations bind every release of the reference implementation. They
 are requirements on the project, not on files.
 
-- **[P19] The weekend test.** §1, §2, §3, §4.1–§4.3, §10.2 and Appendices
+- **[P19] The weekend test.** §1, §2, §3, §4.1–§4.4, §10.2 and Appendices
   C and F MUST be sufficient to write that independent reader, including the
   conservation check. The test is run for real
   before the format is frozen: someone with no other knowledge of the
@@ -1029,6 +1061,17 @@ region is clipped to the axis's present extent.
   unchanged in a copy whose history is withheld (§9.3).
 - **[A3]** Two readers resolving the same anchor against the same revision
   MUST obtain the same result.
+- **[A4] Content that moves is anchored where it lives.** A frame carries
+  an anchor through a uniform shift or scale of an axis, and through
+  nothing else. An arrangement along a continuous axis is therefore changed
+  by rearranging children — the clocks of a timeline, the nodes of a scene
+  — never by rewriting positions inside one object, and an asset's own axes
+  never change. A reader that anchors a place for a person anchors it in
+  the innermost object whose own axis covers it: the caption's clock, the
+  footage's own time, the node. That anchor follows its content wherever
+  the content is moved. A region on the axis of a container names that
+  place in the container, whatever comes to occupy it, and a reader that
+  shows such an anchor says so.
 
 A move — a cut and a paste — removes elements and inserts new ones.
 Attribution follows the new elements (§8.5). Anchors to the old elements
@@ -1036,38 +1079,58 @@ detach; they do not follow the move.
 
 ### 4.4 Pins and staleness
 
-The **digest** of a region is a hash of what the region covers:
+A **pin** is an anchor that also records, in `r`, the revision it was made
+at; in `s`, 16 random bytes of salt; and in `d`, the digest of what it
+covered. The salt is there so that a pin to a short passage does not reveal
+it.
 
-- for a region on a sequence or keyed axis: the covered items or entries, as
-  an encoded value, followed by every other entry of the object's
-  properties that holds an anchor to this object whose region meets the
-  covered one — for a text, the spans that touch the passage — in order of
-  property name and key;
-- for the whole object, or a region on a continuous axis: the object's
-  properties, as an encoded value;
+The **digest** is the SHA-256 of these bytes, in order:
 
-in each case followed, for every ref those values contain — inside formulas
-included — by the identity and current revision hash of the object referred
-to, and of every object reachable from it by refs, in ascending order of
-identity, each once. An anchor without a digest that is a Portal's `of` is
-followed as a ref to its object, because the Portal shows it. Change
-objects are not followed, nor are other anchors, nor pins.
+1. The salt.
+2. The encoding of the *covered value*, with indirects resolved. For a
+   whole object it is the object's properties. For a region it is a map
+   from each axis the region names to that axis's part:
+   - on a sequence axis, a list of two items: the covered items, as a text,
+     a byte string or a list; and a map, from property name to a map from
+     key to value, of every other entry of the object's map-valued
+     properties whose value holds an anchor to this object with a region on
+     that axis sharing at least one element with the covered ones — for a
+     text, the spans that touch the passage;
+   - on a keyed axis, a map from each key of the region that is present to
+     its entry, or for a list of refs a list of those refs in order;
+   - on a continuous axis, the object's properties.
+
+   A Compute-let's `state` is left out of every covered value: it is the
+   state of a machine, not content.
+3. For each *followed* object, in ascending order of identity: its identity
+   and then its current revision hash, or 32 zero bytes if it is no longer
+   in the object map.
+
+The followed objects are those the covered value names by a ref — inside
+formulas too — or by an anchor without a digest that is a Portal's `of`,
+and all that those reach in the same way, each once. Three kinds are not
+followed: change objects; a child that lies wholly outside a region on a
+continuous axis — a clock whose interval does not meet a region on `t`, a
+child of an `absolute` group whose rectangle does not meet a region on `x`
+and `y`; and any object made by the same derivation as the object that
+holds the pin (one whose `from.by` is the same), so that a derived thing
+shown inside its own source does not make itself stale.
 
 A digest therefore changes when anything the region shows could change: a
-pin to a group goes stale when a child changes, and a pin to a chart goes
-stale when its data does.
+pin to a group goes stale when a child changes, a pin to a chart goes stale
+when its data does, and a pin to five minutes of a timeline goes stale when
+something present in those five minutes does. Appendix F has vectors.
 
-A **pin** is an anchor that records the digest its region had when the pin
-was made, in `d`, together with 16 random bytes of salt, in `s`; the digest
-is taken over the salt followed by the content, so that a pin to a short
-passage does not reveal it. A pin is **current** if, resolved against the
-object's current revision, its region is attached and has the same digest; and, where
-what it pins is itself derived (§8.3), that derivation is current.
-Otherwise it is **stale**.
+A pin is **current** if, resolved against the object's current revision,
+its region is attached and has the same digest; and, where what it pins is
+itself derived (§8.3), that derivation is current. Otherwise it is
+**stale**. A pin fixes one revision of one object, and says whether what
+that object shows has changed since. It does not keep what the object
+referred to; an anchor that names a commit does (§1.8).
 
-A pin into another universe (§1.8) names a commit, which never changes, and
-is always current; a newer commit of that universe is offered as an update
-(**C9**).
+An anchor that names a commit — of another universe, or an earlier one of
+this — names something that never changes, and is always current. A newer
+commit of another universe is offered as an update (**C9**).
 
 This one test is how every derived thing in a universe knows whether it still
 reflects its sources (§8.3).
@@ -4008,7 +4071,8 @@ seal   = { commit: hash, key: bytes .size 32, time: uint,
            ; signature = Ed25519 over the 10 bytes "ufo-seal-1" followed by the
            ; SHA-256 of the encoding of this map without `signature` (section 10.2)
 note   = { ? history: bool,
-           ? blobs: [ * { blob: hash, len: uint, hints: [ * tstr ] } ] }
+           ? blobs: [ * { blob: hash, len: uint, hints: [ * tstr ] } ],
+           ? links: [ * { commit: hash, hints: [ * tstr ] } ] }
 
 change-p = { work: indirect,
              actor: { who: principal, with: { name: tstr, version: tstr } },
@@ -4200,6 +4264,7 @@ decision. The file ends with a chain of two indexes and four heads.
 | `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its `seq`, and what its span resolves to; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; ten anchors resolved at the last commit, on sequence and continuous axes, including a replaced word, a point at a removed element, clipping, and a dropped object |
 | `resolve_sequence` | a sequence with removed elements, and nine regions resolved against it (§4.3) |
 | `merge_readiness` | two writers diverging from one text, with insertions at the same place, inside their own earlier insertions and after an element the other removes; the order of elements and the text, identical whichever writer's operations are taken first (§1.10) |
+| `digests` | two pins at the last commit of `history.ufx`, each with its salt, its covered value as bytes, the objects followed and the digest (§4.4): a passage of the text with the span that touches it, and the face object, whose ref to the text is followed |
 | `resolve_continuous` | six regions resolved through a frame: shift, integer rounding of both signs, clipping, detachment, floats |
 | `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§7.3) |
 | `printer` | the described module of `module.ufx` — a function with operands folded, a function with a loop, a call, a global and named locals, three exports and a memory — as encoded values, and the 119 bytes the printer makes of it |

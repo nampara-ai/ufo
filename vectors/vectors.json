@@ -1359,6 +1359,30 @@
    "behaviour": "spin(3) consumes 2 + 3*6 = 20; with ufo:fuel = 19 it traps out of fuel on entering the third iteration"
   }
  ],
+ "digests": [
+  {
+   "pin": "the text of history.ufx at its last commit, the region from before element (c1, 0) to after element (c1, 6)",
+   "region_hex": "8361738350c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c100008350c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c10601",
+   "salt": "31bfce4dc04386823e3406306e916b4a",
+   "covered_value_hex": "a1656368617273826748656c6c6f2c20a1657370616e73a1627031a3626174d9d8a6a26161a16563686172738361738350c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1000063656e64616f50a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1646b696e6465626c6f636b64726f6c6569706172616772617068",
+   "followed": [],
+   "note": "the covered items are 'Hello, '; the one span touches them; an anchor inside a span is not followed",
+   "digest": "610c8b3dbef994f931d2c7e1200e973eb8b7bd1ea806c6b28c642737ebf185b0"
+  },
+  {
+   "pin": "the face object of history.ufx at its last commit, whole",
+   "salt": "bdaaa1159a7f9d94246fcd5a3e5d810e",
+   "covered_value_hex": "a2626f66d9d8a550a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1666d656469756d6474657874",
+   "followed": [
+    {
+     "id": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+     "revision": "02b143b2518280592db89b7e60982af677203013eb7564a826bf698c36b7023f"
+    }
+   ],
+   "note": "the face refers to the text, so the text's identity and current revision hash follow the covered value",
+   "digest": "e70867f124ff1e075a21263b2127811576471f249de46df9ee97afd82b29d679"
+  }
+ ],
  "nested": {
   "nested_file": "nested.ufx",
   "nested_length": 4031,

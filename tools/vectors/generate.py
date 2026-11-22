@@ -553,6 +553,21 @@ V["instrumentation"] = [
     {"name": "spin: entry region of 2 (loop, final end), loop region of 6", "stored_hex": stored_loop.hex(), "instrumented_hex": instr_loop.hex(),
      "behaviour": "spin(3) consumes 2 + 3*6 = 20; with ufo:fuel = 19 it traps out of fuel on entering the third iteration"}]
 
+# ---- 8b. digests of pins (section 4.4), at the last commit of history.ufx ----
+def digest(sl, covered, followed): return sha(sl + enc(covered) + b"".join(i + h for i, h in sorted(followed)))
+cov_text = {"chars": ["Hello, ", {"spans": {"p1": SPAN}}]}
+cov_face = {"of": ref(T), "medium": "text"}
+V["digests"] = [
+    {"pin": "the text of history.ufx at its last commit, the region from before element (c1, 0) to after element (c1, 6)",
+     "region_hex": enc(["s", [C1, 0, 0], [C1, 6, 1]]).hex(), "salt": salt(4001).hex(),
+     "covered_value_hex": enc(cov_text).hex(), "followed": [],
+     "note": "the covered items are 'Hello, '; the one span touches them; an anchor inside a span is not followed",
+     "digest": digest(salt(4001), cov_text, []).hex()},
+    {"pin": "the face object of history.ufx at its last commit, whole", "salt": salt(4002).hex(),
+     "covered_value_hex": enc(cov_face).hex(), "followed": [{"id": T.hex(), "revision": hT3.hex()}],
+     "note": "the face refers to the text, so the text's identity and current revision hash follow the covered value",
+     "digest": digest(salt(4002), cov_face, [(T, hT3)]).hex()}]
+
 # ---- 9. one universe inside another's pack, and the same reference with the records absent (section 1.8) ----
 def nested_pair():
     NU, NT, NC = bytes(16), bytes([0xb1]) * 16, bytes([0xd1]) * 16
