@@ -19,12 +19,16 @@ pages: open, universal, and independent of any application.
 2. **Value.** Null, boolean, integer, float, text, bytes, list, map, and
    four references: *link* (a record's hash), *ref* (an object's identity),
    *anchor* and *formula*.
-3. **Blob.** Bytes of any size as a tree of 1 MiB chunks. Same bytes, same
-   hash, everywhere. Any range is read without the rest.
+3. **Blob.** Bytes of any size, divided by their own content into chunks
+   of about 10 KiB and a tree above them, so an edit changes only what is
+   near it. Pure content, never salted: same bytes, same hash, stored and
+   sent once, everywhere. Any range is read without the rest.
 4. **Object.** A 16-byte identity, a type, properties. Each state is a
    salted *revision* linking to the one before. Unknown types, properties
-   and values are always preserved. A large or private value is kept
-   outside its node as a salted blob and named by an *indirect*.
+   and values are always preserved. A large value — a file's bytes, a long
+   text — is kept outside its node in a blob and named by an *indirect*,
+   which can be *veiled* so that its hash reveals nothing when the content
+   is withheld.
 5. **Commit.** A link to the parent commit, to the object map (a trie whose
    shape depends only on its contents) and to the change it records. Its
    hash, the *root hash*, fixes the universe and all its history. One
@@ -53,7 +57,9 @@ pages: open, universal, and independent of any application.
 9. **Element.** Every item of a sequence — every character of a text — has
    a permanent identity: the change that inserted it and a number. A
    `splice` names elements, not positions. Removed elements stay as
-   markers. So every byte has an origin, read and never reconstructed, and
+   markers among collaborators, and may be forgotten on publication. The
+   order of a sequence is a function of facts all copies share, so
+   concurrent edits converge. So every byte has an origin, read and never reconstructed, and
    operations mean the same thing whatever else has changed, which is what
    merging divergent copies will later rest on.
 10. **Laws.** Operations come from actual content. Replaying them reproduces

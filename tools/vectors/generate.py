@@ -8,9 +8,8 @@ It is not a reader, a writer or a library. Nothing may import it or depend
 on it, and it must not grow into one: the kernel, when it exists, must
 reproduce every vector on its own, without reference to this file.
 
-Run from the repository root: python3 tools/vectors/generate.py [--slow]
+Run from the repository root: python3 tools/vectors/generate.py
 It rewrites vectors/vectors.json, vectors/minimal.ufx and vectors/history.ufx.
---slow also computes the blob vector that hashes one tebibyte (minutes).
 """
 import hashlib, json, os, struct, sys, zlib
 
@@ -20,7 +19,6 @@ def sha(b): return hashlib.sha256(b).digest()
 # ---- deterministic CBOR (RFC 8949, section 4.2.1) -----------------------------
 class Tag:
     def __init__(self, n, v): self.n, self.v = n, v
-def link(h): return Tag(55460, h)
 def ref(i): return Tag(55461, i)
 def anchor(m): return Tag(55462, m)
 def head(major, n):
@@ -70,12 +68,13 @@ vals = [("null", None), ("true", True), ("int 0", 0), ("int 23", 23), ("int 24",
         ("int -1", -1), ("int 2^32", 1 << 32), ("float 1.5", 1.5), ("float 0.1", 0.1),
         ("float 100000.0", 100000.0), ("float -0.0", -0.0), ("text", "héllo"), ("bytes", b"\x00\xff"),
         ("list", [1, "a", [True]]), ("map sorted by encoded key", {"b": 1, "aa": 2, "a": 3}),
-        ("link", link(bytes(32))), ("ref", ref(bytes(range(16)))),
+        ("ref", ref(bytes(range(16)))),
         ("anchor", anchor({"o": bytes(range(16)), "a": {"chars": ["s", [bytes([0xc1]) * 16, 0, 0], "end"], "t": ["c", 0, 705600000], "rows": ["k", "q3"]}})),
         ("formula", Tag(55463, ["+", 1, ["get", ref(bytes(16)), "w"]])),
-        ("indirect", Tag(55464, bytes([0xee]) * 32))]
+        ("indirect to bytes", Tag(55464, ["b", bytes([0xee]) * 32])),
+        ("indirect, veiled, to a value", Tag(55464, ["v", bytes([0xdd]) * 32, True]))]
 def describe(v):
-    if isinstance(v, Tag): return {"tag": {55460: "link", 55461: "ref", 55462: "anchor", 55463: "formula", 55464: "indirect"}[v.n], "of": describe(v.v)}
+    if isinstance(v, Tag): return {"tag": {55461: "ref", 55462: "anchor", 55463: "formula", 55464: "indirect"}[v.n], "of": describe(v.v)}
     if isinstance(v, bytes): return {"bytes_hex": v.hex()}
     if isinstance(v, float): return {"float": repr(v)}
     if isinstance(v, list): return [describe(x) for x in v]
@@ -86,7 +85,7 @@ V["values_malformed"] = [{"name": n, "hex": h} for n, h in (
     ("integer not in shortest form", "1817"), ("map keys out of order", "a2616201616101"),
     ("duplicate map key", "a2616101616102"), ("indefinite-length list", "9f01ff"),
     ("float not in shortest form (1.5 as binary64)", "fb3ff8000000000000"), ("NaN", "f97e00"),
-    ("link tag on 31 bytes", "d9d8a4581f" + "00" * 31), ("non-text map key", "a10101"),
+    ("ref tag on 15 bytes", "d9d8a54f" + "00" * 15), ("non-text map key", "a10101"),
     ("simple value 16", "f0"), ("invalid UTF-8", "62c328"))]
 
 # ---- 2. record hashes -----------------------------------------------------------
@@ -95,57 +94,84 @@ V["record_hashes"] = [
     {"kind": "node", "value": '{k: "map", e: []}', "bytes_hex": enc({"k": "map", "e": []}).hex(),
      "hash": rhash(NODE, enc({"k": "map", "e": []})).hex()}]
 
-# ---- 3. blobs -------------------------------------------------------------------
-MIB = 1 << 20
-def blob_node(length, stream_sha, links):
-    return enc({"k": "blob", "len": length, "sha256": stream_sha, "chunks": [link(h) for h in links]})
-_zsha = {}
-def zeros_sha(n):
-    if n not in _zsha:
-        h = hashlib.sha256(); z = bytes(MIB)
-        for _ in range(n // MIB): h.update(z)
-        h.update(bytes(n % MIB)); _zsha[n] = h.digest()
-    return _zsha[n]
-def zeros_blob(n):
-    """Blob node for n zero bytes (section 1.4), without holding them in memory."""
-    chunks = -(-n // MIB)
-    if chunks <= 1024:
-        hs = [rhash(CHUNK, bytes(MIB))] * (n // MIB) + ([rhash(CHUNK, bytes(n % MIB))] if n % MIB else [])
-        return blob_node(n, zeros_sha(n), hs)
-    span = 1024
-    while -(-chunks // span) > 1024: span *= 1024
-    parts, left = [], n
-    while left > 0:
-        take = min(left, span * MIB); parts.append(rhash(NODE, zeros_blob(take))); left -= take
-    return blob_node(n, zeros_sha(n), parts)
+# ---- 3. blobs: content-defined chunks and a content-defined tree (section 1.4) ----------
+GEAR = [int.from_bytes(sha(b"ufo-gear-1" + bytes([i]))[:8], "little") for i in range(256)]
+MASK = ((1 << 13) - 1) << 51; M64 = (1 << 64) - 1
+def chunks_of(data):
+    out = []; start = 0; h = 0; n = len(data)
+    for i in range(n):
+        h = ((h << 1) + GEAR[data[i]]) & M64
+        size = i + 1 - start
+        if (size >= 2048 and not (h & MASK)) or size == 65536:
+            out.append(data[start:i + 1]); start = i + 1; h = 0
+    if start < n: out.append(data[start:])
+    return out
+def blob_node(length, stream_sha, level, parts):
+    return enc({"k": "blob", "len": length, "sha256": stream_sha, "level": level, "parts": [[l, h] for l, h in parts]})
+def blob_tree(data, emit=None):
+    """Returns (blob hash, nodes by level, chunk list). emit(kind, bytes) is called for every record."""
+    cs = chunks_of(data); parts = [(len(c), rhash(CHUNK, c)) for c in cs]
+    if emit:
+        for c in cs: emit(CHUNK, c)
+    level = 0; offsets = [0]
+    for l, _ in parts: offsets.append(offsets[-1] + l)
+    spans = list(zip(offsets[:-1], offsets[1:])); shape = []
+    while True:
+        groups = []; cur = []
+        for k, (l, h) in enumerate(parts):
+            cur.append(k)
+            if (len(cur) >= 2 and int.from_bytes(h[:4], "big") % 1024 == 0) or len(cur) == 4096:
+                groups.append(cur); cur = []
+        if cur or not groups: groups.append(cur)
+        shape.append([len(g) for g in groups])
+        if len(groups) == 1:
+            node = blob_node(len(data), sha(data), level, parts)
+            if emit: emit(NODE, node)
+            return rhash(NODE, node), shape, cs
+        nparts = []; nspans = []
+        for g in groups:
+            a, b = spans[g[0]][0], spans[g[-1]][1]
+            node = blob_node(b - a, sha(data[a:b]), level, [parts[k] for k in g])
+            if emit: emit(NODE, node)
+            nparts.append((b - a, rhash(NODE, node))); nspans.append((a, b))
+        parts, spans, level = nparts, nspans, level + 1
+def stream(n, label=b"ufo-test-stream"):
+    out = bytearray(); i = 0
+    while len(out) < n: out += sha(label + struct.pack("<Q", i)); i += 1
+    return bytes(out[:n])
+V["gear"] = {"rule": "G[i] = first 8 bytes, little-endian, of SHA-256('ufo-gear-1' || byte i)",
+             "G": ["%016x" % g for g in GEAR[:4]] + ["..."], "G_255": "%016x" % GEAR[255],
+             "sha256_of_table_as_256_little_endian_u64": sha(b"".join(struct.pack("<Q", g) for g in GEAR)).hex()}
 V["blobs"] = []
-for name, data in (("empty", b""), ("abc", b"abc")):
-    node = blob_node(len(data), sha(data), [rhash(CHUNK, data)] if data else [])
-    V["blobs"].append({"name": name, "len": len(data), "node_hex": node.hex(), "blob_hash": rhash(NODE, node).hex()})
-sizes = [("2^20 zero bytes", MIB), ("2^20+1 zero bytes", MIB + 1), ("1025 MiB of zero bytes: two spans of 1024 chunks, the second holding one", 1025 * MIB)]
-if "--slow" in sys.argv:
-    h = hashlib.sha256(); z = bytes(MIB)                       # one pass for both stream hashes
-    for _ in range(1 << 20): h.update(z)
-    _zsha[1 << 40] = h.copy().digest(); h.update(z); _zsha[(1 << 40) + MIB] = h.digest()
-    sizes.append(("2^40+2^20 zero bytes: spans of 1024^2 chunks, the second being a one-chunk blob", (1 << 40) + MIB))
-_prior = []
-if "--slow" not in sys.argv:        # keep the slow vector already computed, so a normal run does not drop it
-    try: _prior = [b for b in json.load(open(os.path.join(OUT, "vectors.json")))["blobs"] if b.get("len", 0) >= 1 << 40]
-    except (OSError, ValueError, KeyError): pass
-for name, n in sizes:
-    node = zeros_blob(n)
-    V["blobs"].append({"name": name, "len": n, "node_hex": node.hex() if len(node) < 400 else None, "blob_hash": rhash(NODE, node).hex()})
-
-V["blobs"] += _prior
+def blob_vector(name, data, extra=None):
+    h, shape, cs = blob_tree(data)
+    v = {"name": name, "len": len(data), "sha256": sha(data).hex(), "chunks": len(cs),
+         "first_chunk_lengths": [len(c) for c in cs[:8]], "groups_per_level": shape, "blob_hash": h.hex()}
+    if len(cs) <= 2: v["node_hex"] = blob_node(len(data), sha(data), 0, [(len(c), rhash(CHUNK, c)) for c in cs]).hex()
+    if extra: v.update(extra)
+    V["blobs"].append(v); return h, cs
+STREAM = "bytes are SHA-256('ufo-test-stream' || u64le(i)) for i = 0, 1, 2, ... concatenated and cut to length"
+blob_vector("empty", b""); blob_vector("abc", b"abc")
+blob_vector("2047 bytes of the test stream: below the minimum, one chunk", stream(2047), {"stream": STREAM})
+blob_vector("65536 zero bytes: no cut point is found, so one chunk of the maximum size", bytes(65536))
+blob_vector("65537 zero bytes: a maximum chunk and a one-byte chunk", bytes(65537))
+big = stream(1 << 20); h1, c1 = blob_vector("1 MiB of the test stream", big, {"stream": STREAM})
+edited = big[:500000] + b"0123456789" + big[500000:]
+h2, c2 = blob_vector("the same with ten bytes inserted at offset 500000", edited)
+s1, s2 = set(rhash(CHUNK, c) for c in c1), set(rhash(CHUNK, c) for c in c2)
+V["blobs"][-1]["chunks_shared_with_the_unedited_stream"] = len(s1 & s2)
+V["blobs"][-1]["chunks_not_shared"] = len(s2 - s1)
+huge = stream(40 << 20)
+blob_vector("40 MiB of the test stream: more than one group, so a tree", huge, {"stream": STREAM})
 
 # ---- 4. object maps ---------------------------------------------------------------
 def object_map(entries, depth=0, out=None):
     if len(entries) <= 32:
-        node = enc({"k": "map", "e": [[i, link(h)] for i, h in entries]})
+        node = enc({"k": "map", "e": [[i, h] for i, h in entries]})
     else:
         kids = {}
         for i, h in entries: kids.setdefault(i[depth], []).append((i, h))
-        node = enc({"k": "map", "c": {"%02x" % b: link(object_map(es, depth + 1, out)) for b, es in kids.items()}})
+        node = enc({"k": "map", "c": {"%02x" % b: object_map(es, depth + 1, out) for b, es in kids.items()}})
     if out is not None and node not in out: out.append(node)
     return rhash(NODE, node)
 V["object_maps"] = []
@@ -206,10 +232,13 @@ class Pack:
         return h
     def node(self, v, codec=0): return self.put(NODE, enc(v), codec)
     def blob(self, data, codec=0):
-        return self.put(NODE, blob_node(len(data), sha(data), [self.put(CHUNK, data, codec)] if data else []))
-    def outside(self, v):
-        """A value kept outside its node (section 1.4): a blob of salt followed by the encoding."""
-        self.n += 1; return Tag(55464, self.blob(salt(self.n) + enc(v)))
+        return blob_tree(data, lambda kind, rec: self.put(kind, rec, codec if kind == CHUNK else 0))[0]
+    def outside(self, kind, v, veiled=False):
+        """A value kept outside its node (section 1.4). The blob is never salted; a veil hides its hash."""
+        data = v if kind == "b" else v.encode() if kind == "t" else enc(v)
+        h = self.blob(data)
+        if not veiled: return Tag(55464, [kind, h])
+        self.n += 1; return Tag(55464, [kind, self.put(CHUNK, salt(self.n) + h), True])
     def raw(self, kind, payload): self.b += frame(kind, payload)
     def index(self):
         ents = sorted((h, self.off[h]) for h in self.pending); prev = self.index_at
@@ -225,18 +254,18 @@ class Pack:
 
 def revision(pk, i, typ, rev, by, sl, p, prev=None, seq=None, codec=0):
     n = {"k": "obj", "id": i, "type": typ, "rev": rev, "by": by, "salt": salt(sl), "p": p}
-    if prev: n["prev"] = link(prev)
+    if prev: n["prev"] = prev
     if seq: n["seq"] = seq
     return pk.node(n, codec)
 def commit(pk, state, change_id, ops, note, public, parent, height, sl):
     work = {"ops": ops}
     if note: work["note"] = note
-    cp = dict(public, work=pk.outside(work))
+    cp = dict(public, work=pk.outside("v", work, veiled=True))
     hC = revision(pk, change_id, "ufo.change", 1, change_id, sl, cp)
     state = dict(state); state[change_id] = hC
     nodes = []; hM = object_map(sorted(state.items()), out=nodes)
     for n in nodes: pk.put(NODE, n)
-    hK = pk.node({"k": "commit", "v": 1, "parents": [link(parent)] if parent else [], "objects": link(hM), "change": link(hC), "height": height})
+    hK = pk.node({"k": "commit", "v": 1, "parents": [parent] if parent else [], "objects": hM, "change": hC, "height": height})
     return state, hC, hM, hK
 
 U, T, F = bytes(16), bytes([0xa1]) * 16, bytes([0xfa]) * 16
@@ -283,14 +312,14 @@ pk.raw(0x7f, b"a frame of unknown kind: skipped and preserved")
 # commit 2: a model replaces a word; a property is replaced; an asset, a clock and 40 small objects appear
 t1 = "Hello, world."
 data = (b"The quick brown fox jumps over the lazy dog.\n" * 120)[:5000]
-hBlob = pk.blob(data, codec=1); hChunk = rhash(CHUNK, data)
+hBlob = pk.blob(data, codec=1); ASSET = Tag(55464, ["b", hBlob])
 FL = 705600000
 items = [(sha(b"item" + struct.pack("<I", i))[:16], i) for i in range(40)]
 LONG = "kept outside its node " * 12
 ops = [{"op": "splice", "obj": T, "key": "chars", "after": [C1, 6], "del": [[C1, 7, 8]], "old": "universe", "ins": "world"},
        {"op": "set", "obj": F, "key": "medium", "old": "document", "val": "text"},
        {"op": "new", "obj": A, "type": "ufo.asset"},
-       {"op": "set", "obj": A, "key": "bytes", "val": link(hBlob)},
+       {"op": "set", "obj": A, "key": "bytes", "val": ASSET},
        {"op": "set", "obj": A, "key": "media", "val": "text/plain"},
        {"op": "new", "obj": K, "type": "ufo.clock"},
        {"op": "set", "obj": K, "key": "start", "val": 0},
@@ -301,12 +330,12 @@ ops.append({"op": "set", "obj": items[0][0], "key": "long", "val": LONG})
 seq2 = [[C1, 0, 7], [C2, 0, 5], [C1, 7, 8, False], [C1, 15, 1]]
 hT2 = revision(pk, T, "ufo.text", 2, C2, 2001, {"chars": t1, "spans": {"p1": SPAN}}, prev=state[T], seq={"chars": seq2}, codec=1)
 hF2 = revision(pk, F, "ufo.face", 2, C2, 2002, {"of": ref(T), "medium": "text"}, prev=state[F])
-hA = revision(pk, A, "ufo.asset", 1, C2, 2003, {"bytes": link(hBlob), "media": "text/plain"})
+hA = revision(pk, A, "ufo.asset", 1, C2, 2003, {"bytes": ASSET, "media": "text/plain"})
 hK2o = revision(pk, K, "ufo.clock", 1, C2, 2004, {"start": 0, "end": 10 * FL})
 st = dict(state); st.update({T: hT2, F: hF2, A: hA, K: hK2o})
 for n_, (i, n) in enumerate(items):
     props = {"n": n}
-    if n_ == 0: props["long"] = pk.outside(LONG)          # stored outside the node
+    if n_ == 0: props["long"] = pk.outside("t", LONG)     # stored outside the node
     st[i] = revision(pk, i, "ai.nampara.example.item", 1, C2, 2100 + n_, props)
 pub = {"actor": actor, "time": 1767229200000, "origin": {"basis": "witnessed", "by": "model", "model": "example-model-1", "asked": who}}
 state2, hC2, hM2, hK2 = commit(pk, st, C2, ops, "Shorter greeting.", pub, g["root"], 1, 2005)
@@ -346,7 +375,8 @@ V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file
     "identities": {"universe": U.hex(), "text": T.hex(), "face": F.hex(), "asset": A.hex(), "clock": K.hex(),
                    "changes": [C1.hex(), C2.hex(), C3.hex()]},
     "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end] and frame frames.t",
-    "blob": {"hash": hBlob.hex(), "len": len(data), "sha256": sha(data).hex(), "chunk_hash": hChunk.hex()},
+    "blob": {"hash": hBlob.hex(), "len": len(data), "sha256": sha(data).hex(), "chunks": len(chunks_of(data)),
+             "note": "the asset's bytes property is an indirect of kind b to this blob; the same blob is named from the operation that set it, inside the change's work"},
     "seal": {"commit": hK2.hex(), "key": key.hex(), "time": 1767229260000, "name": "Test Author", "signature": sig.hex(),
              "signed_bytes_hex": (b"ufo-seal-1" + sha(enc(signed))).hex(), "secret_key_note": "RFC 8032 section 7.1, test 1"},
     "heads": "four head frames: after commit 1, after commit 2, after the seal (naming commit 2 again), after commit 3; each gives the offset of the one before",
@@ -397,9 +427,53 @@ V["resolve_continuous"] = [
     {"region": [10, 20], "frame": [3, 1, 0], "extent": [0, 40], "result": [30, 40], "note": "clipped"},
     {"region": [10, 20], "frame": [1, 1, 50], "extent": [0, 40], "result": "detached"},
     {"region": [1.5, 2.5], "frame": [3, 2, 1], "extent": [0.0, 10.0], "result": [3.25, 4.75], "note": "floats: x times a, divided by b, plus c"}]
-_ov = salt(7) + enc("abc"); _on = blob_node(len(_ov), sha(_ov), [rhash(CHUNK, _ov)])
-V["value_kept_outside"] = {"value": "abc", "salt_hex": salt(7).hex(), "blob_bytes_hex": _ov.hex(), "blob_node_hex": _on.hex(),
-                           "indirect_hex": enc(Tag(55464, rhash(NODE, _on))).hex()}
+_b = enc({"n": 1}); _bn = blob_node(len(_b), sha(_b), 0, [(len(_b), rhash(CHUNK, _b))]); _bh = rhash(NODE, _bn); _open = salt(7) + _bh
+V["value_kept_outside"] = {"value": {"map": [["n", 1]]}, "blob_bytes_hex": _b.hex(), "blob_node_hex": _bn.hex(), "blob_hash": _bh.hex(),
+    "indirect_hex": enc(Tag(55464, ["v", _bh])).hex(), "veiled": {"salt_hex": salt(7).hex(), "opening_chunk_hex": _open.hex(),
+    "opening_hash": rhash(CHUNK, _open).hex(), "indirect_hex": enc(Tag(55464, ["v", rhash(CHUNK, _open), True])).hex()}}
+
+# ---- 7b. readiness for merging (section 1.10) ------------------------------------------
+def rank(e, heights): return (heights[e[0]], e[0], e[1])
+def tree_order(parents, heights):
+    kids = {}
+    for e, par in parents.items(): kids.setdefault(par, []).append(e)
+    out = []
+    def walk(par):
+        for e in sorted(kids.get(par, []), key=lambda e: rank(e, heights), reverse=True): out.append(e); walk(e)
+    walk(None); return out
+def integrate(seq, parents, heights, e, par):
+    """Insert one element into an existing order, knowing only parents and ranks."""
+    i = 0 if par is None else seq.index(par) + 1
+    def child_of_par_above(x):
+        while x is not None and parents.get(x) != par: x = parents.get(x)
+        return x
+    while i < len(seq):
+        sib = child_of_par_above(seq[i])
+        if sib is None or sib not in parents or parents[sib] != par or rank(sib, heights) < rank(e, heights): break
+        i += 1
+    seq.insert(i, e); parents[e] = par
+c0, w1, w2, w3, w4 = (bytes([c]) * 16 for c in (0x10, 0x21, 0x22, 0x33, 0x34))
+heights = {c0: 0, w1: 1, w2: 1, w3: 2, w4: 2}
+base = [((c0, 0), None, "A"), ((c0, 1), (c0, 0), "B"), ((c0, 2), (c0, 1), "C")]
+one = [((w1, 0), (c0, 0), "x"), ((w1, 1), (w1, 0), "y"), ((w3, 0), (w1, 0), "n")]       # writer one: "xy" after A; later "n" after x; removes B
+two = [((w2, 0), (c0, 0), "p"), ((w2, 1), (w2, 0), "q"), ((w2, 2), (c0, 1), "Z"), ((w4, 0), (w2, 0), "m")]   # writer two: "pq" after A; "Z" after B; later "m" after p
+removed = {(c0, 1)}
+def run(order):
+    seq = []; parents = {}; text = {}
+    for e, par, ch in base + order: integrate(seq, parents, heights, e, par); text[e] = ch
+    return seq, parents, text
+sA, pA, tA = run(one + two); sB, pB, tB = run(two + one); sT = tree_order(pA, heights)
+assert sA == sB == sT
+def show(seq, text): return "".join(text[e] for e in seq if e not in removed)
+V["merge_readiness"] = {
+    "base": {"text": "ABC", "change": c0.hex(), "height": 0},
+    "writer_one": [{"change": w1.hex(), "height": 1, "ops": ["insert 'xy' after A", "remove B"]},
+                   {"change": w3.hex(), "height": 2, "ops": ["insert 'n' after x"]}],
+    "writer_two": [{"change": w2.hex(), "height": 1, "ops": ["insert 'pq' after A", "insert 'Z' after B"]},
+                   {"change": w4.hex(), "height": 2, "ops": ["insert 'm' after p"]}],
+    "order_of_elements": [[e[0].hex(), e[1], tA[e], e in removed] for e in sA],
+    "result_one_then_two": show(sA, tA), "result_two_then_one": show(sB, tB), "result_by_definition": show(sT, tA),
+    "note": "each line is [change, number, character, removed]; the three results are equal"}
 
 # ---- 8. printer and instrumentation (section 11) ------------------------------------------
 def vec(xs): return leb(len(xs)) + b"".join(xs)

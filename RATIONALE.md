@@ -183,6 +183,8 @@ full. Each is recorded here so it can be challenged.
 
 | Invention | Existing options, and what each misses | SPEC |
 | --- | --- | --- |
+| **Content-defined chunks and tree for blobs** | Fixed-size chunks rewrite everything after an insertion. *LBFS*, *Borg*, *restic* and *FastCDC* established content-defined chunking; the gear rolling hash of FastCDC is used in its simplest form, with every parameter and the table fixed by the format so that a blob's hash does not depend on who stored it. The tree above the chunks is divided by the same idea, as in prolly trees. | §1.4 |
+| **Veiled indirects** | Salting content defeats deduplication; leaving hashes bare lets short content be guessed. A commitment on the reference, opened by a small record that can itself be withheld, gives both. | §1.4 |
 | **The pack** | *SQLite*: no canonical bytes to hash or sign; its engine in every file. *Git packfiles*: delta compression and a separate index file make a weekend reader impossible; not built for one growing file. *ZIP*: no content addressing; central directory rewritten on every change. *CAR (IPLD)*: content-addressed, but no commit trailer, crash recovery or index. | §2, §3 |
 | **Permanent element identities in every sequence** | *Position-based edit logs* (and this project's own first drafts) needed four interlocking mechanisms to keep attribution and structure attached to an edited sequence: runs, self-carried regions, an insertion bias and history replay. *Automerge* and *Peritext* show the better decomposition: give every element a permanent identity and attach everything to identities. Those systems are replication libraries with their own storage and no notion of attribution, evidence or a hashed, sealed history; the idea is taken, the format is not. Here an element's identity is the change that inserted it and a number, so identity is attribution, and removed elements stay as markers so anchors can always be placed. | §1.7, §4.3 |
 | **Work kept apart from attribution** | *Git shallow clones* drop history wholesale, with its authorship. *Redaction* breaks hashes. A change keeps who and what in the object and the operations in one salted blob beside it, so a copy can withhold what earlier drafts said and still verify authorship. | §1.7, §9.3 |
@@ -254,13 +256,19 @@ elements, which is what merging concurrent edits requires.
 
 *Stored values.* There were three ways for a value to live outside its
 node: a transparent stand-in, a salted record for content that might be
-withheld, and pieces for long texts. There is now one: a blob holding a
-salt and the value. Blobs were already chunked and already withholdable.
-The stand-in keeps its own tag, because a property must still be able to
-hold a link to a file's bytes that is *not* resolved; what went is a node
-kind and two sets of rules. The cost is that a value kept outside is
-rewritten whole, in chunks of up to a mebibyte, when it changes, and that
-identical values no longer share storage, because each has its own salt.
+withheld, and pieces for long texts; and there was a separate link for a
+file's bytes. There is now one: an indirect to a blob. A blob is pure
+content, never salted, so identical content is one record wherever it
+appears — in a property, in the operation that set it, in another
+universe. A file's bytes are simply a byte string kept outside its node,
+so the link, and the confusion between links that are resolved and links
+that are not, are gone: a value can hold four kinds of reference where it
+held five. Where a hash must not be guessable or matchable — a change's
+record of its operations, above all — the indirect is veiled: it names a
+48-byte opening, a salt and the blob's hash, and whoever lacks the
+opening learns nothing. Blobs are divided by content, in chunks and in the
+tree above them, so an edit rewrites only what is near it: ten bytes
+inserted into a mebibyte change one chunk in ninety-six.
 
 ## Where the design departs from first intentions
 

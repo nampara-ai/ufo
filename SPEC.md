@@ -1,6 +1,6 @@
 # The Universal File Object (UFO) Specification
 
-**Version 0.5 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
+**Version 0.6 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
 
 This document specifies the UFO format: a single file that holds a universe of
 described meaning, carries the small player and tools that present and edit
@@ -120,7 +120,6 @@ A **value** is one of:
 | bytes | a byte string |
 | list | an ordered sequence of values |
 | map | text keys to values, keys unique |
-| **link** | the hash of a record (§1.3) |
 | **ref** | the identity of an object in the same universe (§1.5) |
 | **anchor** | a reference to a region of an object at a revision (§4) |
 | **formula** | an expression that computes a value (§5.3) |
@@ -128,9 +127,8 @@ A **value** is one of:
 
 Values are encoded in CBOR (RFC 8949) using the core deterministic encoding
 requirements of RFC 8949 §4.2.1, so that a value has exactly one encoding.
-Link, ref, anchor, formula and indirect are CBOR tags 55460, 55461, 55462,
-55463 and 55464 applied to a 32-byte string, a 16-byte string, a map, a
-list and a 32-byte string respectively. These tag numbers are provisional
+Ref, anchor, formula and indirect are CBOR tags 55461, 55462, 55463 and
+55464 applied to a 16-byte string, a map, a list and a list respectively. These tag numbers are provisional
 until registered.
 
 Integers are encoded in the shortest form. A float is encoded in the
@@ -144,7 +142,7 @@ one key with its value.
   deterministic form; contains a non-finite float, an indefinite-length
   item, a duplicate map key, a non-text map key, text that is not valid
   UTF-8, a simple value other than false, true and null, or an integer
-  outside the range above; applies one of the five tags above to content of
+  outside the range above; applies one of the four tags above to content of
   the wrong kind or length, or has an anchor without `o`, a region of no
   defined form, or a formula whose first item is not text; exceeds a depth
   of 64; or is followed by further bytes in its record. A well-formed item under any other tag,
@@ -161,87 +159,119 @@ directly; they read projections (§7.5).
 
 A **record** is an immutable byte string of one of two kinds:
 
-- a **chunk**: raw bytes, at least 1 and at most 2²⁰;
+- a **chunk**: raw bytes, at least 1 and at most 65 536;
 - a **node**: one encoded value that is a map with a text entry `k` naming the
   kind of node.
 
 The hash of a record is SHA-256 over one kind byte (`0x01` chunk, `0x02`
 node) followed by the record's bytes. A record is identified only by its hash.
 
-- **[C2]** A record is always obtained by its hash: from a link, an index
-  entry or a head. A reader MUST compute the hash of the bytes it obtained
-  and MUST treat a difference from the hash it asked for as malformed
-  storage. A frame carries no hash of its own; a scan computes each
-  record's hash, and `verify` (§7.5) reports any record reachable from the
-  head that is absent or wrong, and any chunk or node frame that is not
+- **[C2]** A record is always obtained by its hash: from another record, an
+  index entry or a head. A reader MUST compute the hash of the bytes it
+  obtained and MUST treat a difference from the hash it asked for as
+  malformed storage. A frame carries no hash of its own; a scan computes
+  each record's hash, and `verify` (§7.5) reports any record reachable from
+  the head that is absent or wrong, and any chunk or node frame that is not
   reachable from any head in the file.
 - **[C3]** A reader MUST preserve, when copying or rewriting a universe, every
   record reachable from a retained commit, whether or not it understands the
   record's node kind.
 
-The node kinds the core defines are `blob`, `obj`, `map` and `commit`.
+The node kinds the core defines are `blob`, `obj`, `map` and `commit`. Where
+a node names another record it does so by that record's hash, in a place
+the node's schema fixes (Appendix C). A record is **reachable** from
+another if a chain of such hashes, and of indirects (§1.4), leads to it.
 
 ### 1.4 Blobs
 
-A **blob** is an immutable byte stream of any length. It is stored as chunks
-of exactly 2²⁰ bytes, except the last, which holds 1 to 2²⁰ bytes. A
-zero-length blob has no chunks. The blob node is:
+A **blob** is an immutable byte stream of any length. It is pure content:
+its hash depends on its bytes and nothing else, so identical content is
+stored once and sent once, in every universe and between them. The player's
+components, shared media, and the unchanged parts of successive versions
+all rely on this.
+
+**Chunks.** A blob's bytes are divided into chunks at places chosen by the
+content itself, so that an edit in the middle of a large blob changes only
+the chunks near it and the rest are shared with the version before. The
+rule is a rolling hash of the *gear* kind:
+
+- `G` is a table of 256 unsigned 64-bit numbers: `G[i]` is the first 8
+  bytes, read as little-endian, of the SHA-256 of the 10 ASCII bytes
+  `ufo-gear-1` followed by the single byte *i*.
+- Starting each chunk with *h* = 0, for each byte *b* in turn,
+  *h* = (2·*h* + `G[b]`) mod 2⁶⁴.
+- A chunk ends after a byte if the chunk is then at least 2 048 bytes long
+  and the top 13 bits of *h* are all zero, or if it is then 65 536 bytes
+  long, or if the stream ends.
+
+Chunks therefore average about 10 KiB. The last chunk may be shorter than
+2 048 bytes. A zero-length blob has no chunks.
+
+**The blob node.** A blob is named by the hash of its node:
 
 | Key | Value |
 | --- | --- |
 | `k` | `"blob"` |
 | `len` | total length in bytes |
 | `sha256` | SHA-256 of the whole stream |
-| `chunks` | list of links |
+| `level` | 0 if `parts` names chunks; otherwise one more than the level of the nodes it names |
+| `parts` | list of `[length, hash]`, in order |
 
-If the stream has at most 1024 chunks, `chunks` lists them in order.
-Otherwise the stream is divided into consecutive spans of 1024ⁿ chunks,
-the last span holding whatever remains, for the smallest *n* that makes
-1024 spans or fewer; `chunks` lists, in order, the blob node of each span,
-and each of those is the blob node its bytes would have as a stream of
-their own, by this same rule, with its own `len` and `sha256`. The shape of a blob node is therefore a
-function of its bytes alone, and identical streams have identical blob hashes
-in every universe. A reader MUST treat a blob node of any other shape as
-malformed.
+A blob with many chunks is a tree, and the tree is divided by content too,
+so that inserting a chunk near the start does not regroup everything after
+it. Take the list of `[length, hash]` for the chunks. Divide it into
+groups: a group ends after an entry if the group then has at least 2
+entries and the first four bytes of that entry's hash, read as a big-endian
+number, are divisible by 1 024; or if the group then has 4 096 entries; or
+if the list ends. If that makes one group, it is the `parts` of the blob
+node, at level 0. Otherwise each group becomes a `blob` node at level 0 for
+the bytes it covers, with its own `len` and `sha256`; the list of
+`[length, hash]` for those nodes is divided by the same rule; and so on,
+one level higher each time, until one group remains.
 
-- **[C4]** To read bytes `[a, b)` a reader MUST load only the chunks that
-  intersect the range, and MUST fail without returning bytes if a required
-  chunk is missing, has the wrong length for its position, or fails its hash.
+The shape of a blob is therefore a function of its bytes alone. A reader
+MUST treat a blob node of any other shape as malformed.
+
+- **[C4]** To read bytes `[a, b)` a reader MUST load only the nodes and
+  chunks that intersect the range, and MUST fail without returning bytes if
+  one is missing, has a length other than the one stated for it, or fails
+  its hash.
 - **[C5]** A whole-stream read or export MUST also verify `sha256` and `len`.
 
-A value that refers to a blob is a link to its blob node.
-
-*Reason.* Fixed chunks make range lookup arithmetic. Fixing the chunk size in
-the format, rather than per writer, is what makes a blob's hash independent
-of who stored it, which deduplication, references between universes and
-partial travel forms all depend on. Content-defined chunking would save space
-when a large byte stream is edited in the middle, but native content is
-description, not edited byte streams, and blobs are immutable originals.
+*Reason.* Content-defined chunking is long established: in LBFS with Rabin
+fingerprints, in backup tools such as Borg and restic, and in FastCDC,
+whose gear hash this rule uses in its simplest form. Fixing every
+parameter in the format, including the table, is what makes a blob's hash
+independent of who stored it. The small average size suits what blobs
+mostly hold here — texts and other described values, where an edit should
+cost little — and costs large media about half a percent in chunk lists.
 
 **Values kept outside a node.** Any value inside the properties of an `obj`
-node (§1.5) MAY be stored outside the node, as a blob whose bytes are 16
-random bytes of salt followed by the value's encoding. In the node it is
-replaced by an *indirect*: the hash of that blob. A reader resolves an
-indirect transparently: wherever this document speaks of a property's
-value, it means the value with every indirect replaced by what it stands
-for. A value kept outside contains no further indirects.
+node (§1.5) MAY be stored outside the node, in a blob, and replaced in the
+node by an **indirect**, `[kind, hash]`:
 
-That is the only way a value lives outside its node, and it serves three
-needs at once. A large value does not bloat its node, and needs no chunking
-of its own, because a blob is already stored in chunks. Changing a small
-property does not rewrite a large one; writers SHOULD move a value outside
-when its encoding exceeds 4096 bytes. And because of the salt, the hash
-reveals nothing about a short or guessable value, which matters when a copy
-withholds the blob (§9.3).
+| `kind` | The blob holds | The value is |
+| --- | --- | --- |
+| `"b"` | raw bytes | that byte string |
+| `"t"` | UTF-8 | that text |
+| `"v"` | the encoding of a value | that value, which contains no further indirects |
 
-A *link*, by contrast, names a blob as bytes — the content of a file — and
-is a value in its own right, never resolved transparently. Within the
-structure of nodes, links also name records of other kinds: a previous
-revision, an object map, a change, a parent commit, a chunk.
+A reader resolves an indirect transparently: wherever this document speaks
+of a property's value, it means the value with every indirect replaced by
+what it stands for. There is no other way to refer to stored content from
+a property. A file's content is simply a byte string that is large, and so
+is kept outside its node, raw; a long text likewise. Writers SHOULD move a
+value outside when its encoding exceeds 4 096 bytes.
 
-A record is **reachable** from another if a chain of links and indirects
-leads to it. Plain hashes elsewhere — in a seal, in a head — do not make a
-record reachable.
+**Veiled indirects.** A hash can be guessed if what it hashes is short or
+predictable, and a copy of a universe may hold a reference to content it
+deliberately lacks (§9.3). Where that matters, the indirect is *veiled*:
+`[kind, hash, true]`, where the hash is not the blob's but that of an
+**opening**: a chunk of exactly 48 bytes, 16 of random salt followed by the
+32 bytes of the blob's hash. Whoever holds the opening can find the blob;
+whoever lacks it learns nothing, not even whether two veiled indirects
+name the same content. The blob itself is never salted: wherever it is
+present it is the same record as every other copy of that content.
 
 ### 1.5 Objects and revisions
 
@@ -258,11 +288,11 @@ Each state an object passes through is a **revision**, stored as a node:
 | `id` | the object's identity |
 | `type` | the object's type |
 | `rev` | revision number: 1 for the first revision, then previous + 1 |
-| `prev` | link to the previous revision; absent in revision 1 |
+| `prev` | hash of the previous revision; absent in revision 1 |
 | `by` | identity of the change (§1.7) that produced this revision |
 | `salt` | 16 random bytes, fresh for every revision |
 | `p` | the properties |
-| `seq` | map from the name of each sequence property to the identities of its elements (§1.7); omitted when the object has none |
+| `seq` | map from the name of each sequence property to the identities of its elements (§1.7), each of which may be kept outside the node like a property's value; omitted when the object has none |
 
 The hash of this node is the **revision hash**. It names one exact state of
 one object and, through `prev`, that object's whole history. Two copies of a
@@ -299,7 +329,7 @@ current revision of every object is recorded in an **object map**: a
 persistent trie from identity to revision hash, built of `map` nodes.
 
 A `map` node covering a set of identities that share a prefix of *d* bytes is
-a leaf `{k: "map", e: [[id, link], …]}` sorted by identity if the set has 32
+a leaf `{k: "map", e: [[id, hash], …]}` sorted by identity if the set has 32
 or fewer members, and otherwise an interior node `{k: "map", c: {…}}` whose
 entries map the byte at position *d* of the identity, counting from zero,
 written as a two-digit lowercase hexadecimal key, to the `map` node for
@@ -316,9 +346,9 @@ A commit is the node:
 | --- | --- |
 | `k` | `"commit"` |
 | `v` | format version, `1` |
-| `parents` | list of links to parent commits: empty for the first commit, otherwise exactly one |
-| `objects` | link to the root of the object map |
-| `change` | link to the revision of the change object this commit records |
+| `parents` | list of the hashes of parent commits: empty for the first commit, otherwise exactly one |
+| `objects` | hash of the root of the object map |
+| `change` | hash of the revision of the change object this commit records |
 | `height` | 0 for the first commit, otherwise 1 + the parent's height |
 
 `change` is a hash, not an identity, so the commit chain binds each change
@@ -338,7 +368,7 @@ and type `ufo.universe`. Its properties are:
 | --- | --- |
 | `lineage` | 16 random bytes fixed in the first commit; shared by every later state and every fork. Required; every other property here is optional |
 | `roots` | map from names to refs: the named entry points |
-| `components` | map from a role — `tools`, `printer`, `shaper`, `rasterizer`, or a prefixed name — to a link or anchor naming the component the universe carries for it (§6.6, §7.4, §11.4) |
+| `components` | map from a role — `tools`, `printer`, `shaper`, `rasterizer`, or a prefixed name — to an indirect holding the component's bytes, or an anchor naming a universe, that the universe carries for it (§6.6, §7.4, §11.4) |
 | `faces` | list of refs to face objects (§7.2) |
 | `features` | map from feature name to `{v: integer, required: boolean}` |
 | `summary` | ref to the top summary (§11.7), if any |
@@ -359,7 +389,7 @@ the universe: one commit. Its properties are:
 
 | Property | Value |
 | --- | --- |
-| `work` | an indirect (§1.4) to `{ops, note}`: the operations, and optionally why the change was made, in the actor's words |
+| `work` | a veiled indirect (§1.4) to `{ops, note}`: the operations, and optionally why the change was made, in the actor's words |
 | `actor` | `{who, with}`: the principal (§10.1) who committed the change, and the name and version of the software used |
 | `time` | milliseconds since 1970-01-01T00:00:00Z, as the actor reported it |
 | `origin` | where content introduced by this change came from (§8.5); absent if the change introduces none |
@@ -368,9 +398,11 @@ the universe: one commit. Its properties are:
 | `attributions` | list of later findings about the origin of content already present (§8.5); optional |
 
 Everything that says what earlier content was — the operations and the note
-— is in `work`, one value kept outside the node. A copy of a universe can
-therefore withhold it whole and keep everything that says who and what made
-the content that is there (§9.3).
+— is in `work`, one value kept outside the node behind a veil. A copy of a
+universe can therefore withhold it whole, revealing nothing of it, and keep
+everything that says who and what made the content that is there (§9.3).
+Content that an operation and the present state have in common — a large
+file that was added and is still there — is one blob, named from both.
 
 The change object is created by the act of committing, not by an operation:
 it has no `new`, its `rev` is 1 and its `by` is its own identity.
@@ -385,7 +417,7 @@ four:
 | --- | --- | --- |
 | `new` | `obj`, `type` | creates an object with no properties |
 | `set` | `obj`, `key`, `old`, `val` | sets property `key` to `val`; absent `val` removes it |
-| `splice` | `obj`, `key`, `after`, `del`, `old`, `ins` | in the sequence at `key`, removes the elements `del` (whose content is `old`) and inserts the items `ins` after the element `after` |
+| `splice` | `obj`, `key`, `after`, `del`, `old`, `ins`, `forget` | in the sequence at `key`, removes the elements `del` (whose content is `old`), inserts the items `ins` after the element `after`, and discards the markers `forget` |
 | `drop` | `obj` | retires the object from the current state |
 
 Operations apply in the order listed, each to the state left by those
@@ -422,8 +454,10 @@ nothing is inserted. `del` is a list of runs
 naming elements to remove, each of which MUST not already be removed; `old`
 is their content in sequence order. `ins` is a text, a byte string or a
 list, matching the property; its items become new elements directly after
-`after`. A `splice` on a property that does not exist creates it, as the
-kind of value `ins` is. A `splice` on a property created by `set`, and a
+`after`. `forget` is a list of runs naming removed elements whose markers
+are to be discarded (§1.10); it is refused if any of them is not removed,
+or is named by an anchor anywhere in the universe. A `splice` on a property
+that does not exist creates it, as the kind of value `ins` is. A `splice` on a property created by `set`, and a
 `set` that gives a sequence property a value, are refused. A `set` with no
 `val` removes a sequence property and its `seq` entry.
 
@@ -516,6 +550,62 @@ The format version is the `v` of the commit. A reader MUST refuse to write a
 universe whose version it does not implement and MAY read one in a degraded,
 clearly labeled mode.
 
+### 1.10 Markers, and readiness for merging
+
+**Markers are kept among collaborators.** A removed element stays in `seq`
+as a marker for two reasons: an anchor may name it, and a collaborator's
+operation, made without knowing of the removal, may name it as the place to
+insert. A working form, and every copy shared with collaborators, keeps
+all markers.
+
+**A published copy may forget them.** Before publishing to outside readers
+(§9.3), a writer MAY commit a change whose splices `forget` markers. A
+marker may be forgotten only if no anchor in the universe names it. The
+change is an ordinary one: it has an actor, it is in the Chronicle, and the
+published copy's head is the commit that made it. Its effects are stated
+plainly to the person: anchors held outside the universe that name a
+forgotten element will resolve as detached in the new revision; a pin into
+the earlier commit from another universe is unaffected, since that commit
+is unchanged; and edits made elsewhere against the earlier state can no
+longer be merged into the compacted one where they name forgotten
+elements.
+
+*The cost, measured on a simulation:* a text first typed as 10 000
+characters, then edited 20 000 times with a mixture of replacements,
+insertions and deletions, ended with 57 771 characters, 131 925 markers and
+a `seq` of about 779 KiB — some thirteen bytes for every character
+present. With every marker forgotten it is about 211 KiB. Most of the
+remainder is the price of knowing which change wrote each stretch of text,
+which the format exists to know. `seq` is kept outside its node, so an
+edit rewrites only the chunks near it (§1.4).
+
+**Merging is a later feature; this design is ready for it.** The order of
+a sequence is not an accident of the order in which operations arrived. It
+is a function of facts that every copy agrees on:
+
+- each element has a *parent*: the element its `splice` named in `after`,
+  or the start; an element inserted together with others has the one before
+  it as its parent;
+- each element has a *rank*: the height of the commit that inserted it,
+  then the identity of the change, then its number;
+- the sequence is the elements in the order of a walk that visits each
+  element and then, at once, its children in descending rank, and their
+  descendants with them;
+- an element is removed if any operation removed it.
+
+For a single line of history this gives exactly what §1.7 says: new items
+go directly after `after`, because the newest commit has the highest rank.
+For two lines of history that diverged, the union of their operations
+gives one tree and one set of removals, and therefore one sequence,
+whichever line is taken first. Appendix F has vectors: two writers insert
+at the same place, insert inside each other's insertions, and remove what
+the other is inserting after, and the two orders of merging produce the
+same result.
+
+What remains for the merge feature is everything else: what a merge commit
+records, how two `set` operations on one property are reconciled, and how
+ranks are compared when a commit has two parents.
+
 ---
 
 ## 2. The pack
@@ -555,7 +645,7 @@ ill-formed. The codec byte of a frame of unknown kind is not interpreted.
 The same record MAY appear in more than one frame.
 
 The payload of each kind has a required form: a chunk decodes to between 1
-and 2²⁰ bytes; a node decodes to one value that is a map with a text `k`;
+and 65 536 bytes; a node decodes to one value that is a map with a text `k`;
 a seal or a note is one value that is a map; an index is 24 + 40 × *n*
 bytes for its stated *n*; a head is 72 bytes with codec 0. A frame whose
 payload has that form is well-formed even if what it says is wrong: a head
@@ -768,13 +858,13 @@ as malformed. A writer MUST NOT produce anything exceeding one.
 
 | Quantity | Limit |
 | --- | --- |
-| Chunk record | 2²⁰ bytes |
+| Chunk record | 65 536 bytes |
 | Node record, decoded | 16 MiB |
 | Seal or note payload | 1 MiB |
 | Nesting depth of a value | 64 |
 | Entries in one map or list | 2²⁰ |
 | Interior levels of the object map above a leaf | 16 |
-| Levels of `blob` nodes above the chunks, a node that lists chunks being level 1 | 4 |
+| Level of a `blob` node | 7 |
 | Indexes in a chain | 64 |
 | Parents of a commit | 1 |
 
@@ -1860,7 +1950,7 @@ An asset (`ufo.asset`) preserves a file's exact bytes.
 
 | Property | Value |
 | --- | --- |
-| `bytes` | link to a blob |
+| `bytes` | the file's content: a byte string, kept outside the node (§1.4) |
 | `media` | media type, determined by whatever imports the file, from the content first and the name second |
 | `name` | the original file name, if any |
 
@@ -2218,7 +2308,7 @@ and still readable.
 
 | Layer | What it is | Travels |
 | --- | --- | --- |
-| **Content** | the current revision of every **live** object — one reachable from the universe object by refs, links and anchors, without passing through a change — any earlier revision that a live object pins as something to present or as support for evidence, and the blobs all of those name | always |
+| **Content** | the current revision of every **live** object — one reachable from the universe object by refs, indirects and anchors, without passing through a change — any earlier revision that a live object pins as something to present or as support for evidence, and the blobs all of those name | always |
 | **Attribution** | for every change that an element or a `by` of a live object names, that an included change's `sources` names, or that records evidence, a decision or a finding about live content: the change object, which holds its actor, time, origin, evidence, decisions and findings (§1.7); the objects its evidence names as support; every commit node; every seal | always |
 | **Working history** | everything else: the `work` of every change — its operations and its note; changes that contributed nothing now present; earlier revisions; earlier object maps; prompts and conversations; objects that are no longer live, and changes that touched only those; summaries whose sources are all working history; earlier Compute-let snapshots | depends on the membrane crossed |
 
@@ -2232,6 +2322,9 @@ receiving decides the default.
   withholds working history by default, and its `note` frame says so
   (§2.5). The person states which they are doing, can change what is
   included either way, and sees the result before it leaves (**E12**).
+  Before publishing, the writer MAY also forget the markers of removed
+  elements that nothing anchors (§1.10), by a recorded change, so that the
+  published copy does not show where deletions were.
 - **[E10] Stubs.** Withholding removes records and nothing else. Every hash
   that names a withheld record stays where it was: in `prev`, in commits, in
   `work`, in `origin.prompt`. The recipient's reader can therefore check
@@ -2270,8 +2363,8 @@ choosing to publish, and **E12** shows it to them.
 - The names, keys, times and software of everyone who changed a live
   object, and the identifiers of the models used.
 - For each sequence, how much each change contributed that has since been
-  removed, and where it sat: removed elements remain as markers (§1.7).
-  What they said is not there.
+  removed, and where it sat, unless the markers were forgotten before
+  publishing (§1.10). What the removed elements said is not there.
 - The notes on evidence and decisions, the parameters of origins, and any
   fields an application added to changes.
 - The objects that evidence names as support, in full, including sources
@@ -2282,8 +2375,8 @@ choosing to publish, and **E12** shows it to them.
   same file that it was once here.
 
 It does not reveal what any earlier draft, prompt or deleted passage said.
-Those are named only by hashes of salted records (§1.4, §1.5), and pins
-are salted (§4.4). It reveals nothing of what the operations were: not
+Those are named only behind veils (§1.4) and by hashes of salted revisions
+(§1.5), and pins are salted (§4.4). It reveals nothing of what the operations were: not
 which properties were edited, not how often, not in what order. A person who needs to reveal less than this starts a
 new universe from an export (§2.6).
 
@@ -2558,7 +2651,7 @@ Its properties are its **manifest**:
 | `requests` | list of `{capability, scope, required, why}`; `why` is plain language for the person |
 | `tests` | list of pins to test objects (§11.6) |
 | `axes` | the axes its surface offers to anchors, if any beyond `x`, `y`, `t`: each with a name and a kind (§4.2) |
-| `state` | link to a blob: the latest snapshot (§11.2) |
+| `state` | the latest snapshot (§11.2): a byte string, kept outside the node |
 | `docs` | ref to a text: documentation and instructions for people and agents |
 | `poster` | ref to a rendition shown when the Compute-let cannot or may not run |
 
@@ -2681,7 +2774,7 @@ A module object (`ufo.module`) holds:
 
 | Property | Value |
 | --- | --- |
-| `wasm` | link to a blob: the module's bytes, uninstrumented. This is the only authority on what the module is. |
+| `wasm` | the module's bytes, uninstrumented: a byte string, kept outside the node. This is the only authority on what the module is. |
 | `items` | map from item key to `{kind, hash, by, name, index}` |
 
 An **item** is one declared part of a module: a function, a global, a data
@@ -2818,8 +2911,8 @@ A test object (`ufo.test`) holds:
 
 | Property | Value |
 | --- | --- |
-| `run` | either `{call, arguments}`: an exported function and values to pass; or `{replay}`: a link to a recorded replay (**M7**) |
-| `from` | a link to the snapshot to start from, or `live` to start from a copy of the running state |
+| `run` | either `{call, arguments}`: an exported function and values to pass; or `{replay}`: the bytes of a recorded replay (**M7**) |
+| `from` | the bytes of the snapshot to start from, or `live` to start from a copy of the running state |
 | `expect` | either `{returns}`: the values the call must return; or `{state}`: the hash the snapshot taken afterward must have; or `{draws}`: the hash of the display list last drawn |
 | `fuel` | the fuel allowed |
 | `judges` | list of item keys: functions in the module that exist to serve this test |
@@ -2935,6 +3028,7 @@ revised once, with reasons, before anything is frozen.
 | Axis kinds | 3 | 3 | every anchor in §14 uses one of them |
 | Core operations | 5 | 4 | `remap` became a property |
 | Node kinds | 5 | 4 | values kept outside a node are blobs |
+| Kinds of reference a value can hold | 5 | 4 | ref, anchor, formula, indirect; the link is gone |
 | Frame kinds | 6 | 6 | |
 | Formula operators | 64 | 51 | a spreadsheet's essentials; anything larger is a Compute-let |
 | Base host functions | 12 | 10, plus 2 exports | small enough to implement identically on every host |
@@ -3378,7 +3472,7 @@ content.
 | Anchors are generic and every profile defines how its anchors survive edits | Holds, more strongly: survival is defined once per axis kind in the core, and a profile only declares its axes | §4.2, §4.3 |
 | The clock model serves video, audio, animation, simulations and games | Holds: locked, free and held clocks cover §14.1 (video, audio, captions), animation by formulas of `time`, and Compute-lets through `time()` | §4.5, §14.1, §14.2 |
 | Presenters are sandboxed components behind a defined interface and can be carried as Compute-lets | Holds for every presenter a universe carries: each is a sandboxed Compute-let behind the host interface. The four base presenters are deliberately not components: they are the host's own facilities, behind the display list, which is equally a defined interface | §6.1, §6.2, §6.3, **M3** |
-| Every reference uses content addressing or stable identity, never file paths | Holds. Refs are identities; links and anchors are hashes; locations are hints without authority | **C11** |
+| Every reference uses content addressing or stable identity, never file paths | Holds. Refs are identities; indirects and anchors name hashes; locations are hints without authority | **C11** |
 | Every derived artifact records what it was derived from | Holds. One derivation record with pins, for renditions, transmutations, summaries, derived spans and imports | §8.3 |
 | The host interface's optional capabilities have a defined request and degradation path | Holds | **H1**, **H2** |
 | Nesting depth, active decoders and active Compute-lets are bounded by the reader, not trusted to the file | Holds | §3.1, **C13**, **O7** |
@@ -3469,7 +3563,7 @@ the second column says how.
 | Tools universe | a nested universe that is the interface to the kernel's functions |
 
 **Structural terms.** Words for the parts of records and for the states
-things can be in, each defined where it is first used: chunk, node, value, link, ref, indirect, frame (of a pack), head, index, note, signature (of a pack), offset, reachable, identity, type, property, sequence property, run, removed (of an element), boundary, revision hash, root hash, object map, universe object, lineage, work (of a change), region, frame (of an axis), digest, flick, basis (witnessed, inferred, unknown), finding, malformed, inconsistent, unavailable, unrecognized, whole, live, withheld, detached, current, stale, compaction, presentation state, player, base presenter, drawing contract, port, manifest, module, item, key, derived bytes, fuel, test, test change, promotion, static face, plain-text head, envelope template, mark, sharing, publishing, export, determinism tier, occurrence.
+things can be in, each defined where it is first used: chunk, node, value, ref, indirect, veiled, opening, frame (of a pack), head, index, note, signature (of a pack), offset, reachable, identity, type, property, sequence property, run, removed (of an element), boundary, revision hash, root hash, object map, universe object, lineage, work (of a change), region, frame (of an axis), digest, flick, basis (witnessed, inferred, unknown), finding, malformed, inconsistent, unavailable, unrecognized, whole, live, withheld, detached, current, stale, compaction, presentation state, player, base presenter, drawing contract, port, manifest, module, item, key, derived bytes, fuel, test, test change, promotion, static face, plain-text head, envelope template, mark, sharing, publishing, export, determinism tier, occurrence.
 
 ---
 
@@ -3636,28 +3730,29 @@ In CDDL (RFC 8610). `hash` is 32 bytes and `id` is 16.
 hash   = bytes .size 32
 id     = bytes .size 16
 salt   = bytes .size 16
-link     = #6.55460(hash)
 ref      = #6.55461(id)
 anchor   = #6.55462({ o: id, ? a: { * tstr => region }, ? r: hash,
                       ? u: hash, ? d: hash, ? s: salt })
 formula  = #6.55463([ tstr, * value ])
-indirect = #6.55464(hash)   ; hash of a blob whose bytes are a salt (16 bytes)
-                            ; followed by the encoding of the value
+indirect = #6.55464([ "b" / "t" / "v", hash, ? true ])
+           ; hash of a blob node; or, with `true`, of an opening: a chunk of
+           ; 48 bytes, a salt followed by the blob node's hash
 region   = [ "s", boundary, boundary ] / [ "c", number, number ]
          / [ "k", * (tstr / id) ]
 boundary = "start" / "end" / [ id, uint, 0 / 1 ]   ; change, number, before / after
 value    = nil / bool / int / float / tstr / bstr / [ * value ]
-         / { * tstr => value } / link / ref / anchor / formula / indirect
+         / { * tstr => value } / ref / anchor / formula / indirect
 
-blob   = { k: "blob", len: uint, sha256: hash, chunks: [ * link ] }
-obj    = { k: "obj", id: id, type: tstr, rev: uint, ? prev: link,
+blob   = { k: "blob", len: uint, sha256: hash, level: uint,
+           parts: [ * [ uint, hash ] ] }                  ; length, hash
+obj    = { k: "obj", id: id, type: tstr, rev: uint, ? prev: hash,
            by: id, salt: salt, p: { * tstr => value },
-           ? seq: { * tstr => [ * run ] } }
+           ? seq: { * tstr => [ * run ] / indirect } }
 run    = [ id, uint, uint ] / [ id, uint, uint, false ]   ; change, first, count; false = removed
-map    = { k: "map", e: [ * [ id, link ] ] }
-       / { k: "map", c: { * tstr => link } }
-commit = { k: "commit", v: 1, parents: [ ? link ], objects: link,
-           change: link, height: uint }
+map    = { k: "map", e: [ * [ id, hash ] ] }
+       / { k: "map", c: { * tstr => hash } }
+commit = { k: "commit", v: 1, parents: [ ? hash ], objects: hash,
+           change: hash, height: uint }
 
 seal   = { commit: hash, key: bytes .size 32, time: uint,
            ? name: tstr, signature: bytes .size 64 }
@@ -3674,7 +3769,8 @@ work   = { ops: [ * op ], ? note: tstr }
 op     = { op: "new", obj: id, type: tstr }
        / { op: "set", obj: id, key: key, ? old: value, ? val: value }
        / { op: "splice", obj: id, key: tstr, ? after: [ id, uint ] / nil,
-           ? del: [ + [ id, uint, uint ] ], ? old: sequence, ? ins: sequence }
+           ? del: [ + [ id, uint, uint ] ], ? old: sequence, ? ins: sequence,
+           ? forget: [ + [ id, uint, uint ] ] }
        / { op: "drop", obj: id }
 key    = tstr / [ + tstr ]
 sequence = tstr / bstr / [ * value ]
@@ -3709,14 +3805,14 @@ The drawing contract (§6.2):
 display-list = [ * item ]
 item  = [ "push", { ? m: [ 6*6 float ], ? clip: rect / path-d, ? alpha: float, * meta } ]
       / [ "pop" ]
-      / [ "text", { s: tstr, x: float, y: float, font: [ + (tstr / link) ], size: float,
+      / [ "text", { s: tstr, x: float, y: float, font: [ + (tstr / hash) ], size: float,
                     weight: uint, ? slant: bool, color: color, ? dir: "ltr" / "rtl",
                     adv: float, * meta } ]
       / [ "path", { d: path-d, ? fill: paint, ? stroke: paint, ? width: float,
                     ? join: tstr, ? cap: tstr, ? dash: [ * float ], ? rule: tstr, * meta } ]
-      / [ "raster", { source: link / uint / { mem: uint, w: uint, h: uint },
+      / [ "raster", { source: hash / uint / { mem: uint, w: uint, h: uint },
                       from: rect, to: rect, ? smooth: bool, ? t: int, ? rate: [ int, int ], * meta } ]
-      / [ "samples", { source: link / { mem: uint, n: uint, hz: uint, channels: uint },
+      / [ "samples", { source: hash / { mem: uint, n: uint, hz: uint, channels: uint },
                        at: int, ? t: int, ? rate: [ int, int ], ? gain: float, ? pan: float, * meta } ]
       / [ "surface", { id: uint, to: rect, * meta } ]
       / [ "hit", { id: uint, shape: rect / path-d, events: [ * tstr ], * meta } ]
@@ -3749,9 +3845,9 @@ print-op = { op: "func.add", key: id, ? name: tstr, params: [ * valtype ], resul
          / { op: "global.add", key: id, type: valtype, mutable: bool, init: value }
          / { op: "global.set", key: id, init: value }
          / { op: "memory.set", key: id, initial: uint, maximum: uint }
-         / { op: "data.set", key: id, at: uint, bytes: link }
+         / { op: "data.set", key: id, at: uint, bytes: bstr }
          / { op: "table.set", key: id, items: [ * id ] }
-         / { op: "module.import", wasm: link, keys: [ * id ] }
+         / { op: "module.import", wasm: bstr, keys: [ * id ] }
 valtype = "i32" / "i64" / "f32" / "f64"
 ```
 
@@ -3830,14 +3926,14 @@ vector on its own.
 
 | File | Contents |
 | --- | --- |
-| `vectors/minimal.ufx` | a whole pack of 2531 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
-| `vectors/history.ufx` | a pack of 27538 bytes holding three commits, built to exercise what the first does not (below) |
+| `vectors/minimal.ufx` | a whole pack of 2599 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
+| `vectors/history.ufx` | a pack of 27722 bytes holding three commits, built to exercise what the first does not (below) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
 
 `history.ufx` extends the first pack. Its second commit, by a model,
 replaces a word in the text (a `splice` that removes eight elements and
 inserts five), replaces a property (a `set` with `old`), adds an asset
-whose blob has one chunk, a clock, and forty small objects, so that the
+whose bytes are a blob, a clock, and forty small objects, so that the
 object map gains an interior node; one node frame and one chunk frame are
 compressed, and one property is kept outside its node. A frame of unknown
 kind precedes it and a seal follows it, with its own head. Its third
@@ -3847,15 +3943,17 @@ decision. The file ends with a chain of two indexes and four heads.
 
 | Group | What is fixed |
 | --- | --- |
-| `values` | the encoding of 20 values, each given both as a description and as bytes: integers at the width boundaries, floats at three widths and negative zero, map key order, the five tags, the three kinds of region |
+| `values` | the encoding of 20 values, each given both as a description and as bytes: integers at the width boundaries, floats at three widths and negative zero, map key order, the four tags, the three kinds of region, plain and veiled indirects |
 | `values_malformed` | 10 encodings a reader must reject (**C1**) |
 | `record_hashes` | the hash of a chunk and of a node |
-| `value_kept_outside` | a value, its salt, the blob that holds it and the indirect that names it (§1.4) |
-| `blobs` | blob nodes and hashes for 0 bytes, 3 bytes, 2²⁰ and 2²⁰ + 1 zero bytes, 1 025 MiB of zero bytes (two spans), and 2⁴⁰ + 2²⁰ zero bytes (spans of 1024² chunks, the last a one-chunk blob) |
+| `gear` | the first entries of the chunking table and the hash of the whole table |
+| `blobs` | 8 blobs: empty; three bytes; just under the minimum chunk; zero bytes at and just over the maximum chunk; one mebibyte of a stated pseudo-random stream, with its chunk count and first chunk lengths; the same with ten bytes inserted in the middle, which shares all but one chunk with it; and forty mebibytes, which is a tree of two levels |
+| `value_kept_outside` | a value, the blob that holds it, the indirect that names it, and the veiled form with its salt and opening (§1.4) |
 | `object_maps` | root hashes of maps with 1, 32, 33 and 9 000 entries: a leaf, the largest leaf, the smallest interior node, and three levels |
 | `minimal_pack` | every record of `minimal.ufx` with its offset and hash; the index; the head; the root hash. Removing its last byte leaves no valid head |
 | `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its `seq`, and what its span resolves to; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; ten anchors resolved at the last commit, on sequence and continuous axes, including a replaced word, a point at a removed element, clipping, and a dropped object |
 | `resolve_sequence` | a sequence with removed elements, and nine regions resolved against it (§4.3) |
+| `merge_readiness` | two writers diverging from one text, with insertions at the same place, inside each other's insertions and after an element the other removes; the order of elements and the text, identical whichever writer's operations are taken first (§1.10) |
 | `resolve_continuous` | six regions resolved through a frame: shift, integer rounding of both signs, clipping, detachment, floats |
 | `printer` | two printer operations on an empty module, the module bytes they produce, and the hash of each item with the exact bytes hashed |
 | `instrumentation` | three stored modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
@@ -3865,11 +3963,12 @@ Three values, for a first check without opening the files:
 | | |
 | --- | --- |
 | Hash of the chunk `abc` | `1e18834c426d00e57788444cb3ccd62c771b420c095bb0c4e040a8c122c4570d` |
-| Root hash of `minimal.ufx` | `436e32c28816d157d28040e6a332473f8e982022755d57e7c59aa79af81311ff` |
-| Root hash of `history.ufx` | `3c5f9cccd9203e95453eedd520d9916a781f4b5419f6f2db3cf754c1fdd4cb12` |
+| Root hash of `minimal.ufx` | `804ec174f46f773d36c1fe7318c999ff21c338b735cb4e5068224725b9cce8bf` |
+| Root hash of `history.ufx` | `d9c0eec863503cdd969209285e1f4db095654bc0f0f46d7bf445566c316727df` |
 
 How far these have been checked: the WebAssembly vectors were validated and
-run in one engine (Node.js) and behave as stated. The other vectors have
-been produced by one script and have not yet been reproduced by any
-independent implementation, so an error shared by this text and that
-script would not have been caught.
+run in one engine (Node.js) and behave as stated. The seal's signature was
+verified there too, and the chunking table and the chunk boundaries of the
+one-mebibyte stream were recomputed there from this text. The other
+vectors, in their present form, have been produced by one script and not
+yet reproduced by an independent implementation.
