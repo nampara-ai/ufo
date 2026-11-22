@@ -331,7 +331,7 @@ form other than the script that wrote the vectors — by the same author.
 | + values, hashing, pack, index, recovery, blobs, object map, indirects, sequences | 675 | 43.6 KiB | 19.1 KiB |
 | + inflater (a library) | — | 57.9 KiB | 25.4 KiB |
 | + composition: text to lines, rows, pages; plain text; Portals; nested universes | 1 262 | 88.6 KiB | 38.7 KiB |
-| + printer | 1 567 | 102.5 KiB | 44.7 KiB |
+| + printer | 1 613 | 102.5 KiB | 44.7 KiB |
 
 Web binding: 79 lines, 7.2 KiB as written, 3.0 KiB DEFLATE, of which the
 drawing contract (two of eight item kinds used here, four written) is 12

@@ -631,7 +631,7 @@ to be deleted once this round is reviewed. Specification 0.7 is the result.
 
 ### 15.2 Size measurements
 
-Kernel miniature: 1 567 lines of Rust, 102.5 KiB compiled, 44 KiB
+Kernel miniature: 1 613 lines of Rust, 102.5 KiB compiled, 44.7 KiB
 compressed; about 50 bytes per line. Binding: 79 lines, 3.0 KiB
 compressed. Printer within the kernel: 305 lines, 14 KiB. Described code:
 2.8 times the size of its WebAssembly as values, 0.85 times after DEFLATE.
@@ -666,7 +666,7 @@ compressed. Printer within the kernel: 305 lines, 14 KiB. Described code:
 | Defined terms | 127 | 129 (limit 130) |
 | Operations, in all | 4 core + 12 printer | 4 |
 | Node kinds; reference kinds | 4; 4 | 4; 4 |
-| Kernel estimate | none measured | 1 567 lines → 102.5 KiB in miniature; the limits of 10 000 lines and 256 KiB cannot both hold at that density |
+| Kernel estimate | none measured | 1 613 lines → 102.5 KiB in miniature; the limits of 10 000 lines and 256 KiB cannot both hold at that density |
 | Binding estimate | none measured | 79 lines, 3.0 KiB compressed, for half the drawing contract's items and one host function |
 
 Fixes this round, classified:

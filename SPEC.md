@@ -3324,11 +3324,11 @@ happens:
 | Projections, search, difference, actions, undo | 1 500 |
 | Printing, module checking, instrumentation, promotion | 1 200 |
 
-**Measured once, in miniature.** A throwaway kernel of 1 567 lines — values,
+**Measured once, in miniature.** A throwaway kernel of 1 613 lines — values,
 hashing, the pack with its index and recovery, blobs, the object map,
 sequences; composition of text into lines, rows and pages; the plain-text
 face; Portals into nested universes; the printer — compiled to 102.5 KiB
-and 44 KiB compressed, of which 12.6 KiB is runtime and 14.3 KiB a borrowed
+and 44.7 KiB compressed, of which 12.6 KiB is runtime and 14.3 KiB a borrowed
 inflater. That is about 50 bytes of WebAssembly for each line of Rust,
 compiled for size, with the standard library and no further processing. At
 that density the two kernel limits above do not agree: 256 KiB is about
@@ -3479,7 +3479,7 @@ summaries.*
 | `transcript` | `ufo.text` | the narration; one block span per sentence |
 | `caption-n` | `ufo.clock` | one per sentence, each holding a Portal whose `of` is an anchor to that sentence's region of `transcript`, so that a corrected word appears in the caption at once |
 | `article` | `ufo.text` | the document form of the video |
-| `chapter-n`, `top` | `ufo.summary` | one per chapter, and one above them |
+| `chapter-n`, `top` | `ufo.summary` | one per chapter, and one for the whole |
 
 **Coordinate spaces and anchors.** `video` offers `t`, and `stage` offers
 `x` and `y`. The Portal's position is the interval of `table-clock`
@@ -3690,7 +3690,7 @@ towers over the rest" links to the bar by its key on `nodes`, and a
 reviewer's comment is anchored to a region of space above it. *Readable
 without the program:* each bar's node was written by the transmuting
 change, so `why` on it names the model and the prompt, and the scene has a
-summary pinned to its node table, under the report's. *Flat content placed
+summary pinned to its node table. *Flat content placed
 in it is data:* a caption panel beside the bars is a Portal child of
 `scene-surface` whose `of` is an anchor to the sentence in `report` and
 whose `place.at` names the node `caption-panel`; edit the sentence and the

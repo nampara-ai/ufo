@@ -321,7 +321,7 @@ saw scored every result.
   task was too easy to show where flat instructions stop being
   maintainable.
 
-**One kernel, several faces.** A kernel miniature of 1 567 lines of Rust
+**One kernel, several faces.** A kernel miniature of 1 613 lines of Rust
 opened real packs, including the normative vectors, and presented one small
 universe as plain text, as a scrolling view and as pages, with a text from
 a nested universe shown through a Portal. It needed an algorithm the
