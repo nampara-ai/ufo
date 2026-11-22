@@ -1303,46 +1303,41 @@
   "note": "each line is [change, number, character, removed]; the three results are equal"
  },
  "printer": {
-  "operations": [
-   {
-    "op": "func.add",
-    "key": "adadadadadadadadadadadadadadadad",
-    "name": "add",
-    "params": [
-     "i32",
-     "i32"
-    ],
-    "results": [
-     "i32"
-    ],
-    "locals": [],
-    "body": "local.get 0\nlocal.get 1\ni32.add"
+  "file": "module.ufx",
+  "length": 3714,
+  "root_hash": "234d57e1d5564cc6861e2f2101ccf96811436aaf1c899682f0d49d73a85e1662",
+  "module": "e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0",
+  "functions": {
+   "add": {
+    "id": "adadadadadadadadadadadadadadadad",
+    "properties_hex": "a564626f64798183676933322e61646461616162646e616d6563616464666c6f63616c738066706172616d7382826161636933328261626369333267726573756c74738163693332"
    },
-   {
-    "op": "export.set",
-    "key": "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
-    "name": "add",
-    "item": "adadadadadadadadadadadadadadadad"
+   "sum_to": {
+    "id": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+    "properties_hex": "a564626f64798a8265626c6f636b64646f6e6582646c6f6f7063746f70836562725f696664646f6e6582676933322e65717a616e83696c6f63616c2e73657463616363846463616c6cd9d8a550adadadadadadadadadadadadadadadad63616363616e83696c6f63616c2e736574616e83676933322e737562616e018262627263746f708163656e648163656e64836a676c6f62616c2e73657465746f74616c63616363826672657475726e63616363646e616d656673756d5f746f666c6f63616c738182636163636369333266706172616d738182616e6369333267726573756c74738163693332"
    }
+  },
+  "module_properties_hex": "a46566756e637382d9d8a550adadadadadadadadadadadadadadadadd9d8a5505e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e666d656d6f7279a267696e697469616c01676d6178696d756d01676578706f727473a363616464d9d8a550adadadadadadadadadadadadadadadad666d656d6f7279666d656d6f72796673756d5f746fd9d8a5505e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e67676c6f62616c73a165746f74616ca364696e697400647479706563693332676d757461626c65f5",
+  "statements_of_sum_to": [
+   "[\"block\",\"done\"]",
+   "[\"loop\",\"top\"]",
+   "[\"br_if\",\"done\",[\"i32.eqz\",\"n\"]]",
+   "[\"local.set\",\"acc\",[\"call\",<ref to add>,\"acc\",\"n\"]]",
+   "[\"local.set\",\"n\",[\"i32.sub\",\"n\",1]]",
+   "[\"br\",\"top\"]",
+   "[\"end\"]",
+   "[\"end\"]",
+   "[\"global.set\",\"total\",\"acc\"]",
+   "[\"return\",\"acc\"]"
   ],
-  "baseline": "an empty module",
-  "wasm_hex": "0061736d0100000001070160027f7f017f030201000707010361646400000a09010700200020016a0b",
-  "items": {
-   "adadadadadadadadadadadadadadadad": {
-    "kind": "func",
-    "index": 0,
-    "name": "add",
-    "hash": "de11b36462539d28902a84a6a789a8dfbbd66b53d1c6764548960576fc762f85",
-    "hashed_bytes_hex": "60027f7f017f00200020016a0b"
-   },
-   "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1": {
-    "kind": "export",
-    "index": 0,
-    "name": "add",
-    "hash": "0979c605bd863160c8e94c70d8c4b741b0282b1207486814912cb1a7efac929f",
-    "hashed_bytes_hex": "0361646400adadadadadadadadadadadadadadadad"
-   }
-  }
+  "printed_hex": "0061736d01000000010c0260027f7f017f60017f017f03030200010504010101010606017f0141000b071903036164640000066d656d6f727902000673756d5f746f00010a31020700200020016a0b2701017f024003402000450d012001200010002101200041016b21000c000b0b2001240020010f0b",
+  "printed_length": 119,
+  "behaviour": "sum_to(4) returns 10 and leaves the global at 10; add(2, 3) returns 5",
+  "notes": [
+   "types in order of first use; exports in the order of their keys in the encoded map (add, memory, sum_to)",
+   "a bare name is local.get of a local or parameter, else global.get; a bare integer is i32.const",
+   "the body of sum_to has one run of locals: one i32"
+  ]
  },
  "instrumentation": [
   {

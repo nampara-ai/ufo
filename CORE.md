@@ -54,7 +54,8 @@ pages: open, universal, and independent of any application.
    (what supports it) and **decision** (what a person chose). The chain of
    changes is the Chronicle.
 8. **Operation.** `new`, `set`, `splice`, `drop`, applied in order to the
-   parent commit's state, each stating exactly what it replaced.
+   parent commit's state, each stating exactly what it replaced. These four
+   edit everything, machine code included.
 9. **Element.** Every item of a sequence — every character of a text — has
    a permanent identity: the change that inserted it and a number. A
    `splice` names elements, not positions. Removed elements stay as
@@ -103,7 +104,9 @@ pages: open, universal, and independent of any application.
     wall is an object placed by an anchor into the scene.
 15. **Player.** Four parts: the **kernel**, one WebAssembly program run
     unchanged in all the project's readers, which composes a face into a
-    *display list*; the **presenters**, which are the host's own drawing and
+    *display list* — text into blocks, lines and rows, rows into pages, by
+    a fixed algorithm, asking the host only how much fits on a line; the
+    **presenters**, which are the host's own drawing and
     audio for the four basic items and carried programs for anything else;
     a thin host **binding** that knows no medium; and the universe. The
     display list's eight items and the input events are a frozen *drawing
@@ -114,13 +117,16 @@ pages: open, universal, and independent of any application.
     keeping the original bytes.
 16. **Faces.** *Sampled*: composed on demand. *Carried*: a stored rendition
     pinned to its sources. *Transmuted*: new description written by a model
-    through the format's `derive` action, pinned to its sources. A universe
+    through the format's `derive` action, pinned to its sources, with a
+    *recipe* — sources, model, prompt, parameters — from which it is made
+    again in one step when they change. A universe
     lists its faces, made or offered. Every object has a plain-text face.
     An export is a face sampled with stated parameters; live presentation
     uses the host's text rendering, and canonical exports are
     byte-identical everywhere.
 17. **Onboard tools.** Kernel functions — overview, search, history, why,
-    diff, verify, expand, propose, derive, undo, export — and an interface
+    diff, verify, expand, recipe, propose, try, derive, refresh, undo,
+    export — and an interface
     to them that is itself a universe, carried by hash. Agents use the same
     functions through the Model Context Protocol, and what they read back
     is fixed field by field: one record per line, every identity reusable
@@ -139,12 +145,17 @@ pages: open, universal, and independent of any application.
     narrow, revocable at any moment and kept by the reader, never in a
     file; and each capability has a defined result when absent or denied.
     Accelerated graphics follows the WebGPU model.
-19. **Printer and ledger.** No source tree. The printer alone writes module
-    bytes, from structured operations, deterministically. Every part of a
-    module is an item with a lasting key, and traces to its prompt, model
-    and tests. Behavior changes while running: tests in force before the
-    change gate a candidate on a shadow of live state; the person approves;
-    failure leaves the machine untouched.
+19. **Printer and ledger.** No source tree. Code is description: a function
+    is an object whose body is a sequence of statements in WebAssembly's
+    own vocabulary, each an element with an identity and an origin, edited
+    by the same four operations as text. The printer, a function of the
+    kernel, alone writes module bytes from the description,
+    deterministically; nothing is stored twice. Every statement traces to
+    its prompt, model and tests. A program compiled elsewhere is carried as
+    an asset and lifted to description when it is first maintained.
+    Behavior changes while running: tests in force before the change gate a
+    candidate on a shadow of live state; the person approves; failure
+    leaves the machine untouched.
 20. **Trust.** A *seal* is an Ed25519 signature over a root hash; a
     principal is a key, a name, or both, and an unsealed name is only a
     claim. A web page that carries its own reader cannot vouch for itself:
@@ -166,9 +177,13 @@ pages: open, universal, and independent of any application.
     default and to outside readers only by choice, its hashes remaining so
     the chain of authorship can still be checked. The reader shows exactly
     what will leave.
-23. **Light cone.** Summaries at three sizes, each pinned to what it
-    condenses, form a tree from the universe, through nested and linked
-    universes, down to exact bytes. The cost of an answer scales with the
+23. **Light cone.** Two layers. An *outline* the kernel computes for
+    anything — its parts, their sizes and kinds, headings, who changed what
+    and when — bounded, always current, needing no model, from the universe
+    through nested and linked universes down to exact bytes. And
+    *summaries* written by a model, each pinned to what it condenses and
+    shown beside the outline's parts, worth writing where the outline
+    cannot tell siblings apart. The cost of an answer scales with the
     question.
 
 ## Limits it holds itself to (SPEC §12)

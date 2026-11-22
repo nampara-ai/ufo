@@ -492,15 +492,49 @@ K_ADD, K_EXP = bytes([0xad]) * 16, bytes([0xe1]) * 16
 t_add = functype([I32, I32], [I32]); code_add = b"\x20\x00\x20\x01\x6a\x0b"
 stored = module([t_add], [0], [], [("add", 0, 0)], [vec([]) + code_add])
 instr = module([t_add], [0], FUEL, [("add", 0, 0), ("ufo:fuel", 3, 0)], [vec([]) + charge(4) + code_add])
+# A described module (section 11.3) and the bytes the kernel's printer makes of it. The bytes are assembled
+# here by hand from the rules of that section; the kernel must print the same from the objects in module.ufx.
+MOD, F_ADD, F_SUM, PCH = bytes([0xe0]) * 16, bytes([0xad]) * 16, bytes([0x5e]) * 16, bytes([0xd3]) * 16
+add_p = {"name": "add", "params": [["a", "i32"], ["b", "i32"]], "results": ["i32"], "locals": [], "body": [["i32.add", "a", "b"]]}
+sum_body = [["block", "done"], ["loop", "top"], ["br_if", "done", ["i32.eqz", "n"]],
+            ["local.set", "acc", ["call", ref(F_ADD), "acc", "n"]], ["local.set", "n", ["i32.sub", "n", 1]], ["br", "top"],
+            ["end"], ["end"], ["global.set", "total", "acc"], ["return", "acc"]]
+sum_p = {"name": "sum_to", "params": [["n", "i32"]], "results": ["i32"], "locals": [["acc", "i32"]], "body": sum_body}
+mod_p = {"funcs": [ref(F_ADD), ref(F_SUM)], "memory": {"initial": 1, "maximum": 1}, "globals": {"total": {"type": "i32", "mutable": True, "init": 0}},
+         "exports": {"sum_to": ref(F_SUM), "add": ref(F_ADD), "memory": "memory"}}
+t_sum = functype([I32], [I32])
+code_sum = (b"\x02\x40" + b"\x03\x40" + b"\x20\x00\x45\x0d\x01" + b"\x20\x01\x20\x00\x10\x00\x21\x01" + b"\x20\x00\x41\x01\x6b\x21\x00" + b"\x0c\x00"
+            + b"\x0b" + b"\x0b" + b"\x20\x01\x24\x00" + b"\x20\x01\x0f" + b"\x0b")
+body_add = vec([]) + code_add; body_sum = vec([b"\x01" + I32]) + code_sum
+printed = (b"\0asm\1\0\0\0" + sec(1, vec([t_add, t_sum])) + sec(3, vec([leb(0), leb(1)])) + sec(5, vec([b"\x01\x01\x01"]))
+           + sec(6, vec([I32 + b"\x01" + b"\x41\x00\x0b"]))
+           + sec(7, vec([name("add") + b"\x00\x00", name("memory") + b"\x02\x00", name("sum_to") + b"\x00\x01"]))   # by length of name, then bytes
+           + sec(10, vec([leb(len(body_add)) + body_add, leb(len(body_sum)) + body_sum])))
+pk = Pack()
+st = {bytes(16): revision(pk, bytes(16), "ufo.universe", 1, PCH, 3001, {"lineage": bytes([0x44]) * 16, "roots": {"primary": ref(MOD)}}),
+      MOD: revision(pk, MOD, "ufo.module", 1, PCH, 3002, mod_p),
+      F_ADD: revision(pk, F_ADD, "ufo.func", 1, PCH, 3003, add_p, seq={"body": [[PCH, 0, 1]]}),
+      F_SUM: revision(pk, F_SUM, "ufo.func", 1, PCH, 3004, sum_p, seq={"body": [[PCH, 1, len(sum_body)]]})}
+mops = [{"op": "new", "obj": bytes(16), "type": "ufo.universe"}, {"op": "set", "obj": bytes(16), "key": "lineage", "val": bytes([0x44]) * 16},
+        {"op": "set", "obj": bytes(16), "key": "roots", "val": {"primary": ref(MOD)}}, {"op": "new", "obj": F_ADD, "type": "ufo.func"}]
+mops += [{"op": "set", "obj": F_ADD, "key": k, "val": add_p[k]} for k in ("name", "params", "results", "locals")]
+mops += [{"op": "splice", "obj": F_ADD, "key": "body", "after": None, "ins": add_p["body"]}, {"op": "new", "obj": F_SUM, "type": "ufo.func"}]
+mops += [{"op": "set", "obj": F_SUM, "key": k, "val": sum_p[k]} for k in ("name", "params", "results", "locals")]
+mops += [{"op": "splice", "obj": F_SUM, "key": "body", "after": None, "ins": sum_body}, {"op": "new", "obj": MOD, "type": "ufo.module"}]
+mops += [{"op": "set", "obj": MOD, "key": k, "val": mod_p[k]} for k in ("funcs", "memory", "globals", "exports")]
+_, _, _, mroot = commit(pk, st, PCH, mops, "A module, described.", {"actor": actor, "time": 1767398400000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 3005)
+pk.index(); pk.head(mroot); open(os.path.join(OUT, "module.ufx"), "wb").write(pk.b)
 V["printer"] = {
-    "operations": [{"op": "func.add", "key": K_ADD.hex(), "name": "add", "params": ["i32", "i32"], "results": ["i32"],
-                    "locals": [], "body": "local.get 0\nlocal.get 1\ni32.add"},
-                   {"op": "export.set", "key": K_EXP.hex(), "name": "add", "item": K_ADD.hex()}],
-    "baseline": "an empty module", "wasm_hex": stored.hex(),
-    "items": {K_ADD.hex(): {"kind": "func", "index": 0, "name": "add", "hash": sha(t_add + vec([]) + code_add).hex(),
-                            "hashed_bytes_hex": (t_add + vec([]) + code_add).hex()},
-              K_EXP.hex(): {"kind": "export", "index": 0, "name": "add", "hash": sha(name("add") + b"\x00" + K_ADD).hex(),
-                            "hashed_bytes_hex": (name("add") + b"\x00" + K_ADD).hex()}}}
+    "file": "module.ufx", "length": len(pk.b), "root_hash": mroot.hex(), "module": MOD.hex(),
+    "functions": {"add": {"id": F_ADD.hex(), "properties_hex": enc(add_p).hex()}, "sum_to": {"id": F_SUM.hex(), "properties_hex": enc(sum_p).hex()}},
+    "module_properties_hex": enc(mod_p).hex(),
+    "statements_of_sum_to": ['["block","done"]', '["loop","top"]', '["br_if","done",["i32.eqz","n"]]', '["local.set","acc",["call",<ref to add>,"acc","n"]]',
+                             '["local.set","n",["i32.sub","n",1]]', '["br","top"]', '["end"]', '["end"]', '["global.set","total","acc"]', '["return","acc"]'],
+    "printed_hex": printed.hex(), "printed_length": len(printed),
+    "behaviour": "sum_to(4) returns 10 and leaves the global at 10; add(2, 3) returns 5",
+    "notes": ["types in order of first use; exports in the order of their keys in the encoded map (add, memory, sum_to)",
+              "a bare name is local.get of a local or parameter, else global.get; a bare integer is i32.const",
+              "the body of sum_to has one run of locals: one i32"]}
 t_div = functype([F64, F64], [F64]); code_div = b"\x20\x00\x20\x01\xa3\x0b"
 canon = b"\x22\x02\x20\x02\x62\x04\x7c\x44" + struct.pack("<Q", 0x7ff8000000000000) + b"\x05\x20\x02\x0b"
 stored_div = module([t_div], [0], [], [("div", 0, 0)], [vec([]) + code_div])

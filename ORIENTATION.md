@@ -611,3 +611,83 @@ non-assertion option for the specification; a contributor agreement in
 CONTRIBUTING.md; trademark policy deferred but the name reserved in the
 README. Reconsider the Community Specification License when the first
 outside contributor to the specification appears.
+
+## 15. The measurement spike: what ran, what changed, what awaits a decision
+
+Run as redirected (§11) and extended by the owner: its job was to invent the
+missing pieces in miniature and write them into the specification. The
+evidence is in `spike/FINDINGS.md`; the code beside it is throwaway and is
+to be deleted once this round is reviewed. Specification 0.7 is the result.
+
+### 15.1 For each claim: did the specification suffice, what broke, what was invented
+
+| Claim | Sufficed? | What broke | What was invented, and where it is now |
+| --- | --- | --- | --- |
+| Description to display list | No | No algorithm from text and spans to lines; `break` took a single run of one style; pagination was a sentence; no default sizes; a host reply in non-deterministic form was rejected by the kernel's one decoder | Blocks, runs, lines, rows; `break` as a line iterator; pagination with three rules (§5.7, §6.3, Appendix A) |
+| The printer | Yes, and it was the wrong design | Nothing failed: all 24 runs at the specified level and two others passed. But every change resent a whole function, and all subjects said so | Code as description: functions as objects, bodies as sequences of statements in WebAssembly's vocabulary, edited by the four core operations, printed by a function of the kernel (§11.3–§11.5). Tried against the baseline under measures declared in advance |
+| Light cone | No | Nothing said who writes summaries, when, or how good; a universe with none could not be navigated at all | A structural layer the kernel computes, always current; summaries as an optional layer attached by their pins; a rule for where a summary is worth writing; the summary tree deleted (§11.7) |
+| Transmutation | Partly | A region's digest ignored spans; an anchor a Portal presents was not followed; the recipe could not be found once a person had edited the object; "regenerate" had no defined inputs | Digest covers what is anchored within a region (§4.4); `from.by`; the recipe; `refresh` and `recipe` (§8.3, §11.8) |
+| Nested universes | No | A nested universe's records were unreachable by the definition of §1.3, so compaction would have discarded them | Reachability through an anchor's `u`; nested or linked decided by the presence of one commit; refs resolved in their own universe (§1.8, §2.5); vectors |
+
+### 15.2 Size measurements
+
+Kernel miniature: 1 567 lines of Rust, 102.5 KiB compiled, 44 KiB
+compressed; about 50 bytes per line. Binding: 79 lines, 3.0 KiB
+compressed. Printer within the kernel: 305 lines, 14 KiB. Described code:
+2.8 times the size of its WebAssembly as values, 0.85 times after DEFLATE.
+
+### 15.3 Decisions that are the owner's
+
+1. **The printer redesign departs from the letter of a founding document.**
+   The brief says the bytes are "the only artifact" and "the only thing
+   that is authoritative". Version 0.7 stores the description and prints
+   the bytes. The non-negotiable — printer and ledger replace the source
+   tree; no human-readable source is required — is kept, and RATIONALE
+   records the departure. Version 0.6 holds the earlier design whole. If
+   the departure is refused, §11.3–§11.5 revert, and the patch operation
+   the subjects asked for is added to the old vocabulary instead.
+2. **The kernel's two limits disagree** by the one measurement there is
+   (SPEC §12.2). Neither number has been changed.
+3. **Canonical exports**: three options with measured sizes
+   (`spike/FINDINGS.md` §6). Nothing chosen; §7.4 is unchanged.
+4. **Licensing** (§14 above): proposed, nothing changed.
+5. **The plain-text face of a Portal is its label** (§7.3), so nested or
+   transcluded text does not appear in plain text. Left as specified;
+   worth a second look.
+
+### 15.4 Convergence, this round
+
+| Measure | Before (0.6) | After (0.7) |
+| --- | --- | --- |
+| Gaps found | 49, by the second reader test, on the storage layer | 16, by the spike, on the layers above storage (listed in `spike/FINDINGS.md`); no reader test this round |
+| Contradictions found | 5 | 3: "contains no further indirects" against the vectors; exports ordered "by bytes" against the order a map gives; reachability against nesting |
+| Specification, words | 39 996 | 43 680 |
+| Concepts | 39 | 39 |
+| Defined terms | 127 | 129 (limit 130) |
+| Operations, in all | 4 core + 12 printer | 4 |
+| Node kinds; reference kinds | 4; 4 | 4; 4 |
+| Kernel estimate | none measured | 1 567 lines → 102.5 KiB in miniature; the limits of 10 000 lines and 256 KiB cannot both hold at that density |
+| Binding estimate | none measured | 79 lines, 3.0 KiB compressed, for half the drawing contract's items and one host function |
+
+Fixes this round, classified:
+
+- **Simplified (6):** printer operations, item keys, key-substituted
+  hashes, the replay check and the stored module removed in favour of
+  objects and sequences; the printer moved from a carried program to a
+  kernel function; the summary tree (`parts`, the universe's `summary`)
+  removed in favour of the outline; `parameters` of a derivation kept in
+  one place; one ordering rule for everything keyed in a module; values
+  kept outside may nest (a restriction removed).
+- **Added (8):** composition (§5.7); `break` as a line iterator; the
+  outline; `from.by` and the recipe; `try` and `call`; lifting of carried
+  modules; the third way a pack may lack records (linked); defaults of a
+  text.
+- **Clarified (7):** reachability through anchors; refs resolved in their
+  own universe; what a region's digest covers; an anchor's definition;
+  frames on float axes; manifest requests; where the fuel export goes.
+
+"Added" outnumbers "simplified", 8 to 6, and the specification grew by
+3 700 words. The rule set for this work says to stop and say so when that
+happens. The additions are the algorithms the owner asked the spike to
+invent, and most replace prose that claimed more than it specified; but
+the count is the count, and the document is now 9% longer than it was.

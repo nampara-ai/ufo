@@ -160,17 +160,36 @@ the file may request and only the person may grant, narrowly and revocably.
 A file cannot grant itself anything, and no clever mechanism in the format
 depends on defeating a platform's security.
 
-## Machine code with a record instead of source
+## Machine code as description, with a record instead of source
 
 Source code does two jobs: it is input to a compiler, and it is the record
 of why the program is the way it is. When the maintainer is a language
 model, the first job can be done directly and the second can be done
-better. A Compute-let keeps canonical WebAssembly as the only thing that
-runs, and a ledger stating, for each function, the request that caused it,
-the model that wrote it, what it replaced and the tests that justify it.
-Readable listings are generated on demand. Whether this scales from a
-calculator to a large program is an open question the project intends to
-answer by building.
+better.
+
+A Compute-let's code is described the way everything else in a universe
+is. A function is an object. Its body is a sequence of statements, each one
+tree in WebAssembly's own instruction vocabulary, and each an element with
+a permanent identity and an origin, exactly as each character of a text
+is. Code is edited with the same four operations as a paragraph. The kernel
+prints the bytes from the description by fixed rules, and what runs is
+always what it printed. Nothing is stored twice, so nothing can drift.
+
+There is still no source tree: no files of text that a person must read
+and a compiler must parse, and nothing whose meaning lies outside
+WebAssembly's own definition. What a maintainer reads is the statements,
+one to a line, each marked with the change that wrote it. What it writes is
+a statement, or three. What the record of a change holds is the statements
+removed and the statements put in their place, with the prompt, the model
+and the tests that came with them.
+
+The first drafts did this differently, as the project's founding
+intentions described it: the module's bytes were the only stored thing, and
+a "printer" applied a vocabulary of twelve operations to them, each
+replacing a whole function. That design was tried, with models, before it
+was replaced; the next section but one has the numbers. Whether either
+design scales from a game of a few hundred instructions to a large program
+is still an open question.
 
 ## What was invented, and why existing things did not fit
 
@@ -196,12 +215,14 @@ full. Each is recorded here so it can be challenged.
 | **Formulas stored as structure** | *Spreadsheet formula text* needs a parser and differs between products. *Vega expressions* are JavaScript text. Structure needs no parser and has one meaning. | §5.3 |
 | **Handlers that propose changes** | Interactive documents either embed a scripting language, with its security history, or cannot edit their own data. A declarative handler that yields a verified, attributed change needs neither. | §5.6 |
 | **The host interface** | *WASI* assumes files, sockets and clocks, which is the authority a document must not have, and has no drawing or input. The *component model* is not yet uniformly available in browsers. Ten functions and named capabilities can be stated in either later. | §6.3 |
-| **The printer and ledger** | *Source maps and debug information* point bytes back at source text; here there is no source text. *Reproducible builds* prove a binary came from a source, not why each function exists. | §11.3–§11.6 |
-| **Item keys in modules** | WebAssembly refers to functions by index, so a hash of a function's bytes changes when an unrelated function is added. *Unison* solves this for a language by hashing references; here every item has a lasting key, and hashes are taken with keys in place of indices. | §11.3 |
+| **Code as description: statements as elements, printed by the kernel** | *Source text and a compiler* put the meaning in a language outside the format and the record of why in commit messages beside it. *Bytes plus a ledger of operations on them* (this project's own earlier draft) needed keys for the parts of a module, hashes with keys substituted for indices, a replay of all history to verify, a separate printer program, and a whole function resent for every change. *Unison* names code by content, for one language. Here the description is WebAssembly's own instructions as values, so there is no new language; each statement is an element like a character of text, so attribution, anchors, diffs and merging come from the core; and printing is a small pure function. | §11.3–§11.5 |
 | **Metering inserted by the reader** | Runtimes with built-in fuel exist outside browsers only. Metering inserted by the toolchain must be trusted or re-verified by a second copy of the rule. Inserting it in the kernel at load means there is one rule and nothing to trust. | §11.2 |
 | **The web envelope's read-back** | A page opened from disk cannot fetch its own file; *single-file web apps* store data as script or JSON text, not as range-readable, hash-verified records. | §9.2 |
 | **The mark** | Metadata, boxes and chunks are stripped by re-encoding platforms. Only pixels survive, and QR is the standard way to put a short reference in pixels; what is new is treating it as a content address for a linked universe. | §9.4 |
-| **Summaries as pinned derivations in a tree** | *Retrieval by similarity* returns fragments without telling you what you did not see. *Stored summaries* go stale silently. | §11.7 |
+| **Two layers of the light cone** | *Retrieval by similarity* returns fragments without telling you what you did not see. *Stored summaries* go stale silently, and a universe that depends on them cannot be navigated until a model has read it. *Tables of contents* cover headings and nothing else. Here an outline is computed for anything — sizes, kinds, headings, who changed what and when — and is always current; summaries are pinned derivations that attach to its parts and are written only where the outline cannot tell siblings apart. | §11.7 |
+| **`break`, one line at a time** | *Host text layout* (CSS, TextKit, DirectWrite paragraphs) takes a whole paragraph and a fixed shape and returns all its lines, which hands every vertical decision to the host. *Measuring single runs* cannot break a paragraph with a bold word in it. A line iterator — given these runs, this place and this width, what fits — is what typesetting interfaces offer underneath, and is the least a host must do. | §6.3, §5.7 |
+| **Rows, and three rules for pages** | *TeX's page builder* and *CSS fragmentation* are far larger than a small kernel can carry and depend on a full box model. Treating the flow as unbreakable rows, filling greedily, and applying three rules (no heading at the foot; no split of a short block; two lines on each side of a split) gives conventional pages from sixty lines of code. It is not optimal page-breaking and does not claim to be. | §5.7 |
+| **The recipe** | *Notebooks and build files* record how to regenerate an output, apart from the output and by path. *Generation metadata* in image files records a prompt with nothing binding it to inputs. A derived object here names its sources by pin and the change that made it; that change's origin holds the model, prompt and parameters; so "make it again" is one action and "how was this made" is one question. | §8.3 |
 
 ## The name, the ending and the mark
 
@@ -270,10 +291,82 @@ opening learns nothing. Blobs are divided by content, in chunks and in the
 tree above them, so an edit rewrites only what is near it: ten bytes
 inserted into a mebibyte change one chunk in ninety-six.
 
+## What the measurement spike showed
+
+Before any implementation, a throwaway spike tried the format's new claims
+in miniature. Its code is not kept; its results are these.
+
+**Models maintaining code.** A game core of 300 to 400 instructions was
+built, and then maintained, by fresh instances of two language models —
+both weaker than a frontier model, so the results are a lower bound —
+through a printer at four levels: flat instructions, folded text, a typed
+expression language, and the statement trees the specification now uses.
+Maintenance meant a planted one-token bug, found from a vague report, and
+three new features, done by an instance with no memory of building and no
+source, only the ledger and projections. Hidden tests the subjects never
+saw scored every result.
+
+- Every cell passed everything: 8 builds and 16 maintenance runs, all
+  hidden tests, and every untouched function left unchanged. On a program
+  this small, no level failed.
+- Every subject found the bug the same way: the history showed a recent
+  change, and the record of that change showed what it did. The ledger did
+  the work a debugger usually does.
+- With whole-function replacement, a one-token fix cost 1.4 to 2.6 KiB of
+  resubmitted code in every run, and every subject asked for a way to
+  change part of a function. With statement-level edits it cost about
+  0.25 KiB, and the whole maintenance job 2.7 times less than the best
+  earlier level, at the same tokens and time.
+- Two runs per cell, one small program: suggestive, not established. The
+  task was too easy to show where flat instructions stop being
+  maintainable.
+
+**One kernel, several faces.** A kernel miniature of 1 567 lines of Rust
+opened real packs, including the normative vectors, and presented one small
+universe as plain text, as a scrolling view and as pages, with a text from
+a nested universe shown through a Portal. It needed an algorithm the
+specification did not have (now §5.7) and a different `break` (now §6.3).
+It compiled to about 50 bytes per line, at which the kernel's line budget
+and byte budget cannot both hold; the specification records the
+disagreement and waits for a better measurement.
+
+**The printer.** The same kernel printed six described modules to bytes
+identical to a second implementation's, and the specification's vector to
+bytes assembled by hand. The printer added 14 KiB to the kernel.
+
+**The light cone.** On a corpus of 199 000 characters in four universes,
+models answered three questions through four projections. With the
+structural layer alone all answers were right; two cost about 1% of the
+corpus, and one — finding a remark among eight untitled interviews — cost
+18.5%. With one-line summaries that one cost 2.4%. So structure bounds
+every search, and summaries pay where structure says nothing.
+
+**Transmutation.** Pins, staleness through a ref, staleness of a
+derivation of a derivation, the recipe, one-step regeneration and its
+refusal when the prompt is withheld all ran, with a deterministic function
+standing in for the model. Two defects in the digest rule were found and
+fixed.
+
+Not shown by any of this: anything at scale; grids, floats, clocks, audio,
+video or 3D; a second person's implementation; a model writing summaries;
+a real model transmuting.
+
 ## Where the design departs from first intentions
 
-Three choices differ from what the project first set out to do. They are
+Four choices differ from what the project first set out to do. They are
 recorded so they can be reversed for good reason.
+
+- **Code is described, and its bytes are printed.** The first intention was
+  that a Compute-let's bytes be the only stored artifact and the only
+  authority, changed by structured operations to a printer and explained by
+  a ledger of those operations. What is stored now is the description —
+  the same instructions, in the same order, as values with names and
+  identities — and the bytes are a function of it. What runs is still only
+  what the printer made; there is still no source tree and no language but
+  WebAssembly's; the ledger still says why each part is as it is, now for
+  each statement and not only for each function. What changed is which of
+  two equivalent forms is kept. The earlier design is specification version
+  0.6, and can be restored whole.
 
 - **Base presenters are the host, not WebAssembly components.** The first
   intention was that every presenter be compiled once and run everywhere. A
@@ -302,7 +395,8 @@ recorded so they can be reversed for good reason.
 - Converting a foreign document to description can lose nuance. The
   original bytes are always kept, and the conversion is recorded.
 - Every size and speed figure in the specification is a target set before
-  anything was built. Budgets change on measurement only.
+  anything was built, and the one measurement so far, of a miniature, says
+  the kernel's two limits disagree. Budgets change on measurement only.
 - A web page that carries its own reader cannot vouch for itself. What it
   says about seals and origins is the file's own account until an installed
   reader checks it.
