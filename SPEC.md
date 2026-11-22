@@ -145,8 +145,9 @@ one key with its value.
   item, a duplicate map key, a non-text map key, text that is not valid
   UTF-8, a simple value other than false, true and null, or an integer
   outside the range above; applies one of the five tags above to content of
-  the wrong kind or length; exceeds a depth of 64; or is followed by
-  further bytes in its record. A well-formed item under any other tag,
+  the wrong kind or length, or has an anchor without `o`, a region of no
+  defined form, or a formula whose first item is not text; exceeds a depth
+  of 64; or is followed by further bytes in its record. A well-formed item under any other tag,
   bignum tags included, is an unrecognized value (§1.9): it is preserved
   and not interpreted.
 
@@ -172,7 +173,8 @@ node) followed by the record's bytes. A record is identified only by its hash.
   and MUST treat a difference from the hash it asked for as malformed
   storage. A frame carries no hash of its own; a scan computes each
   record's hash, and `verify` (§7.5) reports any record reachable from the
-  head that is absent or wrong, and any frame nothing refers to.
+  head that is absent or wrong, and any chunk or node frame that is not
+  reachable from any head in the file.
 - **[C3]** A reader MUST preserve, when copying or rewriting a universe, every
   record reachable from a retained commit, whether or not it understands the
   record's node kind.
@@ -229,7 +231,14 @@ value. Writers SHOULD move a value out of line when its encoding exceeds
 one.
 
 A *link*, by contrast, is a value in its own right: it is never resolved
-transparently. A link names either a blob node or a salted value.
+transparently. Within the structure of nodes, links name records of every
+kind: a previous revision, an object map, a change, a parent commit, a
+chunk. Within properties and operations, a link names either a blob node
+or a salted value.
+
+A record is **reachable** from another if a chain of links, indirects and
+`parts` hashes leads to it. Plain hashes elsewhere — in `revs`, in a seal,
+in a head — do not make a record reachable.
 
 A **salted value** is a node `{k: "val", v: value, salt}` with 16 random
 bytes of salt, always referred to by a link. Its hash reveals nothing about
@@ -296,8 +305,10 @@ entries map the byte at position *d* of the identity, counting from zero,
 written as a two-digit lowercase hexadecimal key, to the `map` node for
 that longer prefix. Every object is in the map, change objects included. The object map is
 therefore a function of its contents alone: the same set of revisions has the
-same root hash however it was built. A reader MUST treat an object map of
-any other shape as malformed.
+same root hash however it was built. The map of no objects is a leaf with
+no entries. A reader MUST treat an object map of any other shape as
+malformed: an interior node covering 32 identities or fewer, a child that
+is empty, entries out of order or under the wrong prefix.
 
 A commit is the node:
 
@@ -381,7 +392,7 @@ The core operations are:
 | `new` | `obj`, `type` | — | creates an object with no properties |
 | `set` | `obj`, `key` | `old`, `val` | sets property `key` to `val`; absent `val` removes it |
 | `splice` | `obj`, `key`, `at`, `del`, `add`, `bias` | `old`, `ins` | in the sequence at `key`, replaces the `del` items at position `at` (which are `old`) with the `add` items of `ins` |
-| `remap` | `obj`, `axis`, `scale`, `shift` | — | declares that positions on a continuous axis moved (§4.3) |
+| `remap` | `obj`, `axis`, `scale`, `shift`, `extent` | — | declares that positions on a continuous axis moved, and the axis's extent afterward (§4.3) |
 | `drop` | `obj` | — | retires the object from the current state |
 
 For `set`, `key` MAY be a list, naming a path through nested maps; maps
@@ -399,8 +410,12 @@ as a text, a byte string or a list according to what `ins` holds, and then
 applies. Its items are Unicode scalar values, bytes or list items
 respectively; `at`, `del` and `add` count items; `old` and `ins` hold a
 text, a byte string or a list of the items concerned. A `splice` on a
-property created by `set` is refused. A `set` on a sequence property
-replaces all of it and is treated as a `splice` of the whole.
+property created by `set` is refused, as is a `splice` with no `ins` on a
+property that does not exist. A `set` that gives a sequence property a
+value is refused: its content changes only by `splice`. A `set` with no
+`val` removes it, with its runs. A reader knows a property is a sequence
+property because the revision's `runs` has an entry for it, which is kept,
+as an empty list, while the property is empty.
 
 **Order.** Operations apply in the order listed. Each is expressed against
 the state left by the operations before it in the same change: a position in
@@ -411,17 +426,23 @@ hash in `revs`.
 **Runs.** For every sequence property, the revision records **runs**: a
 list of `[count, change, offset]` covering the sequence exactly, in order,
 saying for each item which change introduced it and its offset among the
-items that change introduced into that property, counted across the
-change's operations in order. Applying a
+items that change introduced into that property: a count kept for each
+change, object and property, advancing with every item the change's
+operations insert, in order, whether or not a later operation of the same
+change removes it. Applying a
 `splice` removes the runs of the deleted items and gives the inserted items
-a run naming the change that contains the splice, or, when that change's
-origin is a copy from the same universe, the runs the items had at their
-source (§8.5). Adjacent runs that continue one another are merged. Runs are
+a run naming the change that contains the splice. The one exception is a
+copy: when the change's `origin` has `copied`, an anchor to a region of a
+sequence in this universe, the inserted items take, in order, the runs
+that region had at the anchor's revision (§8.5). Two adjacent runs are
+merged when they name the same change and the second's offset is the
+first's offset plus its count. Runs are
 maintained by the kernel for every sequence of every type; they are how
 every item of every sequence has a known origin.
 
 **Self-anchors.** An anchor (§4.1) anywhere within an object's properties
-that names that same object and carries no revision is a **self-anchor**: a region of the
+that names that same object and carries neither a revision nor another
+universe is a **self-anchor**: a region of the
 object's own axes, always expressed against its current revision. Applying
 any operation to an object carries every self-anchor in it by the rules of
 §4.3. This is how structure that lives on a sequence — the spans of a text —
@@ -440,14 +461,19 @@ The **laws of change** follow. They hold for every medium.
 - **[L2] Anchored.** `revs` MUST list exactly the objects the operations
   touch, with the `before` revision of each, and every `set` and `splice`
   that removes or replaces something MUST carry exactly what was there, as
-  `old`.
+  `old`. `old` is compared by value with what was there — for a path, the
+  value at the end of the path — never by the hash of the record that
+  holds it.
 - **[L3] Conservation.** Applying a change's operations, in order, to the
   parent commit's objects MUST produce exactly the commit's objects, compared
   as values with out-of-line values resolved, apart from the change object
   itself and the `rev`, `prev`, `by` and `salt` fields. Identity, type,
   properties, runs and self-anchors are all compared; runs and self-anchors
   follow from the operations by the rules above. The `after` hash of every
-  entry in `revs` MUST be the revision the commit's object map lists. The
+  entry in `revs` MUST be the revision the commit's object map lists; each
+  touched object's new revision MUST have `rev` one more than before,
+  `prev` equal to its `before`, and `by` naming this change; and every
+  object not in `revs` MUST have the revision it had in the parent. The
   parent state of the first commit is empty. A reader MUST be able to perform this check for any
   commit whose operation content is present (§7.5 `verify`), and MUST say so
   where it is not.
@@ -553,9 +579,17 @@ frame     = kind (1 byte)  codec (1 byte)  length (unsigned LEB128, shortest for
 
 `codec` is `0` for identity or `1` for raw DEFLATE (RFC 1951). With codec
 `1` the payload, whose length the frame states, is the decoded length as an
-unsigned LEB128 followed by one complete DEFLATE stream and nothing after
-it. A length that is not in shortest form makes a frame ill-formed. The
-same record MAY appear in more than one frame. The hash of a record is always taken over
+unsigned LEB128, in shortest form, followed by one complete DEFLATE stream
+and nothing after it. A length that is not in shortest form makes a frame
+ill-formed. The codec byte of a frame of unknown kind is not interpreted.
+The same record MAY appear in more than one frame.
+
+The payload of each kind has a required form: a chunk decodes to between 1
+and 2²⁰ bytes; a node decodes to one value that is a map with a text `k`;
+a seal or a note is one value that is a map; an index is 24 + 40 × *n*
+bytes for its stated *n*; a head is 72 bytes with codec 0. A frame whose
+payload has that form is well-formed even if what it says is wrong: a head
+whose check fails is a well-formed frame that is not a valid head. The hash of a record is always taken over
 its decoded bytes. Only chunk and node frames may be compressed. Other
 codecs are features (§1.6) and MUST NOT be used in a travel form (§9.2),
 so that what travels can always be read.
@@ -603,8 +637,10 @@ payload.
 
 - **[P3]** A head is **valid** if its check matches, its length field equals
   the offset just past it, and the frame at its commit offset lies before
-  it and holds a node of kind `commit` whose hash is the one the head
-  names. No index and no scan is needed to check a head. A wrong index
+  it — the commit's frame ends at or before the head's first byte — and
+  holds a node of kind `commit` whose hash is the one the head names. Where
+  the head gives the offset of a previous head, that head lies earlier, is
+  itself valid, and names the same commit or an ancestor of it. No index and no scan is needed to check a head. A wrong index
   offset does not make a head invalid.
 - **[P4]** A writer MUST NOT modify any byte before the last valid head,
   except through compaction (§2.6).
@@ -626,9 +662,11 @@ bytes.** Every reader and every tool starts there.
    frames from the signature forward. A frame is well-formed if its length
    parses, its payload lies within the file, and, for the six kinds this
    document defines, its codec is one the kind allows and its payload has
-   the form that kind requires. Stop at the first frame that is not. The
+   the form that kind requires (§2.1). A frame with a codec this reader
+   does not have is well-formed and unavailable (**P2**); the scan
+   continues past it. Stop at the first frame that is not well-formed. The
    current state is the last valid head met. The reader reports how many
-   bytes lie between that head and the end of the file.
+   bytes lie between the end of that head's frame and the end of the file.
 3. If no valid head is found, no commit was ever completed in this file. It
    holds no universe, and a reader reports it as malformed.
 
@@ -662,15 +700,19 @@ payload is:
 
 The payload is exactly 24 + 40 × *n* bytes. A hash here is a record's hash
 as §1.3 defines it; hashes are strictly ascending; where a record appears
-in several frames the entry gives the lowest offset.
+in several frames within the index's coverage the entry gives the lowest
+offset. An index need not list a record an earlier index in its chain
+already lists.
 
 An index covers every chunk and node frame between the end of the previous
 index's coverage — or the end of the signature, for the first index — and
 the end of its own, which may be the index frame's own offset. When a writer appends an index it
 first merges into it the index before it, repeatedly, for as long as that
 earlier index has no more than twice as many entries as the merged index so
-far. The chain of indexes therefore stays logarithmic in the number of
-records. A writer MUST append an index whenever the frames not yet covered
+far. A merged index takes the previous-index offset of the index it
+absorbed and covers from where that one began. The absorbed index frame
+stays in the file, outside the chain. The chain of indexes therefore stays
+logarithmic in the number of records. A writer MUST append an index whenever the frames not yet covered
 exceed 1024 records or 16 MiB.
 
 To find a record, a reader searches each index in the chain, newest first,
@@ -682,7 +724,8 @@ frames after the newest index's coverage.
   verified by hash when read (**C2**), so a wrong index cannot cause wrong
   content to be accepted. Before concluding that a record is absent, a
   reader MUST have scanned the frames itself or rebuilt the index: an index
-  cannot hide a record that is there.
+  cannot hide a record that is there. A wrong index is reported and
+  rebuilt; it does not make the pack malformed or a head invalid.
 - **[P10]** With a correct index, reading any one record costs a number of
   seeks logarithmic in the number of records.
 
@@ -762,7 +805,7 @@ as malformed. A writer MUST NOT produce anything exceeding one.
 | Nesting depth of a value | 64 |
 | Entries in one map or list | 2²⁰ |
 | Interior levels of the object map above a leaf | 16 |
-| Levels of `blob` nodes above the chunks | 4 |
+| Levels of `blob` nodes above the chunks, a node that lists chunks being level 1 | 4 |
 | Indexes in a chain | 64 |
 | Parents of a commit | 1 |
 
@@ -816,8 +859,8 @@ platform has.
 Two obligations bind every release of the reference implementation. They
 are requirements on the project, not on files.
 
-- **[P19] The weekend test.** §1, §2, §3, §4.1–§4.3 and Appendices C and F
-  MUST be sufficient to write that independent reader, including the
+- **[P19] The weekend test.** §1, §2, §3, §4.1–§4.3, §10.2 and Appendices
+  C and F MUST be sufficient to write that independent reader, including the
   conservation check. The test is run for real
   before the format is frozen: someone with no other knowledge of the
   project is given only those sections and the conformance packs with their
@@ -853,7 +896,7 @@ An **anchor** refers to a region inside an object, at a revision. It is a map:
 | --- | --- | --- |
 | `o` | object identity | required |
 | `r` | revision hash the region is expressed against | required, except in a self-anchor (§1.7) |
-| `a` | map from axis name to region on that axis | absent means the whole object |
+| `a` | map from axis name to region on that axis (§4.2) | absent means the whole object |
 | `u` | commit hash of another universe (§1.8) | absent means this universe |
 | `d`, `s` | digest of the anchored content, and its salt (§4.4) | present makes the anchor a **pin** |
 
@@ -870,9 +913,12 @@ and which property each is bound to.
 
 | Kind | Bound to | Positions | A region is | Examples |
 | --- | --- | --- | --- | --- |
-| **sequence** | a property that is a text, a byte string or a list | integers 0…n, between the items | `[start, end]`, start ≤ end | characters of a text, bytes of an asset |
-| **continuous** | two properties giving the extent's low and high ends | numbers along the extent | `[low, high]`, low ≤ high | time, width, height |
-| **keyed** | a property that is a map, or a list of refs in which no object appears twice | the map's keys, or the identities listed | a list of keys | rows and columns of a table, children of a group, functions of a module |
+| **sequence** | a sequence property (§1.7); the axis has the property's name | integers 0…n, between the items | `["s", start, end]`, start ≤ end | characters of a text, bytes of an asset |
+| **continuous** | an extent the object's type declares (Appendix A), or a data object declares in `axes` | numbers along the extent: integers for time, in flicks; floats otherwise | `["c", low, high]`, low ≤ high | time, width, height |
+| **keyed** | a property that is a map, or a list of refs in which no object appears twice; the axis has the property's name | the map's keys, or the identities listed | `["k", key, …]` | rows and columns of a table, children of a group, functions of a module |
+
+A region states its own kind in its first element, so that an anchor can
+be carried by a reader that knows nothing of the object's type.
 
 A region over several axes is their product: a rectangle of a frame for a
 span of time is a region on `t`, `x` and `y`. A region MAY have zero extent:
@@ -918,21 +964,26 @@ inserted at its edge or in place of its edge; content inserted strictly
 inside it is inside it. A point follows the same table and stays before
 anything inserted at it.
 
-For a self-anchor (§1.7) the operation's `bias` adjusts the two cases of a
-pure insertion exactly at an edge: with `bias: before`, an end equal to *p*
-moves to *p + n*, so the insertion joins the region that ended there; with
-`bias: after`, a start equal to *p* stays at *p*, so it joins the region
-that begins there. Anchors that are not self-anchors ignore `bias`.
+For a self-anchor (§1.7), and only when the splice deletes nothing
+(*m* = 0), the operation's `bias` changes one row of the table. With
+`bias: before`, an end equal to *p* moves to *p + n*, so the insertion
+joins the region that ended there. With `bias: after` — which is what an
+operation with no `bias` has — a start equal to *p* stays at *p*, so the
+insertion joins the region that begins there. Anchors that are not
+self-anchors ignore `bias`.
 
-A `set` that replaces a whole sequence is treated as a `splice` of all of
-it.
+A `set` that removes the property an axis is bound to, or a `drop` of the
+object, leaves every region on it detached.
 
-**Continuous axis.** For a `remap` with `scale` *a/b*, given as two
-integers, and `shift` *t*, every position *x* becomes *x·a/b + t*, rounded
-toward negative infinity when the axis is in flicks. Trimming five seconds
-from the start of a recording is a remap with scale 1/1 and a shift of
-minus five seconds. A region carried partly outside the axis's extent is
-clipped to it. A `remap` is the writer's statement of how positions moved;
+**Continuous axis.** For a `remap` with `scale` *a/b*, two positive
+integers, and `shift` *t*, every position *x* becomes *x·a/b + t*. An
+integer position stays an integer: the product is divided rounding toward
+negative infinity, then *t*, an integer, is added. A float position is
+computed in binary64 as *x* times *a*, divided by *b*, plus *t*. The
+operation's `extent`, `[low, high]`, is the axis's extent after the change;
+a region carried partly outside it is clipped to it, and one left wholly
+outside it is detached. Trimming five seconds from the start of a
+recording is a remap with scale 1/1 and a shift of minus five seconds. A `remap` is the writer's statement of how positions moved;
 it is emitted in the same change as the `set` operations that moved them. A
 writer that omits it leaves anchors where they were.
 
@@ -2411,6 +2462,8 @@ holding `{commit, key, time, name, signature}`, where `signature` is the
 Ed25519 signature of the bytes `"ufo-seal-1"` followed by the SHA-256 of
 the encoded value `{commit, key, time, name}`. The name and time are thus
 signed with the hash, and remain the signer's own claims about themselves.
+A reader checks that the commit a seal names is in the pack; a seal says
+nothing about any other commit.
 
 Because a commit fixes all history before it, sealing the latest commit
 vouches for the state, not for the authorship of every earlier change.
@@ -3504,6 +3557,17 @@ surface), `x`, `y`, `w`, `h`, `row`, `col`, `span`, `align`, `grow`,
 | Surface | *`computelet`*: ref; *`of`*: ref to the object it presents, if it presents one; `w`, `h`; *`ports`*: map from port name to the surface it connects to; *`children`* |
 | Data | *`cols`*: map from column key to `{label, type, order}`; *`rows`*: map from row key to map from column key to value, each row out of line when large; a cell may hold a formula; `sort`: list of row keys giving the default order; *`axes`*: map from axis name to `{kind, low, high, unit}` for continuous axes the object offers beyond its keyed ones, and *`tables`*: for an object holding several tables, map from table name to `{cols, rows}` |
 
+**Axes.** A sequence or keyed axis has the name of the property it is bound
+to. The continuous axes and their extents are:
+
+| Type | Axis | Extent |
+| --- | --- | --- |
+| Clock | `t` | `start` to `end`, in flicks |
+| Region, group, surface, raster, path, Portal | `x`, `y` | 0 to `w`, 0 to `h` |
+| Raster or samples from a timed source | `t` | 0 to the source's duration, in flicks |
+| Data | those it declares in `axes` | as declared |
+| Surface | those its Compute-let declares in `axes` (§11.1) | as declared |
+
 **Default presentation of text roles.** A block span is laid out as a block
 in the flow. Unless the span says otherwise:
 
@@ -3634,7 +3698,7 @@ ref    = #6.55461(id)
 anchor = #6.55462({ o: id, ? r: hash, ? a: { * tstr => region },
                     ? u: hash, ? d: hash, ? s: salt })
 formula = #6.55463([ tstr, * value ])
-region = [ int, int ] / [ number, number ] / [ * (tstr / id) ]
+region = [ "s", uint, uint ] / [ "c", number, number ] / [ "k", * (tstr / id) ]
 value  = nil / bool / int / float / tstr / bstr / [ * value ]
        / { * tstr => value } / link / ref / anchor / formula / indirect
 
@@ -3650,6 +3714,8 @@ commit = { k: "commit", v: 1, parents: [ ? link ], objects: link,
 
 seal   = { commit: hash, key: bytes .size 32, time: uint,
            ? name: tstr, signature: bytes .size 64 }
+           ; signature = Ed25519 over the 10 bytes "ufo-seal-1" followed by the
+           ; SHA-256 of the encoding of this map without `signature` (section 10.2)
 note   = { ? history: bool,
            ? blobs: [ * { blob: hash, len: uint, hints: [ * tstr ] } ] }
 
@@ -3660,9 +3726,10 @@ change-p = { ops: [ * op ], revs: { * tstr => [ hash / nil, hash / nil ] },
              ? note: link }
 op     = { op: "new", obj: id, type: tstr }
        / { op: "set", obj: id, key: key, ? old: link, ? val: link }
-       / { op: "splice", obj: id, key: key, at: uint, del: uint, add: uint,
+       / { op: "splice", obj: id, key: tstr, at: uint, del: uint, add: uint,
            ? bias: "before" / "after", ? old: link, ? ins: link }
-       / { op: "remap", obj: id, axis: tstr, scale: [ int, int ], shift: int }
+       / { op: "remap", obj: id, axis: tstr, scale: [ uint, uint ], shift: int / float,
+           extent: [ number, number ] }
        / { op: "drop", obj: id }
 key    = tstr / [ + tstr ]
 principal = { ? key: bytes .size 32, ? name: tstr }
@@ -3673,7 +3740,8 @@ object's identity is written as 32 lowercase hexadecimal digits. In these
 schemas `uint` and `int` are within the integer range of §1.2. A key this
 schema does not list is unrecognized and preserved in `obj`, `commit`,
 `val`, `seal`, `note` and in properties; in `map` and `blob` nodes, whose
-shape must be a function of their contents, it is malformed.
+shape must be a function of their contents, it is malformed. Values are
+compared exactly: an integer is never equal to a float.
 
 The Chronicle's records (§8.5):
 
@@ -3816,8 +3884,8 @@ vector on its own.
 
 | File | Contents |
 | --- | --- |
-| `vectors/minimal.ufx` | a whole pack of 3459 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
-| `vectors/history.ufx` | a pack of 35723 bytes holding three commits, built to exercise what the first does not (below) |
+| `vectors/minimal.ufx` | a whole pack of 3463 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
+| `vectors/history.ufx` | a pack of 36827 bytes holding three commits, built to exercise what the first does not (below) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
 
 `history.ufx` extends the first pack. Its second commit, by a model,
@@ -3827,8 +3895,9 @@ forty small objects, so that the object map gains an interior node; one
 node frame and the chunk frame are compressed. A frame of unknown kind
 precedes it and a seal follows it, with its own head. Its third commit, by
 a person, inserts a character at the end of the paragraph span with
-`bias: before`, shortens the clock with a `remap`, drops the asset and
-records a decision. The file ends with a chain of two indexes and four
+`bias: before`, then inserts and deletes a second character, shortens the
+clock with a `remap`, drops the asset and records a decision. One object's
+property is stored out of line, as an indirect. The file ends with a chain of two indexes and four
 heads.
 
 | Group | What is fixed |
@@ -3838,8 +3907,9 @@ heads.
 | `record_hashes` | the hash of a chunk and of a node |
 | `blobs` | blob nodes and hashes for 0 bytes, 3 bytes, 2²⁰ and 2²⁰ + 1 zero bytes, 1 025 MiB of zero bytes (two spans), and 2⁴⁰ + 2²⁰ zero bytes (spans of 1024² chunks, the last a one-chunk blob) |
 | `object_maps` | root hashes of maps with 1, 32, 33 and 9 000 entries: a leaf, the largest leaf, the smallest interior node, and three levels |
-| `minimal_pack` | every record of `minimal.ufx` with its offset and hash; the index; the head; the root hash |
-| `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its span and its runs; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; six anchors carried across the commits, on sequence and continuous axes |
+| `minimal_pack` | every record of `minimal.ufx` with its offset and hash; the index; the head; the root hash. Removing its last byte leaves no valid head |
+| `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its span and its runs; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; eight anchors carried across the commits, on sequence and continuous axes, including clipping, detachment and a dropped object |
+| `carry_continuous` | six cases of §4.3's continuous rule: shift, integer rounding of both signs, clipping, detachment, floats |
 | `carry_sequence` | 15 cases of §4.3's table, including points, deletion of a whole region, and both values of `bias` |
 | `printer` | two printer operations on an empty module, the module bytes they produce, and the hash of each item with the exact bytes hashed |
 | `instrumentation` | three stored modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
@@ -3849,8 +3919,8 @@ Three values, for a first check without opening the files:
 | | |
 | --- | --- |
 | Hash of the chunk `abc` | `1e18834c426d00e57788444cb3ccd62c771b420c095bb0c4e040a8c122c4570d` |
-| Root hash of `minimal.ufx` | `690728ddb7ecace04db7549572909e8c70911fb2eedd0d66794e786baae7a3f2` |
-| Root hash of `history.ufx` | `319a3a3c160c0ff775e491d053acffb51d7469bcdc941b0f4cfa5b7333f43308` |
+| Root hash of `minimal.ufx` | `c224935f3791367907b4aa853d2fcb3837993e495947d9b001903d0162802825` |
+| Root hash of `history.ufx` | `c18d5d6713415ef92590b845d4d4c0e49ca9eaa4085aab6bd6f5c719b9a2cc16` |
 
 How far these have been checked: the WebAssembly vectors were validated and
 run in one engine (Node.js) and behave as stated. The other vectors have

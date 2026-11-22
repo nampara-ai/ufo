@@ -71,10 +71,17 @@ vals = [("null", None), ("true", True), ("int 0", 0), ("int 23", 23), ("int 24",
         ("float 100000.0", 100000.0), ("float -0.0", -0.0), ("text", "héllo"), ("bytes", b"\x00\xff"),
         ("list", [1, "a", [True]]), ("map sorted by encoded key", {"b": 1, "aa": 2, "a": 3}),
         ("link", link(bytes(32))), ("ref", ref(bytes(range(16)))),
-        ("anchor", anchor({"o": bytes(range(16)), "a": {"chars": [0, 5]}})),
+        ("anchor", anchor({"o": bytes(range(16)), "a": {"chars": ["s", 0, 5]}})),
         ("formula", Tag(55463, ["+", 1, ["get", ref(bytes(16)), "w"]])),
         ("indirect", Tag(55464, bytes([0xee]) * 32))]
-V["values"] = [{"name": n, "hex": enc(v).hex()} for n, v in vals]
+def describe(v):
+    if isinstance(v, Tag): return {"tag": {55460: "link", 55461: "ref", 55462: "anchor", 55463: "formula", 55464: "indirect"}[v.n], "of": describe(v.v)}
+    if isinstance(v, bytes): return {"bytes_hex": v.hex()}
+    if isinstance(v, float): return {"float": repr(v)}
+    if isinstance(v, list): return [describe(x) for x in v]
+    if isinstance(v, dict): return {"map": [[k, describe(x)] for k, x in v.items()]}
+    return v
+V["values"] = [{"name": n, "value": describe(v), "hex": enc(v).hex()} for n, v in vals]
 V["values_malformed"] = [{"name": n, "hex": h} for n, h in (
     ("integer not in shortest form", "1817"), ("map keys out of order", "a2616201616101"),
     ("duplicate map key", "a2616101616102"), ("indefinite-length list", "9f01ff"),
@@ -231,7 +238,7 @@ C1, C2, C3 = (bytes([c]) * 16 for c in (0xc1, 0xc2, 0xc3))
 A, K = bytes([0xaa]) * 16, bytes([0xcc]) * 16
 who = {"name": "Test Author"}; actor = {"who": who, "with": {"name": "ufo-vectors", "version": "0.4"}}
 lineage = bytes([0x11]) * 16
-def span(a, b): return {"at": anchor({"o": T, "a": {"chars": [a, b]}}), "kind": "block", "role": "paragraph"}
+def span(a, b): return {"at": anchor({"o": T, "a": {"chars": ["s", a, b]}}), "kind": "block", "role": "paragraph"}
 roots, faces, feats = {"primary": ref(F)}, [ref(F)], {"ufo.text": {"v": 1, "required": True}}
 
 def genesis(pk):
@@ -286,6 +293,9 @@ ops = [{"op": "splice", "obj": T, "key": "chars", "at": 7, "del": 8, "add": 5, "
        {"op": "set", "obj": K, "key": "end", "val": pk.sval(10 * FL)}]
 for i, n in items:
     ops += [{"op": "new", "obj": i, "type": "io.example.item"}, {"op": "set", "obj": i, "key": "n", "val": pk.sval(n)}]
+LONG = "out of line " * 20
+ops.append({"op": "set", "obj": items[0][0], "key": "long", "val": pk.sval(LONG)})
+hLong = pk.node({"k": "val", "v": LONG})
 hT2 = revision(pk, T, "ufo.text", 2, C2, 2001, {"chars": t1, "spans": {"p1": span(0, 13)}}, prev=state[T],
                runs={"chars": [[7, C1, 0], [5, C2, 0], [1, C1, 15]]}, codec=1)
 hF2 = revision(pk, F, "ufo.face", 2, C2, 2002, {"of": ref(T), "medium": "text"}, prev=state[F])
@@ -294,7 +304,9 @@ hK2o = revision(pk, K, "ufo.clock", 1, C2, 2004, {"start": 0, "end": 10 * FL})
 revs = {T.hex(): [state[T], hT2], F.hex(): [state[F], hF2], A.hex(): [None, hA], K.hex(): [None, hK2o]}
 st = dict(state); st.update({T: hT2, F: hF2, A: hA, K: hK2o})
 for n_, (i, n) in enumerate(items):
-    st[i] = revision(pk, i, "io.example.item", 1, C2, 2100 + n_, {"n": n}); revs[i.hex()] = [None, st[i]]
+    props = {"n": n}
+    if n_ == 0: props["long"] = Tag(55464, hLong)        # stored out of line: an indirect
+    st[i] = revision(pk, i, "io.example.item", 1, C2, 2100 + n_, props); revs[i.hex()] = [None, st[i]]
 cp = {"ops": ops, "revs": revs, "actor": actor, "time": 1767229200000,
       "origin": {"basis": "witnessed", "by": "model", "model": "example-model-1", "asked": who}, "note": pk.sval("Shorter greeting.")}
 state2, hC2, hM2, hK2 = commit(pk, st, C2, cp, g["root"], 1, 2005)
@@ -305,8 +317,10 @@ pk.raw(3, enc(dict(signed, signature=sig))); pk.head(hK2); len2s = len(pk.b)
 # commit 3: a person appends a character at a span's end with bias "before", trims the clock, drops the asset, accepts commit 2
 t2 = "Hello, world.!"
 ops = [{"op": "splice", "obj": T, "key": "chars", "at": 13, "del": 0, "add": 1, "bias": "before", "ins": pk.sval("!")},
+       {"op": "splice", "obj": T, "key": "chars", "at": 14, "del": 0, "add": 1, "ins": pk.sval("?")},   # no bias: not joined to the span
+       {"op": "splice", "obj": T, "key": "chars", "at": 14, "del": 1, "add": 0, "old": pk.sval("?")},   # a splice that only deletes
        {"op": "set", "obj": K, "key": "end", "old": pk.sval(10 * FL), "val": pk.sval(8 * FL)},
-       {"op": "remap", "obj": K, "axis": "t", "scale": [1, 1], "shift": -2 * FL},
+       {"op": "remap", "obj": K, "axis": "t", "scale": [1, 1], "shift": -2 * FL, "extent": [0, 8 * FL]},
        {"op": "drop", "obj": A}]
 hT3 = revision(pk, T, "ufo.text", 3, C3, 3001, {"chars": t2, "spans": {"p1": span(0, 14)}}, prev=hT2,
                runs={"chars": [[7, C1, 0], [5, C2, 0], [1, C1, 15], [1, C3, 0]]})
@@ -320,12 +334,12 @@ pk.index(); pk.head(hK3)
 open(os.path.join(OUT, "history.ufx"), "wb").write(pk.b)
 V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file": sha(bytes(pk.b)).hex(),
     "commits": [
-        {"height": 0, "root_hash": g["root"].hex(), "object_map_root": g["map"].hex(), "objects": 4, "pack_length_at_head": len1,
+        {"height": 0, "root_hash": g["root"].hex(), "object_map_root": g["map"].hex(), "objects": 4, "pack_length_at_first_head": len1,
          "text": "Hello, universe.", "span_p1": [0, 16], "runs": [[16, C1.hex(), 0]]},
-        {"height": 1, "root_hash": hK2.hex(), "object_map_root": hM2.hex(), "objects": len(state2), "pack_length_at_head": len2,
+        {"height": 1, "root_hash": hK2.hex(), "object_map_root": hM2.hex(), "objects": len(state2), "pack_length_at_first_head": len2,
          "text": t1, "span_p1": [0, 13], "runs": [[7, C1.hex(), 0], [5, C2.hex(), 0], [1, C1.hex(), 15]],
          "text_revision": hT2.hex(), "change_revision": hC2.hex(), "note": "its object map has an interior node; one node frame and the chunk frame use codec 1"},
-        {"height": 2, "root_hash": hK3.hex(), "object_map_root": hM3.hex(), "objects": len(state3), "pack_length_at_head": len(pk.b),
+        {"height": 2, "root_hash": hK3.hex(), "object_map_root": hM3.hex(), "objects": len(state3), "pack_length_at_first_head": len(pk.b),
          "text": t2, "span_p1": [0, 14], "runs": [[7, C1.hex(), 0], [5, C2.hex(), 0], [1, C1.hex(), 15], [1, C3.hex(), 0]],
          "text_revision": hT3.hex(), "change_revision": hC3.hex(), "note": "the asset is dropped: absent from this map, present in the previous one"}],
     "identities": {"universe": U.hex(), "text": T.hex(), "face": F.hex(), "asset": A.hex(), "clock": K.hex(),
@@ -341,13 +355,19 @@ V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file
         {"truncate_to": len2s, "state": hK2.hex(), "bytes_after_head": 0, "writer": "valid by step 1"},
         {"truncate_to": len2s - 1, "state": hK2.hex(), "bytes_after_head": len2s - 1 - len2, "writer": "the seal's head is torn: truncate; the seal frame is lost"},
         {"truncate_to": len1 + 10, "state": g["root"].hex(), "bytes_after_head": 10, "writer": "truncate"}],
+    "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end]",
     "anchors_carried": [
-        {"anchor": {"o": T.hex(), "r": g["text"].hex(), "chars": [7, 15]}, "to_revision": hT3.hex(), "result": "detached (its whole region was replaced)"},
-        {"anchor": {"o": T.hex(), "r": g["text"].hex(), "chars": [0, 5]}, "to_revision": hT3.hex(), "result": [0, 5]},
-        {"anchor": {"o": T.hex(), "r": g["text"].hex(), "chars": [15, 16]}, "to_revision": hT3.hex(), "result": [12, 13]},
-        {"anchor": {"o": T.hex(), "r": hT2.hex(), "chars": [0, 13]}, "to_revision": hT3.hex(), "result": [0, 13], "note": "not a self-anchor, so bias does not extend it"},
-        {"anchor": {"o": K.hex(), "r": hK2o.hex(), "t": [3 * FL, 5 * FL]}, "to_revision": hK3o.hex(), "result": [1 * FL, 3 * FL]},
-        {"anchor": {"o": K.hex(), "r": hK2o.hex(), "t": [0, 3 * FL]}, "to_revision": hK3o.hex(), "result": [0, 1 * FL], "note": "clipped to the extent"}]}
+        {"anchor": {"o": T.hex(), "r": g["text"].hex(), "a": {"chars": ["s", 7, 15]}}, "to_revision": hT3.hex(), "result": "detached"},
+        {"anchor": {"o": T.hex(), "r": g["text"].hex(), "a": {"chars": ["s", 0, 5]}}, "to_revision": hT3.hex(), "result": ["s", 0, 5]},
+        {"anchor": {"o": T.hex(), "r": g["text"].hex(), "a": {"chars": ["s", 15, 16]}}, "to_revision": hT3.hex(), "result": ["s", 12, 13]},
+        {"anchor": {"o": T.hex(), "r": hT2.hex(), "a": {"chars": ["s", 0, 13]}}, "to_revision": hT3.hex(), "result": ["s", 0, 13],
+         "note": "not a self-anchor, so bias does not extend it"},
+        {"anchor": {"o": K.hex(), "r": hK2o.hex(), "a": {"t": ["c", 3 * FL, 5 * FL]}}, "to_revision": hK3o.hex(), "result": ["c", 1 * FL, 3 * FL]},
+        {"anchor": {"o": K.hex(), "r": hK2o.hex(), "a": {"t": ["c", 0, 3 * FL]}}, "to_revision": hK3o.hex(), "result": ["c", 0, 1 * FL],
+         "note": "clipped to the extent the remap states"},
+        {"anchor": {"o": K.hex(), "r": hK2o.hex(), "a": {"t": ["c", 0, 1 * FL]}}, "to_revision": hK3o.hex(), "result": "detached",
+         "note": "left wholly outside the extent"},
+        {"anchor": {"o": A.hex(), "r": hA.hex()}, "to_revision": None, "result": "detached", "note": "the object was dropped"}]}
 
 # ---- 7. carrying a sequence region (section 4.3) ---------------------------------------
 def carry(s, e, p, m, n, bias=None):
@@ -362,8 +382,15 @@ cases = [(5, 10, 0, 0, 3, None), (5, 10, 5, 0, 3, None), (5, 10, 10, 0, 3, None)
          (5, 10, 3, 4, 1, None), (5, 10, 8, 4, 1, None), (5, 10, 5, 5, 2, None), (5, 10, 2, 20, 0, None),
          (5, 10, 6, 2, 9, None), (7, 7, 7, 0, 4, None), (7, 7, 5, 4, 0, None),
          (5, 10, 10, 0, 3, "before"), (5, 10, 5, 0, 3, "after"), (5, 10, 5, 0, 3, "before"), (5, 10, 10, 0, 3, "after")]
-V["carry_sequence"] = [{"region": [s, e], "splice": {"at": p, "del": m, "add": n}, "bias_self_anchor": b,
-                        "result": carry(s, e, p, m, n, b)} for s, e, p, m, n, b in cases]
+V["carry_sequence"] = [{"region": [s, e], "splice": {"at": p, "del": m, "add": n}, "self_anchor": b is not None,
+                        "bias": b, "result": carry(s, e, p, m, n, b)} for s, e, p, m, n, b in cases]
+V["carry_continuous"] = [
+    {"region": [10, 20], "remap": {"scale": [1, 1], "shift": -5, "extent": [0, 100]}, "result": [5, 15, "attached"]},
+    {"region": [10, 21], "remap": {"scale": [1, 2], "shift": 0, "extent": [0, 100]}, "result": [5, 10, "attached"], "note": "integers: 21/2 rounds toward negative infinity"},
+    {"region": [-7, 9], "remap": {"scale": [1, 2], "shift": 0, "extent": [-100, 100]}, "result": [-4, 4, "attached"], "note": "-7/2 is -4"},
+    {"region": [10, 20], "remap": {"scale": [3, 1], "shift": 0, "extent": [0, 40]}, "result": [30, 40, "attached"], "note": "clipped"},
+    {"region": [10, 20], "remap": {"scale": [1, 1], "shift": 50, "extent": [0, 40]}, "result": "detached"},
+    {"region": [1.5, 2.5], "remap": {"scale": [3, 2], "shift": 0.25, "extent": [0.0, 10.0]}, "result": [2.5, 4.0, "attached"], "note": "floats"}]
 
 # ---- 8. printer and instrumentation (section 11) ------------------------------------------
 def vec(xs): return leb(len(xs)) + b"".join(xs)
