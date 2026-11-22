@@ -1826,6 +1826,8 @@ capability is stopped at the end of its current call and its poster shown.
 | `media` | — | decode a baseline asset (§6.5) to pixels or samples at a time | the asset's poster or label | the kernel only |
 | `inflate` | — | decode and encode DEFLATE (§2.1) | compressed records are unavailable | the kernel only |
 | `verify` | — | check an Ed25519 signature | seals are shown as unchecked | the kernel only |
+| `run` | — | run a module in the host's WebAssembly engine | no Compute-let runs; posters are shown | the kernel only |
+| `blobs` | a set of hashes | read those blobs | — | a renderer (§7.4) |
 | `encode` | — | encode pixels or samples to a baseline format, or pages to PDF | that export is not offered | the kernel, on export |
 | `objects` | an anchor, and `read` or `propose` | read objects within the anchor; submit changes to them, which are verified like any change | the program runs on what it carries | nobody |
 | `present` | the surface's own children | present a child into a raster; route input to it | children are not shown | a Compute-let whose surface has children |
@@ -1850,8 +1852,24 @@ rectangle with given text (§5.6). The operations of `objects` are the
 projections and actions of §7.5 and §11.8, confined to the scope. Those of
 `present` are `raster` (child key, width, height → a raster source) and
 `deliver` (child key, input event). The operations of `gpu` are sketched in
-Appendix E. Those of the remaining capabilities are few and are written
-with the first implementation; the contract above does not wait for them.
+Appendix E.
+
+The kernel's own capabilities are part of the frozen interface, and their
+operations are these:
+
+| Capability | Operations |
+| --- | --- |
+| `store` | `size`; `read(offset, length)`; `lock`, `unlock`; `append(bytes)`; `sync`, returning when what was appended is durable; `truncate(length)` (**P7**); `replace(bytes)`, which writes a whole new file and puts it in the old one's place atomically (**P5**, §2.6) |
+| `inflate` | `inflate(bytes, length)`; `deflate(bytes)` |
+| `verify` | `ed25519(key, message, signature)` |
+| `media` | `info(source)`: its kind, pixel size, duration and sample rate. Pixels and samples never enter the kernel; the host decodes when it executes a raster or samples item (§6.2) |
+| `encode` | `image(format, parameters)`, `audio(format, parameters)`, `video(format, parameters)`, `pages(parameters)`: the host encodes what it has just drawn or played for an export |
+| `run` | `load(bytes)`, giving a module or the engine's refusal of it as invalid; `start(module, snapshot)`; `call(instance, export, arguments, fuel)`, giving results, or a trap and its kind; `read` and `write` of an instance's exported memory, globals and table; `drop` |
+
+A kernel is itself WebAssembly and cannot run a module: `run` is how it
+asks the host's engine to. The operations of `audio`, `input.raw`,
+`time.precise`, `net`, `camera`, `microphone` and `files` are not yet
+written.
 
 - **[H1]** A component obtains a capability only if its manifest requests it
   (§11.1), the person has granted it (§10.3), and the host offers it.
@@ -2840,12 +2858,12 @@ the file.
 - **[U5] Requests, not possessions.** A universe can contain requests for
   capabilities (§11.1). It cannot contain grants. A **grant** is recorded by
   the reader, outside every universe, for one person, one Compute-let
-  identified by its root hash (§11.1), and one capability with a stated
+  identified by its program hash (§11.1), and one capability with a stated
   scope. A reader with nowhere durable to keep grants — a page opened from
   disk — keeps them until the page closes.
 - **[U6]** Asking, granting, narrowing and revoking follow the contract of
   §6.3. Grants are narrow by default.
-- **[U7]** A grant made for one root hash carries to a successor only when
+- **[U7]** A grant made for one program hash carries to a successor only when
   the successor was promoted (§11.6) in this reader with the person's
   approval, and requests nothing new. A file that arrives from elsewhere
   begins with no grants, whatever it contains.
@@ -2939,10 +2957,10 @@ A **Compute-let** (`ufo.computelet`) is a complete single-purpose machine
 carried as an object. It is four things that computing has kept apart:
 
 - an *application*: it does something for a person, on a surface;
-- an *operating system*: it carries the services it needs — its own state
-  and history, its scheduling through `frame`, its messaging through ports,
-  its presentation through `draw` — and borrows none from a host it cannot
-  trust;
+- an *operating system*, in the one sense that matters here: it needs none
+  beneath it. What a program asks of an operating system — to be scheduled,
+  to send and receive, to draw, to keep its state — reaches it only as the
+  ten functions of the host interface (§6.3), the same on every host;
 - a *machine*: sealed memory and a clock of its own, which can be
   snapshotted, resumed, copied and moved exactly (§11.2). Opening it starts
   the machine; saving checkpoints it; copying forks it; sending moves it;
@@ -2959,18 +2977,23 @@ Its properties are its **manifest**:
 
 | Property | Value |
 | --- | --- |
-| `module` | pin to its module: a described module, or an asset holding a carried one (§11.3) |
+| `module` | ref to its module: a described module, or an asset holding a carried one (§11.3) |
 | `requests` | list of requests, each `{capability, scope, required, why, without}` as §6.3 defines |
-| `tests` | list of pins to test objects (§11.6) |
+| `tests` | list of refs to test objects (§11.6) |
 | `axes` | the axes its surface offers to anchors, if any beyond `x`, `y`, `t`: each with a name and a kind (§4.2) |
 | `state` | the latest snapshot (§11.2): a byte string, kept outside the node |
 | `docs` | ref to a text: documentation and instructions for people and agents |
 | `poster` | ref to a rendition shown when the Compute-let cannot or may not run |
 
-The Compute-let's **root hash** is the hash of the encoded value of its
-`module`, `requests`, `tests` and `axes`. It fixes every component and
-everything the program may ask for. It does not change when the program
-merely runs, or when its documentation is edited.
+The Compute-let's **program hash** is the SHA-256 of the encoded value
+`{module, requests, tests, axes}`, in which `module` stands for the SHA-256
+of the module's bytes — as the kernel prints them (§11.4), or as carried —
+and `tests` for the list of the SHA-256 of each test's encoded properties.
+It fixes exactly what would run and everything the program may ask for: it
+changes when any statement, test or request does, and it does not change
+when the program merely runs or its documentation is edited. Grants are
+given to a program hash (**U5**), so a grant never passes to changed code
+except by promotion (**U7**).
 
 A Compute-let has one module. Larger programs are composed, not linked: a
 Compute-let presents others as children of its surface (§5.6) and exchanges
@@ -3000,9 +3023,16 @@ carried (§11.3).
 
 ### 11.2 Execution
 
-A module is WebAssembly (core specification 2.0) restricted for
-determinism: no threads, no shared memory, one memory, and imports only
-from `ufo:host/1`.
+A module is WebAssembly as version 2.0 of its core specification defines
+it, restricted for determinism: no vector instructions, one memory, one
+table, and imports only from `ufo:host/1`. `memory.grow` succeeds whenever
+the result is within the module's declared maximum; a reader that cannot
+supply that memory stops the Compute-let (**M8**) and never lets the
+instruction fail. One behavior is left to engines: the depth at which the
+call stack is exhausted. A reader reports it as an *engine limit*, apart
+from every other trap, and a record that meets one is not a valid replay.
+Bounding depth by instrumentation, as fuel is bounded, would remove this;
+it is not yet specified.
 
 - **[M4] Fuel.** Printed and carried modules contain no metering. Before running any
   module the kernel **instruments** it by the rule below, which is normative
@@ -3010,7 +3040,11 @@ from `ufo:host/1`.
 
   1. *Counter.* Append one global of type mutable `i64`, initial value 0,
      after all the module's globals, and export it as `ufo:fuel`, after all
-     the module's exports. No code of the module can refer to it: it did
+     the module's exports. So that a reader can take a snapshot (**M6**),
+     also export, before it and in this order: the memory, as `ufo:memory`,
+     if the module does not export it; each of the module's own globals it
+     does not export, as `ufo:global:` followed by its index in decimal;
+     and the table, as `ufo:table`, likewise. No code of the module can refer to it: it did
      not exist when the module was validated, and a module MUST NOT export
      or import any name beginning `ufo:` (**N1**).
   2. *Regions.* The *entry region* of a function is every instruction of its
@@ -3057,7 +3091,15 @@ from `ufo:host/1`.
 - **[M6] State.** A Compute-let's state is its memory, globals and tables,
   its clock time, its position in the random stream and the input and
   messages not yet delivered to it. A **snapshot** is the exact content of
-  all of these, stored as a blob. A reader takes a snapshot only between
+  all of these, as one encoded value kept in a blob: `{memory, globals,
+  table, time, random, pending}` — the memory's bytes; the globals' values,
+  each as its 4 or 8 bytes, little-endian, in index order, concatenated;
+  the table as a list of function indices and nulls; the clock time; the
+  number of blocks drawn from the random stream; and the undelivered input
+  events and messages in order. The hash of a snapshot is the SHA-256 of
+  that encoding. `random` yields, 32 bytes at a time, the SHA-256 of a
+  32-byte seed followed by a block counter from 0, as 8 bytes,
+  little-endian; the reader chooses the seed at start and records it. A reader takes a snapshot only between
   calls into the module: `checkpoint` asks for one when the current call
   returns. Running a Compute-let changes its state in the reader and writes
   nothing to the universe (**S1**). The state is recorded — a change that
@@ -3066,7 +3108,10 @@ from `ufo:host/1`.
   history and can be restored.
 - **[M7] Replay.** A reader MAY record the fuel, times, inputs, messages,
   capability replies and seeds delivered to a Compute-let, as a blob: a
-  list of encoded values in order of delivery. Replaying the record from
+  list of encoded values in order of delivery, each `[kind, …]` — `["seed",
+  bytes]`, `["call", export, arguments, fuel]`, `["time", flicks]`,
+  `["input", event]`, `["message", port, value]`, `["reply", handle,
+  value]`. Replaying the record from
   the matching snapshot reproduces its behavior. This is what tests,
   verification by others and shared sessions rest on.
 - **[M8]** A Compute-let that traps, exhausts its fuel or exceeds its memory
@@ -3094,7 +3139,7 @@ A **module** object (`ufo.module`) holds:
 | `globals` | map from a name to `{type, mutable, init}` |
 | `exports` | map from an exported name to a ref to a function, the text `memory`, or `{global: name}` |
 | `data` | map from a name to `{at, bytes}`: bytes placed at a fixed address when the module starts |
-| `table` | list of refs to functions: the table for indirect calls, if any |
+| `table` | list of refs to functions, or null for an empty entry: the table for indirect calls, if any |
 
 A function object (`ufo.func`) holds:
 
@@ -3113,7 +3158,8 @@ integer is an `i32.const`. A bare text reads the local or parameter of that
 name, or else the global of that name. A tree is printed by printing its
 operands in order and then the instruction. An instruction written without
 operands takes them from the stack, as WebAssembly defines, so that every
-valid function body can be written: flat, folded, or anywhere between.
+function body within what can be described (below) can be written: flat,
+folded, or anywhere between. A bare float is an `f64.const`.
 
 | Instruction | Immediates |
 | --- | --- |
@@ -3124,11 +3170,24 @@ valid function body can be written: flat, folded, or anywhere between.
 | `block`, `loop` | a label: a text, possibly empty |
 | `br`, `br_if` | the label of an enclosing `block`, `loop` or `if`, or a depth |
 | `br_table` | a list of labels, then the default label |
-| `i32.const`, `i64.const`, `f32.const`, `f64.const` | the number |
+| `i32.const`, `i64.const` | the number |
+| `f32.const`, `f64.const` | the number, as a float where it is finite and the constant's type holds it exactly; otherwise an integer giving the constant's bits |
 | every other instruction | none |
 
 The attributes are `result` (a type, on `block`, `loop` and `if`), `label`
-(on `if`), and `offset` and `align` (on loads and stores).
+(on `if`), and `offset` and `align` (on loads and stores). A `br` names the
+innermost enclosing construct that has its label; a construct with an
+empty label can be named only by depth. `funcs`, `table` and the maps of a
+module are ordinary properties, set whole or by key; only `body` is a
+sequence.
+
+**What can be described.** This version of the profile describes modules
+that use the instructions of WebAssembly 1.0, the sign-extension and
+saturating-conversion instructions, and `memory.copy` and `memory.fill`,
+with one result to a block, four value types, active data segments and one
+table of function references. That is narrower than what may run (§11.2).
+A module outside it stays carried (**N6**) until a later version of the
+profile can describe it.
 
 Control flow is flat. `block`, `loop` and `if` — whose operand is its
 condition — each open a region that a later `end` statement closes, with
@@ -3151,7 +3210,8 @@ axis `funcs`.
   global, export, element, code, data, each only if not empty. There are no
   custom sections and no start section.
 - The type section lists each distinct function type once, in order of
-  first use by the functions of `funcs`.
+  first use: by each function of `funcs` in turn, its own type and then
+  the types its `call_indirect` instructions name.
 - Functions are in the order of `funcs`. Globals, exports and data segments
   are in the order of their keys in the encoded map (§1.2): by length of
   name, then by bytes. A function's or global's index is its position in
@@ -3174,25 +3234,32 @@ axis `funcs`.
 - **[N1]** Before running a described module, the kernel prints it and
   checks that the result is a valid WebAssembly module within the
   restrictions of §11.2, and that it exports and imports no name beginning
-  `ufo:` other than its imports from `ufo:host/1`. A module that does not
+  `ufo:` other than its imports from `ufo:host/1`. The kernel checks the
+  restrictions as it instruments the module; validity is the judgment of
+  the host's engine when the kernel loads it (`run`, §6.3), which the
+  WebAssembly specification makes the same in every engine. A module that does not
   print, or does not pass, is inconsistent (§1.9). It is not run.
 - **[N2]** Printing is deterministic: the same description yields the same
   bytes on every reader. Appendix F has a vector.
 - **[N3]** A change to a module, or to a function a module lists, is
   verified as any change is (**L3**, **L4**), and further: the kernel
   prints the module as the change would leave it, and refuses the change
-  whole if **N1** fails. A change to the code of a Compute-let that has
-  tests is committed only by promotion (§11.6).
+  whole if **N1** fails. A change to the code of a Compute-let is
+  committed only by promotion (§11.6), whether or not it has tests.
 - **[N4] Meaning, not mechanics.** Origin attaches to statements, and to
   the properties of functions and modules. Every other byte of a printed
   module — the framing of sections, lengths, indices, the order of types —
   is **derived** by the rules above and has no origin but them. Every byte
   of a module is thus either stated, with an origin, or derived (**R8**).
-- **[N5] By content.** The digest (§4.4) of a function covers its
-  signature, its locals and its statements, and follows its calls. It names
-  what the function does and what it uses, and does not depend on where the
-  function sits in a module, or on what else is there. A function copied to
-  another universe is recorded with `copied`, as any copy is (§8.5), and
+- **[N5] By content.** A function's **unit hash** is the SHA-256 of the
+  encoded value `[params, results, locals, body]`. It names what the
+  function is, apart from where it is: it does not change when the function
+  is renamed, when other functions come and go, or when it is copied to
+  another universe together with the functions it calls; and two functions
+  with the same statements, calling the same functions, have the same one
+  in any file. `items` and `unit` show it and `search` finds by it. Equal
+  bodies kept outside their nodes are stored once (§1.4). A copied function
+  keeps its identity and is recorded with `copied`, as any copy is (§8.5);
   its history is found by following that.
 
 **Carried modules.** A program compiled elsewhere enters a universe as what
@@ -3202,13 +3269,16 @@ name such an asset, and it runs under the same checks, sandbox and
 metering. Its bytes are all the format knows of it. Like a text in a
 foreign syntax (**X3**), it is not edited in place.
 
-- **[N6]** A carried module becomes maintainable by being **lifted**: one
-  recorded change that writes a described module from it — each function's
-  instructions as statements without operands, in order, with names taken
-  from its exports and its name section where it has one — as a derivation
-  (§8.3) that pins the asset. Lifting is exact: printing the lifted module
-  MUST yield a valid module in which every function has the same
-  instructions in the same order as the original. The asset remains.
+- **[N6]** A carried module that is within what can be described becomes
+  maintainable by being **lifted**: one recorded change that writes a
+  described module from it — each function's instructions as statements
+  without operands, in order, with names taken from its exports and its
+  name section where it has one, and its other custom sections left behind
+  — as a derivation (§8.3) that pins the asset. Lifting is exact: printing
+  the lifted module MUST yield a valid module in which every function has
+  the same instructions in the same order as the original. The asset
+  remains. A module outside what can be described cannot be lifted, and a
+  reader says which of its features prevents it.
 
 *Reason.* An earlier draft stored a module's bytes and changed them through
 a second vocabulary of operations, which needed keys for the parts of a
@@ -3244,8 +3314,8 @@ For each function, and for each statement of it, the ledger answers:
 | --- | --- |
 | What caused it? | the `origin` of the change that inserted the statement, or last set the property: prompt, model, requester |
 | What did it replace? | that change's operation, which holds the statements removed |
-| What justifies it? | evidence of kind `tested-by`, from the function or a region of its statements to tests |
-| What has run it? | evidence of kind `exercised-by`, from the same to a recorded replay |
+| What justifies it? | evidence of kind `tested-by`, written at promotion (§11.6): from each function a change touched to each test that then passed |
+| What has run it? | evidence of kind `exercised-by`, which a reader MAY record with a replay (**M7**): from each function the replay entered — the entry charges of **M4** count them — to the replay |
 | What was decided? | decisions about that change |
 
 The projections of code are in §7.5. Search covers name, signature,
@@ -3274,7 +3344,8 @@ reader, not the Compute-let, carries out:
    a shadow instance. The running instance is not touched.
 4. If every test passes, the reader obtains the person's approval, unless
    the person has approved in advance changes by this actor to this
-   Compute-let for the present session.
+   Compute-let for the present session. A test change (**G1**) is never
+   approved in advance.
 5. The reader records the live state (**M6**), commits the change, starts
    the candidate from that state and switches the surface to it. The
    candidate's memory, globals and tables are those of the live instance; a
@@ -3283,10 +3354,15 @@ reader, not the Compute-let, carries out:
    previous revision remains in history.
 6. If anything fails or approval is refused, the candidate is discarded.
 
+A change to a function that the modules of several Compute-lets list is
+promoted for each of them, and committed only if every one passes. The
+change that commits a promotion records, as evidence of kind `tested-by`,
+each test that passed against each function it touched.
+
 - **[G1] The judge is outside the change.** The tests that gate a change are
   those in force before it. A change that adds, alters or removes a test
-  object, or touches any function a test lists under `judges`, is a **test
-  change**. It MUST NOT be combined with any other operation, and it is
+  object, alters a manifest's `tests`, or touches any function a test lists
+  under `judges`, is a **test change**. It MUST NOT be combined with any other operation, and it is
   committed only with a decision of verdict `approve` from the person,
   given for that change.
 - **[G2]** The running Compute-let never observes a candidate that failed.
