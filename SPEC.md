@@ -1201,16 +1201,15 @@ The followed objects are those the covered value names by a ref, at any
 depth and inside formulas too, or by an anchor that is the value of a
 property named `of` and has neither a digest nor a `u`; and all that those
 reach in the same way through the whole of their properties, each once.
-Four are never followed: the pinned object itself; a change object; where
-the region is on a continuous `t`, a clock whose own `start` and `end` do
-not meet it; and any object made by the same derivation as the object
+Three are never followed: the pinned object itself; a change object; and
+any object made by the same derivation as the object
 that holds the pin (one whose `from.by` is the same), so that a derived
 thing shown inside its own source does not make itself stale.
 
 A digest therefore changes when anything the region shows could change: a
 pin to a group goes stale when a child changes, a pin to a chart goes stale
 when its data does, and a pin to five minutes of a timeline goes stale when
-something present in those five minutes does. Appendix F has vectors.
+a play that touches those five minutes does, and not when another does. Appendix F has vectors.
 
 A pin is **current** if, resolved against the object's current revision,
 its region is attached and has the same digest; and, where what it pins is

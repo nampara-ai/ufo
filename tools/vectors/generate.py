@@ -634,7 +634,7 @@ V["published"] = {"file": "published.ufx", "length": len(pubpk.b), "root_hash": 
 # ---- 10. a timeline: time edited as a sequence (section 4.5) ----
 def timeline_pack():
     pk = Pack(); TU, TK, R1, R2, CAP, NOTE = bytes(16), bytes([0xe1]) * 16, bytes([0xe2]) * 16, bytes([0xe3]) * 16, bytes([0xe4]) * 16, bytes([0xe5]) * 16
-    D1, D2, D3 = (bytes([c]) * 16 for c in (0xd4, 0xd5, 0xd6)); lin = bytes([0x44]) * 16; S = FL
+    D1, D2, D3, D4 = (bytes([c]) * 16 for c in (0xd4, 0xd5, 0xd6, 0xd7)); lin = bytes([0x44]) * 16; S = FL
     def reg(a, b): return anchor({"o": TK, "a": {"t": ["s", a, b]}})
     plays = {"a": {"at": reg([D1, 0, 0], [D1, 6 * S - 1, 1]), "of": ref(R1)},
              "b": {"at": reg([D1, 6 * S, 0], "end"), "of": ref(R2), "offset": 2 * S},
@@ -673,6 +673,11 @@ def timeline_pack():
     h2 = st[TK]; st = dict(st); st[TK] = clock(3, D3, 5021, 9 * S, seq3, prev=h2)
     ops = [{"op": "splice", "obj": TK, "key": "t", "after": [D1, 7 * S - 1], "ins": 1 * S}]
     st, _, _, k3 = commit(pk, st, D3, ops, "One second inserted.", pub(1767232800000), k2, 2, 5013); pk.index(); pk.head(k3)
+    # commit 4: the first second of the second play is cut; its time base is read from its anchor, so what remains plays as before
+    seq4 = [[D1, 0, 3 * S], [D1, 3 * S, 2 * S, False], [D1, 5 * S, 1 * S], [D1, 6 * S, 1 * S, False], [D3, 0, 1 * S], [D1, 7 * S, 3 * S]]
+    h3 = st[TK]; st = dict(st); st[TK] = clock(4, D4, 5031, 8 * S, seq4, prev=h3)
+    ops = [{"op": "splice", "obj": TK, "key": "t", "del": [[D1, 6 * S, 1 * S]], "old": 1 * S}]
+    st, _, _, k4 = commit(pk, st, D4, ops, "The start of the second take cut.", pub(1767236400000), k3, 3, 5032); pk.index(); pk.head(k4)
     def element_at(seq, p):
         for r in seq:
             if len(r) == 3:
@@ -694,17 +699,20 @@ def timeline_pack():
         return res
     commits = []
     for name, k, seq, count, samples in (("1", k1, seq1, 10 * S, [2 * S, 7 * S + S // 2]), ("2", k2, seq2, 8 * S, [2 * S, 3 * S, 4 * S, 5 * S + S // 2]),
-                                         ("3", k3, seq3, 9 * S, [5 * S + S // 2, 6 * S + S // 2])):
+                                         ("3", k3, seq3, 9 * S, [5 * S + S // 2, 6 * S + S // 2]),
+                                         ("4", k4, seq4, 8 * S, [3 * S + S // 2, 4 * S, 5 * S + S // 2])):
         commits.append({"commit": k.hex(), "t": count, "seq": seqj(seq),
             "anchors": {m: resolve(seq, a.v["a"]["t"][1], a.v["a"]["t"][2]) for m, a in sorted(marks.items())},
             "plays_resolve_to": {m: resolve(seq, pl["at"].v["a"]["t"][1], pl["at"].v["a"]["t"][2]) for m, pl in sorted(plays.items())},
             "playing_at": [{"position": p, "element": [element_at(seq, p)[0].hex(), element_at(seq, p)[1]], "plays": playing(seq, p)} for p in samples]})
+    TL.update(st=st, commits=[k1, k2, k3, k4], live=[TU, TK, R1, R2, CAP], changes=[D1, D3, D4], pk=pk)
     return pk, {"file": "timeline.ufx", "length": len(pk.b), "flicks_per_second": S, "clock": TK.hex(),
-        "what": "a clock whose t is a count: ten seconds inserted by one change; then two seconds cut from the middle; then one second inserted by another change. Positions and times are in flicks",
+        "what": "a clock whose t is a count: ten seconds inserted by one change; then two seconds cut from the middle; then one second inserted by another change; then the first second of play b cut. Positions and times are in flicks",
         "plays": {"a": "seconds 0 to 6 as first inserted, playing the first take from its time 0", "b": "from second 6 to the end, playing the second take from its time 2 s", "c": "second 7, a caption"},
         "anchors": {"m1": "second 4: cut in commit 2, so detached from then on", "m2": "second 8: moves two seconds earlier after the cut, and one later after the insertion", "m3": "seconds 1 to 5: shortened by the cut"},
-        "rule": "at an element numbered n by change c inside a play's region whose first element is numbered n0 by the same change, the play's object is at time offset + (n - n0); at an element of another change it is not present",
+        "rule": "a play's region begins at the boundary [c, n, side]; n0 is n + side, read from the anchor whether or not those elements are still present. At an element numbered m by the same change c inside the region, the play's object is at time offset + (m - n0); at an element of another change it is not present",
         "commits": commits}
+TL = {}
 tpk, tv = timeline_pack()
 open(os.path.join(OUT, "timeline.ufx"), "wb").write(tpk.b); V["timeline"] = tv
 
@@ -759,6 +767,70 @@ def compose_pack():
                 "what": "one text holding a heading, a paragraph with emphasis and strong, bulleted items with two numbered items nested, a quote, code with a line break, a second heading, six paragraphs and an empty last paragraph; a document face and a face of pages 320 by 400 with margins of 24"}
 cpk, cv = compose_pack()
 open(os.path.join(OUT, "compose.ufx"), "wb").write(cpk.b); V["compose_pack"] = cv
+
+# ---- 13. regions of every kind, and the digest's cases (sections 4.2 to 4.4, 5.2) ----
+def pins_pack():
+    pk = Pack(); PU, PT, PX, PY, PZ, PA, PK, K1, K2, PM = (bytes([c]) * 16 for c in (0, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99)); PC = bytes([0x9c]) * 16
+    lin = bytes([0x66]) * 16; S = FL; chars = "Alpha.Beta gamma.Delta."
+    def reg(a, b): return anchor({"o": PT, "a": {"chars": ["s", a, b]}})
+    e = lambda i, side=0: [PC, i, side]
+    spans = {"b0": {"at": reg(e(0), e(6)), "kind": "block", "role": "paragraph"},
+             "b1": {"at": reg(e(6), e(6)), "kind": "block", "role": "paragraph"},          # an empty block: a point
+             "b2": {"at": reg(e(6), e(17)), "kind": "block", "role": "paragraph"},
+             "b3": {"at": reg(e(17), "end"), "kind": "block", "role": "paragraph"},
+             "i0": {"at": reg(e(11), e(15, 1)), "kind": "inline", "role": "link", "href": anchor({"o": PY}), "org.example.see": ref(PX)}}
+    data = b"0123456789abcdef"
+    tp = {"chars": chars, "spans": spans}
+    xp = {"label": "x", "of": anchor({"o": PY})}; yp = {"label": "y", "back": ref(PT)}; zp = {"label": "z", "n": 1, "snapshot": b"\x01\x02"}
+    ap = {"bytes": pk.outside("b", data), "media": "text/plain"}
+    kp = {"start": 2 * S, "end": 8 * S, "scales": {"t": [1, 1, -1 * S]}, "children": {"a": ref(K1), "b": ref(K2)}}
+    k1p = {"start": 0, "end": 3 * S}; k2p = {"start": 4 * S, "end": 9 * S}
+    c = lambda o, ax, lo, hi: anchor({"o": o, "a": {ax: ["c", lo, hi]}})
+    marks = {"bytes_mid": c(PA, "bytes", 3, 7), "bytes_clip": c(PA, "bytes", 10, 999), "bytes_out": c(PA, "bytes", 900, 950), "bytes_end": c(PA, "bytes", 16, 20),
+             "t_in": c(PK, "t", 4 * S, 6 * S), "t_clip": c(PK, "t", 0, 4 * S), "t_touch": c(PK, "t", 9 * S, 12 * S), "t_out": c(PK, "t", 10 * S, 12 * S),
+             "unknown": c(PZ, "w", 1.5, 2.5), "keys": anchor({"o": PT, "a": {"spans": ["k", "b0", "nope", "i0"]}}), "kids": anchor({"o": PK, "a": {"children": ["k", "b", "zz"]}}),
+             "point": reg(e(6), e(6)), "whole": anchor({"o": PX})}
+    mp = {"marks": marks}; roots = {"primary": ref(PT), "marks": ref(PM), "clock": ref(PK), "asset": ref(PA), "z": ref(PZ)}
+    objs = [(PU, "ufo.universe", {"lineage": lin, "roots": roots}), (PT, "ufo.text", tp), (PX, "org.example.thing", xp), (PY, "org.example.thing", yp), (PZ, "org.example.thing", zp),
+            (PA, "ufo.asset", ap), (PK, "ufo.clock", kp), (K1, "ufo.clock", k1p), (K2, "ufo.clock", k2p), (PM, "org.example.marks", mp)]
+    st = {}; ops = []
+    for n, (i, ty, p) in enumerate(objs):
+        st[i] = revision(pk, i, ty, 1, PC, 7001 + n, p, seq={"chars": [[PC, 0, len(chars)]]} if i == PT else None)
+        ops.append({"op": "new", "obj": i, "type": ty})
+        for k2_, v in p.items():
+            ops.append({"op": "splice", "obj": i, "key": k2_, "after": None, "ins": v} if (i == PT and k2_ == "chars") else {"op": "set", "obj": i, "key": k2_, "val": v})
+    st, _, _, k = commit(pk, st, PC, ops, None, {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 7050)
+    pk.index(); pk.head(k)
+    hx = lambda i: i.hex()
+    resolves = {"bytes_mid": [3, 7], "bytes_clip": [10, 16], "bytes_out": "detached", "bytes_end": [16, 16],
+                "t_in": [3 * S, 5 * S], "t_clip": [2 * S, 3 * S], "t_touch": [8 * S, 8 * S], "t_out": "detached",
+                "unknown": {"unclipped": [1.5, 2.5]}, "keys": ["b0", "i0"], "kids": ["b"], "point": [6, 6], "whole": "the whole object"}
+    def dg(name, why, sl, covered, followed, **pin):
+        return dict(pin, case=name, why=why, salt=salt(sl).hex(), covered_value_hex=enc(covered).hex(),
+                    followed=[{"id": i.hex(), "revision": st[i].hex()} for i in sorted(followed)], digest=digest(salt(sl), covered, [(i, st[i]) for i in followed]).hex())
+    tk = {k_: v for k_, v in spans.items() if k_ in ("b0", "b2", "i0")}
+    cases = [
+        dg("a passage with spans", "the spans that share a present element with the passage are kept: b0, b2 and i0. The empty block b1 is a point and shares none; b3 lies outside. The ref in i0 is followed to x; x's `of` is followed to y; y refers back to the text, which is the pinned object and is never followed; the anchor in `href` is not a ref and not an `of`, and is not followed",
+           7101, {"chars": ["Alpha.Beta gamma.", {"spans": tk}]}, [PX, PY], o=hx(PT), axis="chars", a=[hx(PC), 0, 0], b=[hx(PC), 16, 1]),
+        dg("a passage one span touches", "only b3", 7102, {"chars": ["Delta.", {"spans": {"b3": spans["b3"]}}]}, [], o=hx(PT), axis="chars", a=[hx(PC), 17, 0], b="end"),
+        dg("a point", "a point covers nothing and nothing touches it: the covered items are empty and the map is there, empty", 7103, {"chars": ["", {}]}, [], o=hx(PT), axis="chars", a=[hx(PC), 6, 0], b=[hx(PC), 6, 0]),
+        dg("a whole object with a snapshot", "a property named snapshot is left out of the covered value", 7104, {"label": "z", "n": 1}, [], o=hx(PZ)),
+        dg("keys", "the entries of the keys that are present, and nothing for the key that is not", 7105, {"spans": {"b0": spans["b0"]}}, [], o=hx(PT), axis="spans", keys=["b0", "nope"]),
+        dg("a continuous region", "the covered value is the object's properties whole; both children are followed, whatever their intervals", 7106, {"t": kp}, [K1, K2], o=hx(PK), axis="t", low=4 * S, high=6 * S),
+        dg("an asset's bytes", "continuous: the covered value is the asset's properties, with the bytes themselves", 7107, {"bytes": {"bytes": data, "media": "text/plain"}}, [], o=hx(PA), axis="bytes", low=3, high=7)]
+    return pk, k, st, {"file": "pins.ufx", "length": len(pk.b), "root_hash": k.hex(), "marks_object": PM.hex(), "flicks_per_second": S,
+        "what": "one commit holding a text with an empty block and an inline span, three small objects that refer to one another, an asset of sixteen bytes, a clock from second 2 to second 8 whose scale shifts t by minus one second, and an object whose `marks` holds an anchor of every kind",
+        "extents": "the asset's bytes: [0, 16]. The clock's t: [start, end] = [2 s, 8 s], in present coordinates, after the scale. The object named by `unknown` is of a type this document does not define, so its axis w has no known extent",
+        "anchors_resolve_to": resolves, "digests": cases}
+ppk, pk_root, pst, pv = pins_pack()
+open(os.path.join(OUT, "pins.ufx"), "wb").write(ppk.b); V["pins"] = pv
+# the same rule on a count: a region of the timeline at its last commit
+_S = FL; _D1 = bytes([0xd4]) * 16; _TK = bytes([0xe1]) * 16; _R1 = bytes([0xe2]) * 16
+_play_a = {"at": anchor({"o": _TK, "a": {"t": ["s", [_D1, 0, 0], [_D1, 6 * _S - 1, 1]]}}), "of": ref(_R1)}
+_cov = {"t": [[[_D1, 0, 3 * _S]], {"plays": {"a": _play_a}}]}
+V["pins"]["digests"].append({"case": "three seconds of a timeline", "pack": "timeline.ufx", "why": "on a count the covered items are the runs the region covers, cut to it; play a touches them and plays b and c do not; the first take is followed",
+    "o": _TK.hex(), "axis": "t", "a": [_D1.hex(), 0, 0], "b": [_D1.hex(), 3 * _S - 1, 1], "salt": salt(7108).hex(), "covered_value_hex": enc(_cov).hex(),
+    "followed": [{"id": _R1.hex(), "revision": TL["st"][_R1].hex()}], "digest": digest(salt(7108), _cov, [(_R1, TL["st"][_R1])]).hex()})
 json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)
 print("minimal.ufx", V["minimal_pack"]["length"], V["minimal_pack"]["root_hash"][:16],
       "| history.ufx", V["history_pack"]["length"], hK3.hex()[:16], "| objects at commit 2:", len(state2))

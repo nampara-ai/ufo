@@ -1499,10 +1499,10 @@
  },
  "timeline": {
   "file": "timeline.ufx",
-  "length": 9119,
+  "length": 11695,
   "flicks_per_second": 705600000,
   "clock": "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
-  "what": "a clock whose t is a count: ten seconds inserted by one change; then two seconds cut from the middle; then one second inserted by another change. Positions and times are in flicks",
+  "what": "a clock whose t is a count: ten seconds inserted by one change; then two seconds cut from the middle; then one second inserted by another change; then the first second of play b cut. Positions and times are in flicks",
   "plays": {
    "a": "seconds 0 to 6 as first inserted, playing the first take from its time 0",
    "b": "from second 6 to the end, playing the second take from its time 2 s",
@@ -1513,7 +1513,7 @@
    "m2": "second 8: moves two seconds earlier after the cut, and one later after the insertion",
    "m3": "seconds 1 to 5: shortened by the cut"
   },
-  "rule": "at an element numbered n by change c inside a play's region whose first element is numbered n0 by the same change, the play's object is at time offset + (n - n0); at an element of another change it is not present",
+  "rule": "a play's region begins at the boundary [c, n, side]; n0 is n + side, read from the anchor whether or not those elements are still present. At an element numbered m by the same change c inside the region, the play's object is at time offset + (m - n0); at an element of another change it is not present",
   "commits": [
    {
     "commit": "42a101a235cf2dac723d1d3a6049f124c1847c81f1300ecb62c13e2b79e63855",
@@ -1744,6 +1744,100 @@
       }
      }
     ]
+   },
+   {
+    "commit": "43649a094b329c0f8d7c29c4ee36109378ab444ff070ce6c22e50509c88fbaa4",
+    "t": 5644800000,
+    "seq": [
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      0,
+      2116800000
+     ],
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      2116800000,
+      1411200000,
+      false
+     ],
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      3528000000,
+      705600000
+     ],
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      4233600000,
+      705600000,
+      false
+     ],
+     [
+      "d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6",
+      0,
+      705600000
+     ],
+     [
+      "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+      4939200000,
+      2116800000
+     ]
+    ],
+    "anchors": {
+     "m1": "detached",
+     "m2": [
+      4233600000,
+      4939200000
+     ],
+     "m3": [
+      705600000,
+      2822400000
+     ]
+    },
+    "plays_resolve_to": {
+     "a": [
+      0,
+      2822400000
+     ],
+     "b": [
+      2822400000,
+      5644800000
+     ],
+     "c": [
+      3528000000,
+      4233600000
+     ]
+    },
+    "playing_at": [
+     {
+      "position": 2469600000,
+      "element": [
+       "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+       3880800000
+      ],
+      "plays": {
+       "a": 3880800000
+      }
+     },
+     {
+      "position": 2822400000,
+      "element": [
+       "d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6",
+       0
+      ],
+      "plays": {}
+     },
+     {
+      "position": 3880800000,
+      "element": [
+       "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+       5292000000
+      ],
+      "plays": {
+       "b": 2469600000,
+       "c": 352800000
+      }
+     }
+    ]
    }
   ]
  },
@@ -1835,5 +1929,209 @@
    }
   ],
   "what": "one text holding a heading, a paragraph with emphasis and strong, bulleted items with two numbered items nested, a quote, code with a line break, a second heading, six paragraphs and an empty last paragraph; a document face and a face of pages 320 by 400 with margins of 24"
+ },
+ "pins": {
+  "file": "pins.ufx",
+  "length": 7886,
+  "root_hash": "40bff902f0d5478fdb2fad4e117ff20924cd144dffc6b3d64f243f803f1989a1",
+  "marks_object": "99999999999999999999999999999999",
+  "flicks_per_second": 705600000,
+  "what": "one commit holding a text with an empty block and an inline span, three small objects that refer to one another, an asset of sixteen bytes, a clock from second 2 to second 8 whose scale shifts t by minus one second, and an object whose `marks` holds an anchor of every kind",
+  "extents": "the asset's bytes: [0, 16]. The clock's t: [start, end] = [2 s, 8 s], in present coordinates, after the scale. The object named by `unknown` is of a type this document does not define, so its axis w has no known extent",
+  "anchors_resolve_to": {
+   "bytes_mid": [
+    3,
+    7
+   ],
+   "bytes_clip": [
+    10,
+    16
+   ],
+   "bytes_out": "detached",
+   "bytes_end": [
+    16,
+    16
+   ],
+   "t_in": [
+    2116800000,
+    3528000000
+   ],
+   "t_clip": [
+    1411200000,
+    2116800000
+   ],
+   "t_touch": [
+    5644800000,
+    5644800000
+   ],
+   "t_out": "detached",
+   "unknown": {
+    "unclipped": [
+     1.5,
+     2.5
+    ]
+   },
+   "keys": [
+    "b0",
+    "i0"
+   ],
+   "kids": [
+    "b"
+   ],
+   "point": [
+    6,
+    6
+   ],
+   "whole": "the whole object"
+  },
+  "digests": [
+   {
+    "o": "91919191919191919191919191919191",
+    "axis": "chars",
+    "a": [
+     "9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c",
+     0,
+     0
+    ],
+    "b": [
+     "9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c",
+     16,
+     1
+    ],
+    "case": "a passage with spans",
+    "why": "the spans that share a present element with the passage are kept: b0, b2 and i0. The empty block b1 is a point and shares none; b3 lies outside. The ref in i0 is followed to x; x's `of` is followed to y; y refers back to the text, which is the pinned object and is never followed; the anchor in `href` is not a ref and not an `of`, and is not followed",
+    "salt": "451385de8f198005f156650194d36b64",
+    "covered_value_hex": "a16563686172738271416c7068612e426574612067616d6d612ea1657370616e73a3626230a3626174d9d8a6a26161a165636861727383617383509c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c000083509c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c0600616f5091919191919191919191919191919191646b696e6465626c6f636b64726f6c6569706172616772617068626232a3626174d9d8a6a26161a165636861727383617383509c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c060083509c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c1100616f5091919191919191919191919191919191646b696e6465626c6f636b64726f6c6569706172616772617068626930a5626174d9d8a6a26161a165636861727383617383509c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c0b0083509c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c0f01616f50919191919191919191919191919191916468726566d9d8a6a1616f5093939393939393939393939393939393646b696e6466696e6c696e6564726f6c65646c696e6b6f6f72672e6578616d706c652e736565d9d8a55092929292929292929292929292929292",
+    "followed": [
+     {
+      "id": "92929292929292929292929292929292",
+      "revision": "2f2c7c96e4857c5318dacc4c96e8033b1e26580718814b0458d8707cb454f47f"
+     },
+     {
+      "id": "93939393939393939393939393939393",
+      "revision": "e6f03dbd663824a561b5beac4457fd65068b8da3d7a4921b096dfe1336d118d8"
+     }
+    ],
+    "digest": "f0629e8899edb32ba2a89ab6885631bcb7f1671d0774712eaa6c078353e77ccf"
+   },
+   {
+    "o": "91919191919191919191919191919191",
+    "axis": "chars",
+    "a": [
+     "9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c",
+     17,
+     0
+    ],
+    "b": "end",
+    "case": "a passage one span touches",
+    "why": "only b3",
+    "salt": "6496fcec54b3e004e84ec49a40b6e14b",
+    "covered_value_hex": "a1656368617273826644656c74612ea1657370616e73a1626233a3626174d9d8a6a26161a165636861727383617383509c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c110063656e64616f5091919191919191919191919191919191646b696e6465626c6f636b64726f6c6569706172616772617068",
+    "followed": [],
+    "digest": "d20332598fa61fdfc769b0abf5bc2034d605c1a79ce7ab74f4e28482a9af6f09"
+   },
+   {
+    "o": "91919191919191919191919191919191",
+    "axis": "chars",
+    "a": [
+     "9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c",
+     6,
+     0
+    ],
+    "b": [
+     "9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c",
+     6,
+     0
+    ],
+    "case": "a point",
+    "why": "a point covers nothing and nothing touches it: the covered items are empty and the map is there, empty",
+    "salt": "f2d021a66dd46c9d0f3ae6aaf17c2c3a",
+    "covered_value_hex": "a16563686172738260a0",
+    "followed": [],
+    "digest": "399951f96d5437ee32b36c74ce5b0dac72bd734b8c7a27513c17d88b0e26c028"
+   },
+   {
+    "o": "94949494949494949494949494949494",
+    "case": "a whole object with a snapshot",
+    "why": "a property named snapshot is left out of the covered value",
+    "salt": "1727e7f0091d02ad5ba2b973b5ed3b7a",
+    "covered_value_hex": "a2616e01656c6162656c617a",
+    "followed": [],
+    "digest": "360d4dd2b74ed96e109aa5c8394b8db370c9957eb903a10d3e7fe9367b2ff5d5"
+   },
+   {
+    "o": "91919191919191919191919191919191",
+    "axis": "spans",
+    "keys": [
+     "b0",
+     "nope"
+    ],
+    "case": "keys",
+    "why": "the entries of the keys that are present, and nothing for the key that is not",
+    "salt": "b1387f23d429be3e6412cf7fa691577a",
+    "covered_value_hex": "a1657370616e73a1626230a3626174d9d8a6a26161a165636861727383617383509c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c000083509c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c0600616f5091919191919191919191919191919191646b696e6465626c6f636b64726f6c6569706172616772617068",
+    "followed": [],
+    "digest": "1f0f47191ac7cd1ba7d298093aeaf127775654938f57739b1d855ea32e56c473"
+   },
+   {
+    "o": "96969696969696969696969696969696",
+    "axis": "t",
+    "low": 2822400000,
+    "high": 4233600000,
+    "case": "a continuous region",
+    "why": "the covered value is the object's properties whole; both children are followed, whatever their intervals",
+    "salt": "572cd9cff2f9dcbdb16cb9aa34524b88",
+    "covered_value_hex": "a16174a463656e641b000000015074d0006573746172741a541d3400667363616c6573a161748301013a2a0e99ff686368696c6472656ea26161d9d8a550979797979797979797979797979797976162d9d8a55098989898989898989898989898989898",
+    "followed": [
+     {
+      "id": "97979797979797979797979797979797",
+      "revision": "8ab1b00eaec3d1b646c3634afb96f04a03a7fce90e93237f69bc0955b96e8db1"
+     },
+     {
+      "id": "98989898989898989898989898989898",
+      "revision": "7d9fbdeb80e70562363a296ab51b335e4acfb970bcac8989c2931974ed674ac7"
+     }
+    ],
+    "digest": "dc25629a166e2796f2d629d0eba5cc14d0c2965c89569a72ec08d76b449c3ce1"
+   },
+   {
+    "o": "95959595959595959595959595959595",
+    "axis": "bytes",
+    "low": 3,
+    "high": 7,
+    "case": "an asset's bytes",
+    "why": "continuous: the covered value is the asset's properties, with the bytes themselves",
+    "salt": "18dddd2c0e7de11bde8f2078007df2c0",
+    "covered_value_hex": "a1656279746573a26562797465735030313233343536373839616263646566656d656469616a746578742f706c61696e",
+    "followed": [],
+    "digest": "17ceefd59c25f07171e678919080f2a28e0103b52f6d7a7aa60ee286e4aadc98"
+   },
+   {
+    "case": "three seconds of a timeline",
+    "pack": "timeline.ufx",
+    "why": "on a count the covered items are the runs the region covers, cut to it; play a touches them and plays b and c do not; the first take is followed",
+    "o": "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
+    "axis": "t",
+    "a": [
+     "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+     0,
+     0
+    ],
+    "b": [
+     "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+     2116799999,
+     1
+    ],
+    "salt": "e1bd69dff744301c3f3953c6db6d5a0c",
+    "covered_value_hex": "a1617482818350d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4001a7e2bce00a165706c617973a16161a2626174d9d8a6a26161a161748361738350d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d400008350d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d41afc579bff01616f50e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1626f66d9d8a550e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2",
+    "followed": [
+     {
+      "id": "e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2",
+      "revision": "cd0f4955e7f2cfe2ec23c21feffed7273029c9118ebe740ee0643d34ad9779ed"
+     }
+    ],
+    "digest": "33f32cc9e34911c8fa984618d9ab2928160a9f9488206022bb9844b24de4ecc5"
+   }
+  ]
  }
 }

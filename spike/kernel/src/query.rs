@@ -195,10 +195,9 @@ fn timeline(pk: &Pack, q: &V) -> Option<V> {
                 continue;
             }
             // the first element the region covers, from its start boundary
-            let (c0, n0) = match reg.l().get(1)?.s() {
-                Some(_) => element_at(&rs, 0)?,
-                None => { let b = reg.l().get(1)?.l(); (b.first()?.id()?, b.get(1)?.i()? as u64 + b.get(2)?.i()? as u64) }
-            };
+            if reg.l().get(1)?.s().is_some() { continue; }
+            let b = reg.l().get(1)?.l();
+            let (c0, n0) = (b.first()?.id()?, b.get(1)?.i()? as u64 + b.get(2)?.i()? as u64);
             if c == c0 {
                 now.push((key.clone(), V::Int(pl.get("offset").and_then(|o| o.i()).unwrap_or(0) + n as i64 - n0 as i64)));
             }
@@ -207,6 +206,64 @@ fn timeline(pk: &Pack, q: &V) -> Option<V> {
     }
     Some(map(vec![("t", k.p.get("t")?.clone()), ("live", V::Int(rs.iter().filter(|r| r.live).map(|r| r.count).sum::<u64>() as i64)),
         ("anchors", V::M(anchors)), ("plays_resolve_to", V::M(resolved)), ("playing_at", V::L(playing))]))
+}
+
+// ---- 4.2, 4.3: continuous and keyed regions ----
+/// A continuous region in present coordinates, clipped to the extent where the extent is known.
+/// Returns (the interval or None if detached, whether it was clipped against a known extent).
+fn extent(pk: &Pack, _commit: &H, o: &Obj, ax: &str, reg: &V) -> (Option<(f64, f64)>, bool) {
+    let (Some(lo), Some(hi)) = (reg.l().get(1).and_then(|x| x.f()), reg.l().get(2).and_then(|x| x.f())) else { return (None, true) };
+    let ints = matches!(reg.l().get(1), Some(V::Int(_)));
+    let sc = o.p.get("scales").and_then(|s| s.get(ax)).map(|s| s.l().iter().filter_map(|x| x.f()).collect::<Vec<f64>>()).unwrap_or(vec![1.0, 1.0, 0.0]);
+    let map = |x: f64| { let y = x * sc[0] / sc[1]; (if ints { libm_floor(y) } else { y }) + sc[2] };
+    let (lo, hi) = (map(lo), map(hi));
+    let e = match (o.ty.as_str(), ax) {
+        ("ufo.clock", "t") => match (o.p.get("start").and_then(|x| x.f()), o.p.get("end").and_then(|x| x.f())) { (Some(a), Some(b)) => Some((a, b)), _ => None },
+        ("ufo.asset", "bytes") => o.p.get("bytes").and_then(|b| b.b()).map(|b| (0.0, b.len() as f64)),
+        _ => None,
+    };
+    let _ = pk;
+    match e {
+        None => (Some((lo, hi)), false),
+        Some((a, b)) if hi < a || lo > b => (None, true),
+        Some((a, b)) => (Some((lo.max(a), hi.min(b))), true),
+    }
+}
+fn libm_floor(x: f64) -> f64 {
+    let t = x as i64 as f64;
+    if t > x { t - 1.0 } else { t }
+}
+/// Every anchor in an object's `marks`, resolved against the commit.
+fn resolve_marks(pk: &Pack, q: &V) -> Option<V> {
+    let commit = arg_commit(pk, q);
+    let m = pk.object(&commit, &arg_id(q, "marks")?)?;
+    let V::M(marks) = m.p.get("marks")? else { return None };
+    let num = |x: f64, ints: bool| if ints { V::Int(x as i64) } else { V::F(x) };
+    let mut out = Vec::new();
+    for (name, a) in marks {
+        let a = a.tag(ANCHOR)?;
+        let Some(o) = a.get("o").and_then(|i| i.id()).and_then(|i| pk.object(&commit, &i)) else { out.push((name.clone(), t("detached"))); continue };
+        let Some(V::M(axes)) = a.get("a") else { out.push((name.clone(), t("the whole object"))); continue };
+        let (ax, reg) = axes.first()?;
+        let r = match reg.l().first().and_then(|k| k.s()) {
+            Some("s") => span_or_detached(o.seq.as_ref().and_then(|s| s.get(ax)).map(runs).and_then(|rs| region(&rs, reg))),
+            Some("c") => {
+                let ints = matches!(reg.l().get(1), Some(V::Int(_)));
+                match extent(pk, &commit, &o, ax, reg) {
+                    (None, _) => t("detached"),
+                    (Some((lo, hi)), true) => V::L(vec![num(lo, ints), num(hi, ints)]),
+                    (Some((lo, hi)), false) => map(vec![("unclipped", V::L(vec![num(lo, ints), num(hi, ints)]))]),
+                }
+            }
+            Some("k") => {
+                let present: Vec<V> = reg.l()[1..].iter().filter(|k| match o.p.get(ax) { Some(V::M(m)) => m.iter().any(|(x, _)| Some(x.as_str()) == k.s()), _ => false }).cloned().collect();
+                if present.is_empty() { t("detached") } else { V::L(present) }
+            }
+            _ => t("detached"),
+        };
+        out.push((name.clone(), r));
+    }
+    Some(V::M(out))
 }
 
 // ---- 4.4: the digest of a pin ----
@@ -238,8 +295,24 @@ pub fn digest(pk: &Pack, commit: &H, id: &Id, axis: Option<(&str, &V)>, salt: &[
     let covered = match axis {
         None => {
             let mut p = o.p.clone();
-            if let V::M(m) = &mut p { m.retain(|(k, _)| !(k == "snapshot" && o.ty == "ufo.computelet")); }
+            if let V::M(m) = &mut p { m.retain(|(k, _)| k != "snapshot"); }
             p
+        }
+        Some((ax, reg)) if reg.l().first().and_then(|k| k.s()) == Some("c") => {
+            extent(pk, commit, &o, ax, reg).0?;
+            let mut p = o.p.clone();
+            if let V::M(m) = &mut p { m.retain(|(k, _)| k != "snapshot"); }
+            V::M(vec![(String::from(ax), p)])
+        }
+        Some((ax, reg)) if reg.l().first().and_then(|k| k.s()) == Some("k") => {
+            let keys: Vec<&str> = reg.l()[1..].iter().filter_map(|k| k.s()).collect();
+            let part = match o.p.get(ax)? {
+                V::M(m) => V::M(m.iter().filter(|(k, _)| keys.contains(&k.as_str())).cloned().collect()),
+                V::L(l) => V::L(l.iter().filter(|r| r.tag(REF).and_then(|i| i.id()).map(|i| keys.contains(&hex(&i).as_str())).unwrap_or(false)).cloned().collect()),
+                _ => return None,
+            };
+            if matches!(&part, V::M(m) if m.is_empty()) || matches!(&part, V::L(l) if l.is_empty()) { return None; }
+            V::M(vec![(String::from(ax), part)])
         }
         Some((ax, reg)) => {
             let rs = runs(o.seq.as_ref()?.get(ax)?);
@@ -262,7 +335,7 @@ pub fn digest(pk: &Pack, commit: &H, id: &Id, axis: Option<(&str, &V)>, salt: &[
                         anchors_in(e, &mut found);
                         let touches = found.iter().any(|a| {
                             a.get("o").and_then(|x| x.id()) == Some(*id) && a.get("u").is_none()
-                                && a.get("a").and_then(|x| x.get(ax)).and_then(|r| region(&rs, r)).map(|(a, b)| a < hi && lo < b).unwrap_or(false)
+                                && a.get("a").and_then(|x| x.get(ax)).and_then(|r| region(&rs, r)).map(|(a, b)| a < b && a < hi && lo < b).unwrap_or(false)
                         });
                         if touches { kept.push((key.clone(), e.clone())); }
                     }
@@ -278,7 +351,7 @@ pub fn digest(pk: &Pack, commit: &H, id: &Id, axis: Option<(&str, &V)>, salt: &[
     todo.extend(first);
     let mut followed = Vec::new();
     while let Some(i) = todo.pop_first() {
-        if i == *id && axis.is_none() || !seen.insert(i) { continue; }
+        if i == *id || !seen.insert(i) { continue; }
         match pk.object(commit, &i) {
             Some(x) if x.ty == "ufo.change" => {}
             Some(x) => { followed.push((i, x.rev)); let mut more = BTreeSet::new(); refs_in(&x.p, false, &mut more); todo.extend(more); }
@@ -295,6 +368,8 @@ fn digest_q(pk: &Pack, q: &V) -> Option<V> {
     let id = arg_id(q, "o")?;
     let salt = unhex(q.get("salt")?.s()?)?;
     let reg = match q.get("axis") {
+        Some(ax) if q.get("low").is_some() => Some((ax.s()?, V::L(vec![t("c"), q.get("low")?.clone(), q.get("high")?.clone()]))),
+        Some(ax) if q.get("keys").is_some() => { let mut l = vec![t("k")]; l.extend(q.get("keys")?.l().iter().cloned()); Some((ax.s()?, V::L(l))) }
         Some(ax) => Some((ax.s()?, V::L(vec![t("s"), arg_boundary(q.get("a")?)?, arg_boundary(q.get("b")?)?]))),
         None => None,
     };
@@ -423,6 +498,7 @@ pub fn query(pk: &Pack, q: &V) -> Option<V> {
         "commits" => Some(V::L(chain(pk).iter().map(|(h, n)| map(vec![("commit", t(&hex(h))), ("height", n.get("height").cloned().unwrap_or(V::Null))])).collect())),
         "timeline" => timeline(pk, q),
         "digest" => digest_q(pk, q),
+        "resolve" => resolve_marks(pk, q),
         "layers" => layers(pk),
         "project" => crate::project::project(pk, q),
         _ => None,

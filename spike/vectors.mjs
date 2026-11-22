@@ -74,4 +74,10 @@ let agree = 0, differ = 0; const check = (what, a, b) => { if (same(a, b)) agree
   const text = 'a1'.repeat(16);
   check('published copy: why, as from the whole pack', pub.query({ q: 'project', name: 'why', o: text }), whole.query({ q: 'project', name: 'why', o: text }));
   console.log(pub.query({ q: 'project', name: 'history', o: text })); }
+// ---- regions of every kind and the digest's cases (sections 4.2 to 4.4) ----
+{ const P = V.pins; const k = await open('pins.ufx'), tl = await open('timeline.ufx');
+  check('pins: every anchor resolved', k.query({ q: 'resolve', marks: P.marks_object }), P.anchors_resolve_to);
+  for (const d of P.digests) { const { case: name, why, salt, covered_value_hex, followed, digest, pack, ...pin } = d;
+    const r = (pack ? tl : k).query({ q: 'digest', salt, ...pin });
+    check('pins digest: ' + name + ' (covered value)', r.covered_value_hex, covered_value_hex); check('pins digest: ' + name + ' (followed)', r.followed, followed); check('pins digest: ' + name, r.digest, digest); } }
 console.log('agree', agree, 'differ', differ);
