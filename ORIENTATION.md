@@ -1078,3 +1078,88 @@ keyed regions over a list of refs.
 *confirmed*: both readers are of the model that wrote the specification.
 `python3 reader-test/package.py` builds the archive for an implementer
 of another kind.
+
+## 22. The envelope spike, first step: the kernel's size, and a stop (2026-11-22)
+
+The owner asked for a comparable build of the kernel — no standard
+library, size-optimised, no general text formatting — its compressed size
+by part, and a projection to the full kernel, with work to stop if the
+projection exceeds 128 KiB compressed. It does, as built. Work on the
+envelope has stopped for the owner's decision.
+
+**Measured** (`spike/SIZE-NOTES.md`; the build was repeated and the
+vectors and the Unicode conformance files re-run on it):
+
+| Build | Size-optimised | Compressed |
+| --- | ---: | ---: |
+| As it stood: standard library, text formatting | 264 289 | 117 951 |
+| No standard library, no text formatting (stable compiler) | 219 754 | 97 207 |
+| The same on a nightly compiler, panics compiled out, library built for size | 189 077 | 87 560 |
+
+By part, compressed, in the stable build:
+
+| Part | Lines | Compressed bytes |
+| --- | ---: | ---: |
+| Allocator | – | 1 899 |
+| Inflating (the host's work by the specification; not counted below) | – | 4 915 |
+| Values and hashing | 364 | 6 251 |
+| Pack, objects, blobs | 368 | 7 012 |
+| Composition, without the two Unicode algorithms | 790 | 17 901 |
+| Line breaking: code, table | 174 | 1 355, 2 561 |
+| Bidirectional ordering: code, tables | 329 | 3 333, 1 867 |
+| Printer | 351 | 5 034 |
+| Queries: regions, digests, timelines, layers | 507 | 24 440 |
+| Projections | 653 | 20 300 |
+| Glue | 166 | 339 |
+
+Line breaking and bidirectional ordering together are 9.1 KiB
+compressed: 7% of the limit. The owner asked for this number
+specifically; they fit.
+
+The kernel's own 3 702 lines compress to about 86 000 bytes: 23.2 bytes a
+line, against the 19 on which the 6 000-line budget was set. The excess
+is in the two newest parts. Queries and projections, written quickly,
+use the library's sorted maps and its stable sort, which the compiler
+copies in for each type: those two things are a fifth of the whole
+build.
+
+**Projected to a full kernel of 6 000 lines**, with the allocator and
+tables added and inflating left to the host:
+
+| Assumption | Compressed | Against 128 KiB |
+| --- | ---: | --- |
+| As built: 23.2 bytes a line | about 142 KiB | **over by 11%** |
+| With the two mechanical changes not yet made (one small sort; sorted lists for maps), estimated at 13 000 bytes | about 122 KiB | under by 5% |
+| Nightly compiler flags instead, no change to the source | about 127 KiB | under by 1% |
+| Both | about 112 KiB | under by 13% |
+
+Three cautions. The estimates for the changes not made are estimates.
+The 6 000 lines are themselves an allocation: composition is at 1 293
+lines of its 1 500 with grid, absolute position, clocks and hit testing
+unwritten, and formulas (700 allocated) and all writing of changes are
+not started. And compressed sizes of parts do not add exactly: the
+breakdown is good to about a tenth.
+
+**Options for the owner.**
+
+1. *Make the two mechanical changes and measure* before anything else.
+   A day's work, no change of behavior, and it replaces an estimate with
+   a number. On the estimate, the projection passes with 5% to spare.
+2. *Build with the nightly compiler's size flags.* 9 600 bytes for
+   nothing in the source, at the price of a kernel that cannot be
+   reproduced with a stable compiler. It could be kept in reserve.
+3. *Carry parts of the kernel only when a file needs them.* The printer
+   (5 KiB) matters only to a file with code; the projections' text for
+   agents (20 KiB as built) only where an agent or the tools ask. The
+   founding rule that a file carries only the components its content
+   requires allows it. The firm limit would then bind the part every file
+   carries. It costs the plainness of "one kernel", and a second way for
+   a file to be incomplete.
+4. *Lower the line budget to what the density allows.* At 23.2 bytes a
+   line, 128 KiB holds about 5 400 lines; at 19.7, about 6 300.
+5. *Raise the limit.* Not recommended: nothing measured yet says the
+   work cannot be done within it.
+
+Recommended: option 1 now, with option 2 in reserve and option 3 as the
+design to turn to if, with formulas and the rest written, the measured
+kernel still crowds the limit.
