@@ -3327,16 +3327,16 @@ happens:
 **Measured once, in miniature.** A throwaway kernel of 1 613 lines — values,
 hashing, the pack with its index and recovery, blobs, the object map,
 sequences; composition of text into lines, rows and pages; the plain-text
-face; Portals into nested universes; the printer — compiled to 102.5 KiB
-and 44.7 KiB compressed, of which 12.6 KiB is runtime and 14.3 KiB a borrowed
-inflater. That is about 50 bytes of WebAssembly for each line of Rust,
-compiled for size, with the standard library and no further processing. At
-that density the two kernel limits above do not agree: 256 KiB is about
-4 800 lines, and 10 000 lines is about 500 KiB. The miniature was not
-written for size and the ratio can be improved by known means, by an amount
-not yet measured. Until it is, this section records the disagreement and
-changes neither number. Its web binding was 79 lines and 3.0 KiB
-compressed, for a tenth of the drawing contract.
+face; Portals into nested universes; the printer — compiled, without the
+standard library and after a size-optimising pass, to 78.4 KiB and 37.5 KiB
+compressed. Of that, 4.2 KiB is an allocator and 11.1 KiB a borrowed
+inflater; the rest is about 40 bytes of WebAssembly for each line of Rust.
+At that density the two kernel limits above do not agree: 256 KiB holds
+about 6 150 lines, and 10 000 lines would be about 407 KiB. The miniature
+was not written for size. This section records the disagreement and
+changes neither number; the byte limit is the one a file pays for. Its web
+binding was 79 lines and 3.0 KiB compressed, for half of the drawing
+contract's items and one host function.
 
 ### 12.3 Behavior
 

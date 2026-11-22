@@ -588,3 +588,89 @@ to publish, which can be decided later and changed without breaking a
 file. Under any option the canonical tier also needs the embedded fonts
 the specification already requires, and a `break` served by the component
 instead of the host.
+
+## 7. Kernel size with the reductions applied
+
+Asked for after the first report: the same kernel miniature, built without
+the standard library and passed through a size-optimising pass
+(`wasm-opt -Oz`). Every variant below was run against the vectors and the
+spike universe and behaves identically (the module vector prints to the
+same bytes; the pages come out the same).
+
+| Build | Compiled | DEFLATE |
+| --- | --- | --- |
+| Standard library, compiled for size (as first reported) | 104 999 | 45 760 |
+| The same, after `wasm-opt -Oz` | 93 312 | 43 871 |
+| No standard library, with the same allocator (dlmalloc) | 91 466 | 40 244 |
+| No standard library, after `wasm-opt -Oz` | **80 246** | **38 434** |
+| The same, with panics compiled out (needs a nightly compiler) | 78 615 | 38 071 |
+
+Breakdown of the 80 246 bytes: allocator 4 260; the borrowed inflater
+11 345; the miniature's own 1 613 lines, 64 641. The printer alone is
+11 577 bytes for 344 lines.
+
+**Bytes per line.** 40.1 for the miniature's own code, down from 48.0 as
+first reported; 39.1 with panics compiled out. Fixed cost beside it:
+15 605 bytes (allocator and inflater), down from 27 567.
+
+**What that means for the two limits**, neither of which has been changed:
+at 40 bytes a line, 256 KiB holds about 6 150 lines after the fixed cost;
+10 000 lines would be about 407 KiB. The miniature was still not written
+for size — it clones values freely and uses general-purpose collections —
+so a kernel written with the limit in mind should do better than 40, by an
+amount this spike cannot say.
+
+## 8. Why small packs are heavy
+
+A module of 981 bytes of WebAssembly, held as description in a pack, took
+8 001 bytes. Where they go (ten functions, one module object, one change,
+no working history to speak of):
+
+| What | Bytes | Share |
+| --- | --- | --- |
+| The ten functions' properties: bodies as values, names, signatures, locals | 3 424 | 43% |
+| The ten function revisions, outside their properties: kind, identity, type, revision number, `by`, salt, the runs of `seq`, the frame | 1 542 | 19% |
+| The module object: refs to functions, exports, globals, and its fixed part | 840 | 10% |
+| Index: 18 entries of 40 bytes, and its header | 748 | 9% |
+| Object map: 13 entries of about 53 bytes | 690 | 9% |
+| The change, its `work` behind a veil, the blob node for it | 399 | 5% |
+| Universe object, commit, head, signature | 358 | 4% |
+
+So about 250 bytes of every object are fixed cost: roughly 150 in its
+revision node, 53 in the object map, 40 in the index, 3 in its frame. A
+universe of many small objects pays that many times over, and the
+description itself is uncompressed. A further cost does not show here
+because this pack's change was written empty: in a pack with working
+history, a change's operations hold what they inserted, so newly written
+content is stored twice until history is withheld — the vector
+`module.ufx` holds a 119-byte module in 3 714 bytes, of which 1 376 are the
+operations.
+
+Options, none taken now:
+
+1. **Compress node frames.** Codec 1 already exists. The function bodies
+   above compress from 2 793 bytes to 836 as one stream; frame by frame
+   the gain is smaller, because each small node is compressed alone. A
+   frame holding several records compressed together, or a fixed
+   dictionary of the instruction names, would recover most of it.
+2. **Leave out the index in small packs.** Already allowed: a writer must
+   write one only past 1 024 uncovered records or 16 MiB. A reader scans.
+   Saves 40 bytes a record; 9% here.
+3. **Share what an operation and the state have in common** below the
+   present threshold for keeping a value outside its node, so that a first
+   commit does not hold its content twice.
+4. **Make small things values, not objects.** Functions could be entries of
+   the module object. That removes about 250 bytes each and with it their
+   own revisions, their identity as anchors' targets, and their place in
+   the outline. Not recommended; listed for completeness.
+5. **A denser spelling of statements** — instruction numbers for names.
+   Compression already gets most of this, and the stored form would stop
+   being readable as what it is.
+6. **Shorter runs in `seq`**: a run names its change by 16 bytes each
+   time; a node could list its changes once and refer to them by number.
+
+The honest summary: the format is tuned for verifiability and for cheap
+edits to large things, and a kilobyte of content pays several kilobytes of
+structure. For a one-paragraph envelope that is negligible beside the
+player; for a universe of ten thousand small objects it would be
+megabytes, and options 1 and 2 would be worth their mechanism.
