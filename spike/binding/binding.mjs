@@ -48,6 +48,7 @@ export async function start(wasmBytes, measure) {
   ex = (await WebAssembly.instantiate(wasmBytes, imports)).instance.exports;
   return {
     open: pack => ex.open(give(pack), pack.length) === 1,
+    print: id => { const p = ex.print(give(id)); return mem().slice(p, p + ex.out_len()); },
     sample: params => { const q = encode(params); const p = ex.sample(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); },
   };
 }

@@ -4,6 +4,7 @@
 extern crate alloc;
 mod layout;
 mod pack;
+mod print;
 mod value;
 use alloc::string::String;
 use alloc::vec;
@@ -101,4 +102,11 @@ unsafe fn run(params: &V) -> Option<V> {
     let rows = compose(&mut cx, &root, &of(&primary)?, w - 2.0 * pad);
     let h = stack(&rows, pad, pad, &mut list) + pad;
     Some(map(vec![("list", V::L(list)), ("w", V::F(w)), ("h", V::F(h)), ("rows", V::Int(rows.len() as i64))]))
+}
+/// Prints the module object whose 16-byte identity is at `p`. Empty output if it cannot be printed.
+#[no_mangle]
+pub unsafe extern "C" fn print(p: *const u8) -> *const u8 {
+    let id: [u8; 16] = core::slice::from_raw_parts(p, 16).try_into().unwrap_or([0; 16]);
+    OUT = PACK.as_ref().and_then(|pk| print::print(pk, &pk.head, &id)).unwrap_or_default();
+    OUT.as_ptr()
 }

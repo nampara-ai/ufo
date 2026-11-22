@@ -260,3 +260,121 @@ and do not show:
   accept identities.
 - Still a toy: one program of a few hundred instructions, one planted bug,
   two models both weaker than a frontier maintainer, two runs per cell.
+
+### 1.6 The printer as a function inside the kernel
+
+If code is description, the printer has no operations of its own left to
+interpret. It is a pure function from a described module to bytes. The
+spike wrote that function twice — in JavaScript for the trial
+(`printer2.mjs`) and in Rust inside the kernel miniature
+(`kernel/src/print.rs`, 344 lines) — and stored the trial's six programs as
+description in packs (`mk/mkmodule.py`): a module object, one object per
+function, each body a sequence property of statement trees with element
+identities, calls by ref.
+
+| Program | Functions | Statements | Module bytes | Kernel's bytes identical to the JavaScript printer's | Description of the bodies, as values | The same, DEFLATE |
+| --- | --- | --- | --- | --- | --- | --- |
+| S built | 9 | 121 | 859 | yes | 2 456 | 743 |
+| H built | 9 | 109 | 812 | yes | 2 189 | 705 |
+| S maintained, run 1 | 10 | 136 | 981 | yes | 2 793 | 836 |
+| S maintained, run 2 | 10 | 136 | 976 | yes | 2 790 | 839 |
+| H maintained, run 1 | 10 | 120 | 916 | yes | 2 496 | 795 |
+| H maintained, run 2 | 10 | 120 | 914 | yes | 2 468 | 787 |
+
+- Two implementations of the printing rules, in two languages, agree byte
+  for byte on six modules (SPEC **N2**, at toy scale). Both were written by
+  the same author in the same week; an independent implementer has not
+  tried.
+- The printed modules pass the hidden tests.
+- Printing took about 2 ms per module in the kernel.
+- The printer adds 14.2 KiB to the compiled kernel. SPEC §12.2 budgets a
+  separate printer at 192 KiB.
+- Described code is about 2.8 times the size of its WebAssembly as values,
+  and about 0.85 times after DEFLATE. A whole pack holding one of these
+  modules as ten objects is 6.7 to 8.0 KiB against a 0.8 to 1.0 KiB module:
+  the fixed cost of an object (a revision node with its salt, a map entry)
+  dominates at this size.
+- One rule had to be chosen for the comparison to pass: exports and globals
+  are ordered as a map orders its keys (by length of name, then bytes), not
+  by bytes alone as SPEC 0.6 §11.3 says for exports. One order for
+  everything keyed is simpler, and the kernel needs no sort.
+
+## 2. From description to display list
+
+**What was built.** A kernel miniature in Rust (`kernel/`, compiled to
+WebAssembly, no dependencies but an inflater) that opens a pack by the
+rules of SPEC §2, finds objects through the object map, resolves values
+kept outside nodes, checks a text's `seq` against its characters,
+resolves spans against element identities, and composes a face. A web
+binding (`binding/binding.mjs`) supplies one host function — how much of a
+list of styled runs fits in a width — and executes the display list on a
+canvas.
+
+**One kernel, one universe, three faces** (`out/face-text.png`,
+`face-view.png`, `face-pages.png`, rendered in Chromium): the plain-text
+face; a scrolling view at a given width; and pages of a stated size. The
+universe (`mk/build.py`, 13.3 KiB) holds a text with headings, paragraphs,
+emphasis and a list, a rule drawn as a path, and a Portal to a text in a
+*nested universe* whose records sit in the same pack.
+
+The same kernel opens both normative vector packs and reads the expected
+text from each ("Hello, universe." and "Hello, world.!"), including
+`history.ufx` with its compressed frames, removed elements, chain of two
+indexes and four heads. This is the first reader of the unified storage
+form other than the script that wrote the vectors — by the same author.
+
+**Sizes.**
+
+| Part | Rust lines | Compiled, cumulative | DEFLATE |
+| --- | --- | --- | --- |
+| Allocator and runtime only | 4 | 12.6 KiB | 5.3 KiB |
+| + values, hashing, pack, index, recovery, blobs, object map, indirects, sequences | 675 | 43.6 KiB | 19.1 KiB |
+| + inflater (a library) | — | 57.9 KiB | 25.4 KiB |
+| + composition: text to lines, rows, pages; plain text; Portals; nested universes | 1 262 | 88.6 KiB | 38.7 KiB |
+| + printer | 1 567 | 102.5 KiB | 44.7 KiB |
+
+Web binding: 79 lines, 7.2 KiB as written, 3.0 KiB DEFLATE, of which the
+drawing contract (two of eight item kinds used here, four written) is 12
+lines and the value codec 35.
+
+**The two kernel limits do not agree with each other.** The miniature
+compiles to about 50 bytes of WebAssembly per line of Rust, with the
+standard library, size optimisation and no post-processing. At that
+density 256 KiB is about 4 800 lines, and 10 000 lines is about 500 KiB.
+The miniature is not written for size, and known measures (no standard
+library, a size-optimising post-pass) would improve the ratio, by an amount
+not measured here. The line budget and the byte budget cannot both be
+right; which moves is the owner's decision, on this measurement.
+
+**What the specification lacked, and what was invented** (written into
+SPEC §5.7):
+
+1. *No algorithm from a text with spans to lines.* §8.1 and Appendix A
+   named roles and defaults. Invented: blocks from the innermost block span
+   over each character; runs of one style from inline spans; lines; rows.
+2. *The host's `break` took one run of one style.* A paragraph with a bold
+   word cannot be broken that way: the break may fall inside any run.
+   Invented: `break` takes the paragraph's runs, a starting place and a
+   width, and returns one line. The kernel calls it once per line, so the
+   kernel owns every decision about vertical placement, and a later line
+   may be given a different width.
+3. *Pagination was one sentence.* Invented: the flow is a list of
+   unbreakable rows; pages are filled greedily under three rules (a heading
+   is not left at the foot of a page; a block of three lines or fewer is
+   not split; a split leaves at least two lines on each side).
+4. *No default sizes.* Appendix A named `size`, `line`, `font` without
+   values. Chosen: 16, 1.4, serif; heading and list spacing as built.
+5. *A host reply must be in deterministic form*, because the kernel has one
+   decoder and it is strict. The binding therefore needs a shortest-float
+   encoder (8 lines). Found when paragraphs vanished: the first binding
+   wrote every float at full width and the kernel rejected the replies.
+6. *A nested universe's records were not reachable* by the definition in
+   §1.3, which follows hashes in fixed positions and indirects only. An
+   anchor's `u` is neither. As written, compaction would have discarded a
+   nested universe and `verify` would have reported its frames as
+   unreachable. Fixed in §1.8.
+
+**Not built:** grid and absolute layout, floats, inline embeds, clocks, hit
+testing, formulas, presentation state, right-to-left text, raster, samples,
+surface and hit items. Break opportunities are spaces only. Nothing here is
+evidence about those.
