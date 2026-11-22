@@ -105,7 +105,8 @@ pages: open, universal, and independent of any application.
 15. **Player.** Four parts: the **kernel**, one WebAssembly program run
     unchanged in all the project's readers, which composes a face into a
     *display list* — text into blocks, lines and rows, rows into pages, by
-    a fixed algorithm, asking the host only how much fits on a line; the
+    a fixed algorithm that breaks every line itself and asks the host only
+    what a run of text measures; the
     **presenters**, which are the host's own drawing and
     audio for the four basic items and carried programs for anything else;
     a thin host **binding** that knows no medium; and the universe. The

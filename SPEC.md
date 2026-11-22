@@ -1261,6 +1261,29 @@ to the item with `arg`.
   locale or time zone. `size` of anything but an earlier sibling is an error
   value, which keeps layout to one pass (**V1**).
 
+**Operators, exactly.** Arguments are evaluated left to right before an
+operator is applied, except that `if`, `and` and `or` evaluate only what
+they need. Each application counts one toward the bound of **F2**.
+Integers and floats are both numbers here; arithmetic is done in binary64,
+and a result that is not finite is an error value.
+
+| Operators | Defined as |
+| --- | --- |
+| `+ − × neg abs min max` | as IEEE 754 |
+| `÷` | division; by zero, an error value |
+| `mod` | *a* − *b* × floor(*a* ÷ *b*): the result has the sign of *b* |
+| `floor ceil round` | to an integer; `round` takes halves away from zero |
+| `sqrt pow exp ln sin cos atan2` | the results of the routines of the same names in the FreeBSD mathematics library (msun), which the kernel carries, so that they are the same everywhere |
+| `= ≠` | exact comparison of two values; a number never equals a text |
+| `< ≤ > ≥` | of two numbers, or of two texts by scalar value; anything else, an error value |
+| `and or not if` | on booleans; `if(c, a, b)` |
+| `concat len slice` | `len` counts the scalar values of a text or the items of a list; `slice(x, from, to)` takes those from index *from* up to but not including *to*, counted from 0 and clipped to the ends |
+| `format` | `format(n, pattern)`: a pattern is `0` followed optionally by `.` and one `0` for each decimal place, optionally containing `,` to group thousands, optionally ending `%`, which multiplies by 100. For a time, a pattern made of `YYYY`, `MM`, `DD`, `hh`, `mm`, `ss` and any other characters, in UTC |
+| `list count sum mean nth range` | `sum` of nothing is 0 and `mean` of nothing an error value; `nth(list, i)` counts from 0 and is an error value outside the list; `range(a, b)` is the integers from *a* up to but not including *b*, at most 2²⁰ of them |
+| `sort filter map` | `sort(list, key)` is stable and ascending by the key formula's value, or by the items themselves |
+| `get cell col` | `get(ref, path)` is the value at a key path of an object's properties; `cell(ref, row, col)` a cell's value, a formula there being evaluated; `col(ref, col)` a column's values in the table's order. A missing object, key or cell is an error value |
+| `arg size time input view state` | `size(key)` is `[w, h]`; `time` is in flicks; `input` is `[x, y, pressed]`; `view` is `[w, h]`; `state(name)` is null until set |
+
 **Repetition.** A group MAY carry `each`: a formula yielding a list or a ref
 to a data object, and `as`, a name. Its single child is then a template,
 presented once per item with `arg` bound. This is how a table becomes rows
@@ -1288,7 +1311,7 @@ The test applied to this draft:
 | --- | --- | --- |
 | Constraint layout | deleted | `absolute` with formulas over `view` and the `size` of earlier siblings expresses one-directional constraints in a single pass. Simultaneous constraints, which need a solver, are not offered; a layout that truly needs one computes positions in a Compute-let |
 | Stack layout | deleted | a one-row or one-column `grid`; back-to-front stacking is `absolute` |
-| Paragraph, heading, list item | deleted | block spans of a text (§8.1), differing only in properties |
+| Paragraph, heading, list item | moved, not deleted | they are block spans of a text (§8.1). The text profile has ten roles whose default presentation the kernel knows (Appendix A), and §12.1 counts them: a small document vocabulary lives inside the text primitive |
 | Page | deleted | a region of fixed size holding a group |
 | Slide | deleted | a region under a clock |
 | Chart | deleted | data, formulas and paths under `each` |
@@ -1423,8 +1446,8 @@ scene, on a screen inside a game, or in a custom interface.
 ### 5.7 Composition
 
 To compose is to turn description into a display list (§6.2). This section
-gives the algorithm for what every document needs: text, vertical flow and
-pages. It is normative.
+is normative, and all of it is the kernel's: the host is asked only what a
+run of text measures.
 
 **Rows.** Composing an object for a width yields a list of **rows**. A row
 is an unbreakable strip across the flow: a height; a *gap*, the space it
@@ -1435,13 +1458,25 @@ page, which block it belongs to, and which line of how many it is.
 | Object | Its rows |
 | --- | --- |
 | a text | by the steps below |
-| a group with `flow` | the rows of its children, in order. The first row of each child after the first has the larger of its own gap and the group's `gap`. Children whose `place` is `inline` share lines: a run of them is broken into lines by their widths, as `break` breaks inline boxes, and each line is one row |
-| a group with `grid` or `absolute`; a region; a path, raster or samples; a surface | one row, of the object's height, holding its items |
-| a Portal | the rows of its target, composed in the target's universe (§1.8), at the Portal's `w` if that is less than the width given; or one row showing its label, where **O4** or **O7** says so |
-| a clock | the rows of the children present at the time of composition |
+| a group with `flow` | the rows of its children, in order. The first row of each child after the first has the larger of its own gap and the group's `gap`. A child of a flow is a block unless its `place` is `inline`. Consecutive inline children share lines: each is placed after the last at its own width, a new line beginning when the next does not fit, and each line is one row, as tall as its tallest child |
+| a group with `grid` | one row: its tracks are sized as below and each child composed in its cell |
+| a group with `absolute`; a region | one row, of the object's `h`: each child composed at its own `w` and placed at its `x`, `y`, in list order, back to front |
+| a path, raster or samples; a surface | one row, of its `h`, holding its item |
+| a Portal that states `h` | one row of that height: the target composed at the Portal's width, its rows stacked, then fitted into the Portal's rectangle by `fit` and clipped (**O2**) |
+| a Portal that states no `h` | the rows of its target, composed in the target's universe (§1.8) at the Portal's width: it takes the height they need, as a text does. Where **O4** or **O7** says so, one row showing its label |
+| a clock | one row, as tall as its tallest child: the children present at the time of composition, each composed at the time the clock gives it (§4.5), one over another in list order |
 
-`place` defaults to `block` for texts, groups and Portals, and to `inline`
-for everything else.
+**A grid's tracks.** `cols` and `rows` are lists of track sizes: a length,
+a fraction `[n, "fr"]`, or `"fit"`. A fixed column has its length. A `fit`
+column is as wide as the widest of its children, each measured as the width
+of its longest line when composed in the width left by the fixed columns,
+or its own `w`. What then remains is shared among fraction columns in
+proportion. Rows are sized the same way from their children composed at
+their column widths; fraction rows share what remains of the group's `h`,
+and count as `fit` if it has none. A child sits in the cell its `row` and
+`col` name, counted from 0, across the tracks its `span` gives, placed by
+`align`. Under `each`, the copies of the template fill cells in order, row
+by row.
 
 **A text into rows.**
 
@@ -1451,36 +1486,67 @@ for everything else.
 3. *Blocks.* Each character belongs to the innermost block span covering
    it: of those that cover it, the one that starts latest; of those, the
    one that ends earliest; of those, the first by key. Maximal runs of
-   consecutive characters with the same innermost span are the blocks, in
-   order. Characters under no block span form paragraphs of their own.
+   consecutive characters with the same innermost span are blocks.
+   Characters under no block span form paragraphs of their own. A block
+   span that covers no character is a block too, an empty one, at its
+   place among the others: an empty paragraph is a row one line high, and a
+   line of its own in the plain-text face. Blocks at one place are ordered
+   by key.
 4. *Style.* A block's style is the text's (Appendix A), then the defaults
    of its span's role, then the span's own properties. Block spans that
    enclose it apply first, outermost first: their indents add and their
    other properties are inherited.
 5. *Runs.* Within a block, each character's style is the block's, changed
    by each inline span covering it, in order of start and then of key.
-   Characters under a `marker` span are left out. Maximal sequences of one
-   style are runs. An `embed` character whose child's `place` is `block`
-   ends the lines before it and contributes the child's rows, composed at
-   the block's width; any other embedded child is an inline box, of its own
-   width, in the list of runs.
-6. *Lines.* Call `break` (§6.3) with the block's runs, the place reached,
-   and the width left after indents. The line it returns is one row. Repeat
-   from the place it gives, until the runs are used up. A reply that does
-   not advance ends the block, so no host can make the kernel loop. The
-   row's height is the largest, over the line's fragments, of size ×
-   `line`. Its baseline lies below the row's top by (height − ascent −
-   descent) ÷ 2 + ascent. Fragments are placed in the order returned, from
-   the start edge plus the indent, each advancing by its `adv`; `align`
-   moves the line within whatever width is left over.
-7. *Items.* Each fragment is a `text` item whose `src` is an anchor to
-   exactly its characters, by element boundaries, with `u` when the text is
-   in another universe. A list item's marker is a `text` item on the first
-   line's baseline, ending 0.4 of the size before the indent.
+   Characters under a `markup` span are left out. Maximal sequences of one
+   style are runs. An `embed` character whose child is a block ends the
+   lines before it and contributes the child's rows, composed at the
+   block's width; any other embedded child is an inline box, of its own
+   width and height, in the list of runs.
+6. *Lines.* The kernel breaks lines; no host does.
+   - *Levels.* The characters' embedding levels are those of the Unicode
+     Bidirectional Algorithm (UAX #9), with the block's `direction` as the
+     paragraph direction, `auto` meaning the first strong character's.
+   - *Opportunities.* A line may end where the Unicode Line Breaking
+     Algorithm (UAX #14) allows, with its default rules and no tailoring;
+     an inline box may be followed or preceded by a break; U+000A in a
+     `code` block, and U+2028 anywhere, end a line. In a `code` block
+     lines end nowhere else.
+   - *Fill.* The kernel asks `measure` (§6.3) for the advance of each run
+     up to each opportunity in it. A line takes content up to the last
+     opportunity at which what precedes it, less trailing spaces, is no
+     wider than the width left after indents. If the first opportunity is
+     already too far, the line ends at the last place before it that fits
+     and is not before a combining mark or a joiner (classes CM and ZWJ),
+     taking at least one character.
+   - *Fragments.* A line's content is cut into fragments, each of one run
+     and one level, and put in visual order by rule L2 of UAX #9. The
+     kernel asks `measure` for each fragment's own advance. Fragments are
+     placed left to right, the line starting at the indent for a
+     left-to-right block and ending at it for a right-to-left one; `align`
+     moves the line within whatever width is left over.
+   - *Height.* The row's height is the largest, over the line, of each
+     fragment's size × `line` and each inline box's height. Its baseline
+     lies below the row's top by (height − ascent − descent) ÷ 2 + ascent,
+     with the largest ascent and descent on the line. An inline box sits
+     with its bottom on the baseline.
+7. *Items.* Each fragment is a `text` item with `dir` from its level, whose
+   `src` is an anchor to exactly its characters, by element boundaries,
+   with `u` when the text is in another universe. A list item's marker is a
+   `text` item on the first line's baseline, measured like any fragment and
+   ending 0.4 of the size before the indent. A numbered item's number is
+   one more than that of the nearest earlier item of its level, if no
+   heading and no item of a shallower level lies between them; otherwise it
+   is 1, or the item's `start`. An underline or a strike is a `path` item:
+   a line 0.06 of the size thick, 0.1 of the size below the baseline or 0.3
+   above it, in the text's color.
 8. *Spacing.* The gap of a block's first row is the larger of the space the
    block asks before itself and the space the block before it asked after
    itself. Its other rows have no gap. The rows of a heading may not end a
    page.
+
+The data for both Unicode algorithms is that of Unicode 16.0. A later
+version is a new version of the text profile (§1.6).
 
 **A view** is the rows stacked from the top, each below the last by its
 gap.
@@ -1501,17 +1567,22 @@ height less its top and bottom margins — pages are filled in order:
 4. The page is rows *i* to *j* − 1, and the next page starts at *j*.
 
 Each page is a region of the page's size, clipping, that holds its rows at
-the margins, and the header and footer if any (Appendix A), composed with
-`state("page")` and `state("pages")`. Breaking pages never changes a line:
-lines are broken once, for the page's width.
+the margins. A header and a footer, if given (Appendix A), are composed at
+the width between the side margins with `state("page")` and
+`state("pages")`, and placed in the top and bottom margins, one line from
+the rows. Breaking pages never changes a line: lines are broken once, for
+the page's width.
 
 - **[V4]** Composition is a function of the description, the sampling
-  parameters, the presentation state and the replies of `break`. Given the
-  same of each, every kernel produces the same display list.
+  parameters, the presentation state and the replies of `measure`. Given
+  the same of each, every kernel produces the same display list. Where two
+  hosts measure the same text differently — other fonts, other shaping —
+  its lines, and so its pages, may differ between them. With the same
+  fonts and one renderer they do not (§7.4).
 
-What this section does not yet give as an algorithm — track sizes in a
-grid, floats, inline flow of children that are not text, composition under
-clocks — is stated as rules in §5.2 and §4.5 and has not been exercised.
+Not yet an algorithm, and not exercised: floats (§5.2) and hit testing.
+The line-breaking steps above replace a host operation that an earlier
+draft and the measurement spike used; they have not themselves been run.
 
 ---
 
@@ -1731,7 +1802,7 @@ capability is stopped at the end of its current call and its poster shown.
 | Capability | Scope | Gives | If absent or denied | Held by default by |
 | --- | --- | --- | --- | --- |
 | `store` | one pack | read and append its bytes; the exclusive lock | no reader | the kernel only |
-| `text` | — | `break`, `locate`, `edit` (below) | no reader | the kernel only |
+| `text` | — | `measure`, `locate`, `edit` (below) | no reader | the kernel only |
 | `media` | — | decode a baseline asset (§6.5) to pixels or samples at a time | the asset's poster or label | the kernel only |
 | `inflate` | — | decode and encode DEFLATE (§2.1) | compressed records are unavailable | the kernel only |
 | `verify` | — | check an Ed25519 signature | seals are shown as unchecked | the kernel only |
@@ -1746,19 +1817,15 @@ capability is stopped at the end of its current call and its poster shown.
 | `camera`, `microphone` | the device | capture while the surface is visible | none | nobody |
 | `files` | one file or folder the person picks | read it, or save to it | the reader's own save | nobody |
 
-`text` has three operations. `break`: given the runs of one block — each
-run its characters, font list, size, weight and slant, or the width of an
-inline box — a place to start (a run and a character within it), a
-direction and a width, *one line*: the fragments of runs that fit, in
-visual order, each with its run, character range and advance; the line's
-ascent and descent; and the place the next line starts. If nothing fits it
-returns at least one cluster, so a caller always makes progress. The kernel
-calls it once for each line (§5.7), which leaves every vertical decision to
-the kernel and lets each line have its own width. Where to break, and how
-to shape and order what is on the line, are the host's — or, for a
-canonical export, the renderer's (§7.4). `locate`:
-given one such line and a horizontal offset, the nearest character
-position. `edit`: mount or unmount the host's editing surface on a
+`text` has three operations. `measure`: given a run — its characters, font
+list, size, weight, slant and direction — and a list of offsets into it,
+the advance of the run's text up to each offset, as the host would draw
+it, and the run's ascent and descent. That is all a host contributes to
+layout: where lines break and how they are ordered is the kernel's (§5.7).
+`measure` answers at once, never *pending*, as do `inflate` and `verify`.
+For a canonical export the renderer answers it in the host's place (§7.4).
+`locate`: given a fragment as it was drawn and a horizontal offset within
+it, the nearest character position. `edit`: mount or unmount the host's editing surface on a
 rectangle with given text (§5.6). The operations of `objects` are the
 projections and actions of §7.5 and §11.8, confined to the scope. Those of
 `present` are `raster` (child key, width, height → a raster source) and
@@ -1943,7 +2010,7 @@ layout or style. It is Unicode text, in lines ended by U+000A.
 
 | Object | Its plain text |
 | --- | --- |
-| a text | one line for each block (§5.7), in order: the block's characters, without those under `marker` spans. A list item's line begins with two spaces for each level above the first, then its marker — `•`, its number and a full stop, or its literal text — and a space. An empty line separates two blocks unless both are list items. An embedded child contributes its own plain text in place: within the line if that is a single line, otherwise as lines of its own |
+| a text | one line for each block (§5.7), in order: the block's characters, without those under `markup` spans. A list item's line begins with two spaces for each level above the first, then its marker — `•`, its number and a full stop, or its literal text — and a space. An empty line separates two blocks unless both are list items. An embedded child contributes its own plain text in place: within the line if that is a single line, otherwise as lines of its own |
 | a group, region or clock | the plain text of its children, in order (for a clock, in order of start time), each starting a new line |
 | a Portal | the plain text of what it presents — the object, or the region its anchor names — wherever that is in the file: in this universe or in a nested one (§1.8). Content from another universe is marked: a line holding the Portal's label and a colon, then the content with `> ` before each of its lines. Where the target is in a linked universe that is not at hand, where the chain of **O7** already holds it, or beyond the reader's limit on nesting (§3.1): one line, the Portal's label, followed for a linked universe by a space and `(ufo:` the commit hash in lowercase hexadecimal `)` |
 | a data object | its rows as tab-separated lines, table by table |
@@ -2061,7 +2128,7 @@ A **span** marks a region of the characters:
 | --- | --- |
 | `at` | an anchor to a region of this text's `chars` (§4.2) |
 | `kind` | `block` or `inline` |
-| `role` | semantic role: `paragraph`, `heading`, `item`, `quote`, `code`, `emphasis`, `strong`, `link`, `embed`, `marker`, or a prefixed name, which readers treat as an opaque label |
+| `role` | semantic role: `paragraph`, `heading`, `item`, `quote`, `code`, `emphasis`, `strong`, `link`, `embed`, `markup`, or a prefixed name, which readers treat as an opaque label |
 | other fields | properties: `level`, style properties (Appendix A), `href` (an anchor), `child` (a ref) |
 
 A span's region is fixed to elements, so it stays in place however the text
@@ -2078,7 +2145,7 @@ nested. Blocks are separated by their spans, not by characters: `chars`
 holds no paragraph separators, and the plain-text face (§7.3) writes a line
 break between blocks. Blocks at the same position are ordered by span key.
 An inline span left with no extent is removed in the same change; a block
-span is kept. A `marker` span covers characters that are part of a foreign
+span is kept. A `markup` span covers characters that are part of a foreign
 syntax and are not presented. An `embed` span covers exactly one U+FFFC
 OBJECT REPLACEMENT CHARACTER and names, in `child`, the object presented at
 that position — a Portal, or a group such as a table.
@@ -2099,7 +2166,7 @@ that position — a Portal, or a group such as a table.
 
 A writer that keeps a marked-up source authoritative — Markdown, for
 example — stores the source as `chars`, declares `syntax`, and writes the
-spans its own parser derives, including `marker` spans over the markup. Every
+spans its own parser derives, including `markup` spans over the markup. Every
 reader then presents the document richly without knowing the syntax, and the
 writer's source remains exact. A writer converting a foreign document to
 native text instead writes clean characters and spans, with no `syntax`.
@@ -3303,6 +3370,7 @@ revised once, with reasons, before anything is frozen.
 | --- | --- | --- | --- |
 | Primitives | 11 | 11 | these sufficed for all four worked examples (§14) |
 | Layout rules | 3 | 3 | two candidates were deleted (§5.4) |
+| Roles of a text that the kernel presents | 10 | 10 | the document vocabulary inside the text primitive (§8.1, Appendix A) |
 | Axis kinds | 3 | 3 | every anchor in §14 uses one of them |
 | Operations, in all | 5 | 4 | `remap` became a property; the printer's twelve operations became the same four (§11.3) |
 | Node kinds | 5 | 4 | values kept outside a node are blobs |
@@ -3422,7 +3490,7 @@ residual field or the reverse, only the portable fact is stored.
 
 | Cursive record | In a UFO |
 | --- | --- |
-| Note source (Markdown) | a text with `syntax` `text/markdown`; `chars` is the source, exactly; spans derived by Cursive's parser, with `marker` spans over markup (§8.1) |
+| Note source (Markdown) | a text with `syntax` `text/markdown`; `chars` is the source, exactly; spans derived by Cursive's parser, with `markup` spans over markup (§8.1) |
 | Attribution segment `[from, to)` in editor positions | not stored; it is the `seq` of the text, whose elements name their changes. Cursive converts between its positions and character positions using its own parse of the same source |
 | Generation record: prompt, model, operation, conversation, original and generated text | one change. `origin` is `{basis: witnessed, by: model, model, prompt, context, asked, parameters}`; the prompt and conversation are text objects; the generated text is the `ins` of the change's splices; the original text is their `old` |
 | Parent and derived-from generation ids | `origin.context` pins to the earlier changes; which is which is kept in `io.cursive.lineage` on the change |
@@ -3881,7 +3949,10 @@ is and MUST NOT be formulas (§5.1); all others may be.
 **Common to all:** `frames` (§4.3), `label`, `role`, `lang`, `opacity`, `visible`, `on` (map
 from an input event name — `press`, `enter`, `leave`, `key`, `change` — to
 `{set: state name, to: formula}`, `{propose: operations}` (§5.6), or
-`{deliver: true}` for surfaces), `from` (§8.3).
+`{deliver: true}` for surfaces), `from` (§8.3). Of the events: `press` is
+a pointer going down and up on the item, or Enter or Space while it has
+focus; `enter` and `leave` are the pointer's; `key` is a key going down
+while it has focus; `change` is an `edit` event delivered to it (§6.2).
 
 **In a parent:** `place` (including `at`, an anchor, for a child of a
 surface), `x`, `y`, `w`, `h`, `row`, `col`, `span`, `align`, `grow`,
@@ -3899,6 +3970,30 @@ surface), `x`, `y`, `w`, `h`, `row`, `col`, `span`, `align`, `grow`,
 | Portal | §8.4 |
 | Surface | *`computelet`*: ref; *`of`*: ref to the object it presents, if it presents one; `w`, `h`; *`ports`*: map from port name to the surface it connects to; *`children`* |
 | Data | *`cols`*: map from column key to `{label, type, order}`; *`rows`*: map from row key to map from column key to value, each row out of line when large; a cell may hold a formula; `sort`: list of row keys giving the default order; *`axes`*: map from axis name to `{kind, low, high, unit}` for continuous axes the object offers beyond its keyed ones, and *`tables`*: for an object holding several tables, map from table name to `{cols, rows}` |
+
+**Types of these properties.**
+
+| Properties | Value |
+| --- | --- |
+| `x`, `y`, `w`, `h`, `gap`, `size`, `width` | a float, in the units of the enclosing region |
+| `margin` | one float, or four: top, right, bottom, left |
+| `opacity`, `gain` | a float from 0 to 1; `pan` from −1 to 1 |
+| `visible`, `smooth`, `slant`, `editable` | a boolean |
+| `place` | `block`, `inline`, `float-start`, `float-end`, or `{at: anchor}` for a child of a surface |
+| `row`, `col` | an integer from 0; `span` is `[rows, cols]`, `[1, 1]` if absent |
+| `align` | `start`, `center` or `end`; in a cell, one value or two, inline then block |
+| `grow` | a float: the share of a flow line's leftover width this inline child takes |
+| `fit` | `contain`, `cover`, `fill` or `none`; `crop` is four fractions from 0 to 1: top, right, bottom, left |
+| `children` | a list of refs, set as a whole; for a surface, a map from key to ref |
+| `layout` | `flow`, `grid` or `absolute`; `rows`, `cols` are lists of track sizes (§5.7) |
+| `transform` | six floats (**W1**); `clip` is a boolean, or a path's `d`; `background` is a color or gradient; `scroll` is `none`, `x`, `y` or `both` |
+| `fill`, `stroke` | a color, or a gradient `{kind: linear or radial, stops: [[offset, color], …], from, to}` with points in the item's own space |
+| `join`, `cap`, `rule` | `miter`, `round`, `bevel`; `butt`, `round`, `square`; `nonzero`, `evenodd`; `dash` is a list of floats |
+| `font` | a list of family names and refs to font assets; `weight` 100 to 900; `direction` `ltr`, `rtl` or `auto`; `line` a multiple of `size`; `decoration` `none`, `underline` or `strike` |
+| `source`, `computelet`, `of` | a ref; `time` is an integer of flicks |
+| `start`, `end`, `offset` | integers of flicks; `rate` two integers; `repeat` an integer or `forever`; `mode` `locked`, `free` or `held` |
+| `cols` | each `{label, type, order}`: `type` is `number`, `text`, `boolean`, `time` or `any`; `order` an integer; `sort` is a list of row keys |
+| a page's header and footer | sampling parameters `header` and `footer`: refs to groups (§5.7) |
 
 **Axes.** A sequence or keyed axis has the name of the property it is bound
 to. The continuous axes and their extents are:
@@ -3928,11 +4023,9 @@ in the flow (§5.7). Unless the span says otherwise:
 | `code` | a monospaced font; line breaks kept; no wrapping |
 | `emphasis`, `strong` | slant true; weight 700 |
 | `link` | `href` is followed on `press` |
-| `marker` | not presented |
+| `markup` | not presented |
 
-A table within a text is a `grid` group at an `embed` span. Page headers
-and footers are groups given to the paged sampling (§7.4) as parameters;
-formulas in them read `state("page")` and `state("pages")`.
+A table within a text is a `grid` group at an `embed` span.
 
 ## Appendix B. Projections
 
@@ -4145,18 +4238,21 @@ event  = [ "pointer", { phase: tstr, x: float, y: float, buttons: uint, pointer:
        / [ "resize", { w: float, h: float, time: int } ]
 ```
 
-The capability contract, the `break` operation, derivations and described
+The capability contract, the `text` operations, derivations and described
 code (§6.3, §8.3, §11.3):
 
 ```
 request = { capability: tstr, ? scope: value, required: bool, why: tstr, without: tstr }
 
-break-request = { runs: [ + run ], from: [ uint, uint ], width: float, ? dir: "ltr" / "rtl" }
-run           = { s: tstr, font: [ + (tstr / hash) ], size: float, weight: uint, slant: bool }
-              / { box: float }                              ; an inline box of that width
-break-reply   = { frags: [ * { run: uint, from: uint, to: uint, adv: float } ],
-                  asc: float, desc: float, to: [ uint, uint ] }
-                ; positions are a run and a count of characters within it
+text-run        = { s: tstr, font: [ + (tstr / hash) ], size: float, weight: uint,
+                    slant: bool, dir: "ltr" / "rtl" }
+measure-request = { run: text-run, at: [ * uint ] }       ; offsets, in characters of `s`
+measure-reply   = { adv: [ * float ], asc: float, desc: float }   ; one advance for each offset
+locate-request  = { run: text-run, x: float }
+locate-reply    = { at: uint }
+edit-request    = { mount: rect, s: tstr, run: text-run, id: uint } / { unmount: uint }
+present-raster  = { child: tstr, w: uint, h: uint }       ; the reply is a raster source (§6.2)
+present-deliver = { child: tstr, event: event }
 
 derivation = { sources: [ + anchor ], how: tstr, by: ref }   ; the `from` property; every source is a pin
 
