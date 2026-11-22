@@ -112,7 +112,7 @@ A **hash** is the 32-byte SHA-256 digest (FIPS 180-4) of a byte string. In
 text it is written `sha256:` followed by 64 lowercase hexadecimal digits.
 
 *Reason.* SHA-256 is standardized, unbroken, hardware-accelerated and present
-in every browser and operating system. One algorithm keeps every identity
+in every browser and operating system. One algorithm keeps every hash
 comparable. A future algorithm is a new format version (§1.9), not a per-file
 option.
 
@@ -129,7 +129,7 @@ A **value** is one of:
 | bytes | a byte string |
 | list | an ordered sequence of values |
 | map | text keys to values, keys unique |
-| **ref** | the identity of an object in the same universe (§1.5) |
+| **ref** | the object identity of an object in the same universe (§1.5) |
 | **anchor** | a reference to an object, or to a region of one (§4) |
 | **formula** | an expression that computes a value (§7.3) |
 | **indirect** | a stand-in for a value stored outside the node, in a blob (§1.4) |
@@ -290,7 +290,7 @@ present it is the same record as every other copy of that content.
 
 ### 1.5 Objects and revisions
 
-An **object** is an identity with a type and properties. Its **identity** is
+An **object** has an object identity, a type and properties. Its **object identity** is
 16 bytes chosen by its creator, unique within the universe, and never reused.
 Its **type** is a text name. Its **properties** are a map from text names to
 values.
@@ -304,10 +304,10 @@ Each state an object passes through is a **revision**, stored as a node:
 | `type` | the object's type |
 | `rev` | revision number: 1 for the first revision, then previous + 1 |
 | `prev` | hash of the previous revision; absent in revision 1 |
-| `by` | identity of the change (§1.7) that produced this revision |
+| `by` | object identity of the change (§1.7) that produced this revision |
 | `salt` | 16 random bytes, fresh for every revision |
 | `p` | the properties |
-| `seq` | map from the name of each sequence property to the identities of its elements (§1.7), each of which may be kept outside the node like a property's value; omitted when the object has none |
+| `seq` | map from the name of each sequence property to the element identities of its elements (§1.7), each of which may be kept outside the node like a property's value; omitted when the object has none |
 
 The hash of this node is the **revision hash**. It names one exact state of
 one object and, through `prev`, that object's whole history. Two copies of a
@@ -317,7 +317,7 @@ reference to a specific revision uses the hash. The salt ensures that the
 hash of an earlier revision, which remains visible in `prev` when the
 revision itself is withheld (§13.3), cannot be used to guess what it held.
 
-A reader checks that a revision's `id` is the identity under which the
+A reader checks that a revision's `id` is the object identity under which the
 object map lists it and, where `prev` is present, that the previous
 revision has the same `id` and `type` and a `rev` one less.
 
@@ -341,18 +341,18 @@ of a domain they control: this project's own extensions and examples use
 
 A **universe** is the set of objects reachable from one **commit**. The
 current revision of every object is recorded in an **object map**: a
-persistent trie from identity to revision hash, built of `map` nodes.
+persistent trie from object identity to revision hash, built of `map` nodes.
 
-A `map` node covering a set of identities that share a prefix of *d* bytes is
-a leaf `{k: "map", e: [[id, hash], …]}` sorted by identity if the set has 32
+A `map` node covering a set of object identities that share a prefix of *d* bytes is
+a leaf `{k: "map", e: [[id, hash], …]}` sorted by object identity if the set has 32
 or fewer members, and otherwise an interior node `{k: "map", c: {…}}` whose
-entries map the byte at position *d* of the identity, counting from zero,
+entries map the byte at position *d* of the object identity, counting from zero,
 written as a two-digit lowercase hexadecimal key, to the `map` node for
 that longer prefix. Every object is in the map, change objects included. The object map is
 therefore a function of its contents alone: the same set of revisions has the
 same hash at its root however it was built. The map of no objects is a leaf with
 no entries. A reader MUST treat an object map of any other shape as
-malformed: an interior node covering 32 identities or fewer, a child that
+malformed: an interior node covering 32 object identities or fewer, a child that
 is empty, entries out of order or under the wrong prefix.
 
 A commit is the node:
@@ -366,7 +366,7 @@ A commit is the node:
 | `change` | hash of the revision of the change object this commit records |
 | `height` | 0 for the first commit, otherwise 1 + the parent's height |
 
-`change` is a hash, not an identity, so the commit chain binds each change
+`change` is a hash, not an object identity, so the commit chain binds each change
 to its place in history even when the object map of that commit is not at
 hand (§13.3). A commit with more than one parent is a merge. Merging
 divergent copies is a later feature, `ufo.merge`; until it is specified a
@@ -374,9 +374,11 @@ writer MUST NOT produce such a commit and a reader classifies one as
 unavailable.
 
 The hash of a commit is the **root hash** of the universe at that point. It
-fixes every object, every byte and all history before it.
+fixes every object, every byte and all history before it. The objects of a
+universe at their revisions, as one commit fixes them, are its **universe
+state**.
 
-One object, the **universe object**, has the identity of sixteen zero bytes
+One object, the **universe object**, has the object identity of sixteen zero bytes
 and type `ufo.universe`. Its properties are:
 
 | Property | Value |
@@ -420,7 +422,7 @@ Content that an operation and the present state have in common — a large
 file that was added and is still there — is one blob, named from both.
 
 The change object is created by the act of committing, not by an operation:
-it has no `new`, its `rev` is 1 and its `by` is its own identity.
+it has no `new`, its `rev` is 1 and its `by` is its own object identity.
 
 The **Chronicle** is the chain of commits and their changes, from the current
 commit back to the first.
@@ -445,15 +447,15 @@ nothing was; `val` and `ins` are omitted when nothing is put.
 property*. Its value is a text, a byte string, a list or a count, and its
 items — Unicode scalar values, bytes, list items, or for a count the
 units counted — are its **elements**. A *count* is a non-negative integer:
-a sequence whose elements have identities and no content of their own. It
+a sequence whose elements have element identities and no content of their own. It
 is how time is edited (§4.5). Every
-element has a permanent **identity**: the change that inserted it, and a
+element has a permanent **element identity**: the change that inserted it, and a
 number, counted from zero across everything that change inserts, in
 operation order. An element's identity never changes and is never reused.
 Everything that attaches to part of a sequence — an anchor, a span, an
 attribution — attaches to element identities, never to positions (§4).
 
-For each sequence property the revision records, in `seq`, the identities
+For each sequence property the revision records, in `seq`, the element identities
 of its elements in order, as a list of runs. A run is
 `[change, first, count]`: *count* elements with consecutive numbers from
 *first*, inserted by *change*. A fourth item, `false`, marks the run as
@@ -465,7 +467,7 @@ same change, consecutive numbers, both removed or both not, MUST be written as o
 A reader knows a property is a sequence property because `seq` has an
 entry for it.
 
-A `splice` names elements by identity. `after` is the identity
+A `splice` names elements by element identity. `after` is the element identity
 `[change, number]` of the element the new items follow, or null for the
 start of the sequence; it may be a removed element, and it is omitted when
 nothing is inserted. `del` is a list of runs
@@ -495,7 +497,7 @@ The **laws of change** follow. They hold for every medium.
   exactly what was there, as `old`, compared by value.
 - **[L3] Conservation.** Applying a change's operations, in order, to the
   parent commit's objects MUST produce exactly the commit's objects:
-  identity, type, properties with indirects resolved, and `seq`. Each object
+  object identity, type, properties with indirects resolved, and `seq`. Each object
   the operations touched has a new revision with `rev` one more than
   before, `prev` naming the revision before, and `by` naming this change;
   every other object has the revision it had; the change object is added.
@@ -543,7 +545,7 @@ linking are the same reference.
 A ref is resolved in the universe of the object that holds it. Identities
 are unique only within a universe — every universe object is sixteen zero
 bytes — so whatever follows a reference into another universe carries that
-universe along, and names an object there by commit and identity together.
+universe along, and names an object there by commit and object identity together.
 
 **An earlier state of the same universe.** An anchor's `u` MAY name an
 earlier commit of the universe that holds it. It then names the object as
@@ -622,7 +624,7 @@ is a function of facts that every copy agrees on:
   or the start; an element inserted together with others has the one before
   it as its parent;
 - each element has a *rank*: the height of the commit that inserted it,
-  then the identity of the change, then its number;
+  then the object identity of the change, then its number;
 - the sequence is the elements in the order of a walk that visits each
   element and then, at once, its children in descending rank, and their
   descendants with them;
@@ -676,7 +678,7 @@ frame     = kind (1 byte)  codec (1 byte)  length (unsigned LEB128, shortest for
 | `0x05` | head | marks a committed state (§2.2) |
 | `0x06` | absent | what this pack deliberately lacks (§2.5), encoded as a value |
 
-`codec` is `0` for identity or `1` for raw DEFLATE (RFC 1951). With codec
+`codec` is `0` for none or `1` for raw DEFLATE (RFC 1951). With codec
 `1` the payload, whose length the frame states, is the decoded length as an
 unsigned LEB128, in shortest form, followed by one complete DEFLATE stream
 and nothing after it. A length that is not in shortest form makes a frame
@@ -1134,9 +1136,9 @@ The **digest** is the SHA-256 of these bytes, in order:
      its entry, or for a list of refs a list of those refs in order;
    - on a continuous axis, the object's properties.
 
-   A Compute-let's `snapshot` is left out of every covered value: it is the
-   state of a machine, not content.
-3. For each *followed* object, in ascending order of identity: its identity
+   A Compute-let's `snapshot` is left out of every covered value: it is a
+   machine state, not content.
+3. For each *followed* object, in ascending order of object identity: its object identity
    and then its current revision hash, or 32 zero bytes if it is no longer
    in the object map.
 
@@ -1190,7 +1192,7 @@ A clock is in one of three modes:
 | --- | --- |
 | `locked` | the parent, by the formula above; pausing or scrubbing the parent pauses or scrubs the child |
 | `free` | the child's own running time: it starts at `offset` when the parent enters the interval and then advances with the root clock at `rate`, whatever the parent does. Scrubbing the parent out of the interval and back restarts it. When a face is sampled at a stated time with no history of scrubbing, a free clock reads as a locked one would |
-| `held` | a formula (§7.3), typically of a setting: a slider that scrubs an animation, a key that advances a deck |
+| `held` | a formula (§7.3), typically of presentation state: a slider that scrubs an animation, a key that advances a deck |
 
 The time at the top of a presentation is the **root clock**, supplied by the
 reader. The reader MAY drive it from real time, from a scrub position, from a
@@ -1256,7 +1258,7 @@ A text object (`ufo.text`) holds characters and their structure.
 | `syntax` | absent for native text; otherwise the media type of a foreign syntax the characters are written in |
 
 `chars` is a sequence property (§1.7): its elements are Unicode scalar
-values, each with a permanent identity that names the change that
+values, each with a permanent element identity that names the change that
 introduced it. A position, where one is shown to a person or an agent, is a
 count of scalar values from the start.
 
@@ -1448,7 +1450,7 @@ writes `origin.sources`: a list of `[count, change]` saying, for the
 elements this change inserted, in order — or with a count of 1 for a value
 that is not a sequence — which change first introduced what was copied,
 following earlier copies back to their beginning. The copied elements are
-new elements with identities of their own; their attribution is read
+new elements with element identities of their own; their attribution is read
 through `sources`. Moving text by cut and paste therefore keeps every
 character's attribution.
 
@@ -1523,7 +1525,7 @@ that last set it.
 
 - **[R8] Every byte has a known origin.** For every byte of content in a
   universe, `why` MUST return a change and its origin: for an element of a
-  sequence, by its identity; for any other property value, by the revision that set it; for a
+  sequence, by its element identity; for any other property value, by the revision that set it; for a
   byte of a blob, by the change that first referred to the blob; for a
   statement of a function, as for any element; for an implied byte of a
   printed module, "computed by the printer" from the description (**N4**).
@@ -1562,8 +1564,8 @@ revised once, with reasons, before anything is frozen.
 | Capabilities | 20 | 18 | each is something only a host can provide (**H4**) |
 | Operations across UFO's own capabilities | 64 | 28 written: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `engine` 6, `text` 3, `present` 2, `blobs` 1. `objects` exposes the projections and actions | seven optional capabilities are unwritten, and count here when they are |
 | Operations of `gpu` | — | 27 sketched (Appendix E) | counted apart: they mirror an outside standard, WebGPU, and are not the format's to keep small |
-| Concepts | 121 | 121 | what a capable newcomer must learn, counted without classification (§6.2): 58 for the core, 63 across the four profiles. The limit is the honest count; a new concept MUST displace one |
-| All defined terms | 174 | 174 | concepts, and the names of parts and statuses. The limit is the honest count; a new term MUST displace one |
+| Concepts | 123 | 123 | what a capable newcomer must learn, counted without classification (§6.2): 59 for the core, 64 across the four profiles. The limit is the honest count; a new concept MUST displace one |
+| All defined terms | 176 | 176 | concepts, and the names of parts and statuses. The limit is the honest count; a new term MUST displace one |
 
 ### 6.2 Glossary
 
@@ -1576,12 +1578,12 @@ A word has one meaning throughout the specification.
 
 | Part | Concepts | Parts and statuses | All terms |
 | --- | --- | --- | --- |
-| Core | 58 | 33 | 91 |
+| Core | 59 | 33 | 92 |
 | Presentation | 21 | 11 | 32 |
 | The player | 16 | 2 | 18 |
-| Execution | 12 | 4 | 16 |
+| Execution | 13 | 4 | 17 |
 | Travel and trust | 14 | 3 | 17 |
-| **The whole format** | **121** | **53** | **174** |
+| **The whole format** | **123** | **53** | **176** |
 
 The eleven primitives, the four operations, the three kinds of axis and
 the three layouts are counted where they are named: a newcomer learns
@@ -1619,7 +1621,8 @@ different question from the one a newcomer asks.
 | Detached | part | of a region: what it named is gone | 4.3 |
 | Digest | concept | a salted hash of a region's content and of everything that content refers to | 4.4 |
 | Edge | part | a property holding a ref | 1.5 |
-| Element | concept | one item of a sequence property, with an identity | 1.7 |
+| Element | concept | one item of a sequence property, with an element identity | 1.7 |
+| Element identity | concept | the permanent name of an element: the change that inserted it and a number | 1.7 |
 | Evidence | concept | what supports content | 5.4 |
 | Feature | concept | a declared requirement a reader needs in order to interpret a universe | 1.6 |
 | Finding | concept | a later statement about origin, added beside the first and never replacing it | 5.4 |
@@ -1628,7 +1631,6 @@ different question from the one a newcomer asks.
 | Hash | concept | the SHA-256 digest that names a record | 1.1 |
 | Head | concept | the frame that ends a commit; the last one names the state of the pack | 2.2 |
 | Host | concept | the platform a reader runs on | 0.1 |
-| Identity | concept | the permanent name of a thing, never changed and never reused: of an object, 16 bytes; of an element, the change that inserted it and a number | 1.5, 1.7 |
 | Index | part | a lookup table from hash to offset, rebuilt at will | 2.4 |
 | Indirect | concept | a value kept outside its node, in a blob, and named there by hash | 1.4 |
 | Item | part | one member of a list or of a sequence | 1.2 |
@@ -1639,8 +1641,9 @@ different question from the one a newcomer asks.
 | Nested | concept | of another universe: its commit is in this file | 1.8 |
 | Node | part | a record holding one value | 1.3 |
 | Note | part | words a writer attaches to a change, an evidence entry or a decision | 1.7 |
-| Object | concept | an identity with a type and properties | 1.5 |
-| Object map | concept | the trie from identity to current revision, whose shape depends only on what it holds | 1.6 |
+| Object | concept | an object identity with a type and properties | 1.5 |
+| Object identity | concept | the permanent name of an object: 16 bytes chosen at its creation, never changed and never reused | 1.5 |
+| Object map | concept | the trie from object identity to current revision, whose shape depends only on what it holds | 1.6 |
 | Offset | part | a position in a pack, in bytes | 2.1 |
 | Opening | part | the small record that connects a veiled indirect to its content | 1.4 |
 | Operation | concept | one edit to the state: `new`, `set`, `splice` or `drop` | 1.7 |
@@ -1655,7 +1658,7 @@ different question from the one a newcomer asks.
 | Reader | concept | any software that opens a UFO | 0.1 |
 | Recipe | concept | a derivation with the origin of the change that made it: enough to make the thing again | 5.3 |
 | Record | concept | an immutable byte string named by its hash: a chunk or a node | 1.3 |
-| Ref | concept | a value naming an object by its identity | 1.2 |
+| Ref | concept | a value naming an object by its object identity | 1.2 |
 | Region | concept | the part of an object an anchor names, axis by axis | 4.1 |
 | Rendition | concept | an asset with a derivation | 5.3 |
 | Revision | concept | one state of an object, stored as a node that names the revision before | 1.5 |
@@ -1669,13 +1672,13 @@ different question from the one a newcomer asks.
 | Signature | part | the fixed bytes that begin a pack | 2.1 |
 | Span | concept | an anchor on a text's elements, with a role and properties | 5.1 |
 | Stale | concept | of a pin: what it covered has changed. Otherwise it is current | 4.4 |
-| State | concept | what a thing holds at one moment: of a universe, its objects at their revisions, fixed by a commit; of a Compute-let, its memory, globals and tables, fixed by a snapshot | 1.6, 12.2 |
 | Timeline | concept | a clock whose time is a sequence of flicks, edited by `splice`, with what plays attached to it as spans are to a text | 4.5 |
 | Tombstone | concept | what a removed element leaves in place, so that what was attached to it can still be placed | 1.7, 1.10 |
 | Transmutation | concept | described objects that a model made from other objects | 5.3 |
 | Type | part | the name of the kind of an object | 1.5 |
 | Universe | concept | the set of objects reachable from one commit | 1.6 |
 | Universe object | concept | the object that names a universe's entry points, faces, features and components | 1.6 |
+| Universe state | concept | the objects of a universe at their revisions, fixed by a commit | 1.6 |
 | Value | concept | null, boolean, integer, float, text, bytes, list, map, or one of four references | 1.2 |
 | Veiled | concept | of an indirect: naming its content through an opening, so that the hash reveals nothing when the content is withheld | 1.4 |
 | Whole | part | of a pack: holding every record its state names | 2.5 |

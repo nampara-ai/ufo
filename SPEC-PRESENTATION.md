@@ -92,7 +92,7 @@ structure, never as text to be parsed; a readable spelling is a projection.
 | Group | Operators |
 | --- | --- |
 | reference | `get` (a property of an object, by ref and key path), `cell` (a table cell by row and column key), `col` (a column as a list), `arg` (a named value supplied by the enclosing `each`, or by the Portal that presents this, §7.6), `size` (the laid-out width and height of an earlier sibling in the same group), `ask` (the records of a projection, §10.1) |
-| environment | `time` (the enclosing clock's time), `input` (the pointer's position and whether it is pressed, within the enclosing pane, and the `src` of the item under it), `view` (the available width and height), `setting` (a named setting) |
+| environment | `time` (the enclosing clock's time), `input` (the pointer's position and whether it is pressed, within the enclosing pane, and the `src` of the item under it), `view` (the available width and height), `state` (a named value of the presentation state) |
 | arithmetic | `+ − × ÷ mod neg abs min max floor ceil round sqrt pow exp ln sin cos atan2` |
 | logic | `= ≠ < ≤ > ≥ and or not if` |
 | text | `concat len slice format` (numbers and dates to text by a stated pattern) |
@@ -143,7 +143,7 @@ and a result that is not finite is an error value.
 | `list count sum mean nth range` | `sum` of nothing is 0 and `mean` of nothing an error value; `nth(list, i)` counts from 0 and is an error value outside the list; `range(a, b)` is the integers from *a* up to but not including *b*, at most 2²⁰ of them |
 | `sort filter map` | `sort(list, key)` is stable and ascending by the key formula's value, or by the items themselves |
 | `get cell col` | `get(ref, path)` is the value at a key path of an object's properties; `cell(ref, row, col)` a cell's value, a formula there being evaluated; `col(ref, col)` a column's values in the table's order. A missing object, key or cell is an error value |
-| `arg size time input view setting` | `size(key)` is `[w, h]`; `time` is in flicks; `input` is `[x, y, pressed, src]`, `src` being the anchor carried by the item under the pointer (§9.2); `view` is `[w, h]`; `setting(name)` is null until set |
+| `arg size time input view state` | `size(key)` is `[w, h]`; `time` is in flicks; `input` is `[x, y, pressed, src]`, `src` being the anchor carried by the item under the pointer (§9.2); `view` is `[w, h]`; `state(name)` is null until set |
 | `ask` | `ask(projection, argument…)` is the records a projection of §10.1 returns for those arguments, as a list of maps from field name to value. A projection is a function of a commit, so `ask` is as pure as `get`. It reads the universe the formula is in, or a subject it was given (§7.6). Each record counts one toward the bound of **F2** |
 
 **Repetition.** A group MAY carry `each`: a formula yielding a list or a ref
@@ -151,13 +151,13 @@ to a data object, and `as`, a name. Its single child is then a template,
 presented once per item with `arg` bound. This is how a table becomes rows
 of text, and a dataset becomes the bars of a chart.
 
-**Settings** are a small map of named values held by the reader for
+**Presentation state** is a small map of named values held by the reader for
 one presentation: a sort column, a selected tab, a scroll position, a slider.
-Primitives declare which input sets which setting (`on`, Appendix A). It is not
+Primitives declare which input sets which of its values (`on`, Appendix A). It is not
 part of the universe and changing it changes no byte. Each presentation of
-an object through a Portal has its own settings: two Portals onto one table
+an object through a Portal has its own presentation state: two Portals onto one table
 sort independently, and nothing inside a nested or linked universe can read
-or set the settings of what presents it; what it is given, it is given in
+or set the presentation state of what presents it; what it is given, it is given in
 `with` (§7.6). An action that edits
 the universe is a change (§1.7), made through the onboard tools.
 
@@ -206,7 +206,7 @@ type the kernel knows.
 | Video | a clock holding clocks, each bringing a raster, samples, text, paths or Portals into presence for an interval |
 | Recorded footage | a raster whose source is a video asset and whose time is the clock's |
 | Animation | any of the above with formulas of `time` |
-| Interface | panes, groups, text and paths with `on` handlers that set settings |
+| Interface | panes, groups, text and paths with `on` handlers that set presentation state |
 | Application, game | a surface |
 | 3D scene | a data object in the glTF model, with `x`, `y`, `z` and `t` axes; a surface that names it in `of` and whose Compute-let draws it using the `gpu` capability; children placed by anchors into the scene |
 
@@ -279,7 +279,7 @@ program, and let programs take part in composition.
 **Handlers that propose changes.** An `on` handler (Appendix A) may carry
 `propose`: a list of operations (§1.7) in which any field may be a formula.
 When the event occurs, the kernel evaluates the formulas — against data,
-settings and the event — and submits the result as a change, with
+presentation state and the event — and submits the result as a change, with
 origin `{basis: witnessed, by: person}` naming the person using the reader.
 It is verified and committed, or refused, like any change (**L4**). A
 checkbox, a form, an editable cell and a button that adds a row are
@@ -317,7 +317,7 @@ accepts text entry. The host supplies the editing surface it already has —
 caret, selection, input methods, accessibility — through the `text`
 capability and reports each committed edit as an input event `edit` giving
 the range replaced and the text that replaced it. The kernel turns the
-range into the identities of the elements concerned and submits a
+range into the element identities of the elements concerned and submits a
 `splice`. The host
 knows it is editing a piece of text and nothing more (**K2**).
 
@@ -458,13 +458,13 @@ height less its top and bottom margins — pages are filled in order:
 
 Each page is a region of the page's size, clipping, that holds its rows at
 the margins. A header and a footer, if given (Appendix A), are composed at
-the width between the side margins with `setting("page")` and
-`setting("pages")`, and placed in the top and bottom margins, one line from
+the width between the side margins with `state("page")` and
+`state("pages")`, and placed in the top and bottom margins, one line from
 the rows. Breaking pages never changes a line: lines are broken once, for
 the page's width.
 
 - **[V4]** Composition is a function of the description, the sampling
-  parameters, the settings and the replies of `measure`. Given
+  parameters, the presentation state and the replies of `measure`. Given
   the same of each, every kernel produces the same display list. Where two
   hosts measure the same text differently — other fonts, other shaping —
   its lines, and so its pages, may differ between them. With the same
@@ -480,7 +480,7 @@ draft and the measurement spike used; they have not themselves been run.
 
 A **Portal** (`ufo.portal`) is a pane in a parent that presents one other
 object. Each Portal is an **occurrence**: an object in its own right, with
-its own identity, distinct from what it presents.
+its own object identity, distinct from what it presents.
 
 | Property | Value |
 | --- | --- |
@@ -508,13 +508,13 @@ the clock it is placed under (§4.5).
   target's rows need at that width, as a text does (§7.7). A target never
   sets its Portal's width, nor its height where one is stated.
 - **[O3] Occurrences are never shared.** Duplicating a Portal, by any means,
-  gives the copy a new identity. Both may present the same target.
+  gives the copy a new object identity. Both may present the same target.
 - **[O4] Missing targets.** A Portal whose target is absent or unavailable
   shows an inspectable placeholder at the authored size.
 - **[O5] One drop, one owner.** Content dropped over nested Portals is claimed
   by exactly one: the deepest that accepts it.
 - **[O6] No stale binding.** An import started for a Portal names that
-  Portal's identity and the target it had; the change that binds the
+  Portal's object identity and the target it had; the change that binds the
   result gives that target as `old`. If the Portal no longer exists or has
   changed target when the import completes, **L4** refuses the binding; the
   imported asset remains in the universe, unreferenced.
@@ -696,10 +696,10 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 | Determinism tier | part | which of two promises an export makes: the host's rendering, or a named renderer's | 8.4 |
 | Export | concept | a face sampled with stated parameters and encoded | 8.4 |
 | Face | concept | a presentation of a universe: sampled, carried or transmuted | 8.1 |
-| Formula | concept | a pure, terminating expression over data, time, input and settings | 7.3 |
+| Formula | concept | a pure, terminating expression over data, time, input and presentation state | 7.3 |
 | Fragment | part | the part of a piece that falls on one line | 7.7 |
 | Group | concept | children laid out by flow, by grid or by absolute position | 7.1 |
-| Handler | concept | what a primitive does on input: set a setting, propose a change, or act on a subject | 7.6 |
+| Handler | concept | what a primitive does on input: set presentation state, propose a change, or act on a subject | 7.6 |
 | Layout | concept | how a group places its children: `flow`, `grid` or `absolute` | 7.2 |
 | Occurrence | part | one presenting of an object through one Portal | 7.8 |
 | Pane | concept | a two-dimensional space with a transform and a clip, holding children | 7.1 |
@@ -708,6 +708,7 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 | Plain-text face | concept | an object's text in reading order | 8.3 |
 | Portal | concept | a place in a parent that presents another object, here or in another universe | 7.8 |
 | Poster | concept | the rendition shown where a Compute-let cannot or may not run | 7.6 |
+| Presentation state | concept | named values a reader holds for one presentation and never writes to the universe | 7.3 |
 | Primitive | concept | one of the eleven kinds of thing a universe can describe | 7.1 |
 | Projection | concept | anything generated on demand and never stored | 8.1 |
 | Raster | concept | pixels, still or moving | 7.1 |
@@ -715,7 +716,6 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 | Role | part | what a span says a stretch of text is: a heading, a list item, emphasis | 5.1, Appendix A |
 | Sampled, carried | part | of a face: composed on demand; stored as a rendition | 8.1 |
 | Samples | concept | sound | 7.1 |
-| Settings | concept | named values a reader holds for one presentation and never writes to the universe | 7.3 |
 | Subject | concept | a universe the reader hands to what it presents, so that tools can reach the work | 7.6 |
 | Surface | concept | a pane a Compute-let draws | 7.1 |
 | Text | concept | characters, with spans for structure and style | 7.1 |
@@ -731,7 +731,7 @@ is and MUST NOT be formulas (§7.1); all others may be.
 
 **Common to all:** `scales` (§4.3), `label`, `role`, `lang`, `opacity`, `visible`, `on` (map
 from an input event name — `press`, `enter`, `leave`, `key`, `change` — to
-`{set: setting name, to: formula}`, `{propose: operations}` (§7.6), or
+`{set: name, to: formula}`, `{propose: operations}` (§7.6), or
 `{deliver: true}` for surfaces), `from` (§5.3). Of the events: `press` is
 a pointer going down and up on the item, or Enter or Space while it has
 focus; `enter` and `leave` are the pointer's; `key` is a key going down

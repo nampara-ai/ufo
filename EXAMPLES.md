@@ -17,7 +17,7 @@ those of the specification: §0–§6 in [SPEC.md](SPEC.md), §7–§8 in
 
 Each example is represented using only the core, the eleven primitives and
 the profiles of §5 and §12. Object names in `code` are labels for this
-text; real identities are 16 bytes.
+text; real object identities are 16 bytes.
 
 ### 15.1 An interactive video
 
@@ -36,7 +36,7 @@ summaries.*
 | `dataset` | `ufo.data` | the figures; rows and columns keyed |
 | `table-clock` | `ufo.clock` | interval 1:32 to 2:12, `locked`; holds `table-portal` |
 | `table-portal` | `ufo.portal` | `of` `table-view`; `table-clock` is a child of `stage` placed at the upper right |
-| `table-view` | `ufo.group` | `grid`, `each` over `dataset` sorted by `setting("sort")`; header cells carry `on` handlers that set `sort` |
+| `table-view` | `ufo.group` | `grid`, `each` over `dataset` sorted by `state("sort")`; header cells carry `on` handlers that set `sort` |
 | `info-clock` | `ufo.clock` | interval 8:00 to 8:45; holds `info-portal` |
 | `info-portal` | `ufo.portal` | `of` `info-surface` |
 | `info-surface` | `ufo.surface` | Compute-let `infographic`, granted `objects` read scope on `dataset` |
@@ -55,7 +55,7 @@ caption clock present at that time; "when is this sentence spoken" by
 finding the clock whose Portal anchors it.
 
 **Clocks.** `table-clock` and `info-clock` are `locked`: scrubbing the video
-scrubs them. The table's sort order is a setting, so sorting while
+scrubs them. The table's sort order is presentation state, so sorting while
 the video plays changes no byte (**S1**). `info-surface` receives the locked
 time through `time()` (**T1**) and reads `dataset` through its granted
 capability; its figures are computed live. If the person denies the grant,
@@ -296,8 +296,8 @@ and leave the mark as the way back to the universe (**E19**, **E20**).
 
 Nothing was added to §1–§4 to represent these examples. They did shape
 three decisions made while drafting: clocks became a primitive symmetrical
-with regions, rather than a property; settings were separated from
-the universe's state, so that sorting a table inside a video is not an edit; and
+with regions, rather than a property; presentation state was separated from
+universe state, so that sorting a table inside a video is not an edit; and
 references to other universes were made identical for nested and linked
 content.
 

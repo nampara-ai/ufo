@@ -179,11 +179,11 @@ it is not yet specified.
   metering itself, there is nothing for a file to omit and nothing for the
   reader to trust, and because the rule is fixed, the same module with the
   same fuel traps at the same instruction everywhere.
-- **[M5] Determinism.** Given the same module, state, fuel, clock times,
+- **[M5] Determinism.** Given the same module, machine state, fuel, clock times,
   inputs, messages, capability replies and random seed, a Compute-let MUST
   behave identically on every reader, including the point at which it runs
   out of fuel.
-- **[M6] State.** A Compute-let's state is its memory, globals and tables,
+- **[M6] Machine state.** A Compute-let's **machine state** is its memory, globals and tables,
   its clock time, its position in the random stream and the input and
   messages not yet delivered to it. A **snapshot** is the exact content of
   all of these, as one encoded value kept in a blob: `{memory, globals,
@@ -196,8 +196,8 @@ it is not yet specified.
   32-byte seed followed by a block counter from 0, as 8 bytes,
   little-endian; the reader chooses the seed at start and records it. A reader takes a snapshot only between
   calls into the module: `checkpoint` asks for one when the current call
-  returns. Running a Compute-let changes its state in the reader and writes
-  nothing to the universe (**S1**). The state is recorded — a change that
+  returns. Running a Compute-let changes its machine state in the reader and writes
+  nothing to the universe (**S1**). The machine state is recorded — a change that
   sets `snapshot`, with origin `tool` and the person as `asked` — when the
   person saves, and before a promotion (§12.6). Earlier snapshots remain in
   history and can be restored.
@@ -289,13 +289,13 @@ condition — each open a stretch that a later `end` statement closes, with
 `else` between for an `if`. These five are statements only, never
 operands.
 
-Every statement is an element (§1.7). It has a permanent identity, names
+Every statement is an element (§1.7). It has a permanent element identity, names
 the change that inserted it, and through that change has an origin (§5.4).
 Code is therefore edited with `splice`, as text is: a fix to one statement
 is an operation on one statement, and its record is the statement removed
 and the statement put in its place. Statements are always addressed by
-their identities, never by number: a number moves with every edit above
-it, and an identity does not. An anchor addresses statements by a region on
+their element identities, never by number: a number moves with every edit above
+it, and an element identity does not. An anchor addresses statements by a region on
 `body` and survives edits around them (§4.3). A module offers the keyed
 axis `funcs`.
 
@@ -354,7 +354,7 @@ axis `funcs`.
   with the same statements, calling the same functions, have the same one
   in any file. `items` and `unit` show it and `search` finds by it. Equal
   bodies kept outside their nodes are stored once (§1.4). A copied function
-  keeps its identity and is recorded with `copied`, as any copy is (§5.4);
+  keeps its unit hash and is recorded with `copied`, as any copy is (§5.4);
   its history is found by following that.
 
 **Carried modules.** A program compiled elsewhere enters a universe as what
@@ -391,7 +391,7 @@ application supplies bytes for a described module, and what a reader runs
 is what the kernel printed and then instrumented (**M4**). A reader stores
 no bytes for a described module; a cache (§3.4) MAY keep them,
 under the module's digest. A model never types bytes. It reads a function
-through `unit`, one statement to a line, each with its identity and the
+through `unit`, one statement to a line, each with its element identity and the
 change that wrote it; it writes statements through `propose`, as it would
 any content (§10.3); and the kernel refuses a change whose module would not
 validate (**N3**).
@@ -423,7 +423,7 @@ A test object (`ufo.test`) holds:
 | Property | Value |
 | --- | --- |
 | `run` | either `{call, arguments}`: an exported function and values to pass; or `{replay}`: the bytes of a recorded replay (**M7**) |
-| `from` | the bytes of the snapshot to start from, or `live` to start from a copy of the running state |
+| `from` | the bytes of the snapshot to start from, or `live` to start from a copy of the running machine state |
 | `expect` | either `{returns}`: the values the call must return; or `{state}`: the hash the snapshot taken afterward must have; or `{draws}`: the hash of the display list last drawn |
 | `fuel` | the fuel allowed |
 | `judges` | list of refs to functions in the module that exist to serve this test |
@@ -441,8 +441,8 @@ reader, not the Compute-let, carries out:
    the person has approved in advance changes by this actor to this
    Compute-let for the present session. A test change (**G1**) is never
    approved in advance.
-5. The reader records the live state (**M6**), commits the change, starts
-   the candidate from that state and switches the surface to it. The
+5. The reader records the live machine state (**M6**), commits the change, starts
+   the candidate from that machine state and switches the surface to it. The
    candidate's memory, globals and tables are those of the live instance; a
    global the change added takes its declared initial value; a data segment
    the change altered is not applied again. The
@@ -461,7 +461,7 @@ each test that passed against each function it touched.
   committed only with a decision of verdict `approve` from the person,
   given for that change.
 - **[G2]** The running Compute-let never observes a candidate that failed.
-- **[G3] Rollback** is promotion of an earlier revision, with the live state
+- **[G3] Rollback** is promotion of an earlier revision, with the live machine state
   carried across in the same way and the same tests applied.
 
 ## Terms of this part
@@ -475,12 +475,13 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 | Implied | part | of a module's bytes: fixed by the printing rules, not by any statement | 12.4 |
 | Ledger | concept | the changes to a Compute-let's code, tests and manifest | 12.5 |
 | Lifted | concept | of a module compiled elsewhere: turned into description, exactly | 12.3 |
+| Machine state | concept | the memory, globals and tables of a running Compute-let | 12.2 |
 | Manifest | concept | what a Compute-let declares: its module, the capabilities it asks for, its tests | 12.1 |
 | Module | concept | a described WebAssembly module: functions, memory, globals, exports, data | 12.3 |
 | Printer | concept | the kernel's function from a described module to its bytes | 12.4 |
 | Program hash | concept | the hash of what a Compute-let would run and may ask for; grants attach to it | 12.1 |
 | Promotion | concept | the gate by which a change to code takes effect: tests, approval, switch | 12.6 |
-| Snapshot | concept | a blob holding the state of a Compute-let | 12.2 |
+| Snapshot | concept | a blob holding a machine state | 12.2 |
 | Statement | concept | one element of a function's body: a tree in WebAssembly's own vocabulary | 12.3 |
 | Stretch | part | the instructions one charge of fuel covers | 12.2 |
 | Test | concept | an object stating a call or a replay and what must result | 12.6 |

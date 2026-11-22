@@ -24,7 +24,7 @@ pages: open, universal, and independent of any application.
    of about 10 KiB and a tree above them, so an edit changes only what is
    near it. Pure content, never salted: same bytes, same hash, stored and
    sent once, everywhere. Any range is read without the rest.
-4. **Object.** A 16-byte identity, a type, properties. Each state is a
+4. **Object.** A 16-byte object identity, a type, properties. Each state is a
    salted *revision* naming the one before. Unknown types, properties
    and values are always preserved. A large value — a file's bytes, a long
    text — is kept outside its node in a blob and named by an *indirect*,
@@ -57,7 +57,7 @@ pages: open, universal, and independent of any application.
    parent commit's state, each stating exactly what it replaced. These four
    edit everything, machine code included.
 9. **Element.** Every item of a sequence — every character of a text — has
-   a permanent identity: the change that inserted it and a number. A
+   a permanent element identity: the change that inserted it and a number. A
    `splice` names elements, not positions. Removed elements stay as
    tombstones among collaborators, and may be forgotten on publication. The
    order of a sequence is a function of facts all copies share, so
@@ -142,7 +142,7 @@ pages: open, universal, and independent of any application.
     to them that is itself a universe, carried by hash and presented with
     the universe being worked on as its *subject*. Agents use the same
     functions through the Model Context Protocol, and what they read back
-    is fixed field by field: one record per line, every identity reusable
+    is fixed field by field: one record per line, every object identity reusable
     as an argument.
 
 ## Behavior (SPEC §9.3, §14, §12)
@@ -160,7 +160,7 @@ pages: open, universal, and independent of any application.
     Accelerated graphics follows the WebGPU model.
 19. **Printer and ledger.** No source tree. Code is description: a function
     is an object whose body is a sequence of statements in WebAssembly's
-    own vocabulary, each an element with an identity and an origin, edited
+    own vocabulary, each an element with an element identity and an origin, edited
     by the same four operations as text. The printer, a function of the
     kernel, alone writes module bytes from the description,
     deterministically: the bytes are a face of the code, always verifiable
@@ -220,7 +220,7 @@ pages: open, universal, and independent of any application.
 ## Limits it holds itself to (SPEC §6)
 
 Eleven primitives, three layouts, three axis kinds, four operations, ten
-host functions, 121 concepts for a newcomer to learn, 58 of them in the core; a kernel of at most 128 KiB as it travels,
+host functions, 123 concepts for a newcomer to learn, 59 of them in the core; a kernel of at most 128 KiB as it travels,
 compressed, and 6 000 lines;
 one implementation of everything in the project's readers; additions only
 by showing that data, formulas or composition cannot do the job; and

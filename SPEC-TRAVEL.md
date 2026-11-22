@@ -361,7 +361,7 @@ changes since the previous one.
 
 - **[U2]** Readers verify seals and state in plain words who sealed which
   state, or that the universe is unsealed. Hash verification establishes
-  integrity; only a seal establishes identity. A reader MUST NOT present one
+  integrity; only a seal establishes who. A reader MUST NOT present one
   as the other.
 - **[U3]** Writers preserve every seal frame whose commit is retained.
 - **[U4] Keys stay home.** No signing key, password, token or credential is

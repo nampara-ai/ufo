@@ -90,7 +90,7 @@ host except through the host interface.
 ### 9.2 The drawing contract
 
 To present, the kernel **composes**: given a face (§8), an available size,
-the root clock's time and the settings, it produces a **display
+the root clock's time and the presentation state, it produces a **display
 list**. Executing display lists is the whole of what a host draws and
 plays, and this section is the whole of what a binding knows about
 presentation. It is part of the frozen host interface (§9.3): once
@@ -228,7 +228,7 @@ request, one of four states:
 | *absent* | the host does not have it |
 
 *Asking.* For each *undecided* request the reader asks the person, showing
-the program's identity, who sealed it if anyone, the capability in plain
+the program's hash, who sealed it if anyone, the capability in plain
 words, the exact scope, and the program's `why` and `without` as the
 program's own words. The person answers yes, no, or yes with a narrower
 scope, for this session or until revoked. A reader MUST NOT ask on merely
@@ -403,7 +403,7 @@ are two things.
   contribution; verify the universe and its seals; show what will travel;
   and save or send the result.
 - **[K6]** The tools interface contains no logic of its own. Everything it
-  does is a formula, a change of a setting, or an action of §10.3 on
+  does is a formula, a change of presentation state, or an action of §10.3 on
   its subject, performed by the kernel as the act of the person using it.
   It adds no code to the binding and none to the kernel.
 
@@ -447,7 +447,7 @@ and the agent interface's (§10.3).
 | `leaving(parameters)` | exactly what a send, share or export with those parameters would carry (**E12**) |
 | `sample(face, parameters)` | a face: as text, as a display list, or as an encoded export |
 | `items(ref)` | a module's functions, globals and exports, with name, signature, size, origin and tests (§12.5) |
-| `unit(ref)` | a function: its signature, and its statements one to a line, each with its identity and the change that wrote it |
+| `unit(ref)` | a function: its signature, and its statements one to a line, each with its element identity and the change that wrote it |
 | `calls(ref)`, `unit-history(ref)` | which functions call which; the changes that touched a function, newest first |
 
 Projections for agents are dense, regular text designed for a language
@@ -498,7 +498,7 @@ are shown 64 to a range, and ranges 64 to a range of ranges, each range
 with the labels of its first and last parts, their number and the total of
 their sizes, so that every reply is bounded and any part is reached in a
 number of steps logarithmic in the number of parts. A universe's other
-objects are in order of type name, then label, then identity. `history` is
+objects are in order of type name, then label, then object identity. `history` is
 bounded the same way: the 64 newest changes, then older ones in ranges. Sizes and times are totals over what lies beneath a part;
 a reader MAY keep them in a cache (§3.4) under revision hashes,
 which a commit changes only along the path it touched.
@@ -589,11 +589,11 @@ to outside agents as tools under the Model Context Protocol:
 | `export(face or universe, parameters)` | sample and encode a face; or write the universe itself, as a travel form or a working form holding the layers the parameters state (§13.3) |
 
 Projections show a statement, or an item of any list that is a sequence,
-with its identity, and an operation names it by that identity. Characters
+with its element identity, and an operation names it by that element identity. Characters
 and bytes are too many to show one by one: projections show them by
 position at the revision named in the header, and an operation may name
 them by positions together with that revision, which the kernel turns into
-identities using it. Either way, an edit made against a reading that is a
+element identities using it. Either way, an edit made against a reading that is a
 little out of date lands on the elements that were read, or is refused
 (**L4**) if they are gone; it never lands on whatever now stands in the
 same place.
@@ -638,7 +638,7 @@ happens:
 | Objects, object map, blobs and chunking, changes, conservation, sequences | 700 | the miniature read objects, blobs and sequences in about 115, and wrote nothing |
 | Anchors, resolution, pins, digests, derivations, the layers of what travels | 500 | not measured |
 | Formulas, with the mathematics routines they need | 700 | not measured |
-| Composition: text with line breaking and bidirectional ordering, flow, grid, absolute, clocks, pages, plain text, settings, hit testing | 1 500 | the miniature did text, flow, pages and plain text, without the two Unicode algorithms, in 491 |
+| Composition: text with line breaking and bidirectional ordering, flow, grid, absolute, clocks, pages, plain text, presentation state, hit testing | 1 500 | the miniature did text, flow, pages and plain text, without the two Unicode algorithms, in 491 |
 | Projections, outlines, search, difference, actions, undo, the agent's spelling of values | 800 | not measured |
 | Code and machines: printing; decoding and instrumenting modules; lifting; promotion; running Compute-lets through `engine`; snapshots and replay; capabilities | 900 | the miniature's printer was 344, for part of the instruction set |
 
@@ -740,9 +740,9 @@ detectable.
 
 | Value | Written as |
 | --- | --- |
-| identity | `o:` and the shortest prefix of its lowercase hexadecimal, of at least 8 digits, that is unique among identities in the universe |
+| object identity | `o:` and the shortest prefix of its lowercase hexadecimal, of at least 8 digits, that is unique among object identities in the universe |
 | hash | the same rule among hashes of its kind, with `r:` for a revision, `c:` for a commit, `b:` for a blob |
-| element | the identity of the change that inserted it, a dot, and its number: `o:d2c417e9.12` |
+| element | the object identity of the change that inserted it, a dot, and its number: `o:d2c417e9.12` |
 | region | `axis=[low,high]` for sequence and continuous axes, `axis=[key,key]` for keyed ones; several axes are several fields |
 | anchor | `o:…` then, if any, its regions, then `r:…`; written without spaces inside brackets |
 | integer, float | decimal; floats with the fewest digits that round-trip |
@@ -757,7 +757,7 @@ is not asked for the text itself — is written as its first 200 characters
 followed by `…` inside the string, with a `len=` field after it.
 
 Two rules bind every projection. It is a function of the commit and its
-arguments alone. And every identity, hash and anchor it shows can be
+arguments alone. And every object identity, hash and anchor it shows can be
 passed back, exactly as written, as an argument to another projection.
 
 **Records.**
@@ -765,21 +765,21 @@ passed back, exactly as written, as an argument to another projection.
 | Projection | Arguments | Records, in order (`*` any number, `?` at most one) |
 | --- | --- | --- |
 | `overview` | — | `universe`; `seal`*; `feature`*; `component`*; `face`*; `lacks`?; `part`* |
-| `object` | identity | `object`; `prop`*; `run`*; `referrer`* |
+| `object` | object identity | `object`; `prop`*; `run`*; `referrer`* |
 | `text` | anchor | `text` |
 | `search` | query | `hit`* |
 | `history` | anchor | `change`* newest first |
 | `why` | anchor | `region`; then for each part of it: `run` or `value`; `copied`*; `finding`*; `evidence`*; `decision`? |
 | `diff` | two commits or revisions | `op`* |
 | `expand` | anchor | `part`* |
-| `recipe` | identity | `source`*; `made` |
+| `recipe` | object identity | `source`*; `made` |
 | `verify` | commit | `check`*; `issue`* |
 | `leaving` | the parameters of an export | `layer`*; `seal`*; `lacks`? |
 | `sample` | face, parameters | as text: `text`; as a display list: `item`* |
-| `items` | identity of a module | `item`* |
-| `unit` | identity of a function | `unit`; `stmt`* |
-| `calls` | identity of a module | `call`* |
-| `unit-history` | identity of a function | `change`* newest first |
+| `items` | object identity of a module | `item`* |
+| `unit` | object identity of a function | `unit`; `stmt`* |
+| `calls` | object identity of a module | `call`* |
+| `unit-history` | object identity of a function | `change`* newest first |
 
 | Record | Fields |
 | --- | --- |
@@ -803,15 +803,15 @@ passed back, exactly as written, as an argument to another projection.
 | `referrer` | `id` `key` |
 | `text` | the anchor, `chars` (count), then `s` |
 | `hit` | the anchor, `type`, `s` (up to 80 characters around the match) |
-| `change` | `id` `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of identities) [`note`] |
+| `change` | `id` `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of object identities) [`note`] |
 | `op` | `op` `obj` [`key`] [`after`] [`del`] then `old` and `new`, each a value; where the change's `work` is withheld, one record `op withheld` |
 | `check` | `rule` (a label of this document) `scope` `result` (`pass`, `fail`, `skipped`) [`reason`] |
 | `layer` | `name` (`content`, `attribution`, `history`) `included` (boolean) `objects` (count) `bytes` `actors` (list) `models` (list) `changes` (count) `first` `last` (times) |
 | `issue` | `class` (of §1.9) `record` `rule` `s` |
 | `item` | for `sample`: the display-list item as fields. For `items`: `id` `kind` `name` `size` `by` `basis` `tests` (count) [`signature`] |
 | `unit` | `id` `name` `signature` `r` `statements` (count) |
-| `stmt` | `e` (the statement's identity) `change` `depth` (of the blocks enclosing it) `s` (the statement, in the JSON spelling of its value, with functions shown by name) |
-| `call` | `from` `to` (identities) `count` |
+| `stmt` | `e` (the statement's element identity) `change` `depth` (of the blocks enclosing it) `s` (the statement, in the JSON spelling of its value, with functions shown by name) |
+| `call` | `from` `to` (object identities) `count` |
 
 **Queries.** `search` takes a map with any of: `text`; `type`; `hash` (of a
 record, a blob or a unit); `basis`; `by`; `actor`; `model`; `after` and
