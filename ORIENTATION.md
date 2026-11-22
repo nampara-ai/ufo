@@ -846,5 +846,97 @@ Appendices keep their letters: C, D and F with the core, A with
 presentation, B with the player, E with execution. Rule labels are
 unchanged.
 
-Words: the core is about 19 000; presentation 8 900; the player 8 600;
-execution 4 600; travel and trust 4 200; the two companions 4 000.
+Word counts are in §19.
+
+## 19. Version 0.8: decisions after the review response, and what was done (2026-11-22)
+
+**The owner's decisions.**
+
+1. Split the specification (§18).
+2. **Nothing normative without something that exercises it**: a vector,
+   a test or running code. A finding answered only in text is "open,
+   text only". Now in CONTRIBUTING.md; VISION-TRACE.md ends with the
+   register of what is still only text.
+3. Give each overloaded word one meaning, then count concepts honestly
+   and set the limits at the counts.
+4. Count `gpu` operations apart; the limit of 64 covers the format's own.
+5. Subjects approved, on two conditions: only a reader hands one over
+   (**F6**), and a change through one passes the usual gate (**F7**).
+6. The kernel breaks lines: approved; measure it against 128 KiB
+   compressed in the next build, and bring the numbers if it does not fit.
+7. Vector instructions excluded for now, with the way back recorded
+   (SPEC-EXECUTION §12.2).
+8. Evaluate time as a sequence, for the finding that continuous anchors
+   survive only a shift or a scale.
+9. Order: split and disambiguation; vectors; then the reader test on the
+   core alone; then the envelope spike.
+
+**One meaning each.** A removed element leaves a *tombstone*; "marker"
+is a list item's. A *run* is consecutive elements; what a host measures
+is a *piece* of text; the capability that reaches the host's engine is
+`engine`. A *frame* is a unit of a pack; an axis has a *scale*; a
+component exports `tick`; a video has *pictures*. A *region* is what an
+anchor names; the space-mapping primitive is a *pane*; fuel is charged by
+*stretch*. The *root hash* is a commit's. *Settings* are what a
+presentation holds for its viewer; a Compute-let's property is
+`snapshot`; a projection's field is `status`. An *absent* frame says what
+a pack lacks; a *note* is words on a change. A *cache* is what can be
+rebuilt; bytes fixed by the printing rules are *implied*; *derived* means
+having a derivation. *Identity* and *state* each have one definition that
+covers two things (object and element; universe and machine), and *item*
+is a member of any list: the owner may want those three split further.
+
+**Honest counts.** 121 concepts and 174 defined terms, with no
+classification to shelter under: 58 concepts in the core, 63 in the four
+profiles. The earlier 39 answered a different question. The limits are
+121 and 174, and neither grows without displacing something.
+
+**Time as a sequence: adopted.** A clock may hold `t` as a *count*, a
+sequence whose elements are flicks and carry no content. A cut is a
+splice. An anchor into time names elements. What plays is attached by
+`plays`, as spans are attached to a text, and its time is a function of
+the element's identity, so a cut from the middle skips what was cut.
+Nothing was added to storage but the count. Space has no order for a
+splice to act on, so rule **A4** stands there. Vector: `timeline.ufx`.
+
+**Vectors.** The spike kernel is back under `spike/`, by the owner's
+direction, to produce provisional vectors. It gained line breaking
+(UAX #14) and bidirectional ordering (UAX #9), which pass the Unicode
+16.0 conformance files in full: 16 672, 91 707 and 770 241 cases.
+
+| Vector | Made by | Checked against |
+| --- | --- | --- |
+| `timeline.ufx` and its group | generator | the kernel: agree |
+| `digests` | generator | the kernel: agree |
+| `provisional/staleness.json` | kernel | nothing |
+| `provisional/layers.json` | kernel | nothing |
+| `provisional/projections.json` | kernel | nothing |
+| `provisional/composition.json` | kernel | nothing |
+
+Generator and kernel share an author. Nothing here is independent.
+
+**What making them found.** 64 places where the text did not decide:
+24 in `spike/QUERY-NOTES.md`, 40 in `spike/COMPOSITION-NOTES.md`. Among
+the more serious: the current object map is in no travel layer; an
+outline's ranges have no record; the section rule gives no structure to
+a text with one heading at each of two levels; how a line that starts
+inside a piece is measured; which characters end a line; a tall inline
+box is placed partly above its row by the rules as written. None is
+fixed yet: by rule 2, a fix needs a vector with it.
+
+**Size.** The spike kernel as it stands is 3 836 lines, 251.7 KiB after
+size optimisation and 112.5 KiB compressed: 88% of the firm limit, for
+perhaps half a kernel. It is built with the standard library and uses
+general text formatting for projections, so it is not comparable with
+the 78.4 KiB of §15. Line breaking and bidirectional ordering are about
+9.8 KiB of it, compressed. The comparable build belongs to the envelope
+spike, and the owner has asked for the numbers if it does not fit.
+
+**Words.** Core 20 400; presentation 9 900; player 9 200; execution
+5 300; travel and trust 4 800; examples 3 000; mapping 1 100. Total
+53 700, against 48 681 as one document: the split added preambles and a
+glossary to each part, and the timeline, the subject rules and the
+provisional-vector notes added the rest.
+
+Next, after the owner's review: the strict spec-first reader test on the
+core alone; then the envelope spike.

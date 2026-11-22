@@ -1,6 +1,6 @@
 # Vision trace
 
-Where each element of the vision stands in specification version 0.7: which
+Where each element of the vision stands in specification version 0.8: which
 sections realize it, what has actually exercised it, and how solid it is.
 
 Status has four values.
@@ -29,10 +29,11 @@ A cold review of version 0.7 then judged this trace row by row and found
 it generous in three ways, all corrected here. Rows rested "tested" on
 independent readers of a storage form that has since changed. The count
 took each row at its best status. And several rows said "specified,
-untested" of things with too little written to build from. Of the 44 rows
-below, taking each at its **weakest** status: 2 are tested, 11 tested in
-miniature, 14 specified and untested, and 17 thin. Taking each at its
-first status: 2, 15, 14 and 13.
+untested" of things with too little written to build from. Of the 48 rows
+below, taking each at its **weakest** status: 2 are tested, 16 tested in
+miniature, 13 specified and untested, and 17 thin. Taking each at its
+first status: 2, 20, 13 and 13. Before version 0.8 there were 44 rows:
+2, 11, 14 and 17 at their weakest.
 
 Three cautions.
 
@@ -51,18 +52,31 @@ Three cautions.
   other than the author has read it.
 - Nothing here has been built by a person.
 
+**Since the review: version 0.8.** The owner set a rule: nothing
+normative counts as settled until something exercises it. The throwaway
+kernel was restored to produce test vectors, and now breaks its own
+lines. What that changed below: composition, pagination and the
+plain-text face of a text with lists have vectors; so have digests and
+staleness, the layers of what travels, outlines and five other
+projections; and time that is edited became a sequence, with a vector on
+which the kernel and the vector generator agree. All of these vectors
+are **provisional**: one author wrote the text, the generator and the
+kernel. Making them found 64 places where the text did not decide what
+to do (`spike/QUERY-NOTES.md`, `spike/COMPOSITION-NOTES.md`). The last
+section lists what is still text and nothing else.
+
 ## The ten commitments the owner set as not negotiable
 
 | # | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- | --- |
 | 1 | An open, universal primitive of computing that outlives any application | SPEC §0; RATIONALE "The ambition"; the pack's re-implementability, §3.3 | Two independent readers built the storage layer of an earlier version from the text; a kernel miniature read the current one | **Thin.** There is still no reader anyone can use, no second writer, no file anyone has opened outside a test |
-| 2 | One universe presents as anything: document, plain text, image, video, audio, data, diagram, 3D, application, game | §7 (vocabulary), §7.7 (composition), §8 (faces), §15 | One small universe presented by one kernel as plain text, as a view and as pages, drawn in a browser | **Tested in miniature for a document. Thin for everything else.** Rules for grid, absolute position and clocks were written after the review and have not run; floats, charts from data, video, audio and 3D have less |
+| 2 | One universe presents as anything: document, plain text, image, video, audio, data, diagram, 3D, application, game | §7 (vocabulary), §7.7 (composition), §8 (faces), §15 | One text with every block role composed by a kernel that breaks its own lines, into rows and pages, with a provisional vector; earlier, one small universe drawn in a browser | **Tested in miniature for a document. Thin for everything else.** Rules for grid, absolute position and clocks have not run; floats, charts from data, video, audio and 3D have less |
 | 3 | The file stands alone: carries its player and onboard tools, opens with nothing but a browser | §9.1, §9.6, §13.2 | A kernel and a 79-line binding ran in a browser, served from a local server, not from inside an envelope | **Thin.** The envelope template and the tools universe do not exist. The review found the tools universe could not work as specified; how it reaches the universe being worked on has been redesigned (§9.6) and not tried. Reading the pack back from a page opened from disk, compiling WebAssembly under the stated security policy, and phones are all untested |
 | 4 | Description, not depiction; the description changes only when the work changes | §8.1 (S1), §7.3, §7.7 | The three faces above were sampled from one description. The kernel that did it could not write, so that it wrote nothing shows little | **Tested in miniature**, for text only |
 | 5 | Compute-lets are full machines — application, operating system, machine, environment — running live inside other universes through Portals | §12.1, §12.2, §7.8, §7.6, §9.3 | Fuel instrumentation of three small hand-assembled modules; printed modules run as plain WebAssembly under tests | **Thin beyond metering and printing.** How a module is started, the snapshot and the replay log now have formats, unrun. Running out of call stack is not yet deterministic. Seven optional capabilities have no operations. Nothing has run inside a Portal or drawn through `draw` |
 | 6 | The printer and ledger replace the source tree: code is description, and its bytes are a face of it | §12.3–§12.6 | Two language models built a 300-to-400-instruction program and fresh instances maintained it from a ledger alone: 8 builds and 16 maintenance runs at four levels, scored on hidden tests, all passing. Of those, the adopted design had 2 builds and 4 maintenance runs, through a tool that addressed statements by number. The printer written twice, agreeing byte for byte on six modules and with a hand-assembled vector | **Tested in miniature.** No model has edited code by element identity through `propose`, or read the Chronicle itself as the ledger. The claim at the size of a real program is still the project's largest unproven one. Lifting a compiled module, promotion and tests-as-objects have not run |
 | 7 | Every byte has a known origin; provenance is intrinsic | §1.7 (elements), §5.4 (R8), §12.3 (N4) | The kernel miniature read `seq` and resolved spans by element identity; the trial printer showed each statement with the change that wrote it, and subjects used that to find a bug | **Specified, untested** as a whole: `why`, `origin.sources` for copies, later findings and attribution of derived bytes have never run |
-| 8 | The light cone: overview to exact bytes at a cost that scales with the question | §10.2, §10.1, §15.3 | Two models answered three questions over a 199 000-character corpus in four universes, with the structural layer alone and with both layers; cost recorded per question | **Tested in miniature**, on an object model outside the kernel, with summaries written by a script. 62 objects is not scale. Ranges in an outline, the matching of summaries to parts, and stale summaries during navigation did not run |
+| 8 | The light cone: overview to exact bytes at a cost that scales with the question | §10.2, §10.1, §15.3 | Two models answered three questions over a 199 000-character corpus in four universes, on an object model outside the kernel, with scripted summaries. Since then the kernel computes outlines of a text and of a universe from real packs, as provisional vectors | **Tested in miniature.** Building the outline found the section rule gives no structure to a text with one heading at each of two levels, and that ranges have no record. Ranges, summaries beside parts, and stale summaries have not run |
 | 9 | Universes nest and link without limit, through membranes with explicit rules | §1.8, §14.4, §7.8 (O7, O8) | Normative vectors `nested.ufx` and `linked.ufx`; the kernel miniature presented a nested text through a Portal and showed a label for a linked one | **Tested in miniature** for nesting. **Thin for linking:** a linked universe is a hash, a label and, since the review, a hint of where to look. Transfer between people and encryption are not specified enough to try |
 | 10 | AI transmutation is a first-class operation of the format | §5.3 (D3, D4), §10.3 (`derive`, `refresh`, `recipe`), §4.4 | Pins, staleness through a ref and through a chain of derivations, the recipe, one-step regeneration and its refusal when the prompt is withheld, with a deterministic function standing in for the model | **Tested in miniature.** The transmutation itself happens outside the format; what the format does — supply inputs, bind outputs, know when they part, hold the recipe — is what ran. No real model was in the loop |
 
@@ -75,6 +89,15 @@ Three cautions.
 | The memory: an append-only Chronicle with origin, evidence, decision | §1.7, §5.4 | Conservation replayed by two independent readers on an earlier design, and once by the reviewer on the current vectors; a ledger used by models to find a planted bug | **Tested in miniature** for conservation; **specified, untested** for evidence, decisions, findings and `why` |
 | The attention: the light cone | §10.2 | See row 8 | **Tested in miniature** |
 | The membrane | §14.4, §13.3 | Nothing | **Specified, untested**; the layers of what travels have no vector, and no published copy has been built or read |
+
+## Addressing
+
+| Element | Realized in | Exercised by | Status |
+| --- | --- | --- | --- |
+| Anchors into sequences, resolved without history | §4.3 | Two independent readers of an earlier form; the kernel on the current one | **Tested in miniature** in its current form |
+| Time that is edited: a timeline | §4.5, §1.7 | `timeline.ufx`: a cut from the middle and an insertion. Every anchor and play resolved by the generator and by the kernel, which agree | **Tested in miniature.** Two implementations, one author. Nothing has played |
+| Pins and staleness | §4.4 | Two digests on which generator and kernel agree; three pins followed across three commits: current, stale, detached | **Tested in miniature**, for a sequence region and a whole object only |
+| Projections for agents | §10.1, Appendix B | Twelve projections of real packs as text, from the kernel | **Tested in miniature.** No model has read them |
 
 ## Faces
 
@@ -96,7 +119,7 @@ Three cautions.
 | The drawing contract and base presenters | §9.2, Appendix C | Four of eight item kinds executed on a canvas | **Specified, untested** for raster, samples, surface, hit and input |
 | The binding knows no medium | §9.1 (K2), §11.1 | A 79-line binding: a value codec, one host function, the drawing loop for two kinds of item. That one function broke lines, which the kernel now does; the binding's part is now to measure | **Tested in miniature**, generously; **specified, untested** in its present form |
 | The host interface and capability contract | §9.3, Appendix E | One operation, in a form since replaced | **Specified, untested** for the contract and for the kernel's own capabilities; **thin** for the seven optional capabilities, which have no operations |
-| Budgets | §6 | One measurement, of a miniature: 78.4 KiB, 40 bytes of WebAssembly per line, compressing to 48%, built without the standard library and size-optimised. The kernel's limits were reset from it: 128 KiB compressed, firm; 6 000 lines | **Thin.** One miniature is a narrow base for limits on a kernel four times its size; every other number is still a target |
+| Budgets | §6, §11 | Two measurements of a throwaway kernel. In version 0.7: 78.4 KiB compiled, built without the standard library. Now, with line breaking, bidirectional ordering, queries and projections, built with the standard library: 3 836 lines, 251.7 KiB size-optimised, 112.5 KiB compressed. Line breaking and bidirectional ordering account for about 9.8 KiB of that, compressed | **Thin.** The second figure is 88% of the firm limit of 128 KiB for a kernel that does perhaps half of what the specification asks. It is not built the way the first was, so the two are not comparable; the comparable build is owed |
 
 ## Decode at the border
 
@@ -123,7 +146,7 @@ Three cautions.
 | The pack: append-only, recoverable, indexable | §2, §3 | Two independent readers, including recovery from four truncations; the kernel miniature | **Tested.** Frames, heads, the index and recovery are little changed since the independent readers; the records inside the frames have changed (see the object) |
 | The web envelope | §13.2 | Nothing | **Thin** (row 3) |
 | Video and image envelopes, and the mark | §13.4 | Nothing | **Specified, untested** |
-| What leaves: content, attribution, working history | §13.3 | Nothing | **Specified, untested** |
+| What leaves: content, attribution, working history | §13.3 | The kernel assigns every record of four packs to a layer, as a provisional vector | **Tested in miniature** for the assignment, which found the current object map and the opening of a veiled work in no layer. No copy holding two layers has been written or opened |
 | Platform declarations, media type | §13.5, `registration/` | The name was checked against live registries | **Specified, untested** |
 
 ## The worked examples
@@ -154,3 +177,30 @@ The four places where the vision was thinnest are now of three kinds.
    envelope except the pack is still unwritten. It is now the thinnest
    part of the vision, and the next thing a spike or an implementation
    should attack.
+
+## Open, text only
+
+Requirements written into the specification that nothing has exercised:
+no vector, no test, no code that ran. By the owner's rule they are open,
+however fully they are written.
+
+- **Subjects** (§7.6, **F6**, **F7**), `ask` and `act`: how tools reach
+  the work.
+- **Composition** of grid, absolute position, clocks, inline boxes in
+  flow, page headers and footers (§7.7); every formula operator (§7.3);
+  the types of Appendix A.
+- **The plain-text face** of data, of a group under `each`, of a clock
+  (§8.3).
+- **The renderer** and canonical exports (§8.4).
+- **Execution**: `engine`, the snapshot and replay formats, the random
+  generator, the unit hash and program hash, the test gate, evidence
+  written at promotion, the described subset and lifting (§12).
+- **The kernel's capability operations** other than `measure` (§9.3).
+- **The envelope**: template, browser baseline, head (§13.2).
+- **Linking**: where a linked universe is found (§2.5).
+- **Summaries**: their list in the universe object, matching to parts,
+  ranges (§10.2).
+- **Rule A4** for space (§4.3); derivation sources per object, `refresh`
+  (§5.3); what an agent writes (Appendix B).
+- **Right-to-left text in composition.** The bidirectional algorithm
+  passes its conformance tests; no vector composes right-to-left text.
