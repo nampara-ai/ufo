@@ -5,12 +5,12 @@ import fs from 'fs'; import { start } from './binding/binding.mjs';
 const root = new URL('../', import.meta.url);
 const wasm = fs.readFileSync(new URL('spike/kernel/target/wasm32-unknown-unknown/release/ufo_spike_kernel.wasm', root));
 const V = JSON.parse(fs.readFileSync(new URL('vectors/vectors.json', root)));
-const STATUS = 'provisional: produced by the specification author\'s throwaway kernel; not yet reproduced by an independent implementation';
+const STATUSES = JSON.parse(fs.readFileSync(new URL('../vectors/STATUS.json', import.meta.url))).files;
 const noMeasure = () => ({ adv: 0, asc: 0, desc: 0 });
 const open = async f => { const k = await start(wasm, noMeasure); if (!k.open(new Uint8Array(fs.readFileSync(new URL('vectors/' + f, root))))) throw new Error('does not open: ' + f); return k; };
 const canon = v => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, canon(v[k])])) : v;
 const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
-const out = (name, v) => fs.writeFileSync(new URL('vectors/provisional/' + name, root), JSON.stringify({ status: STATUS, ...v }, null, 1) + '\n');
+const out = (name, v) => fs.writeFileSync(new URL('vectors/provisional/' + name, root), JSON.stringify({ status: STATUSES['provisional/' + name], ...v }, null, 1) + '\n');
 let agree = 0, differ = 0; const check = (what, a, b) => { if (same(a, b)) agree++; else { differ++; console.log('DIFFERS:', what, '\n  kernel   ', JSON.stringify(a), '\n  generator', JSON.stringify(b)); } };
 
 // ---- timeline (section 4.5): the kernel against the generator ----

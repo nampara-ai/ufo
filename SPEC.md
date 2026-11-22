@@ -1936,14 +1936,21 @@ library, nothing may depend on it, and where it disagrees with this text or
 the vectors, it is wrong. The kernel, when it exists, must reproduce every
 vector on its own.
 
-**Provisional vectors.** The files in `vectors/provisional/` were produced
-by running a throwaway kernel (`spike/`) on the packs above. They are not
-yet normative. Each stays provisional until an implementation written
-independently, from this specification alone, reproduces it; where one
-disagrees, the disagreement is a finding against the text, the kernel or
-both. Where the generator states a value too — the timeline, the digests —
-the kernel was checked against it, and the two agree; they share an
-author.
+**Status.** Every group of vectors and every file has one of three
+statuses, kept in `vectors/STATUS.json` and copied into each vector file.
+
+| Status | Meaning |
+| --- | --- |
+| provisional | made by this specification's author only: the generator, the author's throwaway kernel (`spike/`), or both |
+| reproduced | one independent implementation, built from the text alone with the expected values withheld, agrees |
+| confirmed | two independent implementations agree, at least one of them from a different model family, or a person |
+
+Nothing is confirmed yet. Where an independent implementation disagrees
+with a vector, the disagreement is a finding against the text, the
+vector, or both, and the status does not rise until it is settled.
+
+The files in `vectors/provisional/` were produced by running the author's
+throwaway kernel on the packs above:
 
 | File | Contents |
 | --- | --- |

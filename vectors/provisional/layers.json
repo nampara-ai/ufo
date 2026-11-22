@@ -1,5 +1,8 @@
 {
- "status": "provisional: produced by the specification author's throwaway kernel; not yet reproduced by an independent implementation",
+ "status": {
+  "status": "provisional",
+  "note": "recomputed by the rule now in section 2.5"
+ },
  "what": "for each pack, every record by the layer it falls in at the last commit: content, attribution, working history (section 13.3). Seals are frames, not records, and always travel",
  "packs": {
   "minimal.ufx": {

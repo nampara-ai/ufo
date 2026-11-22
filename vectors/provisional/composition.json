@@ -1,5 +1,8 @@
 {
- "status": "provisional: produced by the specification author's throwaway kernel; not yet reproduced by an independent implementation",
+ "status": {
+  "status": "provisional",
+  "note": "the author's kernel only"
+ },
  "what": "the composition (SPEC-PRESENTATION 7.7), pagination and plain-text face (8.3) of the universe in vectors/compose.ufx",
  "pack": {
   "file": "compose.ufx",

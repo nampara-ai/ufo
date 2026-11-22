@@ -860,6 +860,8 @@ V["published_nested"] = layer_vector(both, _c, _a, NP["outer_commit"], "publishe
     "the outer universe's object map and its three live objects; and, because a live Portal's anchor names a commit that is present, the nested universe's object map, its universe object and its text",
     "both commits and both changes: the outer one, and the nested universe's own, so that who wrote the nested text can be said",
     {"can": "say who wrote 'Nested.': the change d1 of the nested universe, witnessed, by a person, Test Author", "plain_text_of_the_nested_text": "Nested."})
+# the status of every group: kept by hand in vectors/STATUS.json, copied here so that each vector file states it
+V = dict(status=json.load(open(os.path.join(OUT, "STATUS.json"))), **V)
 json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)
 print("minimal.ufx", V["minimal_pack"]["length"], V["minimal_pack"]["root_hash"][:16],
       "| history.ufx", V["history_pack"]["length"], hK3.hex()[:16], "| objects at commit 2:", len(state2))

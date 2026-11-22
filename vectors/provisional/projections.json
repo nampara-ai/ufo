@@ -1,5 +1,8 @@
 {
- "status": "provisional: produced by the specification author's throwaway kernel; not yet reproduced by an independent implementation",
+ "status": {
+  "status": "provisional",
+  "note": "the author's kernel only"
+ },
  "what": "projections of the vector packs, as the text Appendix B fixes: the header, one record a line, and the count. Outlines are the projection `expand`",
  "projections": [
   {

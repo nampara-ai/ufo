@@ -6,7 +6,7 @@ import fs from 'fs'; import crypto from 'crypto'; import { start } from './bindi
 const root = new URL('../', import.meta.url);
 const wasm = fs.readFileSync(new URL('spike/kernel/target/wasm32-unknown-unknown/release/ufo_spike_kernel.wasm', root));
 const pack = new Uint8Array(fs.readFileSync(new URL('vectors/compose.ufx', root)));
-const STATUS = 'provisional: produced by the specification author\'s throwaway kernel; not yet reproduced by an independent implementation';
+const STATUSES = JSON.parse(fs.readFileSync(new URL('../vectors/STATUS.json', import.meta.url))).files;
 // The synthetic host. Every character is as wide as every other; nothing is shaped or kerned.
 const factor = piece => piece.font.includes('monospace') ? 0.6 : piece.weight >= 700 ? 0.55 : 0.5;
 let requests = 0;
@@ -21,7 +21,7 @@ const pg = k.sample({ as: 'pages', detail: true });
 const text = k.sample({ as: 'text' }).text;
 const page = [320, 400], margins = [24, 24, 24, 24];
 const out = {
-  status: STATUS,
+  status: STATUSES['provisional/composition.json'],
   what: 'the composition (SPEC-PRESENTATION 7.7), pagination and plain-text face (8.3) of the universe in vectors/compose.ufx',
   pack: { file: 'compose.ufx', sha256: crypto.createHash('sha256').update(pack).digest('hex') },
   measure: {
