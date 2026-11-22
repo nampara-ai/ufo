@@ -12,6 +12,7 @@ every part of it came from.
 | [CORE.md](CORE.md) | The whole format in two pages |
 | [SPEC.md](SPEC.md) | The draft specification, version 0.4 |
 | [RATIONALE.md](RATIONALE.md) | Why the format is shaped as it is |
+| [VISION-TRACE.md](VISION-TRACE.md) | Each element of the vision: where it is specified, what has tested it, and how solid it is |
 | [vectors/](vectors/) | Byte-level test vectors (normative) |
 | [tools/](tools/) | Non-normative tooling |
 | [NAMING.md](NAMING.md) | The decision on the file-name ending (`.ufx`) and media type, with the candidates compared and the dated checks |

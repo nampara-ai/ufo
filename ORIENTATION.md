@@ -474,22 +474,25 @@ full count of defined terms, which version 0.1 did not report, is 125.
   example show the three conditions.
 - **Naming** is a proposal with evidence (NAMING.md); nothing is chosen.
 
-## 11. A proposed measurement spike
+## 11. The measurement spike, as redirected
 
-The kernel and binding budgets are bets. I do not know that they are
-wrong, and I do not know that they are right. A throwaway spike, outside
-the specification and not to be kept, would settle the three parts that
-carry the most risk:
+Approved by the owner, to run after the cold re-review; strictly throwaway,
+two days, in its own directory or branch, deleted or archived afterward. It
+is not the beginning of the implementation.
 
-1. values, records, pack reading with recovery, object map and blobs,
-   checked against the vectors;
-2. flow layout of one styled paragraph with the host breaking lines,
-   composed to a display list, plus a web binding that draws it;
-3. module checking and fuel instrumentation, checked against the vectors.
+It measures kernel and binding size against the budgets of SPEC §12.2, and
+it does so by testing the format's new claims in miniature:
 
-Measured: lines of Rust per part against the per-part budget of SPEC
-§12.2, compiled and compressed size, and the binding's lines. About two
-days. It needs the owner's go-ahead, because it is implementation.
+1. a one-paragraph universe presented through the primitive vocabulary as
+   text, as a page and as an image, by one kernel;
+2. a tiny Compute-let changed through the printer, with ledger attribution;
+3. one light cone query answered while expanding only part of a small
+   universe;
+4. one transmuted face marked stale when its source changes.
+
+Reported for each claim: whether the specification was sufficient, what
+broke, and what had to be invented; and the size measurements. A claim that
+fails in miniature is the most important finding of the phase.
 
 ## 12. Naming, decided
 
