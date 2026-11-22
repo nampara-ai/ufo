@@ -518,6 +518,43 @@ V["instrumentation"] = [
     {"name": "spin: entry region of 2 (loop, final end), loop region of 6", "stored_hex": stored_loop.hex(), "instrumented_hex": instr_loop.hex(),
      "behaviour": "spin(3) consumes 2 + 3*6 = 20; with ufo:fuel = 19 it traps out of fuel on entering the third iteration"}]
 
+# ---- 9. one universe inside another's pack, and the same reference with the records absent (section 1.8) ----
+def nested_pair():
+    NU, NT, NC = bytes(16), bytes([0xb1]) * 16, bytes([0xd1]) * 16
+    PP, PF, PC = bytes([0xb2]) * 16, bytes([0xb3]) * 16, bytes([0xd2]) * 16
+    def child(pk):
+        t = "Nested."; lin = bytes([0x22]) * 16; r = {"primary": ref(NT)}
+        hU = revision(pk, NU, "ufo.universe", 1, NC, 2001, {"lineage": lin, "roots": r})
+        hT = revision(pk, NT, "ufo.text", 1, NC, 2002, {"chars": t}, seq={"chars": [[NC, 0, len(t)]]})
+        ops = [{"op": "new", "obj": NU, "type": "ufo.universe"}, {"op": "set", "obj": NU, "key": "lineage", "val": lin},
+               {"op": "new", "obj": NT, "type": "ufo.text"}, {"op": "splice", "obj": NT, "key": "chars", "after": None, "ins": t},
+               {"op": "set", "obj": NU, "key": "roots", "val": r}]
+        return commit(pk, {NU: hU, NT: hT}, NC, ops, None, {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 2003)[3]
+    def parent(pk, nested):
+        of = anchor({"o": NT, "u": nested}); lin = bytes([0x33]) * 16
+        pp = {"of": of, "label": "A note from another universe"}; pf = {"of": ref(PP), "medium": "document"}
+        pu = {"lineage": lin, "roots": {"primary": ref(PF)}, "faces": [ref(PF)]}
+        hU = revision(pk, bytes(16), "ufo.universe", 1, PC, 2011, pu)
+        hP = revision(pk, PP, "ufo.portal", 1, PC, 2012, pp); hF = revision(pk, PF, "ufo.face", 1, PC, 2013, pf)
+        ops = [{"op": "new", "obj": bytes(16), "type": "ufo.universe"}, {"op": "set", "obj": bytes(16), "key": "lineage", "val": lin},
+               {"op": "new", "obj": PP, "type": "ufo.portal"}, {"op": "set", "obj": PP, "key": "of", "val": of}, {"op": "set", "obj": PP, "key": "label", "val": pp["label"]},
+               {"op": "new", "obj": PF, "type": "ufo.face"}, {"op": "set", "obj": PF, "key": "of", "val": ref(PP)}, {"op": "set", "obj": PF, "key": "medium", "val": "document"},
+               {"op": "set", "obj": bytes(16), "key": "roots", "val": pu["roots"]}, {"op": "set", "obj": bytes(16), "key": "faces", "val": pu["faces"]}]
+        root = commit(pk, {bytes(16): hU, PP: hP, PF: hF}, PC, ops, None, {"actor": actor, "time": 1767312000000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 2014)[3]
+        pk.index(); pk.head(root); return root, of
+    both = Pack(); nested = child(both); of_nested = [r["hash"] for r in both.log]; root, of = parent(both, nested)
+    alone = Pack(); alone.n = 1; root2, _ = parent(alone, nested)   # the veil counter continues as in the first file, so the records are the same
+    return both, alone, nested, root, root2, of, of_nested
+both, alone, nested, root, root2, of, of_nested = nested_pair()
+assert root == root2
+open(os.path.join(OUT, "nested.ufx"), "wb").write(both.b); open(os.path.join(OUT, "linked.ufx"), "wb").write(alone.b)
+V["nested"] = {"nested_file": "nested.ufx", "nested_length": len(both.b), "linked_file": "linked.ufx", "linked_length": len(alone.b),
+    "root_hash_of_both_files": root.hex(), "commit_named_by_the_anchor": nested.hex(), "portal_of_hex": enc(of).hex(),
+    "records_reached_only_through_the_anchor": of_nested,
+    "records_of_the_outer_universe": [r["hash"] for r in alone.log],
+    "nested.ufx": "whole. The commit the anchor names is present, so the other universe is nested and each of its records is reachable through the anchor (section 1.3); compaction keeps them. The Portal presents the text 'Nested.'",
+    "linked.ufx": "whole. The same universe, with the same root hash; the commit the anchor names is not in the file, so the other universe is linked. The Portal's target is unavailable and the reader shows its label (O4). Nothing is malformed.",
+    "plain_text_face_of_both": "A note from another universe"}
 json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)
 print("minimal.ufx", V["minimal_pack"]["length"], V["minimal_pack"]["root_hash"][:16],
       "| history.ufx", V["history_pack"]["length"], hK3.hex()[:16], "| objects at commit 2:", len(state2))

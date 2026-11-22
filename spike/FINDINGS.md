@@ -499,3 +499,92 @@ The transmutation itself still happens outside the format: the format
 supplies the inputs, binds the outputs to them, and knows when they have
 parted. That is what "first-class" can mean for a file format, and the
 specification should say so in those words.
+
+## 5. Nested universes
+
+**What was built.** The spike universe nests a second universe — its own
+lineage, its own change and commit — in the same pack, and presents a text
+from it through a Portal whose `of` is an anchor naming that commit. The
+kernel miniature follows it: the nested text appears in the view and on
+the last page, and every display-list item from it carries an anchor with
+`u`, so that what is on screen traces to the right universe.
+
+**Vectors, now normative** (`vectors/nested.ufx`, `vectors/linked.ufx`,
+group `nested` in `vectors.json`): the same outer universe twice — once
+with the other universe's records in the file (4 031 bytes), once without
+(2 391 bytes). The root hash is the same in both. The kernel miniature
+shows "Nested." from the first and the Portal's label from the second.
+
+**What the specification lacked.**
+
+1. *Reachability* (see 2, item 6): an anchor's `u` now makes the commit it
+   names reachable, where that commit is present.
+2. *Which universe a ref belongs to.* A ref names an object "in the same
+   universe"; a composer following a Portal into another universe must
+   carry the universe along and resolve every ref inside in that universe.
+   Stated in §8.4. Identities may coincide across universes — every
+   universe object is sixteen zero bytes — so "already presented" (**O7**)
+   is tracked by universe and identity together.
+3. *Nested or linked is decided by one record:* the commit. If it is
+   present, everything it needs must be, by the ordinary rules; if it is
+   absent, the universe is linked and nothing of it is expected.
+4. The plain-text face of a Portal is its label (§7.3), so the nested text
+   does not appear in the plain-text face. That is what the specification
+   says; whether it is what a reader of the plain text wants is a fair
+   question, left open.
+
+## 6. Canonical exports: the options, with sizes
+
+SPEC §7.4 promises that a canonical export is byte-identical on every
+reader, using "a software rasterizer and a text-shaping component". Neither
+is specified or budgeted. Existing engines, each compiled alone to
+WebAssembly with the settings used for the kernel (size-optimised, with the
+standard library; each figure includes about 13 KiB of runtime):
+
+| Engine | What it does | Compiled | DEFLATE |
+| --- | --- | --- | --- |
+| tiny-skia 0.11 | fills and strokes paths with anti-aliasing into a pixel buffer | 305 KiB | 84 KiB |
+| zeno 0.3 | fills and strokes paths into a coverage mask only | 141 KiB | 40 KiB |
+| rustybuzz 0.20 | full OpenType shaping (a port of HarfBuzz), including font parsing | 550 KiB | 216 KiB |
+| ttf-parser 0.25 | parses fonts; glyph outlines and advances; no shaping | 103 KiB | 50 KiB |
+| fontdue 0.9 | parses fonts and rasterizes single glyphs; no shaping | 103 KiB | 50 KiB |
+| unicode-linebreak 0.1 | line-break opportunities (UAX #14) | 36 KiB | 11 KiB |
+| unicode-bidi 0.3 | bidirectional ordering (UAX #9) | 65 KiB | 28 KiB |
+
+Three ways to keep the promise:
+
+**A. Carry existing engines.** tiny-skia, rustybuzz, line breaking and
+bidirectional ordering: about 0.9 MiB compiled, about 330 KiB compressed
+(the sum above, less shared runtime). Every script HarfBuzz handles. No
+invention; the algorithms are other people's, pinned by hash. It is a
+component fetched or carried only for canonical exports, never part of the
+kernel — but at three and a half times the kernel's whole budget it is the
+largest thing in the system, and "byte-identical" then rests on execution
+of that component being deterministic (**M5**), not on a specified
+algorithm anyone could reimplement.
+
+**B. Invent a minimal engine and specify it.** A coverage rasterizer, a
+TrueType outline reader, and shaping that is one glyph per character with
+advances and pair kerning: perhaps 1 500 to 2 500 lines, 100 to 130 KiB by
+the density measured in section 2 (an estimate, not a measurement). The
+algorithms would be in the specification and reimplementable. No
+ligatures, no complex scripts, no right-to-left: canonical exports of
+Arabic, Devanagari or Thai would be wrong or refused. Specifying a
+rasterizer bit-exactly is a large addition to the specification.
+
+**C. Narrow what is promised.** Say that a canonical export's bytes are a
+function of the universe, the face, the parameters *and the hashes of the
+components that rendered it*, which the export records. Two readers using
+the same components produce the same bytes; that follows from
+deterministic execution and needs no specified rasterizer. The
+specification then promises reproducibility, not one true rendering, and
+the project can publish a component built as in A, or later as in B,
+without the format depending on either.
+
+**Not chosen here.** A observation that bears on the choice: under C the
+specification loses nothing it can currently deliver, because it has no
+rasterizer to specify; and A and B become questions about which component
+to publish, which can be decided later and changed without breaking a
+file. Under any option the canonical tier also needs the embedded fonts
+the specification already requires, and a `break` served by the component
+instead of the host.
