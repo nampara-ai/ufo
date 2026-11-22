@@ -698,7 +698,7 @@ exist, are measured against the same suite.
 
 ## Terms of this part
 
-Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer must learn; a **part** is a name for a piece of a record or a status.
+Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer must learn; a **name** is a founding word for something built of concepts; a **part** is a name for a piece of a record or a status.
 
 | Term | | Meaning | § |
 | --- | --- | --- | --- |
@@ -712,10 +712,10 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 | Drawing contract | concept | the frozen form of the display list and of input events | 9.2 |
 | Host interface | concept | the complete set of functions a sandboxed component may import | 9.3 |
 | Kernel | concept | the one program that reads, verifies and composes a universe | 9.1 |
-| Light cone | concept | outlines, with summaries attached to their parts: from the whole to exact bytes | 10.2 |
-| Onboard tools | concept | the kernel's projections and actions, and the tools universe | 9.6 |
+| Light cone | name | outlines, with summaries attached to their parts: from the whole to exact bytes | 10.2 |
+| Onboard tools | name | the kernel's projections and actions, and the tools universe | 9.6 |
 | Outline | concept | what the kernel computes of any object: its parts, their sizes and kinds, who changed them and when | 10.2 |
-| Player | concept | what presents a universe: kernel, presenters, binding | 9.1 |
+| Player | name | what presents a universe: kernel, presenters, binding | 9.1 |
 | Port | part | a channel for messages between components | 9.3 |
 | Presenter | concept | what turns the display list into output | 9.1 |
 | Summary | concept | a derivation that condenses what it pins | 10.2 |

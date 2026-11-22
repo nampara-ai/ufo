@@ -220,7 +220,7 @@ pages: open, universal, and independent of any application.
 ## Limits it holds itself to (SPEC §6)
 
 Eleven primitives, three layouts, three axis kinds, four operations, ten
-host functions, 123 concepts for a newcomer to learn, 59 of them in the core; a kernel of at most 128 KiB as it travels,
+host functions, 118 concepts for a newcomer to learn, 58 of them in the core, and five founding names; a kernel of at most 128 KiB as it travels,
 compressed, and 6 000 lines;
 one implementation of everything in the project's readers; additions only
 by showing that data, formulas or composition cannot do the job; and

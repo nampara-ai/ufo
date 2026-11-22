@@ -687,7 +687,7 @@ a new asset; it does not recover the description.
 
 ## Terms of this part
 
-Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer must learn; a **part** is a name for a piece of a record or a status.
+Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer must learn; a **name** is a founding word for something built of concepts; a **part** is a name for a piece of a record or a status.
 
 | Term | | Meaning | § |
 | --- | --- | --- | --- |

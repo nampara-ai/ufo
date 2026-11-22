@@ -466,14 +466,14 @@ each test that passed against each function it touched.
 
 ## Terms of this part
 
-Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer must learn; a **part** is a name for a piece of a record or a status.
+Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer must learn; a **name** is a founding word for something built of concepts; a **part** is a name for a piece of a record or a status.
 
 | Term | | Meaning | § |
 | --- | --- | --- | --- |
 | Compute-let | concept | a complete single-purpose machine carried as an object and run in a sandbox | 12.1 |
 | Fuel | concept | the count of instructions a Compute-let may still execute, charged by code the reader inserts | 12.2 |
 | Implied | part | of a module's bytes: fixed by the printing rules, not by any statement | 12.4 |
-| Ledger | concept | the changes to a Compute-let's code, tests and manifest | 12.5 |
+| Ledger | name | the changes to a Compute-let's code, tests and manifest | 12.5 |
 | Lifted | concept | of a module compiled elsewhere: turned into description, exactly | 12.3 |
 | Machine state | concept | the memory, globals and tables of a running Compute-let | 12.2 |
 | Manifest | concept | what a Compute-let declares: its module, the capabilities it asks for, its tests | 12.1 |

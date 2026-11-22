@@ -1628,26 +1628,30 @@ revised once, with reasons, before anything is frozen.
 | Capabilities | 20 | 18 | each is something only a host can provide (**H4**) |
 | Operations across UFO's own capabilities | 64 | 28 written: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `engine` 6, `text` 3, `present` 2, `blobs` 1. `objects` exposes the projections and actions | seven optional capabilities are unwritten, and count here when they are |
 | Operations of `gpu` | — | 27 sketched (Appendix E) | counted apart: they mirror an outside standard, WebGPU, and are not the format's to keep small |
-| Concepts | 123 | 123 | what a capable newcomer must learn, counted without classification (§6.2): 59 for the core, 64 across the four profiles. The limit is the honest count; a new concept MUST displace one |
+| Concepts | 118 | 118 | what a capable newcomer must learn (§6.2): 58 for the core, 60 across the four profiles. Five founding names — Chronicle, ledger, light cone, player, onboard tools — are kept as the vision's vocabulary and counted apart, as names. The limit is the honest count; a new concept MUST displace one |
 | All defined terms | 176 | 176 | concepts, and the names of parts and statuses. The limit is the honest count; a new term MUST displace one |
 
 ### 6.2 Glossary
 
 Every defined term is in one table, in the part that defines it. Each
-is marked one of two ways. A **concept** is an idea a capable newcomer must
+is marked one of three ways. A **concept** is an idea a capable newcomer must
 learn to understand or build that part, whatever it is made of. A
+**name** is one of five words kept from the project's founding vision for
+things built wholly of concepts listed here: Chronicle, ledger, light
+cone, player, onboard tools. They are the vision's vocabulary, and are
+counted as names, not as mechanisms. A
 **part** is a name for a piece of a record or for a status: its one line
 here is the whole of it. A row naming several terms counts as that many.
 A word has one meaning throughout the specification.
 
-| Part | Concepts | Parts and statuses | All terms |
-| --- | --- | --- | --- |
-| Core | 59 | 33 | 92 |
-| Presentation | 21 | 11 | 32 |
-| The player | 16 | 2 | 18 |
-| Execution | 13 | 4 | 17 |
-| Travel and trust | 14 | 3 | 17 |
-| **The whole format** | **123** | **53** | **176** |
+| Part | Concepts | Founding names | Parts and statuses | All terms |
+| --- | --- | --- | --- | --- |
+| Core | 58 | 1 | 33 | 92 |
+| Presentation | 21 | 0 | 11 | 32 |
+| The player | 13 | 3 | 2 | 18 |
+| Execution | 12 | 1 | 4 | 17 |
+| Travel and trust | 14 | 0 | 3 | 17 |
+| **The whole format** | **118** | **5** | **53** | **176** |
 
 The eleven primitives, the four operations, the three kinds of axis and
 the three layouts are counted where they are named: a newcomer learns
@@ -1672,7 +1676,7 @@ different question from the one a newcomer asks.
 | Boundary | part | one end of a sequence region, fixed before or after an element | 4.3 |
 | Cache | part | anything a reader keeps on its own device that can be rebuilt from a pack | 3.4 |
 | Change | concept | the object recording one commit: who, when, origin, evidence, decisions, and the work | 1.7 |
-| Chronicle | concept | the chain of commits and their changes | 1.7 |
+| Chronicle | name | the chain of commits and their changes | 1.7 |
 | Chunk | part | a record of raw bytes | 1.3 |
 | Clock | concept | a mapping from a parent's time to a child's, over an interval | 4.5 |
 | Commit | concept | the record fixing a universe's state and history: parent, object map, change | 1.6 |

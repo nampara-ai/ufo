@@ -1,7 +1,18 @@
 # The 123 concepts, ranked
 
 Input to a simplification pass. Nothing in the specification is changed by
-this document, and nothing here is decided.
+this document.
+
+**Decided by the owner since it was written (2026-11-22).** The five
+founding names — Chronicle, ledger, light cone, player, onboard tools —
+are kept as the vision's vocabulary and counted as names, not
+mechanisms: the specification now counts 118 concepts and 5 names, and
+candidates D4, D5, D9, D24 and the "player" part of D8 below are closed.
+The seven mechanism candidates of section 2 go to the simplification pass
+after the envelope spike. Deferring reproducible exports (R4) is
+acceptable there only as a later profile with its design hook kept, not
+as removal. The `snapshot` property and the `status` field keep their
+names. The ranking below still numbers all 123.
 
 The specification counts 123 concepts: every idea a capable newcomer must
 learn to understand or build the format, counted without classification

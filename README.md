@@ -14,7 +14,7 @@ every part of it came from.
 | [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md), [SPEC-PLAYER.md](SPEC-PLAYER.md), [SPEC-EXECUTION.md](SPEC-EXECUTION.md), [SPEC-TRAVEL.md](SPEC-TRAVEL.md) | The specification's four profiles, each readable after the core |
 | [EXAMPLES.md](EXAMPLES.md), [MAPPING.md](MAPPING.md) | Companions: four worked examples; mapping an application's records. Not normative |
 | [RATIONALE.md](RATIONALE.md) | Why the format is shaped as it is |
-| [CONCEPTS.md](CONCEPTS.md) | The 123 concepts a newcomer must learn, ranked, with the candidates for simplification |
+| [CONCEPTS.md](CONCEPTS.md) | The concepts a newcomer must learn, ranked, with the candidates for simplification |
 | [VISION-TRACE.md](VISION-TRACE.md) | Each element of the vision: where it is specified, what has tested it, and how solid it is |
 | [vectors/](vectors/) | Byte-level test vectors (normative) |
 | [tools/](tools/) | Non-normative tooling |
