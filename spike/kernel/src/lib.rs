@@ -2,7 +2,11 @@
 // paginates it, and gives the plain-text face. Not the beginning of the implementation.
 #![allow(static_mut_refs)]
 extern crate alloc;
+mod bidi;
+mod bidi_data;
 mod layout;
+mod linebreak;
+mod linebreak_data;
 mod pack;
 mod print;
 mod project;
@@ -117,5 +121,29 @@ pub unsafe extern "C" fn print(p: *const u8) -> *const u8 {
 pub unsafe extern "C" fn query(p: *mut u8, n: usize) -> *const u8 {
     let q = decode(&Vec::from_raw_parts(p, n, n.max(1))).unwrap_or(V::Null);
     OUT = encode(&PACK.as_ref().and_then(|pk| query::query(pk, &q)).unwrap_or(V::Null));
+    OUT.as_ptr()
+}
+/// For the conformance run only: the break at each position of a UTF-8 string, by UAX #14.
+#[cfg(feature = "conformance")]
+#[no_mangle]
+pub unsafe extern "C" fn uax14(p: *mut u8, n: usize) -> *const u8 {
+    let s: Vec<char> = String::from_utf8_lossy(&Vec::from_raw_parts(p, n, n.max(1))).chars().collect();
+    OUT = linebreak::breaks(&s);
+    OUT.as_ptr()
+}
+/// For the conformance run only. Input: a direction byte (0, 1, or 2 for auto), then one paragraph in
+/// UTF-8. Output, an encoded list: the paragraph level, the levels (-1 where X9 removes), the order.
+#[cfg(feature = "conformance")]
+#[no_mangle]
+pub unsafe extern "C" fn uax9(p: *mut u8, n: usize) -> *const u8 {
+    let d = Vec::from_raw_parts(p, n, n.max(1));
+    let s: Vec<char> = String::from_utf8_lossy(&d[1..]).chars().collect();
+    let (mut lv, base) = bidi::levels(&s, d[0]);
+    bidi::reset(&s, &mut lv, base);
+    let keep: Vec<usize> = (0..s.len()).filter(|&i| !bidi::removed(bidi::class(s[i]))).collect();
+    let kept: Vec<u8> = keep.iter().map(|&i| lv[i]).collect();
+    let levels = (0..s.len()).map(|i| V::Int(if keep.contains(&i) { lv[i] as i64 } else { -1 })).collect();
+    let order = bidi::order(&kept).iter().map(|&k| V::Int(keep[k] as i64)).collect();
+    OUT = encode(&V::L(vec![V::Int(base as i64), V::L(levels), V::L(order)]));
     OUT.as_ptr()
 }
