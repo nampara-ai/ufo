@@ -756,3 +756,62 @@ For that envelope spike, asked by the owner and not to be started before
 it: evaluate whether an encoding denser than base64 can carry the kernel
 and the pack safely inside a web page — valid under the HTML Standard, with
 no reliance on parser error recovery — and measure the saving.
+
+## 17. The cold review of version 0.7, and the response
+
+A reviewer with no part in the writing read version 0.7 (commit `010c2d5`)
+against the project's founding intentions and reran what could be rerun.
+It made 55 findings: 9 contradictions or failures of a stated claim, 18
+serious gaps, 16 places where the text could not be built from, 12 small
+ones. All were accepted. The review and the response to each finding are
+kept outside this repository.
+
+**What changed.**
+
+- The onboard tools could not work as specified: a nested universe cannot
+  reach the universe around it. A presenter may now hand a *subject*
+  universe to what it presents (SPEC §5.6, §6.6).
+- Line breaking was the host's, so there was one implementation per host
+  and another in any renderer. The kernel now breaks every line and asks
+  the host only what a run of text measures (§5.7, §6.3).
+- Written where there had been a name or a paragraph: the pin's digest,
+  grid, absolute position and clocks, the formula operators, the kernel's
+  own capability operations, how a Compute-let is started, snapshot and
+  replay formats, the renderer's interface, the envelope template, what an
+  agent writes, where summaries live.
+- Code has a *unit hash* and a Compute-let a *program hash* (§11.3).
+  Vector instructions are excluded, for determinism.
+- VISION-TRACE.md is re-rated at each row's weakest status: 2 tested, 11
+  tested in miniature, 14 specified and untested, 17 thin.
+- CORE.md gained what it omitted and no longer claims two pages.
+  RATIONALE.md states the spike's stand-ins and lists twelve departures.
+
+**What none of this is.** Every fix is text. None has run, and none has
+been reviewed.
+
+**Open, and owed a decision.**
+
+1. *Length.* The specification is 48 681 words, up from 43 339. The review
+   found it too long before the fixes. Splitting it into a core and
+   profiles, and moving the worked examples out, are the options on the
+   table.
+2. *Terms.* Counted honestly there are 144 defined terms against a limit
+   of 130 (§12.1). The limit has not been moved.
+3. *Capability operations.* 55 of a limit of 64, with seven optional
+   capabilities unwritten; `gpu` is 27 of them.
+4. *The two redesigns above* await the owner's confirmation.
+
+**Open, and owed work.**
+
+- No vectors yet for composition, pagination, the plain text of lists,
+  the layers of what travels, outlines, projections or an envelope.
+- What line breaking and bidirectional ordering add to the kernel's size
+  is unmeasured, against a firm limit.
+- Exhausting the call stack is not yet deterministic across engines.
+- Floats and hit testing are rules, not algorithms.
+- A continuous anchor survives a shift or a scale; content cut from the
+  middle of a timeline is safe only if anchored to an object that moves
+  with it (rule **A4**).
+
+Next, after the owner's review: the strict spec-first reader test, then
+the envelope spike.
