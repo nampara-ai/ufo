@@ -4,7 +4,26 @@ pub use crate::bidi_data::*;
 use alloc::vec;
 use alloc::vec::Vec;
 
+#[cfg(feature = "cut-bidi-table")]
+static RUNS: [u8; 8] = [0, ON, 65, L, 26, ON, 100, R];
+#[cfg(feature = "cut-bidi-table")]
+static BRACKETS: [(u16, u16); 1] = [(0x28, 0x29)];
+#[cfg(feature = "cut-bidi")]
+pub fn class(c: char) -> u8 {
+    c as u8 & 15
+}
+#[cfg(feature = "cut-bidi")]
+pub fn levels(s: &[char], dir: u8) -> (Vec<u8>, u8) {
+    (vec![dir & 1; s.len()], dir & 1)
+}
+#[cfg(feature = "cut-bidi")]
+pub fn reset(_: &[char], _: &mut [u8], _: u8) {}
+#[cfg(feature = "cut-bidi")]
+pub fn order(lv: &[u8]) -> Vec<usize> {
+    (0..lv.len()).collect()
+}
 static mut TABLE: Vec<u32> = Vec::new();
+#[cfg(not(feature = "cut-bidi"))]
 pub fn class(c: char) -> u8 {
     unsafe {
         if TABLE.is_empty() {
@@ -54,6 +73,7 @@ fn bracket(c: char) -> u32 {
 /// The embedding level of each character of one paragraph, by rules P2 to I2, and the paragraph's
 /// level. `dir`: 0 left to right, 1 right to left, 2 the first strong character's. A character X9
 /// removes is given the level of the character before it.
+#[cfg(not(feature = "cut-bidi"))]
 pub fn levels(s: &[char], dir: u8) -> (Vec<u8>, u8) {
     let orig: Vec<u8> = s.iter().map(|&c| class(c)).collect();
     let n = s.len();
@@ -295,6 +315,7 @@ fn resolve(s: &[char], orig: &[u8], t: &mut [u8], lv: &mut [u8], seq: &[usize], 
 }
 /// L1, for the characters of one line: separators, and white space before them or at the end
 /// of the line, take the paragraph's level.
+#[cfg(not(feature = "cut-bidi"))]
 pub fn reset(s: &[char], lv: &mut [u8], base: u8) {
     let mut tail = true;
     for i in (0..s.len()).rev() {
@@ -312,6 +333,7 @@ pub fn reset(s: &[char], lv: &mut [u8], base: u8) {
     }
 }
 /// L2: the visual order, left to right, of things with these levels.
+#[cfg(not(feature = "cut-bidi"))]
 pub fn order(lv: &[u8]) -> Vec<usize> {
     let mut o: Vec<usize> = (0..lv.len()).collect();
     for l in (1..=lv.iter().copied().max().unwrap_or(0)).rev() {

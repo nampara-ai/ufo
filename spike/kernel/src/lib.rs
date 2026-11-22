@@ -1,5 +1,7 @@
 // Throwaway spike kernel: opens a pack, composes a face into a display list,
 // paginates it, and gives the plain-text face. Not the beginning of the implementation.
+// Built without the standard library unless the `std` feature is on.
+#![cfg_attr(not(feature = "std"), no_std)]
 #![allow(static_mut_refs)]
 extern crate alloc;
 mod bidi;
@@ -11,6 +13,7 @@ mod pack;
 mod print;
 mod project;
 mod query;
+mod spell;
 mod value;
 use alloc::string::String;
 use alloc::vec;
@@ -24,6 +27,72 @@ extern "C" {
     /// The `text` capability's `measure` (PLAYER 9.3): request and reply are encoded values.
     fn host_measure(req: *const u8, n: usize, out: *mut u8, cap: usize) -> usize;
 }
+#[cfg(not(any(feature = "std", feature = "cut-alloc")))]
+#[global_allocator]
+static ALLOCATOR: dlmalloc::GlobalDlmalloc = dlmalloc::GlobalDlmalloc;
+#[cfg(not(feature = "std"))]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
+// ---- for measuring only: see the `cut-` features in Cargo.toml ----
+#[cfg(feature = "cut-alloc")]
+mod cut_alloc {
+    use core::alloc::{GlobalAlloc, Layout};
+    struct Bump;
+    static mut NEXT: usize = 0;
+    unsafe impl GlobalAlloc for Bump {
+        unsafe fn alloc(&self, l: Layout) -> *mut u8 {
+            if NEXT == 0 {
+                NEXT = core::arch::wasm32::memory_size(0) << 16;
+            }
+            let p = (NEXT + l.align() - 1) & !(l.align() - 1);
+            NEXT = p + l.size();
+            while NEXT > core::arch::wasm32::memory_size(0) << 16 {
+                if core::arch::wasm32::memory_grow(0, 1) == usize::MAX {
+                    return core::ptr::null_mut();
+                }
+            }
+            p as *mut u8
+        }
+        unsafe fn dealloc(&self, _: *mut u8, _: Layout) {}
+    }
+    #[global_allocator]
+    static ALLOCATOR: Bump = Bump;
+}
+#[cfg(feature = "cut-values")]
+fn decode(_: &[u8]) -> Option<V> {
+    None
+}
+#[cfg(feature = "cut-values")]
+fn encode(_: &V) -> Vec<u8> {
+    Vec::new()
+}
+#[cfg(feature = "cut-pack")]
+fn open_pack(_: Vec<u8>) -> Option<Pack> {
+    None
+}
+#[cfg(not(feature = "cut-pack"))]
+fn open_pack(d: Vec<u8>) -> Option<Pack> {
+    Pack::open(d)
+}
+#[cfg(feature = "cut-layout")]
+unsafe fn run(_: &V) -> Option<V> {
+    None
+}
+#[cfg(feature = "cut-print")]
+fn print_module(_: &Pack, _: &H, _: &Id) -> Option<Vec<u8>> {
+    None
+}
+#[cfg(not(feature = "cut-print"))]
+use print::print as print_module;
+#[cfg(feature = "cut-query")]
+fn answer(_: &Pack, _: &V) -> Option<V> {
+    None
+}
+#[cfg(not(feature = "cut-query"))]
+use query::query as answer;
+
 static mut PACK: Option<Pack> = None;
 static mut OUT: Vec<u8> = Vec::new();
 
@@ -37,7 +106,7 @@ pub extern "C" fn alloc(n: usize) -> *mut u8 {
 /// Takes ownership of a buffer from `alloc` holding a pack. Returns 1 if it holds a universe.
 #[no_mangle]
 pub unsafe extern "C" fn open(p: *mut u8, n: usize) -> i32 {
-    PACK = Pack::open(Vec::from_raw_parts(p, n, n.max(1)));
+    PACK = open_pack(Vec::from_raw_parts(p, n, n.max(1)));
     PACK.is_some() as i32
 }
 #[no_mangle]
@@ -61,6 +130,7 @@ pub unsafe extern "C" fn sample(p: *mut u8, n: usize) -> *const u8 {
     OUT = encode(&run(&params).unwrap_or(V::Null));
     OUT.as_ptr()
 }
+#[cfg(not(feature = "cut-layout"))]
 unsafe fn run(params: &V) -> Option<V> {
     let pk = PACK.as_ref()?;
     let root = pk.head;
@@ -120,14 +190,14 @@ unsafe fn run(params: &V) -> Option<V> {
 #[no_mangle]
 pub unsafe extern "C" fn print(p: *const u8) -> *const u8 {
     let id: [u8; 16] = core::slice::from_raw_parts(p, 16).try_into().unwrap_or([0; 16]);
-    OUT = PACK.as_ref().and_then(|pk| print::print(pk, &pk.head, &id)).unwrap_or_default();
+    OUT = PACK.as_ref().and_then(|pk| print_module(pk, &pk.head, &id)).unwrap_or_default();
     OUT.as_ptr()
 }
 /// Answers a query, an encoded map with `q` naming it. Null if it cannot be answered.
 #[no_mangle]
 pub unsafe extern "C" fn query(p: *mut u8, n: usize) -> *const u8 {
     let q = decode(&Vec::from_raw_parts(p, n, n.max(1))).unwrap_or(V::Null);
-    OUT = encode(&PACK.as_ref().and_then(|pk| query::query(pk, &q)).unwrap_or(V::Null));
+    OUT = encode(&PACK.as_ref().and_then(|pk| answer(pk, &q)).unwrap_or(V::Null));
     OUT.as_ptr()
 }
 /// For the conformance run only: the break at each position of a UTF-8 string, by UAX #14.

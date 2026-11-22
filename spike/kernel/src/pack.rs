@@ -4,6 +4,24 @@ use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 
+#[cfg(not(feature = "cut-inflate"))]
+fn inflate(d: &[u8], n: usize) -> Option<Vec<u8>> {
+    miniz_oxide::inflate::decompress_to_vec_with_limit(d, n).ok()
+}
+#[cfg(feature = "cut-inflate")]
+fn inflate(d: &[u8], n: usize) -> Option<Vec<u8>> {
+    #[link(wasm_import_module = "ufo:host/1")]
+    extern "C" {
+        fn host_inflate(d: *const u8, n: usize, out: *mut u8, cap: usize) -> usize;
+    }
+    let mut out = alloc::vec![0u8; n];
+    let got = unsafe { host_inflate(d.as_ptr(), d.len(), out.as_mut_ptr(), n) };
+    if got > n {
+        return None;
+    }
+    out.truncate(got);
+    Some(out)
+}
 pub type H = [u8; 32];
 pub type Id = [u8; 16];
 const SIG: [u8; 8] = [0x89, b'U', b'F', b'O', 0x0d, 0x0a, 0x1a, 0x0a];
@@ -69,7 +87,7 @@ impl Pack {
             0 => p.to_vec(),
             1 => {
                 let (n, q) = leb(p, 0)?;
-                let out = miniz_oxide::inflate::decompress_to_vec_with_limit(&p[q..], n).ok()?;
+                let out = inflate(&p[q..], n)?;
                 if out.len() != n {
                     return None;
                 }

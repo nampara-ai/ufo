@@ -3,7 +3,6 @@
 use crate::pack::*;
 use crate::value::*;
 use alloc::collections::{BTreeMap, BTreeSet};
-use alloc::format;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -501,6 +500,7 @@ pub fn query(pk: &Pack, q: &V) -> Option<V> {
         "digest" => digest_q(pk, q),
         "resolve" => resolve_marks(pk, q),
         "layers" => layers(pk),
+        #[cfg(not(feature = "cut-project"))]
         "project" => crate::project::project(pk, q),
         _ => None,
     }

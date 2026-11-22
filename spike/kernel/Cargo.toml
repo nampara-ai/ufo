@@ -9,8 +9,25 @@ crate-type = ["cdylib"]
 
 [dependencies]
 miniz_oxide = { version = "0.8", default-features = false, features = ["with-alloc"] }
+dlmalloc = { version = "0.2", features = ["global"] } # the allocator, when built without the standard library
 
 [features]
+std = [] # build with the standard library (its allocator, its panic machinery)
+# For measuring only (SIZE-NOTES.md): each replaces the entry points of one part with stubs.
+# A kernel built with any of them does not work.
+cut-inflate = [] # inflating is asked of the host instead
+cut-sha = []
+cut-project = []
+cut-query = []
+cut-print = []
+cut-lb-table = []
+cut-lb = []
+cut-bidi-table = []
+cut-bidi = []
+cut-layout = []
+cut-pack = []
+cut-values = []
+cut-alloc = [] # an allocator that never frees, in place of dlmalloc
 conformance = [] # adds the exports spike/tools/conformance.mjs calls
 
 [profile.release]

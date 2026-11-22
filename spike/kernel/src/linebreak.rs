@@ -4,6 +4,16 @@ pub use crate::linebreak_data::*;
 use alloc::vec;
 use alloc::vec::Vec;
 
+#[cfg(feature = "cut-lb-table")]
+static RUNS: [u8; 8] = [0, AL, 32, SP, 1, AL, 100, ID];
+#[cfg(feature = "cut-lb")]
+pub fn class(c: char) -> u8 {
+    c as u8 & 63
+}
+#[cfg(feature = "cut-lb")]
+pub fn breaks(s: &[char]) -> Vec<u8> {
+    vec![MAY; s.len() + 1]
+}
 /// A table of a property, unpacked: for each run of scalar values, its first shifted left 8, and its value.
 pub fn unpack(runs: &[u8]) -> Vec<u32> {
     let (mut out, mut c, mut i) = (Vec::new(), 0u32, 0);
@@ -33,6 +43,7 @@ pub fn value(c: char) -> u8 {
         lookup(&TABLE, c)
     }
 }
+#[cfg(not(feature = "cut-lb"))]
 pub fn class(c: char) -> u8 {
     value(c) & 63
 }
@@ -64,6 +75,7 @@ pub const MUST: u8 = 2;
 
 /// For each position 0 to the length: whether a line may or must end there. Position 0 is NO (LB2)
 /// and the end is MUST (LB3).
+#[cfg(not(feature = "cut-lb"))]
 pub fn breaks(s: &[char]) -> Vec<u8> {
     let mut out = vec![NO; s.len() + 1];
     // LB9, LB10: units
