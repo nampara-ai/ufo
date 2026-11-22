@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """Generates the UFO conformance test vectors (SPEC.md, Appendix F).
 
 NON-NORMATIVE. The specification and the files in vectors/ are normative;

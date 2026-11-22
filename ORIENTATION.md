@@ -520,10 +520,24 @@ Consequence, stated plainly: the unified storage design (versions 0.5 and
 0.6) has not been read by any independent implementer. VISION-TRACE.md says
 so.
 
-## 14. Licensing: a proposal, not yet decided
+## 14. Licensing: decided, and applied
 
-Nothing has been changed. The repository is still under the MIT License as
-a whole. This section is a proposal for the owner's decision.
+Decided by the owner on 2026-11-22 and applied the same day, replacing the
+MIT License: Apache-2.0 for code and everything not otherwise stated
+(`LICENSE`, `NOTICE`, SPDX identifiers on source files); CC0 1.0 for the
+test vectors (`vectors/LICENSE`); the Open Web Foundation Final
+Specification Agreement 1.0 for the specification (`SPEC-LICENSE.md`), with
+Jake Lundahl as the party making the commitment; a policy for the name and
+the mark (`TRADEMARKS.md`). **Counsel will review all of it before the
+project's public launch.** Three points for that review in particular: the
+agreement is written for a final specification and is here applied to a
+draft, version by version; the signature is a typed name entered at the
+owner's instruction; and CONTRIBUTING.md does not yet say on what terms
+outside contributions to the specification's text are accepted, which the
+agreement's own contributor form (OWF CLA 1.0) exists for.
+
+What follows is the proposal as it was put, kept for its reasoning. It
+recommended Apache-2.0 for the vectors; the owner chose CC0 for them.
 
 **The problem with the present state.** MIT grants copyright permission and
 says nothing about patents. For a format meant to be implemented by

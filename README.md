@@ -21,10 +21,22 @@ every part of it came from.
 | [brand/](brand/) | Design brief for the default icon |
 | [ORIENTATION.md](ORIENTATION.md) | Working notes: open problems and the record of design decisions |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How changes are judged |
+| [SPEC-LICENSE.md](SPEC-LICENSE.md), [TRADEMARKS.md](TRADEMARKS.md) | The specification's licence; the policy for the name and the mark |
 
 The aim is an open, universal primitive of computing, of the kind the PDF
 became: one universe that can present as a document, plain text, an image,
 a video, audio, data, a diagram, a 3D scene, an application or a game, and
 that outlives every application that writes it. Start with CORE.md.
 
-Released under the [MIT License](LICENSE).
+## License
+
+Three licences, by what a thing is:
+
+| What | Licence | Why |
+| --- | --- | --- |
+| The specification: [SPEC.md](SPEC.md) and [CORE.md](CORE.md) | [Open Web Foundation Final Specification Agreement 1.0](SPEC-LICENSE.md) | a copyright licence, and a promise not to assert necessary patent claims against any implementation of the specification |
+| Test vectors: everything in [vectors/](vectors/) | [CC0 1.0](vectors/LICENSE) | they are meant to be copied into every implementation's tests, with no conditions |
+| Everything else: code, tooling and the other documents | [Apache License 2.0](LICENSE), with [NOTICE](NOTICE) | an express patent grant from every contributor |
+
+Source files carry an SPDX identifier. The name and the 🛸 mark are not
+licensed by any of these: see [TRADEMARKS.md](TRADEMARKS.md).
