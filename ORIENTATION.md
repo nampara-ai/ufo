@@ -633,7 +633,7 @@ to be deleted once this round is reviewed. Specification 0.7 is the result.
 
 Kernel miniature: 1 613 lines of Rust, 102.5 KiB compiled, 44.7 KiB
 compressed; about 50 bytes per line. Binding: 79 lines, 3.0 KiB
-compressed. Printer within the kernel: 305 lines, 14 KiB. Described code:
+compressed. Printer within the kernel: 344 lines, 14 KiB. Described code:
 2.8 times the size of its WebAssembly as values, 0.85 times after DEFLATE.
 
 ### 15.3 Decisions that are the owner's
