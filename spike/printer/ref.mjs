@@ -1,5 +1,5 @@
 // Reference behaviour of the test program, used only to produce expected results.
-export function make(v2) {
+export function make(v2, bug) {
   const W = 16, H = 12; let rng, grid, body, dir, score, dead, wrap = 0, foods;
   const rnd = () => { rng = (Math.imul(rng, 1103515245) + 12345) >>> 0; return (rng >>> 16) & 0x7fff; };
   const food = () => { if (body.length >= W * H) return; let x, y; do { x = rnd() % W; y = rnd() % H; } while (grid[y * W + x]); foods++; grid[y * W + x] = (v2 && foods % 5 === 0) ? 3 : 2; };
@@ -11,7 +11,7 @@ export function make(v2) {
       if (x < 0 || x >= W || y < 0 || y >= H) { if (v2 && wrap) { x = (x + W) % W; y = (y + H) % H; } else { dead = 1; return 1; } }
       const c = y * W + x, v = grid[c];
       if (v >= 2) { score += v === 3 ? 3 : 1; body.push(c); grid[c] = 1; food(); return v2 ? 2 : 0; }
-      if (v === 1 && c !== body[0]) { dead = 1; return 1; }
+      if (v === 1 && (bug ? c === body[0] : c !== body[0])) { dead = 1; return 1; }
       grid[body.shift()] = 0; body.push(c); grid[c] = 1; return 0; },
     score: () => score, length: () => body.length, head: () => body[body.length - 1], cell: (x, y) => (x < 0 || x >= W || y < 0 || y >= H) ? -1 : grid[y * W + x],
     render() { let s = ''; const h = body[body.length - 1]; for (let y = 0; y < H; y++) { for (let x = 0; x < W; x++) { const c = y * W + x, v = grid[c]; s += c === h ? '@' : v === 1 ? 'o' : v === 2 ? '*' : v === 3 ? '$' : '.'; } s += '\n'; } return s; },
@@ -41,4 +41,33 @@ if (process.argv[2] === 'gen') {
   fs.writeFileSync('tests2.json', JSON.stringify([{ name: 'start', steps: first(make(true)) }, ...mk(true, [['v2 wall still kills', 3, 20, {}], ['v2 chase 5', 5, 200, { chase: 1 }], ['v2 wrap wander 11', 11, 120, { wrap: 1 }], ['v2 wrap chase 42', 42, 400, { chase: 1, wrap: 1, every: 13 }]])]));
   fs.writeFileSync('hidden2.json', JSON.stringify(mk(true, [['h2 chase 9', 9, 500, { chase: 1, every: 5 }], ['h2 wrap chase 1234', 1234, 700, { chase: 1, wrap: 1, every: 3 }], ['h2 wrap wander 31337', 31337, 300, { wrap: 1, every: 1 }], ['h2 chase 2026', 2026, 700, { chase: 1, every: 2 }]])));
   for (const f of ['tests1', 'hidden1', 'tests2', 'hidden2']) { const t = JSON.parse(fs.readFileSync(f + '.json')); console.log(f, t.map(x => x.steps.length + ':' + Math.max(...x.steps.filter(s => s.call === 'score').map(s => s.expect))).join(' ')); }
+}
+
+// ---- scripted scenarios for the planted bug: following the tail (legal) and hitting the body (fatal)
+export function scenario(v2, seed, eats, wrap) {
+  for (const turn of [1, 3]) {
+    const g = make(v2), steps = [{ call: 'init', args: [seed] }]; g.init(seed); if (wrap) { g.set_wrap(1); steps.push({ call: 'set_wrap', args: [1] }); }
+    let dir = 1, ok = true, n = 0;
+    const go = d => { const e = g.step(d); if (d >= 0 && d <= 3 && ((d + 2) & 3) !== dir) dir = d; steps.push({ call: 'step', args: [d], expect: e }); return e; };
+    while (g.length() < 3 + eats && ok) { const h = g.head(), hx = h % 16, hy = h / 16 | 0; let fx, fy; for (let y = 0; y < 12; y++) for (let x = 0; x < 16; x++) if (g.cell(x, y) >= 2) { fx = x; fy = y; }
+      let d = fx > hx ? 1 : fx < hx ? 3 : fy > hy ? 2 : 0; if (((d + 2) & 3) === dir) d = (dir + 1) & 3; if (go(d) === 1 || ++n > 200) ok = false; }
+    if (!ok) continue;
+    let died = false; for (let k = 0; k < 14 && !died; k++) { died = go((dir + turn) & 3) === 1; }
+    if (eats === 1 && died) continue; if (eats > 1 && !died) continue;
+    steps.push({ call: 'score', expect: g.score() }, { call: 'length', expect: g.length() }, { call: 'render', args: [4096], expect: 204 }, { text: [4096, 204], expect: g.render() }, { call: 'step', args: [0], expect: died ? 1 : g.step(0) });
+    return steps;
+  }
+  return null;
+}
+if (process.argv[2] === 'gen2') {
+  const pick = (v2, eats, wrap, seeds, n, tag) => { const out = []; for (const s of seeds) { const st = scenario(v2, s, eats, wrap); if (st) out.push({ name: `${tag} seed ${s}`, steps: st }); if (out.length === n) break; } return out; };
+  const A = [2, 4, 6, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30], Bs = [101, 103, 105, 107, 109, 111, 113, 115, 117, 119, 121, 123, 125, 127, 129, 131];
+  fs.writeFileSync('bug1.json', JSON.stringify([...pick(false, 1, 0, A, 1, 'head follows tail'), ...pick(false, 2, 0, A, 1, 'head hits body')]));
+  fs.writeFileSync('hiddenbug2.json', JSON.stringify([...pick(true, 1, 0, Bs, 3, 'h follows tail'), ...pick(true, 2, 0, Bs, 3, 'h hits body'), ...pick(true, 1, 1, Bs.slice(5), 2, 'h wrap follows tail'), ...pick(true, 3, 1, Bs.slice(3), 2, 'h wrap hits body')]));
+  for (const f of ['bug1', 'hiddenbug2']) console.log(f, JSON.parse(fs.readFileSync(f + '.json')).map(t => t.name + ':' + t.steps.length).join(' | '));
+}
+if (process.argv[2] === 'selfcheck') { // which test files notice the planted bug, judged on the reference itself
+  for (const [f, v2] of [['tests1', 0], ['hidden1', 0], ['bug1', 0], ['tests2', 1], ['hidden2', 1], ['hiddenbug2', 1]]) { let bad = 0, badOk = 0; const T = JSON.parse(fs.readFileSync(f + '.json'));
+    for (const bug of [false, true]) for (const t of T) { const g = make(!!v2, bug); let fail = false; for (const s of t.steps) { if (s.call) { const r = s.call === 'render' ? 204 : g[s.call](...(s.args || [])); if ('expect' in s && r !== s.expect && r !== undefined) fail = true; } if (s.text && g.render() !== s.expect) fail = true; } if (fail) bug ? bad++ : badOk++; }
+    console.log(f, `tests: ${T.length}; fail on correct reference: ${badOk}; fail on bugged reference: ${bad}`); }
 }

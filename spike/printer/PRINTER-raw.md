@@ -13,7 +13,14 @@ Commands (run from this directory; `<dir>` is your state directory):
     node printer.mjs items <dir>                 every item, one per line
     node printer.mjs unit <dir> <name>           one function, as it was last written
     node printer.mjs history <dir> [name]        the changes, or those touching one item
-    node printer.mjs test <dir> <tests.json>     run tests
+    node printer.mjs test <dir> <tests.json>     run tests against the committed module
+    node printer.mjs check <dir> <change.json> [tests.json]
+                                                 dry run: say whether the change would be committed,
+                                                 and optionally run tests against the candidate; changes nothing
+    node printer.mjs call <dir> "init(1); step(2); score(); text(4096,204)"
+                                                 call exports in order on a fresh instance and print results;
+                                                 text(ptr,len) prints memory as text
+    node printer.mjs change <dir> <n>            the operations of change n, exactly as recorded
 
 Operations:
 
