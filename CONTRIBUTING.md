@@ -38,9 +38,7 @@ example of SPEC §14 still works.
 
 ## The terms of a contribution
 
-*Proposed by the project's owner and pending review by counsel; until that
-review is done, outside contributions are welcome as issues and reviews,
-and are not merged.*
+*Proposed by the project's owner, and pending review by counsel.*
 
 - **To the specification** (`SPEC.md`, `CORE.md`): under the Open Web
   Foundation's [Contributor License Agreement 1.0](https://www.openwebfoundation.org/the-agreements/the-owf-1-0-agreements-granted-claims),
