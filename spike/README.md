@@ -6,7 +6,7 @@ is kept as evidence.
 `kernel/` and `binding/` are the spike's throwaway kernel, restored at the
 owner's direction to generate the **provisional** test vectors of version
 0.8: it runs on the packs in `vectors/` and its answers are written to
-`vectors/provisional.json`. It is not the beginning of the implementation,
+`vectors/provisional/`. It is not the beginning of the implementation,
 nothing may depend on it, and a vector it produced stays provisional until
 an implementation written independently, from the specification alone,
 reproduces it.

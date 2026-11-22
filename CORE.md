@@ -78,7 +78,10 @@ pages: open, universal, and independent of any application.
     a list of keys. An anchor is resolved against the current revision
     alone — no history, no replay — and is reported detached, never
     re-found by matching, when what it named is gone. A span of a text is
-    simply an anchor.
+    simply an anchor. Time that is edited is a sequence too: a timeline is
+    a clock whose flicks are elements, a cut is a splice, and what plays
+    is attached to it as spans are to a text, so that an anchor into time
+    survives a cut as an anchor into a text survives a deletion.
 12. **Pin.** An anchor plus a salted hash of what it covered and everything
     that content refers to; stale if any of that has changed. Every derived
     thing holds pins to its sources.

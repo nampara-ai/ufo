@@ -1869,6 +1869,25 @@ library, nothing may depend on it, and where it disagrees with this text or
 the vectors, it is wrong. The kernel, when it exists, must reproduce every
 vector on its own.
 
+**Provisional vectors.** The files in `vectors/provisional/` were produced
+by running a throwaway kernel (`spike/`) on the packs above. They are not
+yet normative. Each stays provisional until an implementation written
+independently, from this specification alone, reproduces it; where one
+disagrees, the disagreement is a finding against the text, the kernel or
+both. Where the generator states a value too — the timeline, the digests —
+the kernel was checked against it, and the two agree; they share an
+author.
+
+| File | Contents |
+| --- | --- |
+| `provisional/composition.json` | `compose.ufx` composed at a stated width with a stated, synthetic measure of text: every row and its items; the rows on each page; the plain-text face (§7.7, §8.3) |
+| `provisional/staleness.json` | three pins made at the first commit of `history.ufx`, and whether each is current, stale or detached at each later commit (§4.4) |
+| `provisional/layers.json` | for four packs, the layer of every record: content, attribution, working history (§13.3) |
+| `provisional/projections.json` | twelve projections of the packs, as text: `overview`, `object`, `text`, `history`, `why`, and outlines by `expand` (§10.1, §10.2, Appendix B) |
+
+`spike/QUERY-NOTES.md` and `spike/COMPOSITION-NOTES.md` list each place
+where the text did not decide what the kernel should do, and what it did.
+
 | File | Contents |
 | --- | --- |
 | `vectors/minimal.ufx` | a whole pack of 2599 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
@@ -1876,6 +1895,7 @@ vector on its own.
 | `vectors/nested.ufx`, `vectors/linked.ufx` | one universe twice, of 4031 and 2391 bytes: with the records of a second universe that its Portal names, and without them (§1.8). The root hash is the same |
 | `vectors/timeline.ufx` | a pack of 9119 bytes holding three commits of one timeline (§4.5): ten seconds of time with three plays; two seconds cut from the middle; one second inserted |
 | `vectors/module.ufx` | a pack of 3714 bytes holding a described module of two functions (§12.3) |
+| `vectors/compose.ufx` | a pack holding one text with every block role, a document face and a face of pages (§7.7, §8.3) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
 
 `history.ufx` extends the first pack. Its second commit, by a model,

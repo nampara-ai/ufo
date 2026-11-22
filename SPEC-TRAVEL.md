@@ -174,7 +174,7 @@ receiving decides the default.
   withholds working history by default, and its `absent` frame says so
   (§2.5). The person states which they are doing, can change what is
   included either way, and sees the result before it leaves (**E12**).
-  Markers of removed elements may be forgotten first (§1.10).
+  Tombstones may be forgotten first (§1.10).
 - **[E10] Stubs.** Withholding removes records and nothing else. Every hash
   that names a withheld record stays where it was: in `prev`, in commits, in
   `work`, in `origin.prompt`. The recipient's reader can therefore check

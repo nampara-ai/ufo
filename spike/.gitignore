@@ -1,1 +1,4 @@
 kernel/target/
+tools/node_modules/
+tools/ucd/
+tools/target/

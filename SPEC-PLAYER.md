@@ -789,7 +789,7 @@ passed back, exactly as written, as an argument to another projection.
 | `component` | `role` `hash` `status` |
 | `face` | `id` `kind` (`sampled`, `carried`, `transmuted`) `status` `medium` `label` |
 | `lacks` | `history` (boolean) `blobs` (count) |
-| `part` | an anchor, then `type` `label` (its label, heading or name, or the first 60 characters of a block) `size` `changed` (time) `by` `basis` [`parts` (count)] [`derived` (state)] [`summary` (the text of its line) `summary-state`] |
+| `part` | an anchor, then `type` `label` (its label, heading or name, or the first 60 characters of a block) `size` `changed` (time) `by` `basis` [`parts` (count)] [`derived` (status)] [`summary` (the text of its line) `summary-status`] |
 | `source` | an anchor, then `r` `status` |
 | `made` | `how` `change` `basis` [`by`] [`model`] [`tool`] [`asked`] [`prompt` (its text, or `withheld`)] [`parameters`] |
 | `object` | `id` `type` `rev` (number) `r` (revision hash) `by` |

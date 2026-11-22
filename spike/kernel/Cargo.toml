@@ -10,6 +10,9 @@ crate-type = ["cdylib"]
 [dependencies]
 miniz_oxide = { version = "0.8", default-features = false, features = ["with-alloc"] }
 
+[features]
+conformance = [] # adds the exports spike/tools/conformance.mjs calls
+
 [profile.release]
 opt-level = "z"
 lto = true
