@@ -92,7 +92,7 @@ structure, never as text to be parsed; a readable spelling is a projection.
 | Group | Operators |
 | --- | --- |
 | reference | `get` (a property of an object, by ref and key path), `cell` (a table cell by row and column key), `col` (a column as a list), `arg` (a named value supplied by the enclosing `each`, or by the Portal that presents this, §7.6), `size` (the laid-out width and height of an earlier sibling in the same group), `ask` (the records of a projection, §10.1) |
-| environment | `time` (the enclosing clock's time), `input` (the pointer's position and pressed state within the enclosing pane, and the `src` of the item under it), `view` (the available width and height), `state` (a named value of presentation state) |
+| environment | `time` (the enclosing clock's time), `input` (the pointer's position and whether it is pressed, within the enclosing pane, and the `src` of the item under it), `view` (the available width and height), `setting` (a named setting) |
 | arithmetic | `+ − × ÷ mod neg abs min max floor ceil round sqrt pow exp ln sin cos atan2` |
 | logic | `= ≠ < ≤ > ≥ and or not if` |
 | text | `concat len slice format` (numbers and dates to text by a stated pattern) |
@@ -296,12 +296,21 @@ ask for it.
 description presented reads them with `arg`, and a Portal there MAY have
 `arg` as its `of`. This is what lets an interface work on something other
 than itself. An `ask` reads, and an action changes, the universe that holds
-the formula or handler, unless it is aimed at a **subject**: an anchor to
-another universe that the presenter supplied in `with`. A presenter can
-supply as a subject only itself, or a subject it was itself given, so
-nesting a universe never gives it power over anything but what its
-presenter chose to hand it. A reader hands the universe being worked on to
-the tools it has chosen (§9.6).
+the formula or handler, unless it is aimed at a **subject**: another
+universe, which the description reads as `arg("subject")`.
+
+- **[F6] Only a reader hands over a subject.** A subject exists where a
+  reader, by its own explicit act, presents one universe as a tool for
+  another (§9.6). Nothing in a file can supply one: a `with` that names
+  `subject` is ignored and reported as inconsistent, and a universe
+  presented through a Portal receives no subject, whatever presents it. A
+  file therefore cannot give anything it carries power over itself, or
+  over any other universe.
+- **[F7] A subject earns nothing.** An action aimed at a subject is a
+  proposal like any other. The kernel verifies it under the laws of
+  change and commits it or refuses it whole (**L4**); where a change of
+  its kind needs the person's approval (§12.6, **U11**), it needs it
+  here.
 
 **Editable text.** A text primitive, or a region of one, marked `editable`
 accepts text entry. The host supplies the editing surface it already has —
@@ -675,6 +684,44 @@ measured.
 An export is a fixed performance. It carries no structure, history or
 behavior, unless it is an envelope (§13.2). Importing an exported file creates
 a new asset; it does not recover the description.
+
+## Terms of this part
+
+Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer must learn; a **part** is a name for a piece of a record or a status.
+
+| Term | | Meaning | § |
+| --- | --- | --- | --- |
+| Block, line, row | part | what composition divides a text into: by its block roles, by the kernel's line breaking, and into the units that pages are filled with | 7.7 |
+| Data | concept | tables of values | 7.1 |
+| Determinism tier | part | which of two promises an export makes: the host's rendering, or a named renderer's | 8.4 |
+| Export | concept | a face sampled with stated parameters and encoded | 8.4 |
+| Face | concept | a presentation of a universe: sampled, carried or transmuted | 8.1 |
+| Formula | concept | a pure, terminating expression over data, time, input and settings | 7.3 |
+| Fragment | part | the part of a piece that falls on one line | 7.7 |
+| Group | concept | children laid out by flow, by grid or by absolute position | 7.1 |
+| Handler | concept | what a primitive does on input: set a setting, propose a change, or act on a subject | 7.6 |
+| Layout | concept | how a group places its children: `flow`, `grid` or `absolute` | 7.2 |
+| Occurrence | part | one presenting of an object through one Portal | 7.8 |
+| Pane | concept | a two-dimensional space with a transform and a clip, holding children | 7.1 |
+| Path | concept | a shape | 7.1 |
+| Piece | part | characters in one font, size and direction: what the host is asked to measure | 7.7 |
+| Plain-text face | concept | an object's text in reading order | 8.3 |
+| Portal | concept | a place in a parent that presents another object, here or in another universe | 7.8 |
+| Poster | concept | the rendition shown where a Compute-let cannot or may not run | 7.6 |
+| Primitive | concept | one of the eleven kinds of thing a universe can describe | 7.1 |
+| Projection | concept | anything generated on demand and never stored | 8.1 |
+| Raster | concept | pixels, still or moving | 7.1 |
+| Renderer | concept | a Compute-let, named by hash, that measures, draws and encodes for reproducible exports | 8.4 |
+| Role | part | what a span says a stretch of text is: a heading, a list item, emphasis | 5.1, Appendix A |
+| Sampled, carried | part | of a face: composed on demand; stored as a rendition | 8.1 |
+| Samples | concept | sound | 7.1 |
+| Settings | concept | named values a reader holds for one presentation and never writes to the universe | 7.3 |
+| Subject | concept | a universe the reader hands to what it presents, so that tools can reach the work | 7.6 |
+| Surface | concept | a pane a Compute-let draws | 7.1 |
+| Text | concept | characters, with spans for structure and style | 7.1 |
+| Transclusion | part | a Portal whose target is a region of another object | 7.8 |
+
+---
 
 ## Appendix A. Properties of the primitives
 

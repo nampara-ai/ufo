@@ -54,9 +54,9 @@ bind what a writer or a reader does where no file records it — **L1**,
 **L5**, **M9**, **R2**, **E12**, **H6** — and can be tested only where a
 harness watches the software at work. They are obligations all the same.
 
-Every term is defined once, in **bold**. §6.2 lists them all, in three
-tables: the concepts a newcomer must learn, the names given to compositions
-of those concepts, and the structural terms of the storage layer.
+Every term is defined once, in **bold**, and has one meaning. Each part
+of the specification ends with a table of the terms it defines; §6.2 holds
+the core's, and the counts for the whole.
 
 *Reader* means any software that opens a UFO. *Writer* means any software that
 changes one. *Person* means the human using a reader. *Agent* means software,
@@ -1520,100 +1520,126 @@ revised once, with reasons, before anything is frozen.
 | Formula operators | 64 | 52 | a spreadsheet's essentials, and `ask`; anything larger is a Compute-let |
 | Base host functions | 12 | 10, plus 2 exports | small enough to implement identically on every host |
 | Capabilities | 20 | 18 | each is something only a host can provide (**H4**) |
-| Operations across all capabilities | 64 | 55 written or sketched: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `engine` 6, `text` 3, `present` 2, `blobs` 1, `gpu` 27 (Appendix E). `objects` exposes the projections and actions | seven optional capabilities are unwritten. The limit will not hold once they are, unless `gpu` shrinks: a decision owed |
-| Concepts | 40 | 39 | what a newcomer must learn; each is justified in §6.2, and a new concept must displace one |
-| All defined terms, including names for compositions and structural terms | 130 | 144 | **over the limit.** Earlier counts took a row that names several terms as one, and left out terms the text defines. Either terms go or the limit moves: a decision owed |
+| Operations across UFO's own capabilities | 64 | 28 written: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `engine` 6, `text` 3, `present` 2, `blobs` 1. `objects` exposes the projections and actions | seven optional capabilities are unwritten, and count here when they are |
+| Operations of `gpu` | — | 27 sketched (Appendix E) | counted apart: they mirror an outside standard, WebGPU, and are not the format's to keep small |
+| Concepts | 121 | 121 | what a capable newcomer must learn, counted without classification (§6.2): 58 for the core, 63 across the four profiles. The limit is the honest count; a new concept MUST displace one |
+| All defined terms | 172 | 172 | concepts, and the names of parts and statuses. The limit is the honest count; a new term MUST displace one |
 
 ### 6.2 Glossary
 
-Every defined term of this document is in one of three tables. There are
-144 in all: 39 concepts, 35 names for compositions, and 70 structural
-terms. A row that names two or three terms counts as that many.
+Every defined term is in one table, in the part that defines it. Each
+is marked one of two ways. A **concept** is an idea a capable newcomer must
+learn to understand or build that part, whatever it is made of. A
+**part** is a name for a piece of a record or for a status: its one line
+here is the whole of it. A row naming several terms counts as that many.
+A word has one meaning throughout the specification.
 
-**Concepts.** What a newcomer must learn. A concept is listed here only if
-it cannot be expressed as a composition of the others; the third column
-says why not.
-
-| Concept | Meaning | Why it cannot be removed | § |
+| Part | Concepts | Parts and statuses | All terms |
 | --- | --- | --- | --- |
-| Anchor | a reference to an object or a region of one | the one way anything attaches to anything | 4.1 |
-| Axis | a named dimension of an object: sequence, continuous or keyed | defines what a region is and how it survives edits | 4.2 |
-| Binding | the host-specific code connecting the kernel to a host | the only part that differs by host; must be named to be kept empty of domain logic | 6.1 |
-| Blob | an immutable byte stream stored as chunks | range reads and identity of large bytes | 1.4 |
-| Capability | a named, granted authority beyond the base host functions | the unit of permission | 6.3 |
-| Change | the object recording one transition of a universe | carries operations, origin, evidence and decisions | 1.7 |
-| Clock | a mapping from a parent's time to a child's, over an interval | time cannot be composed from space | 4.5 |
-| Commit | the record fixing a universe's state and history | the thing a root hash names and a seal signs | 1.6 |
-| Compute-let | a complete single-purpose machine carried as an object, run in a sandbox | behavior cannot be composed from description | 11.1 |
-| Decision | what a person chose to do about content | one of three facts that must never merge | 8.5 |
-| Derivation | the record of what an object was made from, and how | basis of staleness for every derived thing | 8.3 |
-| Display list | what the kernel composes for presenters to draw and play | the contract between kernel and host | 6.2 |
-| Element | one item of a sequence, with a permanent identity | what attribution, anchors and spans attach to; the basis of later merging | 1.7 |
-| Envelope | a file valid in a common format that carries a pack | how a universe reaches software that does not know the format | 9.2 |
-| Evidence | what supports content | one of three facts that must never merge | 8.5 |
-| Face | a presentation of a universe: sampled, carried or transmuted | what a person actually opens | 7.1 |
-| Feature | a declared requirement a reader needs to interpret a universe | lets old readers fail plainly on new content | 1.6 |
-| Formula | a pure, terminating, deterministic expression | computed values without a program | 5.3 |
-| Grant | a reader's record that a person allowed a capability | must be distinct from a request, which a file can contain | 10.3 |
-| Hash | the SHA-256 digest that names a record | identity of everything stored | 1.1 |
-| Host interface | the complete set of functions a sandboxed component may import | the frozen boundary of the sandbox | 6.3 |
-| Kernel | the one program that reads, verifies and composes a universe | the single implementation everything else relies on | 6.1 |
-| Membrane | a boundary between universes, with rules for what crosses | what makes unlimited nesting and linking safe; decides what travels | 10.4 |
-| Object | an identity with a type and properties | the unit of content | 1.5 |
-| Operation | one edit to the parent commit's state | what conservation is computed from | 1.7 |
-| Origin | who or what contributed content: witnessed, inferred or unknown | one of three facts that must never merge | 8.5 |
-| Pack | the byte format holding a universe's records | the file | 2.1 |
-| Pin | an anchor that records the digest of what it covers | the staleness test | 4.4 |
-| Portal | an occurrence in a parent that presents another object | composition of objects, within and across universes | 8.4 |
-| Presenter | what turns display-list items into output: the host's facilities, or a carried Compute-let | must be named to be kept few | 6.1 |
-| Primitive | one of the eleven kinds of thing a universe can describe | the vocabulary | 5.1 |
-| Principal | a party that acts, identified by key, name or both | who an actor, decider or sealer is | 10.1 |
-| Printer | the kernel's function from a described module to its bytes | the only writer of executable bytes | 11.4 |
-| Projection | anything generated on demand and never stored | separates views from truth | 7.1 |
-| Record | an immutable byte string named by its hash | the unit of storage | 1.3 |
-| Revision | one state of an object, named by its revision hash | what an anchor is expressed against | 1.5 |
-| Seal | a signature over a root hash | identity, as distinct from integrity | 10.2 |
-| Summary | a derivation that condenses a pinned scope | navigation at low resolution | 11.7 |
-| Universe | the set of objects reachable from one commit | the whole | 1.6 |
+| Core | 58 | 31 | 89 |
+| Presentation | 21 | 11 | 32 |
+| The player | 16 | 2 | 18 |
+| Execution | 12 | 4 | 16 |
+| Travel and trust | 14 | 3 | 17 |
+| **The whole format** | **121** | **51** | **172** |
 
-**Names for compositions.** Each of these is fully part of the format and
-loses nothing by appearing here. It is built from the concepts above, and
-the second column says how.
+The eleven primitives, the four operations, the three kinds of axis and
+the three layouts are counted where they are named: a newcomer learns
+each. Earlier drafts reported 39 concepts by listing only those that
+could not be expressed as compositions of others, and placing the rest in
+two further tables. Nothing was hidden, but the number answered a
+different question from the one a newcomer asks.
 
-| Name | Is |
-| --- | --- |
-| Agent | a writer acting through the agent interface |
-| Asset | an object whose `bytes` is a blob |
-| Attribution | origin, evidence and decision read for a region |
-| Border | the moment of import or export |
-| Chronicle | the chain of commits and their changes |
-| Coordinate space | the set of axes an object offers |
-| Edge | a property holding a ref |
-| Ledger | the changes to a Compute-let's code, tests and manifest |
-| Light cone | outlines, with the summaries attached to their parts |
-| Rendition | an asset with a derivation |
-| Root | an entry in the universe object's `roots` |
-| Snapshot | a blob holding the state of a Compute-let |
-| Span | an anchor on a text's elements, with a role and properties |
-| Transclusion | a Portal whose target is a region of another object |
-| Transmutation | described objects with a derivation that a model performed |
-| Unit | a function object |
-| Recipe | a derivation's `from`, with the origin of the change it names |
-| Working form, travel form | a pack alone; a pack in an envelope |
-| Content layer, attribution layer, working history | the three sets of records, by reachability, that decide what travels |
-| Carried presenter, component | a Compute-let on a surface; a Compute-let the player relies on |
-| Tools universe | a universe that is the interface to the kernel's functions, presented with the universe being worked on as its subject |
-| Subject | a universe that a presenter hands to what it presents |
-| Onboard tools | the kernel's projections and actions, and the tools universe |
-| Renderer | a Compute-let that measures, draws and encodes for canonical exports |
-| Plain-text face | an object's text in reading order |
-| Nested, linked | of another universe: its commit is in the file, or is not |
-| Profile | a versioned set of types, properties and axes, declared as a feature |
-| Poster | the rendition shown when a Compute-let cannot or may not run |
-| Program hash, unit hash | the hash of what a Compute-let would run and may ask for; the hash of a function's content |
+**Terms of the core.**
 
-**Structural terms.** Words for the parts of records and for the states
-things can be in, each defined where it is first used: chunk, node, value, ref, indirect, veiled, opening, frame (of a pack), head, index, note, signature (of a pack), offset, reachable, identity, type, property, sequence property, run, removed (of an element), boundary, revision hash, root hash, object map, universe object, lineage, work (of a change), region, frame (of an axis), digest, flick, basis (witnessed, inferred, unknown), finding, malformed, inconsistent, unavailable, unrecognized, whole, live, withheld, detached, current, stale, compaction, presentation state, root clock, row, outline, player, base presenter, drawing contract, port, manifest, module, statement, derived (of bytes), lifted, fuel, test, test change, promotion, static face, plain-text head, envelope template, mark, sharing, publishing, export, determinism tier, occurrence.
+| Term | | Meaning | § |
+| --- | --- | --- | --- |
+| Absent frame | part | a frame listing what a pack deliberately lacks, and where it may be found | 2.5 |
+| Agent | concept | software, usually a language model, acting through the agent interface | 0.1 |
+| Anchor | concept | a reference to an object or to a region of one | 4.1 |
+| Asset | concept | an object whose `bytes` is a blob | 5.2 |
+| Attribution | concept | origin, evidence and decision, read for a region | 5.4 |
+| Axis | concept | a named dimension of an object: sequence, continuous or keyed | 4.2 |
+| Basis | concept | how an origin is known: witnessed, inferred by a stated method, or unknown | 5.4 |
+| Blob | concept | bytes of any size, stored as chunks under a tree divided by the content itself | 1.4 |
+| Border | part | the moment of import or export | 5.3 |
+| Boundary | part | one end of a sequence region, fixed before or after an element | 4.3 |
+| Cache | part | anything a reader keeps on its own device that can be rebuilt from a pack | 3.4 |
+| Change | concept | the object recording one commit: who, when, origin, evidence, decisions, and the work | 1.7 |
+| Chronicle | concept | the chain of commits and their changes | 1.7 |
+| Chunk | part | a record of raw bytes | 1.3 |
+| Clock | concept | a mapping from a parent's time to a child's, over an interval | 4.5 |
+| Commit | concept | the record fixing a universe's state and history: parent, object map, change | 1.6 |
+| Compaction | concept | rewriting a pack without what is no longer reachable, every kept hash unchanged | 2.6 |
+| Coordinate space | part | the set of axes an object offers | 4.2 |
+| Decision | concept | what a person chose to do about content | 5.4 |
+| Derivation | concept | the record of what an object was made from, how, and by what | 5.3 |
+| Derived | part | having a derivation | 5.3 |
+| Detached | part | of a region: what it named is gone | 4.3 |
+| Digest | concept | a salted hash of a region's content and of everything that content refers to | 4.4 |
+| Edge | part | a property holding a ref | 1.5 |
+| Element | concept | one item of a sequence property, with an identity | 1.7 |
+| Evidence | concept | what supports content | 5.4 |
+| Feature | concept | a declared requirement a reader needs in order to interpret a universe | 1.6 |
+| Finding | concept | a later statement about origin, added beside the first and never replacing it | 5.4 |
+| Flick | part | the unit of time: 1/705 600 000 of a second | 4.5 |
+| Frame | concept | one unit of a pack: a record, an index, a seal, a head, or a list of what is absent | 2.1 |
+| Hash | concept | the SHA-256 digest that names a record | 1.1 |
+| Head | concept | the frame that ends a commit; the last one names the state of the pack | 2.2 |
+| Host | concept | the platform a reader runs on | 0.1 |
+| Identity | concept | the permanent name of a thing, never changed and never reused: of an object, 16 bytes; of an element, the change that inserted it and a number | 1.5, 1.7 |
+| Index | part | a lookup table from hash to offset, rebuilt at will | 2.4 |
+| Indirect | concept | a value kept outside its node, in a blob, and named there by hash | 1.4 |
+| Item | part | one member of a list or of a sequence | 1.2 |
+| Laws of change | concept | the seven rules every change obeys; among them conservation: replaying the operations on the parent state gives the new state exactly | 1.7 |
+| Lineage | concept | 16 bytes fixed in the first commit and shared by every later state and fork: what makes two files the same universe | 1.6 |
+| Linked | concept | of another universe: named by hash, its commit not in this file | 1.8 |
+| Malformed, inconsistent, unavailable, unrecognized | part | the four things a reader reports of content it cannot use | 1.9 |
+| Nested | concept | of another universe: its commit is in this file | 1.8 |
+| Node | part | a record holding one value | 1.3 |
+| Note | part | words a writer attaches to a change, an evidence entry or a decision | 1.7 |
+| Object | concept | an identity with a type and properties | 1.5 |
+| Object map | concept | the trie from identity to current revision, whose shape depends only on what it holds | 1.6 |
+| Offset | part | a position in a pack, in bytes | 2.1 |
+| Opening | part | the small record that connects a veiled indirect to its content | 1.4 |
+| Operation | concept | one edit to the state: `new`, `set`, `splice` or `drop` | 1.7 |
+| Origin | concept | who or what contributed content | 5.4 |
+| Pack | concept | the byte format that holds a universe's records: the file | 2 |
+| Person | part | the human using a reader | 0.1 |
+| Pin | concept | an anchor with a digest of what it covered | 4.4 |
+| Profile | concept | a versioned set of types, properties and axes, declared as a feature | 5 |
+| Property | part | a named value of an object | 1.5 |
+| Reachable | part | named, directly or through other records, from a commit | 1.3 |
+| Reader | concept | any software that opens a UFO | 0.1 |
+| Recipe | concept | a derivation with the origin of the change that made it: enough to make the thing again | 5.3 |
+| Record | concept | an immutable byte string named by its hash: a chunk or a node | 1.3 |
+| Ref | concept | a value naming an object by its identity | 1.2 |
+| Region | concept | the part of an object an anchor names, axis by axis | 4.1 |
+| Rendition | concept | an asset with a derivation | 5.3 |
+| Revision | concept | one state of an object, stored as a node that names the revision before | 1.5 |
+| Revision hash | part | the hash of a revision | 1.5 |
+| Root | part | an entry point named by the universe object | 1.6 |
+| Root clock | part | the time at the top of a presentation, supplied by the reader | 4.5 |
+| Root hash | concept | the hash of a commit | 1.6 |
+| Run | part | consecutive elements written as `[change, first, count]` | 1.7 |
+| Scale | concept | on a continuous axis, the mapping from the coordinates anchors are written in to present ones | 4.3 |
+| Sequence property | concept | a property edited by `splice`: a text, a byte string, a list or a track | 1.7 |
+| Signature | part | the fixed bytes that begin a pack | 2.1 |
+| Span | concept | an anchor on a text's elements, with a role and properties | 5.1 |
+| Stale | concept | of a pin: what it covered has changed. Otherwise it is current | 4.4 |
+| State | concept | what a thing holds at one moment: of a universe, its objects at their revisions, fixed by a commit; of a Compute-let, its memory, globals and tables, fixed by a snapshot | 1.6, 12.2 |
+| Tombstone | concept | what a removed element leaves in place, so that what was attached to it can still be placed | 1.7, 1.10 |
+| Track | concept | the value of a clock's `time`: a sequence whose elements are instants, each saying what plays then | 4.5 |
+| Transmutation | concept | described objects that a model made from other objects | 5.3 |
+| Type | part | the name of the kind of an object | 1.5 |
+| Universe | concept | the set of objects reachable from one commit | 1.6 |
+| Universe object | concept | the object that names a universe's entry points, faces, features and components | 1.6 |
+| Value | concept | null, boolean, integer, float, text, bytes, list, map, or one of four references | 1.2 |
+| Veiled | concept | of an indirect: naming its content through an opening, so that the hash reveals nothing when the content is withheld | 1.4 |
+| Whole | part | of a pack: holding every record its state names | 2.5 |
+| Withheld | part | deliberately absent, its hash remaining | 2.5 |
+| Work | concept | the operations and note of a change, kept behind a veil so that they can be withheld | 1.7 |
+| Writer | concept | any software that changes one | 0.1 |
 
 ---
 

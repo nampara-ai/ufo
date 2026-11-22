@@ -462,3 +462,26 @@ without keys unless records are also salted; that design is not settled.
 Consent prompts are only as good as the attention paid to them.
 
 ---
+
+## Terms of this part
+
+Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer must learn; a **part** is a name for a piece of a record or a status.
+
+| Term | | Meaning | § |
+| --- | --- | --- | --- |
+| Content layer, attribution layer, working history | concept | the three sets of records, by reachability, that decide what leaves | 13.3 |
+| Envelope | concept | a file valid in a common format that carries a pack and the player | 13.2 |
+| Envelope template | part | the fixed page a web envelope is made from | 13.2 |
+| Grant | concept | a reader's record that a person allowed a capability | 14.3 |
+| Live | part | of an object: reachable from the universe object | 13.3 |
+| Mark | concept | the visible sign on a video or image envelope that leads back to the universe | 13.4 |
+| Membrane | concept | a boundary between universes, with rules for what crosses | 14.4 |
+| Plain-text head | part | the lines at the start of an envelope that say what it is | 13.2 |
+| Principal | concept | a party that acts, identified by key, name or both | 14.1 |
+| Seal | concept | a signature over a root hash | 14.2 |
+| Sharing, publishing | concept | sending to collaborators, with working history; sending to outside readers, without it unless chosen | 13.3 |
+| Static face | concept | the text a web envelope shows where no script runs | 13.2 |
+| Travel form | concept | a pack in an envelope | 13.2 |
+| Working form | concept | a pack alone | 13.1 |
+
+---

@@ -118,6 +118,14 @@ supply that memory stops the Compute-let (**M8**) and never lets the
 instruction fail. One behavior is left to engines: the depth at which the
 call stack is exhausted. A reader reports it as an *engine limit*, apart
 from every other trap, and a record that meets one is not a valid replay.
+
+Vector instructions are left out because their results for not-a-number
+values differ between engines in ways the rule of **M5** does not yet
+cover, and because described code has no spelling for them. The way back
+is a feature, `ufo.simd/1`, that adds their spelling to §12.3 and extends
+the rule; it needs vectors that show two engines agreeing before it is
+admitted. Until then a module that uses them is carried as an asset and
+cannot be run.
 Bounding depth by instrumentation, as fuel is bounded, would remove this;
 it is not yet specified.
 
@@ -455,6 +463,31 @@ each test that passed against each function it touched.
 - **[G2]** The running Compute-let never observes a candidate that failed.
 - **[G3] Rollback** is promotion of an earlier revision, with the live state
   carried across in the same way and the same tests applied.
+
+## Terms of this part
+
+Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer must learn; a **part** is a name for a piece of a record or a status.
+
+| Term | | Meaning | § |
+| --- | --- | --- | --- |
+| Compute-let | concept | a complete single-purpose machine carried as an object and run in a sandbox | 12.1 |
+| Fuel | concept | the count of instructions a Compute-let may still execute, charged by code the reader inserts | 12.2 |
+| Implied | part | of a module's bytes: fixed by the printing rules, not by any statement | 12.4 |
+| Ledger | concept | the changes to a Compute-let's code, tests and manifest | 12.5 |
+| Lifted | concept | of a module compiled elsewhere: turned into description, exactly | 12.3 |
+| Manifest | concept | what a Compute-let declares: its module, the capabilities it asks for, its tests | 12.1 |
+| Module | concept | a described WebAssembly module: functions, memory, globals, exports, data | 12.3 |
+| Printer | concept | the kernel's function from a described module to its bytes | 12.4 |
+| Program hash | concept | the hash of what a Compute-let would run and may ask for; grants attach to it | 12.1 |
+| Promotion | concept | the gate by which a change to code takes effect: tests, approval, switch | 12.6 |
+| Snapshot | concept | a blob holding the state of a Compute-let | 12.2 |
+| Statement | concept | one element of a function's body: a tree in WebAssembly's own vocabulary | 12.3 |
+| Stretch | part | the instructions one charge of fuel covers | 12.2 |
+| Test | concept | an object stating a call or a replay and what must result | 12.6 |
+| Test change | part | a change that adds, alters or removes a test | 12.6 |
+| Unit hash | part | the hash of a function's content | 12.3 |
+
+---
 
 ## Appendix E. Accelerated graphics, sketched
 

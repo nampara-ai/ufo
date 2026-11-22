@@ -54,6 +54,11 @@ example of SPEC §15 still works.
 
 - Report only what you ran and observed. Where a check could not be run,
   say so and say why.
+- **Nothing normative is added without something that exercises it:** a
+  test vector, a test, or running code, in the same change. A finding
+  answered only in text is not closed; it is recorded as *open, text only*
+  until something runs. This is how the specification's length and the
+  trust it deserves are kept together.
 - Every new requirement in the specification must be testable and carry a rule
   label.
 - Define a term once and use it the same way everywhere.

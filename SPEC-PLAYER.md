@@ -389,8 +389,9 @@ are two things.
    **tools universe**: text, groups, panes and paths. It reads the
    universe being worked on with `ask` (§7.3), changes it through handlers
    that `act` (§7.6), and shows it through a Portal whose `of` is
-   `arg("subject")`. The reader presents the tools universe and gives it
-   the working universe as its subject. Nothing in a tools universe names
+   `arg("subject")`. The reader presents the tools universe and, by its
+   own act and never at a file's instruction (**F6**), gives it the
+   working universe as its subject. Nothing in a tools universe names
    any particular universe, so one tools universe, with one hash, serves
    every file. It is carried under `components.tools` as a nested universe
    (§1.8); a reader that holds the same one uses its own copy (**K3**), and
@@ -692,6 +693,33 @@ after long edit histories; and a
 travel form with working history withheld, checked for what it reveals and
 what it still verifies (**E10**). Independent implementations, when they
 exist, are measured against the same suite.
+
+---
+
+## Terms of this part
+
+Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer must learn; a **part** is a name for a piece of a record or a status.
+
+| Term | | Meaning | § |
+| --- | --- | --- | --- |
+| Agent interface | concept | the kernel's functions as an agent calls them | 10.3 |
+| Base presenter | part | a presenter that is the host's own drawing and sound | 9.1 |
+| Binding | concept | the host-specific code that connects the kernel to a host | 9.1 |
+| Capability | concept | a named authority beyond the base host functions, granted by the person | 9.3 |
+| Carried presenter | concept | a presenter that is a Compute-let on a surface | 9.1 |
+| Component | concept | a Compute-let the player relies on, carried by hash | 9.1 |
+| Display list | concept | what the kernel composes for presenters to draw and play | 9.2 |
+| Drawing contract | concept | the frozen form of the display list and of input events | 9.2 |
+| Host interface | concept | the complete set of functions a sandboxed component may import | 9.3 |
+| Kernel | concept | the one program that reads, verifies and composes a universe | 9.1 |
+| Light cone | concept | outlines, with summaries attached to their parts: from the whole to exact bytes | 10.2 |
+| Onboard tools | concept | the kernel's projections and actions, and the tools universe | 9.6 |
+| Outline | concept | what the kernel computes of any object: its parts, their sizes and kinds, who changed them and when | 10.2 |
+| Player | concept | what presents a universe: kernel, presenters, binding | 9.1 |
+| Port | part | a channel for messages between components | 9.3 |
+| Presenter | concept | what turns the display list into output | 9.1 |
+| Summary | concept | a derivation that condenses what it pins | 10.2 |
+| Tools universe | concept | a universe that is the interface to those functions, presented with the work as its subject | 9.6 |
 
 ---
 
