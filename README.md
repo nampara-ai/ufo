@@ -9,7 +9,7 @@ every part of it came from.
 
 | Document | What it is |
 | --- | --- |
-| [CORE.md](CORE.md) | The whole format in two pages |
+| [CORE.md](CORE.md) | The whole format in about four pages |
 | [SPEC.md](SPEC.md) | The draft specification, version 0.7 |
 | [RATIONALE.md](RATIONALE.md) | Why the format is shaped as it is |
 | [VISION-TRACE.md](VISION-TRACE.md) | Each element of the vision: where it is specified, what has tested it, and how solid it is |

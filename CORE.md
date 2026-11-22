@@ -1,7 +1,7 @@
-# UFO in two pages
+# UFO in brief
 
-The whole of the Universal File Object at low resolution: every part of the
-[specification](SPEC.md) is here, none in full. Where the two differ, the
+The whole of the Universal File Object at low resolution, in about four
+pages: every part of the [specification](SPEC.md) is here, none in full. Where the two differ, the
 specification governs. Nothing is implemented yet.
 
 **What it is.** One file holding a universe of *described* meaning — words,
@@ -83,8 +83,11 @@ pages: open, universal, and independent of any application.
     that content refers to; stale if any of that has changed. Every derived
     thing holds pins to its sources.
 13. **Universes compose.** An anchor may name a commit of another universe:
-    *nested* if its records are in the pack, *linked* if not. Bodies of
-    work of any size are built this way. Every boundary is a **membrane**
+    *nested* if its records are in the pack, *linked* if not, in which
+    case the file holds its hash, a label and a hint of where to look,
+    and little else is yet specified. Bodies of work of any size are
+    built this way. A chain of Portals never presents a universe inside
+    itself, and a reader stops at a stated depth of nesting. Every boundary is a **membrane**
     with fixed rules: nested content is verified, immutable and given no
     authority; references cannot be redirected; transfers carry no grants.
 
@@ -109,7 +112,9 @@ pages: open, universal, and independent of any application.
     what a run of text measures; the
     **presenters**, which are the host's own drawing and
     audio for the four basic items and carried programs for anything else;
-    a thin host **binding** that knows no medium; and the universe. The
+    a thin host **binding** that knows no medium; and the universe. A
+    file carries only the components its content needs, each named by
+    hash, and a reader that already holds one uses its own. The
     display list's eight items and the input events are a frozen *drawing
     contract*, exactly specified, against which a binding is tested. No
     plugins and no dispatch by type. The kernel holds no decoder: the host
@@ -131,7 +136,8 @@ pages: open, universal, and independent of any application.
 17. **Onboard tools.** Kernel functions — overview, search, history, why,
     diff, verify, expand, recipe, propose, try, derive, refresh, undo,
     export — and an interface
-    to them that is itself a universe, carried by hash. Agents use the same
+    to them that is itself a universe, carried by hash and presented with
+    the universe being worked on as its *subject*. Agents use the same
     functions through the Model Context Protocol, and what they read back
     is fixed field by field: one record per line, every identity reusable
     as an argument.
@@ -156,7 +162,8 @@ pages: open, universal, and independent of any application.
     kernel, alone writes module bytes from the description,
     deterministically: the bytes are a face of the code, always verifiable
     against it, and nothing is stored twice. Every statement traces to
-    its prompt, model and tests. A program compiled elsewhere is carried as
+    the change that wrote it, and through that to its prompt and model;
+    the tests it passed are recorded when a change is promoted. A program compiled elsewhere is carried as
     an asset and lifted to description when it is first maintained.
     Behavior changes while running: tests in force before the change gate a
     candidate on a shadow of live state; the person approves; failure
@@ -171,7 +178,8 @@ pages: open, universal, and independent of any application.
 
 21. **Forms.** A pack alone is the working form. The travel form is an
     envelope: by default a valid web page carrying kernel, binding, tools
-    and pack, read back from itself with no network; also a video or an
+    and pack, read back from itself with no network, with a static face
+    of the text for a previewer that runs no script; also a video or an
     image whose outer face any player shows, with a visible mark that leads
     back to the universe when a platform strips it. What leaves a reader
     leaves in the travel form.
@@ -190,6 +198,21 @@ pages: open, universal, and independent of any application.
     shown beside the outline's parts, worth writing where the outline
     cannot tell siblings apart. The cost of an answer scales with the
     question.
+
+## Readers and applications (SPEC §9.5, §10.3, §13)
+
+24. **The reader ladder.** The same file works on three rungs, each a
+    binding and shell around the same kernel: any browser opening a web
+    envelope, with nothing installed; the reader installed as a web app;
+    and native and command-line readers, which add file association,
+    seal verification, permission prompts and the agent interface.
+25. **Delegation.** A principal may pass a capability it holds to
+    another, never wider than its own.
+26. **Applications.** An application with richer records of its own
+    writes portable facts in the format's terms and keeps the rest as
+    properties under its own prefix, which every other writer preserves.
+    That this loses nothing is a claim worked on paper for one
+    application, and not yet run.
 
 ## Limits it holds itself to (SPEC §12)
 

@@ -18,7 +18,7 @@ foundations.
 It is written to be built from, and to stand alone: it depends on no other
 document. It contains no code. Where it chooses a technology it gives the
 reason, so the choice can be challenged. [CORE.md](CORE.md) states the whole
-format in two pages; [RATIONALE.md](RATIONALE.md) explains why the format is
+format in about four pages; [RATIONALE.md](RATIONALE.md) explains why the format is
 shaped as it is.
 
 ## 0. Reading this document

@@ -178,9 +178,12 @@ is. Code is edited with the same four operations as a paragraph. The kernel
 prints the bytes from the description by fixed rules, and what runs is
 always what it printed. Nothing is stored twice, so nothing can drift.
 
-There is still no source tree: no files of text that a person must read
-and a compiler must parse, and nothing whose meaning lies outside
-WebAssembly's own definition. What a maintainer reads is the statements,
+Said plainly: this is code a person or a model can read, kept in a
+structured store and assembled when it is needed. What it removes is not
+readability. It is the separate source tree, the second history beside
+it, and any language beyond WebAssembly's own: there are no files of text
+that a compiler must parse, no build, and nothing whose meaning lies
+outside WebAssembly's definition. What a maintainer reads is the statements,
 one to a line, each marked with the change that wrote it. What it writes is
 a statement, or three. What the record of a change holds is the statements
 removed and the statements put in their place, with the prompt, the model
@@ -305,13 +308,17 @@ built, and then maintained, by fresh instances of two language models —
 both weaker than a frontier model, so the results are a lower bound —
 through a printer at four levels: flat instructions, folded text, a typed
 expression language, and the statement trees the specification now uses.
+At that fourth level subjects named statements by number, through a tool
+written for the trial; the specification names them by identity, through
+`propose`, and no model has yet worked that way.
 Maintenance meant a planted one-token bug, found from a vague report, and
 three new features, done by an instance with no memory of building and no
 source, only the ledger and projections. Hidden tests the subjects never
 saw scored every result.
 
 - Every cell passed everything: 8 builds and 16 maintenance runs, all
-  hidden tests, and every untouched function left unchanged. On a program
+  hidden tests, and every untouched function left unchanged. The adopted
+  level accounts for 2 of those builds and 4 of those runs. On a program
   this small, no level failed.
 - Every subject found the bug the same way: the history showed a recent
   change, and the record of that change showed what it did. The ledger did
@@ -328,8 +335,10 @@ saw scored every result.
 **One kernel, several faces.** A kernel miniature of 1 613 lines of Rust
 opened real packs, including the normative vectors, and presented one small
 universe as plain text, as a scrolling view and as pages, with a text from
-a nested universe shown through a Portal. It needed an algorithm the
-specification did not have (now §5.7) and a different `break` (now §6.3).
+a nested universe shown through a Portal. It read; it wrote nothing. It
+needed an algorithm the specification did not have (now §5.7). In it the
+host broke lines; the specification has since moved line breaking into
+the kernel, and what that adds to the kernel's size is not measured.
 Built without the standard library and passed through a size optimiser, it
 came to 78.4 KiB, about 40 bytes for each line of its own code. At that
 density, and at the 48% to which it compressed, the first budgets — 10 000
@@ -346,7 +355,9 @@ deleted with the rest of the spike, and the kernel's printer is the only
 one there will be.
 
 **The light cone.** On a corpus of 199 000 characters in four universes,
-models answered three questions through four projections. With the
+held in an object model written for the spike and not in a pack or a
+kernel, models answered three questions through four projections. The
+summaries were written by the spike's script, not by a model. With the
 structural layer alone all answers were right; two cost about 1% of the
 corpus, and one — finding a remark among eight untitled interviews — cost
 18.5%. With one-line summaries that one cost 2.4%. So structure bounds
@@ -355,7 +366,8 @@ every search, and summaries pay where structure says nothing.
 **Transmutation.** Pins, staleness through a ref, staleness of a
 derivation of a derivation, the recipe, one-step regeneration and its
 refusal when the prompt is withheld all ran, with a deterministic function
-standing in for the model. Two defects in the digest rule were found and
+standing in for the model, on the same object model, with characters
+named by position. Two defects in the digest rule were found and
 fixed.
 
 Not shown by any of this: anything at scale; grids, floats, clocks, audio,
@@ -373,8 +385,9 @@ stretch of text, which the format exists to know.
 
 ## Where the design departs from first intentions
 
-Four choices differ from what the project first set out to do. They are
-recorded so they can be reversed for good reason.
+Twelve choices differ from what the project first set out to do. They
+are recorded so they can be reversed for good reason. The first four are
+argued here; the rest are listed with where each is argued.
 
 - **Code is described, and its bytes are a face of the description.** The
   first intention was worded as "the bytes are the only artifact", changed
@@ -404,12 +417,35 @@ recorded so they can be reversed for good reason.
   `z` and `t` axes, and what sits in it — parts, Portals, flat content on a
   wall — is format data with attribution and summaries. Only the drawing is
   done by a carried program, which may hold no content of its own.
+- **A pack, not a database, and no archive view.** Argued in the table of
+  inventions above and in the specification (§2).
+- **Summaries are optional, and there is no stored tree of them.** The
+  first intention was a summary at every level. The outline is computed
+  for everything; a summary is written where it pays (§11.7).
+- **Code is not named by a hash of its bytes alone.** A function has an
+  identity, as every object has, and a *unit hash* of its content; a
+  Compute-let has a *program hash*, to which grants attach (§11.3).
+- **Executable bytes may arrive compiled elsewhere.** The first intention
+  was that the printer alone ever writes executable bytes. A module made
+  by another toolchain is carried as an asset and lifted to description
+  when first maintained, within the instructions that can be described
+  (§11.3).
+- **The printer is part of the kernel**, not of each Compute-let, so
+  there is one (§11.4).
+- **Tests are declarative objects the reader runs**, not a test runner
+  carried as a program (§11.6).
+- **A canonical export is reproducible given a named renderer**, not by a
+  rendering profile written into the format (§7.4).
+- **Fonts shape and measure on the host; the kernel breaks the lines.**
+  The first intention had the format own layout entirely. The kernel
+  decides every break by the Unicode algorithms and asks the host only
+  what a run of text measures (§5.7).
 
 ## Honest limits
 
 - Envelopes other than the web page survive only where bytes are preserved.
-- Live presentation uses each host's text rendering, so line breaks can
-  differ between devices; identical output is promised only for canonical
+- Live presentation measures text with each host's fonts, so line breaks
+  can differ between devices; identical output is promised only for canonical
   exports.
 - A reference by hash can never be redirected, and can also fail to be
   found. The format verifies content from anywhere; it cannot make anyone
