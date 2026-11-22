@@ -399,3 +399,53 @@ forbids.
   a module, which a file with withheld history could not satisfy; a module's
   `units` axis was used in an example but never declared; section 3 was an
   empty placeholder.
+
+## 9. What changed in version 0.3
+
+Two things happened after version 0.2: the owner's addendum — simplify the
+mechanism, never the ambition; invent where nothing fits — and an
+independent cold review of 75 findings, ten critical. The review and a
+finding-by-finding response are in [reviews/](reviews/).
+
+**From the addendum.** Reach restored or extended: texts of any length;
+Portals inside 3D scenes and games, through children of a surface; scene
+data in the glTF object model; video and image envelopes specified in full,
+with a visible mark as the way back to a universe that a platform has
+stripped; onboard tools designed, as kernel functions plus a tools universe;
+handlers that propose changes; transmutation as a first-class `derive`
+action; the history default set by the membrane crossed.
+
+**From the review.** The rules that did not yet do what the design
+intended:
+
+- operations apply in order; the sequence rule for anchors is a table with
+  no overlapping cases;
+- runs and self-anchors moved into the core, so text needs no special
+  handling and conservation is exact;
+- a commit links its change by hash and each change lists the revisions it
+  touched, so withheld history is checkable and not merely asserted;
+- copies keep their runs, so attribution survives moves and withholding;
+- staleness follows references and derivations;
+- capability calls may be pending, because hosts are asynchronous;
+- a web envelope must say it cannot vouch for itself;
+- the kernel inserts fuel metering, so there is nothing to verify;
+- module parts have lasting keys, so a function's identity survives changes
+  around it;
+- tests cannot be weakened inside the change they judge.
+
+**Three departures from first intentions that need the owner's eye.** Base
+presenters are the host's facilities, not WebAssembly components. The
+reader, not the printer, inserts fuel metering. Regions are two-dimensional;
+three dimensions belong to a surface. Each is argued in RATIONALE.md.
+
+**Open, and said so in the specification.** The operations behind most
+capabilities, `gpu` above all. Byte-level test vectors. Whether the kernel
+fits its budget, which was raised once in response to the review. The exact
+fields of projections. The file-name ending, which collides with an
+existing font format.
+
+**Weight, honestly.** The specification grew, from about 21 000 words to
+about 32 000, because the review showed it was not yet complete enough to
+build from. CORE.md is the two-page form. Concepts went from 47 to 38; the
+full count of defined terms, which version 0.1 did not report, is 125.
+

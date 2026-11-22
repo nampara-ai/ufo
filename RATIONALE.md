@@ -186,7 +186,9 @@ full. Each is recorded here so it can be challenged.
 | **The pack** | *SQLite*: no canonical bytes to hash or sign; its engine in every file. *Git packfiles*: delta compression and a separate index file make a weekend reader impossible; not built for one growing file. *ZIP*: no content addressing; central directory rewritten on every change. *CAR (IPLD)*: content-addressed, but no commit trailer, crash recovery or index. | §2, §3 |
 | **Operations split into shape and salted content** | *Git shallow clones* drop history wholesale, with its authorship. *Redaction* breaks hashes. Nothing kept an edit history verifiable, and anchors resolvable, while withholding what the edits said. | §1.7, §9.3 |
 | **Three kinds of axis with one survival rule each** | *W3C Web Annotation selectors* re-find text by quoting it, which is matching. *Media Fragments* address time and space but say nothing about edits. *Operational transformation and CRDT positions* cover sequences only. Nothing covered text, time, space and tables with one model that never guesses. | §4 |
-| **Pins and one staleness test** | Build systems track staleness of files, not regions; document formats do not track it at all. | §4.4, §8.3 |
+| **Pins and one staleness test** | Build systems track staleness of files, not regions; document formats do not track it at all. A pin's digest follows references, so a pin to a container notices a change in anything it shows. | §4.4, §8.3 |
+| **Runs and self-anchors in the core** | Attribution systems for text live inside one editor and know about paragraphs. Putting per-item runs and self-carried regions in the core gives every sequence of every medium span-level attribution and structure that stays put, with no knowledge of text. | §1.7 |
+| **Insertion bias on a splice** | Editors resolve "which side does typed text join" with caret affinity that is never recorded. One field on the operation makes the answer part of history and deterministic for every reader. | §4.3 |
 | **The change as an object, with origin, evidence and decision apart** | *Version control* records who committed, not who or what wrote each span, on what evidence, with what human decision. *C2PA* attests to whole assets after the fact, not to spans as they are written. *Track changes* is per application and lost on export. | §1.7, §8.5 |
 | **Origin with a basis: witnessed, inferred, unknown** | Attribution systems either assert authorship or stay silent. None distinguishes what was recorded at the moment from what was worked out later. | §8.5 |
 | **Eleven primitives and a display list** | *HTML and CSS* are a full description language, but far too large to interpret in a small kernel, and their meaning is whatever a browser version does. *SVG* has no flow layout, data or time model worth the name. *PDF* is depiction. *Scene and timeline formats* each cover one medium. | §5, §6.2 |
@@ -194,9 +196,28 @@ full. Each is recorded here so it can be challenged.
 | **Handlers that propose changes** | Interactive documents either embed a scripting language, with its security history, or cannot edit their own data. A declarative handler that yields a verified, attributed change needs neither. | §5.6 |
 | **The host interface** | *WASI* assumes files, sockets and clocks, which is the authority a document must not have, and has no drawing or input. The *component model* is not yet uniformly available in browsers. Ten functions and named capabilities can be stated in either later. | §6.3 |
 | **The printer and ledger** | *Source maps and debug information* point bytes back at source text; here there is no source text. *Reproducible builds* prove a binary came from a source, not why each function exists. | §11.3–§11.6 |
+| **Item keys in modules** | WebAssembly refers to functions by index, so a hash of a function's bytes changes when an unrelated function is added. *Unison* solves this for a language by hashing references; here every item has a lasting key, and hashes are taken with keys in place of indices. | §11.3 |
+| **Metering inserted by the reader** | Runtimes with built-in fuel exist outside browsers only. Metering inserted by the toolchain must be trusted or re-verified by a second copy of the rule. Inserting it in the kernel at load means there is one rule and nothing to trust. | §11.2 |
 | **The web envelope's read-back** | A page opened from disk cannot fetch its own file; *single-file web apps* store data as script or JSON text, not as range-readable, hash-verified records. | §9.2 |
 | **The mark** | Metadata, boxes and chunks are stripped by re-encoding platforms. Only pixels survive, and QR is the standard way to put a short reference in pixels; what is new is treating it as a content address for a linked universe. | §9.4 |
 | **Summaries as pinned derivations in a tree** | *Retrieval by similarity* returns fragments without telling you what you did not see. *Stored summaries* go stale silently. | §11.7 |
+
+## Where the design departs from first intentions
+
+Three choices differ from what the project first set out to do. They are
+recorded so they can be reversed for good reason.
+
+- **Base presenters are the host, not WebAssembly components.** The first
+  intention was that every presenter be compiled once and run everywhere. A
+  component that only forwards "draw this text" to a host call is an empty
+  layer; the host's own facilities, behind the display list, are the base
+  presenters. Presenters a universe carries are still sandboxed components.
+- **The reader, not the printer, inserts fuel metering.** The first
+  intention was that the printer insert it and the reader check that it is
+  there. Checking needs the same rule in two places, or trust in a printer
+  the file supplied.
+- **Regions are two-dimensional.** Three dimensions belong to a surface and
+  its carried presenter, which can also place live Portals inside a scene.
 
 ## Honest limits
 
@@ -210,4 +231,12 @@ full. Each is recorded here so it can be challenged.
 - Converting a foreign document to description can lose nuance. The
   original bytes are always kept, and the conversion is recorded.
 - Every size and speed figure in the specification is a target set before
-  anything was built.
+  anything was built, and an independent reviewer doubts the kernel's.
+- A web page that carries its own reader cannot vouch for itself. What it
+  says about seals and origins is the file's own account until an installed
+  reader checks it.
+- The interface between a program and its host is ten functions, but the
+  operations behind most named capabilities — accelerated graphics above
+  all — are not yet written.
+- The file-name ending `.ufo` is already used by a font format and will
+  have to change or be shared.

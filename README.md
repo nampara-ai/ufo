@@ -10,18 +10,15 @@ every part of it came from.
 | Document | What it is |
 | --- | --- |
 | [CORE.md](CORE.md) | The whole format in two pages |
-| [SPEC.md](SPEC.md) | The draft specification, version 0.2 |
+| [SPEC.md](SPEC.md) | The draft specification, version 0.3 |
 | [RATIONALE.md](RATIONALE.md) | Why the format is shaped as it is |
 | [ORIENTATION.md](ORIENTATION.md) | Working notes: open problems and the record of design decisions |
 | [reviews/](reviews/) | Independent reviews of the draft, unedited |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How changes are judged |
 
-The design in one paragraph: a universe is a set of objects stored as
-immutable records named by their hashes; every change is itself an object,
-so history cannot be separated from content; any location in any object is
-named by an anchor that survives edits by one of three rules; what a
-universe shows is described with eleven primitives that one small kernel,
-compiled once to WebAssembly, composes for the host to draw; programs are
-objects that run in a sandbox with only the authority a person grants.
+The aim is an open, universal primitive of computing, of the kind the PDF
+became: one universe that can present as a document, plain text, an image,
+a video, audio, data, a diagram, a 3D scene, an application or a game, and
+that outlives every application that writes it. Start with CORE.md.
 
 Released under the [MIT License](LICENSE).
