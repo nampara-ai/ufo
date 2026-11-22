@@ -860,6 +860,32 @@ V["published_nested"] = layer_vector(both, _c, _a, NP["outer_commit"], "publishe
     "the outer universe's object map and its three live objects; and, because a live Portal's anchor names a commit that is present, the nested universe's object map, its universe object and its text",
     "both commits and both changes: the outer one, and the nested universe's own, so that who wrote the nested text can be said",
     {"can": "say who wrote 'Nested.': the change d1 of the nested universe, witnessed, by a person, Test Author", "plain_text_of_the_nested_text": "Nested."})
+
+# ---- 15. a minimal tools universe (section 9.6): an interface that names no universe ----
+def tools_pack():
+    pk = Pack(); XU, XT, XF, XC = bytes(16), bytes([0x81]) * 16, bytes([0x82]) * 16, bytes([0x8c]) * 16; lin = bytes([0x77]) * 16
+    words = [("Document", {"set": "face", "to": "document"}), ("Pages", {"set": "face", "to": "pages"}), ("Text", {"set": "face", "to": "text"}),
+             ("Edit", {"set": "editing", "to": True}), ("Save", {"act": "export"})]
+    chars = "   ".join(w for w, _ in words); spans = {"b0": {"at": anchor({"o": XT, "a": {"chars": ["s", [XC, 0, 0], "end"]}}), "kind": "block", "role": "paragraph"}}
+    at = 0
+    for i, (w, h) in enumerate(words):
+        spans["t%d" % i] = {"at": anchor({"o": XT, "a": {"chars": ["s", [XC, at, 0], [XC, at + len(w) - 1, 1]]}}), "kind": "inline", "role": "strong", "on": {"press": h}}
+        at += len(w) + 3
+    roots = {"primary": ref(XF)}; faces = [ref(XF)]; tp = {"chars": chars, "spans": spans, "size": 15.0}
+    st = {XU: revision(pk, XU, "ufo.universe", 1, XC, 8001, {"lineage": lin, "roots": roots, "faces": faces}),
+          XT: revision(pk, XT, "ufo.text", 1, XC, 8002, tp, seq={"chars": [[XC, 0, len(chars)]]}),
+          XF: revision(pk, XF, "ufo.face", 1, XC, 8003, {"of": ref(XT), "medium": "document"})}
+    ops = [{"op": "new", "obj": XU, "type": "ufo.universe"}, {"op": "set", "obj": XU, "key": "lineage", "val": lin},
+           {"op": "new", "obj": XT, "type": "ufo.text"}, {"op": "splice", "obj": XT, "key": "chars", "after": None, "ins": chars},
+           {"op": "set", "obj": XT, "key": "spans", "val": spans}, {"op": "set", "obj": XT, "key": "size", "val": 15.0},
+           {"op": "new", "obj": XF, "type": "ufo.face"}, {"op": "set", "obj": XF, "key": "of", "val": ref(XT)}, {"op": "set", "obj": XF, "key": "medium", "val": "document"},
+           {"op": "set", "obj": XU, "key": "roots", "val": roots}, {"op": "set", "obj": XU, "key": "faces", "val": faces}]
+    st, _, _, k = commit(pk, st, XC, ops, None, {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 8004)
+    pk.index(); pk.head(k); return pk, k
+xpk, xk = tools_pack()
+open(os.path.join(OUT, "tools.ufx"), "wb").write(xpk.b)
+V["tools_pack"] = {"file": "tools.ufx", "length": len(xpk.b), "root_hash": xk.hex(),
+    "what": "a minimal tools universe: one line of five words, each under a span whose `on.press` handler sets presentation state (which face; whether editing) or acts (export). It names no universe: a reader presents it with the universe being worked on as its subject"}
 # the status of every group: kept by hand in vectors/STATUS.json, copied here so that each vector file states it
 V = dict(status=json.load(open(os.path.join(OUT, "STATUS.json"))), **V)
 json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)

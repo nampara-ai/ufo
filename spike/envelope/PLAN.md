@@ -32,7 +32,7 @@ take and give them.
 | --- | --- | --- |
 | `open_tools(ptr, len)` | a tools pack | 1 if it holds a universe |
 | `sample` with `of: "tools"` | as for the working universe | the tools universe composed; every text item that lies under a span with an `on` handler carries `press`: the handler's key (the span's key) |
-| `press(ptr, len)` | `{key}`: the span key of the pressed item of the tools universe | the action that span's `on.press` holds, as a value `{act, …}`, or null. A press on anything in the working universe gives null: only what the reader presents as tools acts |
+| `press(ptr, len)` | `{key}`: the span key of the pressed item of the tools universe | the handler that span's `on.press` holds, as a value: `{set, to}` or `{act, …}`, or null. The tools pack is `vectors/tools.ufx`: its handlers set `face` to `document`, `pages` or `text`, set `editing` to true, and act `export`. A press on anything in the working universe gives null: only what the reader presents as tools acts |
 | `block_at(ptr, len)` | `{src}`: the `src` anchor of a text item of the working universe | `{o, key, lo, hi, text}`: the block that holds it, by positions, and its characters |
 | `propose(ptr, len)` | `{o, lo, hi, ins, who, time, random}`: replace positions lo..hi of the text `o` with `ins`; `who` a name; `time` in milliseconds; `random` 64 bytes from the host | `{commit, change, root}` or `{refused: reason}`. The change has one `splice`, origin `{basis: "witnessed", by: "person", who: {name}}`, and passes the kernel's own conservation check before anything is written |
 | `pack_bytes()` | — | the whole pack as it now stands |

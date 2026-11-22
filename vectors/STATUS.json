@@ -153,6 +153,10 @@
   "instrumentation": {
    "status": "provisional",
    "note": "belong to the execution part; not part of the core reader test"
+  },
+  "tools_pack": {
+   "status": "provisional",
+   "note": "an example for the envelope spike; belongs to the player part"
   }
  },
  "files": {

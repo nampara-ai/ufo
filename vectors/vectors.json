@@ -154,6 +154,10 @@
    "instrumentation": {
     "status": "provisional",
     "note": "belong to the execution part; not part of the core reader test"
+   },
+   "tools_pack": {
+    "status": "provisional",
+    "note": "an example for the envelope spike; belongs to the player part"
    }
   },
   "files": {
@@ -2372,5 +2376,11 @@
    "can": "say who wrote 'Nested.': the change d1 of the nested universe, witnessed, by a person, Test Author",
    "plain_text_of_the_nested_text": "Nested."
   }
+ },
+ "tools_pack": {
+  "file": "tools.ufx",
+  "length": 3919,
+  "root_hash": "2d8445f69d4794764fa9b016c8c3eda488b813c042aac676953e5e61de3716b0",
+  "what": "a minimal tools universe: one line of five words, each under a span whose `on.press` handler sets presentation state (which face; whether editing) or acts (export). It names no universe: a reader presents it with the universe being worked on as its subject"
  }
 }
