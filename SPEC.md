@@ -3259,13 +3259,13 @@ These limits change only on measurement.
 
 | Measure | Limit | Reason |
 | --- | --- | --- |
-| Kernel, compiled WebAssembly | 256 KiB | a tenth of a typical phone photograph. This is the limit a file pays for, and it is firm |
+| Kernel, DEFLATE-compressed | 128 KiB, firm | this is the size that travels: every envelope carries the kernel compressed, so this is the limit every file pays for |
+| Kernel, compiled WebAssembly | 256 KiB, as guidance | derived from the compressed limit at the measured ratio of 48%; no longer a limit of its own |
 | Kernel source: its own code, excluding tests and anything borrowed | 6 000 lines | set from the compiled limit at the measured density of about 40 bytes a line; one engineer reads it in a working day |
-| Kernel, DEFLATE-compressed | 96 KiB | what an envelope actually carries |
 | Binding source, per host | 600 lines | readable in minutes; this now includes executing the drawing contract (§6.2) |
 | Web binding, as shipped | 16 KiB | |
 | Tools universe (§6.6), as carried | 24 KiB | description only; no code |
-| Web envelope holding one paragraph | 192 KiB | compressed kernel in base64 (128 KiB), binding, tools universe, static face, pack |
+| Web envelope holding one paragraph | 256 KiB | the compressed kernel in base64 (171 KiB at its limit), binding, tools universe, static face, pack |
 | Web envelope for each worked example of §14 | reported | no limit yet; measured and published with the first implementation |
 | Printer, as a part of the kernel | 16 KiB | it is a function of the kernel, within the kernel's limits above; it measured 11 KiB in miniature |
 | Implementations of any piece of format, layout or media logic in the project's readers | exactly 1 | **K1** |
@@ -3291,14 +3291,20 @@ printer for the instructions its test programs used (344) — compiled,
 without the standard library and after a size-optimising pass, to 78.4 KiB.
 Leaving out an inflater it borrowed, which is the host's to supply (§6.3),
 it was 67.3 KiB: an allocator of 4.2 KiB, and 40 bytes of WebAssembly for
-each line of its own code. At that density 6 000 lines compile to about
-239 KiB. The line limit was 10 000 before this was measured; the compiled
-limit did not move. The same build compressed to 48% of its size, at which
-a kernel of 256 KiB would be about 123 KiB compressed: more than the
-compressed limit above, and than the share of a one-paragraph envelope
-allowed for it. That disagreement is recorded here and not yet resolved.
-The miniature's web binding was 79 lines and 3.0 KiB compressed, for half
-of the drawing contract's items and one host function.
+each line of its own code. It compressed to 48% of its size.
+
+The limits follow from that measurement, in this order. What a file pays
+for is what travels, and what travels is the compressed kernel: 128 KiB,
+firm. At 48%, that is about 267 KiB compiled, so 256 KiB is the guidance
+for the compiled size and is not policed separately. At 40 bytes a line,
+6 000 lines compile to about 239 KiB and compress to about 115 KiB, inside
+both. In base64 a kernel at its compressed limit is 171 KiB, which with a
+binding of 16 KiB and a tools universe of 24 KiB leaves about 45 KiB of a
+256 KiB envelope for the static face, the template and the pack. Before
+this was measured the limits were 10 000 lines, 256 KiB compiled, 96 KiB
+compressed and a 192 KiB envelope, and they did not agree with one
+another. The miniature's web binding was 79 lines and 3.0 KiB compressed,
+for half of the drawing contract's items and one host function.
 
 ### 12.3 Behavior
 

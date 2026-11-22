@@ -729,9 +729,11 @@ the count is the count, and the document is now 9% longer than it was.
    (`spike/FINDINGS.md` §7): 78.4 KiB, 40 bytes a line. The compiled limit
    stays at 256 KiB, firm. The line limit is 6 000 lines of the kernel's
    own code, and the per-part budgets were divided again to sum to it
-   (SPEC §12.2). Still open, found while applying this: at the measured
-   compression ratio a 256 KiB kernel is about 123 KiB compressed, over the
-   96 KiB compressed limit and the envelope's allowance for it.
+   (SPEC §12.2). Applying this showed that the compressed limit of 96 KiB
+   could not hold beside it; the owner then resolved it: the size that
+   travels is the firm limit — 128 KiB compressed; 256 KiB compiled is
+   guidance derived from it at the measured 48%; a one-paragraph web
+   envelope is 256 KiB in all; 6 000 lines stands.
 3. **Canonical exports: reproducible given a named renderer** identified by
    its hash; a component fetched or carried only when such an export is
    requested, never part of an ordinary file's player. No engine chosen
@@ -749,3 +751,8 @@ Next, in order: the cold re-review of the tightened specification with the
 updated VISION-TRACE.md; then, after the owner's review, the strict
 spec-first reader test; then a spike on the thinnest row, the self-opening
 web envelope.
+
+For that envelope spike, asked by the owner and not to be started before
+it: evaluate whether an encoding denser than base64 can carry the kernel
+and the pack safely inside a web page — valid under the HTML Standard, with
+no reliance on parser error recovery — and measure the saving.

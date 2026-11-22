@@ -78,7 +78,7 @@ which did read it, was written by the same author as the vectors.
 | The drawing contract and base presenters | §6.2, Appendix C | Four of eight item kinds executed on a canvas | **Specified, untested** for raster, samples, surface, hit and input |
 | The binding knows no medium | §6.1 (K2), §12.2 | A 79-line binding: a value codec, one host function, the drawing loop | **Tested in miniature** |
 | The host interface and capability contract | §6.3, Appendix E | One operation, `break`, in its new form | **Specified, untested** for the contract; **thin** for the operations behind most capabilities |
-| Budgets | §12 | One measurement, of a miniature: 78.4 KiB, 40 bytes of WebAssembly per line, built without the standard library and size-optimised. The kernel's line limit was reset from it, to 6 000; the compiled limit stayed at 256 KiB | **Thin.** One miniature is a narrow base for the line limit, and the same measurement says a full-size kernel would exceed its compressed limit; every other number is still a target |
+| Budgets | §12 | One measurement, of a miniature: 78.4 KiB, 40 bytes of WebAssembly per line, compressing to 48%, built without the standard library and size-optimised. The kernel's limits were reset from it: 128 KiB compressed, firm; 6 000 lines | **Thin.** One miniature is a narrow base for limits on a kernel four times its size; every other number is still a target |
 
 ## Decode at the border
 

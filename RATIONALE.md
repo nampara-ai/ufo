@@ -328,9 +328,11 @@ a nested universe shown through a Portal. It needed an algorithm the
 specification did not have (now §5.7) and a different `break` (now §6.3).
 Built without the standard library and passed through a size optimiser, it
 came to 78.4 KiB, about 40 bytes for each line of its own code. At that
-density the first line budget, 10 000, and the byte budget could not both
-hold. The byte budget is what a file pays for, so it stood at 256 KiB, and
-the line budget became 6 000.
+density, and at the 48% to which it compressed, the first budgets — 10 000
+lines, 256 KiB compiled, 96 KiB compressed — could not all hold. What a
+file pays for is the size that travels, so the firm limit is now the
+compressed kernel, at 128 KiB; the compiled size, about 256 KiB, is
+guidance derived from it; and the line budget became 6 000.
 
 **The printer.** The same kernel printed six described modules to bytes
 identical to a second implementation's, and the specification's vector to
