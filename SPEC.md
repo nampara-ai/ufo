@@ -1897,6 +1897,7 @@ where the text did not decide what the kernel should do, and what it did.
 | `vectors/history.ufx` | a pack of 27722 bytes holding three commits, built to exercise what the first does not (below) |
 | `vectors/nested.ufx`, `vectors/linked.ufx` | one universe twice, of 4031 and 2391 bytes: with the records of a second universe that its Portal names, and without them (§1.8). The root hash is the same |
 | `vectors/timeline.ufx` | a pack of 9119 bytes holding three commits of one timeline (§4.5): ten seconds of time with three plays; two seconds cut from the middle; one second inserted |
+| `vectors/published.ufx` | `history.ufx` as it is published (§13.3): a pack of 9437 bytes holding its content and attribution layers, its seal, and an `absent` frame saying that working history is withheld |
 | `vectors/module.ufx` | a pack of 3714 bytes holding a described module of two functions (§12.3) |
 | `vectors/compose.ufx` | a pack holding one text with every block role, a document face and a face of pages (§7.7, §8.3) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
@@ -1928,6 +1929,7 @@ decision. The file ends with a chain of two indexes and four heads.
 | `digests` | two pins at the last commit of `history.ufx`, each with its salt, its covered value as bytes, the objects followed and the digest (§4.4): a passage of the text with the span that touches it, and the face object, whose ref to the text is followed |
 | `resolve_continuous` | six regions resolved through a scale: shift, integer rounding of both signs, clipping, detachment, floats |
 | `timeline` | for each commit of `timeline.ufx`: the count, the `seq`, where three anchors and three plays resolve, and at sampled positions the element there and the time of each play present. **Provisional** |
+| `published` | the hashes of the content layer and of the attribution layer of `history.ufx`, the number of records in its working history, and what a reader of `published.ufx` finds: the same state, the same text, the same answer to who wrote each character. Generator and kernel agree. **Provisional** |
 | `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§8.3) |
 | `printer` | the described module of `module.ufx` — a function with operands folded, a function with a loop, a call, a global and named locals, three exports and a memory — as encoded values, and the 119 bytes the printer makes of it |
 | `instrumentation` | three modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |

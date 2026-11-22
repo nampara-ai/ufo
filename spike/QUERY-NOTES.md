@@ -12,7 +12,9 @@ kernel, until the text is changed. Section numbers are those of 0.8.
    revision of every live object" and the blobs they name; attribution
    includes "every commit node". The nodes of the current object map,
    without which no object can be found, are not mentioned. *Chosen:*
-   content.
+   content. **Fixed in the text, with a vector** (`published.ufx`): the
+   generator and the kernel compute the same layers, and the kernel opens
+   the copy that holds only the first two.
 2. **The opening of a veiled `work`.** A change's `work` is working
    history; the change object is attribution. The small record that opens
    the veil is neither named. If it travels, the recipient learns the hash
@@ -94,3 +96,8 @@ kernel, until the text is changed. Section numbers are those of 0.8.
     in `why`, for each sequence property.
 24. **Appendix B still lists `items`**, a projection of the design before
     code became description.
+25. **`history` of a published copy** has nothing to count: `ops` and
+    `touched` come from the work, which is withheld. Appendix B says how
+    `diff` writes a withheld change (`op withheld`) and says nothing
+    for `history`. The kernel returns no records, which hides that the
+    changes exist.

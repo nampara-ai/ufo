@@ -222,11 +222,11 @@ class Pack:
     """Accumulates frames for one example file. Not a general writer."""
     def __init__(self):
         self.b = bytearray(b"\x89UFO\r\n\x1a\n"); self.off = {}; self.pending = []; self.index_at = 0
-        self.head_at = 0; self.index_sizes = []; self.log = []; self.n = 0
+        self.head_at = 0; self.index_sizes = []; self.log = []; self.n = 0; self.recs = {}
     def put(self, kind, rec, codec=0):
         h = rhash(kind, rec)
         if h not in self.off:
-            self.off[h] = len(self.b); self.pending.append(h)
+            self.off[h] = len(self.b); self.pending.append(h); self.recs[h] = (kind, rec, codec)
             self.log.append({"kind": "chunk" if kind == CHUNK else "node", "codec": codec, "offset": len(self.b), "hash": h.hex(),
                              "hex": rec.hex() if len(rec) <= 600 else None})
             self.b += frame(kind, rec, codec)
@@ -360,7 +360,7 @@ pub = {"actor": actor, "time": 1767232800000, "origin": {"basis": "witnessed", "
        "decisions": [{"about": ref(C2), "verdict": "accept", "who": who}]}
 state3, hC3, hM3, hK3 = commit(pk, st, C3, ops, None, pub, hK2, 2, 3003)
 pk.index(); pk.head(hK3)
-open(os.path.join(OUT, "history.ufx"), "wb").write(pk.b)
+open(os.path.join(OUT, "history.ufx"), "wb").write(pk.b); hist_pk = pk
 def seqj(q): return [[r[0].hex()] + r[1:] for r in q]
 def B(c, n, side): return [c.hex(), n, side]
 V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file": sha(bytes(pk.b)).hex(),
@@ -607,6 +607,30 @@ V["nested"] = {"nested_file": "nested.ufx", "nested_length": len(both.b), "linke
     "plain_text_face_of_nested.ufx": "A note from another universe:\n> Nested.",
     "plain_text_face_of_linked.ufx": "A note from another universe (ufo:" + nested.hex() + ")"}
 
+
+# ---- 12. what travels (section 13.3): the layers of history.ufx, and a published copy holding the first two ----
+def layers_of_history():
+    nodes = []; object_map(sorted(state3.items()), out=nodes)
+    content = {rhash(NODE, n) for n in nodes} | {state3[U], state3[F], state3[T]}      # the current object map; the live objects: universe, face, text
+    attribution = {g["root"], hK2, hK3, state3[C1], state3[C2], state3[C3]}                # every commit; the changes that elements and `by` name
+    history = set(hist_pk.recs) - content - attribution
+    pub = Pack()
+    for h, (kind, rec, codec) in hist_pk.recs.items():                                          # in the order they were first written
+        if h in content or h in attribution: pub.put(kind, rec, codec)
+    pub.raw(3, enc(dict(signed, signature=sig)))
+    pub.raw(6, enc({"history": True}))
+    pub.index(); pub.head(hK3)
+    return content, attribution, history, pub
+content, attribution, whist, pubpk = layers_of_history()
+open(os.path.join(OUT, "published.ufx"), "wb").write(pubpk.b)
+V["published"] = {"file": "published.ufx", "length": len(pubpk.b), "root_hash": hK3.hex(), "made_from": "history.ufx",
+    "what": "history.ufx as it is published: the content and attribution layers, the seal, and an absent frame saying that working history is withheld. Working history is every other record of history.ufx",
+    "content": sorted(h.hex() for h in content), "attribution": sorted(h.hex() for h in attribution), "working_history_records": len(whist),
+    "content_is": "the nodes of the current object map, and the current revisions of the universe object, the face and the text. The clock and the forty items are not reachable from the universe object, so they are not live",
+    "attribution_is": "the three commit nodes and the three change objects. Each change's work, and the opening of its veil, are working history",
+    "a_reader_of_published.ufx": {"state": hK3.hex(), "plain_text_face": "Hello, world.!\n", "span_p1_resolves_to": [0, 14],
+        "can": "verify the commit chain and the seal; find and read every live object; resolve every anchor; say which change wrote each character and its origin",
+        "cannot": "replay any change: every work is withheld, and it reports them as withheld (E11), not as missing"}}
 # ---- 10. a timeline: time edited as a sequence (section 4.5) ----
 def timeline_pack():
     pk = Pack(); TU, TK, R1, R2, CAP, NOTE = bytes(16), bytes([0xe1]) * 16, bytes([0xe2]) * 16, bytes([0xe3]) * 16, bytes([0xe4]) * 16, bytes([0xe5]) * 16

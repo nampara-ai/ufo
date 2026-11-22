@@ -46,7 +46,7 @@ let agree = 0, differ = 0; const check = (what, a, b) => { if (same(a, b)) agree
   out('layers.json', { what: 'for each pack, every record by the layer it falls in at the last commit: content, attribution, working history (section 13.3). Seals are frames, not records, and always travel', packs: res });
   for (const [f, r] of Object.entries(res)) console.log(f, 'content', r.content.records, 'attribution', r.attribution.records, 'history', r.working_history.records);
 }
-console.log('agree', agree, 'differ', differ);
+
 
 // ---- projections and outlines (section 10.1, 10.2, Appendix B) ----
 { const cases = [
@@ -61,3 +61,17 @@ console.log('agree', agree, 'differ', differ);
   out('projections.json', { what: 'projections of the vector packs, as the text Appendix B fixes: the header, one record a line, and the count. Outlines are the projection `expand`', projections: res });
   console.log(res.filter(r => r.text).map(r => r.text).join('\n'));
 }
+
+// ---- a published copy (section 13.3): the generator's layers against the kernel's; the copy opened and read ----
+{ const P = V.published; const whole = await open('history.ufx'), pub = await open('published.ufx');
+  const lw = whole.query({ q: 'layers' }), lp = pub.query({ q: 'layers' });
+  check('content layer of history.ufx', lw.content.hashes, P.content); check('attribution layer of history.ufx', lw.attribution.hashes, P.attribution);
+  check('working history, count', lw.working_history.records, P.working_history_records);
+  check('published copy: state', pub.query({ q: 'commits' })[0].commit, P.root_hash);
+  check('published copy: nothing but the two layers', lp.working_history.records, 0);
+  check('published copy: content', lp.content.hashes, P.content); check('published copy: attribution', lp.attribution.hashes, P.attribution);
+  check('published copy: plain text', pub.sample({ as: 'text' }).text, P['a_reader_of_published.ufx'].plain_text_face);
+  const text = 'a1'.repeat(16);
+  check('published copy: why, as from the whole pack', pub.query({ q: 'project', name: 'why', o: text }), whole.query({ q: 'project', name: 'why', o: text }));
+  console.log(pub.query({ q: 'project', name: 'history', o: text })); }
+console.log('agree', agree, 'differ', differ);

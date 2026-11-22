@@ -234,12 +234,19 @@ impl Pack {
             V::Tag(INDIRECT, x) if depth < 16 => {
                 let l = x.l();
                 let mut h = l[1].hash()?;
+                // 2.5, E11: what is withheld stays an indirect; the reader says so and goes on
+                if self.find(&h).is_none() {
+                    return Some(v.clone());
+                }
                 if l.len() == 3 {
                     let opening = self.record(1, &h)?;
                     if opening.len() != 48 {
                         return None;
                     }
                     h = opening[16..].try_into().ok()?;
+                    if self.find(&h).is_none() {
+                        return Some(v.clone());
+                    }
                 }
                 let bytes = self.blob(&h)?;
                 match l[0].s()? {
