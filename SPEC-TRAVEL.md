@@ -157,12 +157,18 @@ and still readable.
   reader holds.
 
 **What travels.** A universe has three layers, defined by reachability.
+The core defines them exactly (§2.5); in brief:
 
 | Layer | What it is | Travels |
 | --- | --- | --- |
-| **Content** | the nodes of the current object map, without which no object is found; the current revision of every **live** object — one reachable from the universe object by refs, indirects and anchors, without passing through a change — what a live object's anchor names in an earlier commit (§1.8), any earlier revision that a live object pins as support for evidence, and the blobs all of those name | always |
-| **Attribution** | for every change that an element or a `by` of a live object names, that a live object's `from` names, that an included change's `sources` names, or that records evidence, a decision or a finding about live content: the change object, which holds its actor, time, origin, evidence, decisions and findings (§1.7); the objects its evidence names as support; every commit node; every seal | always |
-| **Working history** | everything else: the `work` of every change — its operations and its note; changes that contributed nothing now present; earlier revisions; earlier object maps; prompts and conversations; objects that are no longer live, and changes that touched only those; summaries whose sources are all working history; earlier Compute-let snapshots | depends on the membrane crossed |
+| **Content** | the current object map; the current revision of every **live** object — one reachable from the universe object — and the blobs they name; and the same for each universe a live object's anchor names | always |
+| **Attribution** | every commit; every change that a live object names as having written it, or that records evidence, a decision or a finding, with its actor, time and origin; and the same for nested universes | always |
+| **Working history** | everything else: the `work` of every change — its operations and its note; changes that contributed nothing now present; earlier revisions; earlier object maps; prompts and conversations; objects that are no longer live | depends on the membrane crossed |
+
+Three things §2.5 does not yet place, and which therefore travel only as
+working history until it does: an earlier revision that a live object
+pins as support for evidence; the objects evidence names as support; and
+summaries. Seals are frames, not records, and always travel.
 
 The trail of work is the context for whoever continues it, so who is
 receiving decides the default.

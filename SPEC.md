@@ -847,11 +847,8 @@ says about itself.
   `blobs`. A hint carries no authority (**C11**): whatever is fetched is
   verified by hash.
 
-- **Withheld history** (§13.3). A missing record is *withheld* if it is
-  reachable only through references that §13.3 defines as working history:
-  the `prev` of a revision, a change's `work`, the object map of a commit
-  other than the head, an origin's `prompt`, or an entry of the head's
-  object map for an object that is not live and not part of attribution.
+- **Withheld history.** A missing record is *withheld* if it belongs to
+  working history, as defined below.
 - **Absent blobs.** A pack MAY omit the chunks of large blobs. It then
   carries an `absent` frame listing, for each, `{blob, len, hints}`: the blob
   hash, its length and zero or more locations where the chunks may be
@@ -859,8 +856,9 @@ says about itself.
 
 - **[P11]** A missing record of any of these kinds is unavailable (§1.9),
   and the reader says which kind. A missing record that is none of them —
-  one that current content or attribution needs, in this universe or in a
-  nested one — is malformed storage, whatever any `absent` frame says.
+  one in the content layer or the attribution layer, of this universe or
+  of a nested one — is malformed storage, whatever any `absent` frame
+  says.
 - **[P12]** A reader MUST present everything that is present, MUST show for
   each absent blob an inspectable placeholder at the authored size (or a
   carried face, §8.1, if one is present), and MUST verify by hash anything
@@ -868,6 +866,45 @@ says about itself.
 
 An `absent` frame MAY also record `history: true` as a courtesy to tools; it
 has no effect on classification.
+
+**The three layers.** Every record a universe can reach is in exactly one
+of three layers. They decide what may be missing here, and what leaves a
+reader (§13.3). They are computed from the head commit, and for a nested
+universe (§1.8) from the commit that names it, in the same way.
+
+An object is **live** if it is the universe object, or is named by a ref,
+or by an anchor that has no `u`, anywhere in the properties or `seq` of
+the current revision of a live object, values kept outside nodes
+included. A change object is never live, and nothing is reached through
+one.
+
+- The **content layer** is: the nodes of the commit's object map; the
+  current revision of every live object; and every record those revisions
+  name outside themselves — openings, blob nodes and chunks. Where a live
+  object holds an anchor with a `u` whose commit is present, it is also
+  the content layer of that commit's universe, taking as live there the
+  object the anchor names as well as that universe's own universe object.
+- The **attribution layer** is: every commit node, from the commit back
+  to the first; the current revision of every *attributing* change; and
+  every record those change revisions name outside themselves, other than
+  through `work`. A change is attributing if the current revision of a
+  live object names it in `by` or in a run of `seq`; if it holds
+  `evidence`, `decisions` or `attributions`; or if an attributing change
+  names it, by a ref or an anchor, in any property but `work`. Where the
+  content layer takes in another universe, the attribution layer takes in
+  that universe's attribution layer, so that who wrote nested content can
+  always be said.
+- **Working history** is every other record: each change's `work` and the
+  opening of its veil; earlier revisions; the object maps of earlier
+  commits; the current revisions of objects that are not live and of
+  changes that are not attributing; and all that only those name.
+
+A missing record is therefore withheld, and not damage, exactly when what
+names it is one of: the `prev` of a revision; a change's `work`; a
+commit's `objects`, for a commit that is neither the head nor named by a
+`u`; a commit's `change`, or an entry of the object map, where the object
+it names is neither live nor an attributing change; or a record of
+working history. A commit's `parents` are never withheld.
 
 ### 2.6 Compaction
 
@@ -965,8 +1002,8 @@ The kernel's own share is budgeted in §11.1.
 Two obligations bind every release of the reference implementation. They
 are requirements on the project, not on files.
 
-- **[P19] The weekend test.** §1, §2, §3, §4.1–§4.4, §14.2 and Appendices
-  C and F MUST be sufficient to write that independent reader, including the
+- **[P19] The weekend test.** This document — §1 to §5 and Appendices C
+  and F — MUST be sufficient to write that independent reader, including the
   conservation check. The test is run for real
   before the format is frozen: someone with no other knowledge of the
   project is given only those sections and the conformance packs with their
@@ -1014,13 +1051,13 @@ resource of a permission.
 ### 4.2 Axes
 
 A coordinate space is the set of named **axes** an object offers. Each axis
-is one of three kinds. The core defines the kinds; a profile only declares
-which axes its objects have.
+is one of three kinds. The core defines the kinds, and how a region of
+each is resolved by a reader that knows nothing of the object's type.
 
 | Kind | Bound to | A region is | Examples |
 | --- | --- | --- | --- |
-| **sequence** | a sequence property (§1.7); the axis has the property's name | `["s", from, to]`: two boundaries | characters of a text, bytes of an asset |
-| **continuous** | an extent the object's type declares (Appendix A), or a data object declares in `axes` | `["c", low, high]`, low ≤ high, in the axis's base coordinates | time, width, height |
+| **sequence** | a sequence property (§1.7): one with an entry in `seq`. The axis has the property's name | `["s", from, to]`: two boundaries | characters of a text, the time of a timeline |
+| **continuous** | an *extent* the object's type defines | `["c", low, high]`, low ≤ high, in the axis's base coordinates | the time of a clock, width, height, the bytes of an asset |
 | **keyed** | a property that is a map, or a list of refs in which no object appears twice; the axis has the property's name | `["k", key, …]` | rows and columns of a table, children of a group, functions of a module |
 
 A region states its own kind in its first element, so that an anchor can
@@ -1037,11 +1074,16 @@ span of time is a region on `t`, `x` and `y`. A coordinate space may have
 any number of axes of each kind. Space in three dimensions is three
 continuous axes, `x`, `y` and `z`, and is as much a part of the anchor
 model as a line of text: a volume is a region on all three, a moment in an
-animated scene adds `t`, and a part of the scene is a key. Every object
-declares the axes it offers. The primitives' axes are fixed by §7.1; a data
-object declares its own, in `axes` (Appendix A), which is how a described
-space of any dimension — a scene, a map, a volume of measurements — becomes
-addressable.
+animated scene adds `t`, and a part of the scene is a key.
+
+The **extent** of a continuous axis is a pair `[low, high]` in present
+coordinates: where the axis begins and ends. This document defines two.
+A clock's `t` runs from its `start` to its `end` (§4.5). An asset's
+`bytes` runs from 0 to the length of its bytes (§5.2). Every other extent
+is defined with the type that has it, in the part of the specification
+that defines the type. A reader resolves a continuous region of an object
+whose type it does not know all the same (§4.3): it cannot clip it, and
+says so.
 
 Time is an integer count of **flicks**: units of
 1/705 600 000 of a second. Every common frame rate and audio sample rate
@@ -1076,8 +1118,16 @@ same way; an anchor made from a position and resolved at once may
 therefore land one unit below it, and never above. An axis with no scale has the
 scale `[1, 1, 0]`. A change that moves everything on an axis — trimming the
 start of a recording, rescaling a drawing — sets the scale in the same
-change, as an ordinary `set`, and regions follow with no further act. A
-region is clipped to the axis's present extent.
+change, as an ordinary `set`, and regions follow with no further act.
+`scales` is a map from axis name to scale.
+
+The region, now in present coordinates, is then clipped to the extent,
+both taken as closed intervals: `[low, high]` against `[e₀, e₁]` gives
+`[max(low, e₀), min(high, e₁)]`. A region that only touches an end of the
+extent resolves to that point. A region wholly outside it — `high` below
+`e₀`, or `low` above `e₁` — is detached. Where the reader does not know
+the extent, because it does not know the object's type, the region is not
+clipped and is never detached, and the reader reports it as *unclipped*.
 
 **Keyed axis.** A region resolves to those of its keys that are present.
 
@@ -1128,29 +1178,34 @@ The **digest** is the SHA-256 of these bytes, in order:
    - on a sequence axis, a list of two items: the covered items, as a text,
      a byte string or a list, or for a count the runs of `seq` that the
      region covers, each cut to the region and none of them removed; and a map, from property name to a map from
-     key to value, of every other entry of the object's map-valued
-     properties whose value holds an anchor to this object with a region on
-     that axis sharing at least one element with the covered ones — for a
-     text, the spans that touch the passage;
+     key to value, built as follows. Take each property of the object,
+     other than the sequence property itself, whose value is a map. Keep
+     each of its entries whose value holds, at any depth, an anchor that
+     has no `u`, names this object, and has a region on this axis that
+     shares at least one present element with the covered ones. A point
+     shares none, and removed elements do not count. A property with no
+     entry kept is left out; the map is there even when it is empty. For
+     a text, these are the spans that touch the passage;
    - on a keyed axis, a map from each key of the region that is present to
-     its entry, or for a list of refs a list of those refs in order;
+     its entry, or for a list of refs a list of those of its refs that the
+     region names, in the order of the list;
    - on a continuous axis, the object's properties.
 
-   A Compute-let's `snapshot` is left out of every covered value: it is a
-   machine state, not content.
+   A property named `snapshot` is left out of every covered value, of any
+   object: it is a machine state, not content.
 3. For each *followed* object, in ascending order of object identity: its object identity
    and then its current revision hash, or 32 zero bytes if it is no longer
    in the object map.
 
-The followed objects are those the covered value names by a ref — inside
-formulas too — or by an anchor without a digest that is a Portal's `of`,
-and all that those reach in the same way, each once. Three kinds are not
-followed: change objects; a child that lies wholly outside a region on a
-continuous axis — a clock whose interval does not meet a region on `t`, a
-child of an `absolute` group whose rectangle does not meet a region on `x`
-and `y`; and any object made by the same derivation as the object that
-holds the pin (one whose `from.by` is the same), so that a derived thing
-shown inside its own source does not make itself stale.
+The followed objects are those the covered value names by a ref, at any
+depth and inside formulas too, or by an anchor that is the value of a
+property named `of` and has neither a digest nor a `u`; and all that those
+reach in the same way through the whole of their properties, each once.
+Four are never followed: the pinned object itself; a change object; where
+the region is on a continuous `t`, a clock whose own `start` and `end` do
+not meet it; and any object made by the same derivation as the object
+that holds the pin (one whose `from.by` is the same), so that a derived
+thing shown inside its own source does not make itself stale.
 
 A digest therefore changes when anything the region shows could change: a
 pin to a group goes stale when a child changes, a pin to a chart goes stale
@@ -1214,9 +1269,15 @@ What plays is attached to the timeline as spans are attached to a text. A
 timeline's `plays` is a map from a key to `{at, of, offset}`: `at` is an
 anchor to a region of the timeline's own `t`; `of` is a ref to the object
 that plays there; `offset`, zero if absent, is the time in `of` at the
-region's first element. Let that first element be numbered *n₀* by change
-*c*. At an element numbered *n* by the same change, inside the region,
-`of` is present at its own time `offset` + (*n* − *n₀*). At an element of
+place where the region begins. That place is read from the anchor, never
+from the sequence: the region's first boundary MUST name an element,
+`[c, n, side]`, and not `"start"`; then *n₀* is *n* + *side*, whether or
+not the elements there are still present. At an element numbered *n* by
+the same change *c*, inside the region, `of` is present at its own time
+`offset` + (*n* − *n₀*). So a play whose beginning is cut still shows,
+at each moment that remains, what it showed there before; and since an
+element that an anchor names is never forgotten (§1.10), the place stays
+readable. A timeline stores no `end`: it follows from the count. At an element of
 any other change it is not present. The time a play shows is thus a
 function of the element's identity, never of its position: when flicks
 are cut from the middle of a play, the numbers on either side of the cut
@@ -1244,8 +1305,8 @@ description sampled at the same times yields the same result.
 
 A **profile** is a versioned set of object types, properties, axes and
 operations layered on the core. Each is declared as a feature (§1.6). This
-section defines `ufo.text/1`, `ufo.asset/1`, `ufo.derivation/1`,
-`ufo.portal/1` and `ufo.chronicle/1`.
+section defines `ufo.text/1`, `ufo.asset/1`, `ufo.derivation/1` and
+`ufo.chronicle/1`.
 
 ### 5.1 Text
 
@@ -1331,7 +1392,11 @@ An asset (`ufo.asset`) preserves a file's exact bytes.
 | `name` | the original file name, if any |
 
 Any file can enter a universe as an asset, before any presenter understands
-it. The `bytes` axis is a sequence of bytes.
+it. `bytes` is set whole and is never edited in place: it is not a
+sequence property, and a different file is a different value. Its
+`bytes` axis is continuous, in whole bytes: the region `["c", 3, 7]` is
+the four bytes at offsets 3 to 6. Its extent is from 0 to the length, and
+it never has a scale.
 
 - **[X4]** Exporting an asset's original bytes MUST reproduce them exactly
   and MUST be offered separately from any export of a presentation of it.
@@ -1742,7 +1807,7 @@ commit = { k: "commit", v: 1, parents: [ ? hash ], objects: hash,
 seal   = { commit: hash, key: bytes .size 32, time: uint,
            ? name: tstr, signature: bytes .size 64 }
            ; signature = Ed25519 over the 10 bytes "ufo-seal-1" followed by the
-           ; SHA-256 of the encoding of this map without `signature` (section 10.2)
+           ; SHA-256 of the encoding of this map without `signature` (§14.2, in the part on travel and trust; a reader of the core keeps seal frames and need not verify them)
 absent = { ? history: bool,
            ? blobs: [ * { blob: hash, len: uint, hints: [ * tstr ] } ],
            ? links: [ * { commit: hash, hints: [ * tstr ] } ] }
