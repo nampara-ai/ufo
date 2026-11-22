@@ -90,7 +90,7 @@ host except through the host interface.
 ### 9.2 The drawing contract
 
 To present, the kernel **composes**: given a face (§8), an available size,
-the root clock's time and the presentation state, it produces a **display
+the root clock's time and the settings, it produces a **display
 list**. Executing display lists is the whole of what a host draws and
 plays, and this section is the whole of what a binding knows about
 presentation. It is part of the frozen host interface (§9.3): once
@@ -138,7 +138,7 @@ there to its origin (§10.1 `why`).
   the host then draws.
 - **[W5] Rasters.** A host decodes the source, maps the `from` rectangle to
   the `to` rectangle, with bilinear filtering if `smooth` and nearest
-  neighbor if not. For video it shows the frame at `t`; if `rate` is not
+  neighbor if not. For video it shows the picture at `t`; if `rate` is not
   zero it goes on advancing at that rate until the next display list
   arrives, which is the only thing a host knows about playback.
 - **[W6] Samples.** A host sounds the source so that its position `t` is
@@ -179,7 +179,7 @@ Base functions, available to every component with no grant:
 
 | Function | Purpose |
 | --- | --- |
-| `draw(list)` | submit the component's display list for the current frame, in its own surface's coordinates |
+| `draw(list)` | submit the component's display list for the current tick, in its own surface's coordinates |
 | `input(buffer) → count` | read the input events delivered since the last call (§9.2), each with a clock time |
 | `time() → flicks` | the component's clock time (**T1**) |
 | `random(buffer)` | fill with random bytes; from a recorded seed during replay |
@@ -189,8 +189,8 @@ Base functions, available to every component with no grant:
 | `call(handle, operation, in, out) → status` | use a capability. The status is *done*, with the reply in `out`; *failed*; or *pending*, in which case the reply arrives later as a message on the handle |
 | `log(message)` | emit a diagnostic the reader may show; has no other effect |
 
-The reader calls two functions the component exports: `frame(time)`, once
-per presented frame, and `message(port)`, when a message or a pending reply
+The reader calls two functions the component exports: `tick(time)`, once
+each time the presentation is drawn, and `message(port)`, when a message or a pending reply
 arrives.
 
 Every capability operation may answer *pending*. Hosts differ in what they
@@ -256,7 +256,7 @@ capability is stopped at the end of its current call and its poster shown.
 | `media` | — | decode a baseline asset (§9.5) to pixels or samples at a time | the asset's poster or label | the kernel only |
 | `inflate` | — | decode and encode DEFLATE (§2.1) | compressed records are unavailable | the kernel only |
 | `verify` | — | check an Ed25519 signature | seals are shown as unchecked | the kernel only |
-| `run` | — | run a module in the host's WebAssembly engine | no Compute-let runs; posters are shown | the kernel only |
+| `engine` | — | run a module in the host's WebAssembly engine | no Compute-let runs; posters are shown | the kernel only |
 | `blobs` | a set of hashes | read those blobs | — | a renderer (§8.4) |
 | `encode` | — | encode pixels or samples to a baseline format, or pages to PDF | that export is not offered | the kernel, on export |
 | `objects` | an anchor, and `read` or `propose` | read objects within the anchor; submit changes to them, which are verified like any change | the program runs on what it carries | nobody |
@@ -264,15 +264,15 @@ capability is stopped at the end of its current call and its poster shown.
 | `gpu` | the surface | accelerated graphics (Appendix E) | poster, or the program's own fallback through `draw` | nobody |
 | `audio` | the surface | a low-latency stream of generated samples | silence | nobody |
 | `input.raw` | the surface | unbuffered pointer, gamepad and device input | ordinary `input` events | nobody |
-| `time.precise` | — | timing finer than a frame | frame times | nobody |
+| `time.precise` | — | timing finer than a tick | tick times | nobody |
 | `net` | a list of origins | requests to those origins | the program runs offline | nobody |
 | `camera`, `microphone` | the device | capture while the surface is visible | none | nobody |
 | `files` | one file or folder the person picks | read it, or save to it | the reader's own save | nobody |
 
-`text` has three operations. `measure`: given a run — its characters, font
+`text` has three operations. `measure`: given a piece — its characters, font
 list, size, weight, slant and direction — and a list of offsets into it,
-the advance of the run's text up to each offset, as the host would draw
-it, and the run's ascent and descent. That is all a host contributes to
+the advance of the piece's text up to each offset, as the host would draw
+it, and the piece's ascent and descent. That is all a host contributes to
 layout: where lines break and how they are ordered is the kernel's (§7.7).
 `measure` answers at once, never *pending*, as do `inflate` and `verify`.
 For a canonical export the renderer answers it in the host's place (§8.4).
@@ -294,9 +294,9 @@ operations are these:
 | `verify` | `ed25519(key, message, signature)` |
 | `media` | `info(source)`: its kind, pixel size, duration and sample rate. Pixels and samples never enter the kernel; the host decodes when it executes a raster or samples item (§9.2) |
 | `encode` | `image(format, parameters)`, `audio(format, parameters)`, `video(format, parameters)`, `pages(parameters)`: the host encodes what it has just drawn or played for an export |
-| `run` | `load(bytes)`, giving a module or the engine's refusal of it as invalid; `start(module, snapshot)`; `call(instance, export, arguments, fuel)`, giving results, or a trap and its kind; `read` and `write` of an instance's exported memory, globals and table; `drop` |
+| `engine` | `load(bytes)`, giving a module or the engine's refusal of it as invalid; `start(module, snapshot)`; `call(instance, export, arguments, fuel)`, giving results, or a trap and its kind; `read` and `write` of an instance's exported memory, globals and table; `drop` |
 
-A kernel is itself WebAssembly and cannot run a module: `run` is how it
+A kernel is itself WebAssembly and cannot run a module: `engine` is how it
 asks the host's engine to. The operations of `audio`, `input.raw`,
 `time.precise`, `net`, `camera`, `microphone` and `files` are not yet
 written.
@@ -386,7 +386,7 @@ are two things.
    §10.3. Because they are in the kernel, every reader on every rung has
    them, and so does every web envelope.
 2. *An interface to those functions*, which is itself a universe, the
-   **tools universe**: text, groups, regions and paths. It reads the
+   **tools universe**: text, groups, panes and paths. It reads the
    universe being worked on with `ask` (§7.3), changes it through handlers
    that `act` (§7.6), and shows it through a Portal whose `of` is
    `arg("subject")`. The reader presents the tools universe and gives it
@@ -402,7 +402,7 @@ are two things.
   contribution; verify the universe and its seals; show what will travel;
   and save or send the result.
 - **[K6]** The tools interface contains no logic of its own. Everything it
-  does is a formula, a presentation-state change, or an action of §10.3 on
+  does is a formula, a change of a setting, or an action of §10.3 on
   its subject, performed by the kernel as the act of the person using it.
   It adds no code to the binding and none to the kernel.
 
@@ -472,7 +472,7 @@ needs no model.
 | Outline of | Its parts |
 | --- | --- |
 | a universe | its roots and faces; the universes it nests or links to; its other objects, grouped by type |
-| a group, region, clock or surface | its children, in order |
+| a group, pane, clock or surface | its children, in order |
 | a Portal | what it presents, followed into the universe it is in |
 | a text, or a region of one | its sections: of the heading levels within it, the shallowest that has two or more headings, each section running to the next heading of that level or above. Where there are no headings, its blocks |
 | a data object | its tables and columns, and its rows in ranges |
@@ -499,7 +499,7 @@ their sizes, so that every reply is bounded and any part is reached in a
 number of steps logarithmic in the number of parts. A universe's other
 objects are in order of type name, then label, then identity. `history` is
 bounded the same way: the 64 newest changes, then older ones in ranges. Sizes and times are totals over what lies beneath a part;
-a reader MAY keep them in a derived store (§3.4) under revision hashes,
+a reader MAY keep them in a cache (§3.4) under revision hashes,
 which a commit changes only along the path it touched.
 
 **The model layer.** A summary (`ufo.summary`) condenses a stated scope in
@@ -617,7 +617,7 @@ These limits change only on measurement.
 | Measure | Limit | Reason |
 | --- | --- | --- |
 | Kernel, DEFLATE-compressed | 128 KiB, firm | this is the size that travels: every envelope carries the kernel compressed, so this is the limit every file pays for |
-| Kernel, compiled WebAssembly | 256 KiB, as guidance | derived from the compressed limit at the measured ratio of 48%; no longer a limit of its own |
+| Kernel, compiled WebAssembly | 256 KiB, as guidance | computed from the compressed limit at the measured ratio of 48%; no longer a limit of its own |
 | Kernel source: its own code, excluding tests and anything borrowed | 6 000 lines | set from the compiled limit at the measured density of about 40 bytes a line; one engineer reads it in a working day |
 | Binding source, per host | 600 lines | the base functions, the drawing contract and the kernel's own capabilities. Each optional capability a host offers is counted apart, and reported |
 | Web binding, as shipped | 16 KiB | |
@@ -637,9 +637,9 @@ happens:
 | Objects, object map, blobs and chunking, changes, conservation, sequences | 700 | the miniature read objects, blobs and sequences in about 115, and wrote nothing |
 | Anchors, resolution, pins, digests, derivations, the layers of what travels | 500 | not measured |
 | Formulas, with the mathematics routines they need | 700 | not measured |
-| Composition: text with line breaking and bidirectional ordering, flow, grid, absolute, clocks, pages, plain text, presentation state, hit testing | 1 500 | the miniature did text, flow, pages and plain text, without the two Unicode algorithms, in 491 |
+| Composition: text with line breaking and bidirectional ordering, flow, grid, absolute, clocks, pages, plain text, settings, hit testing | 1 500 | the miniature did text, flow, pages and plain text, without the two Unicode algorithms, in 491 |
 | Projections, outlines, search, difference, actions, undo, the agent's spelling of values | 800 | not measured |
-| Code and machines: printing; decoding and instrumenting modules; lifting; promotion; running Compute-lets through `run`; snapshots and replay; capabilities | 900 | the miniature's printer was 344, for part of the instruction set |
+| Code and machines: printing; decoding and instrumenting modules; lifting; promotion; running Compute-lets through `engine`; snapshots and replay; capabilities | 900 | the miniature's printer was 344, for part of the instruction set |
 
 These are allocations, not measurements. Two are known to be tight:
 composition, which has gained the two Unicode algorithms since the
@@ -721,7 +721,7 @@ detectable.
 | time | milliseconds as an integer; clock times in flicks with the suffix `f` |
 | text | a JSON string (RFC 8259) |
 | list | values separated by commas, in brackets |
-| state | one of `current`, `stale`, `detached`, `unresolved`, `withheld`, `absent` |
+| status | one of `current`, `stale`, `detached`, `unresolved`, `withheld`, `absent` |
 | basis | one of `witnessed`, `inferred`, `unknown` |
 
 A value too long to show — text over 200 characters where the projection
@@ -756,13 +756,13 @@ passed back, exactly as written, as an argument to another projection.
 | Record | Fields |
 | --- | --- |
 | `universe` | `lineage` `commit` `height` `objects` (count) `types` (count of objects of each type) `changes` (count) `first` `last` (times) `actors` (list) |
-| `seal` | `commit` `key` `state` (`valid`, `invalid`, `unchecked`) [`name`] [`time`] |
+| `seal` | `commit` `key` `status` (`valid`, `invalid`, `unchecked`) [`name`] [`time`] |
 | `feature` | `name` `v` `required` `supported` |
-| `component` | `role` `hash` `state` |
-| `face` | `id` `kind` (`sampled`, `carried`, `transmuted`) `state` `medium` `label` |
+| `component` | `role` `hash` `status` |
+| `face` | `id` `kind` (`sampled`, `carried`, `transmuted`) `status` `medium` `label` |
 | `lacks` | `history` (boolean) `blobs` (count) |
 | `part` | an anchor, then `type` `label` (its label, heading or name, or the first 60 characters of a block) `size` `changed` (time) `by` `basis` [`parts` (count)] [`derived` (state)] [`summary` (the text of its line) `summary-state`] |
-| `source` | an anchor, then `r` `state` |
+| `source` | an anchor, then `r` `status` |
 | `made` | `how` `change` `basis` [`by`] [`model`] [`tool`] [`asked`] [`prompt` (its text, or `withheld`)] [`parameters`] |
 | `object` | `id` `type` `rev` (number) `r` (revision hash) `by` |
 | `prop` | `key` then `value`, or `len` and `kind` when large |
@@ -770,7 +770,7 @@ passed back, exactly as written, as an argument to another projection.
 | `value` | `key` then the same fields as `run` from `change` on |
 | `copied` | `from` (anchor) `basis` |
 | `finding` | `change` `basis` and the origin fields, as in `run` |
-| `evidence` | `claim` (region) `kind` `support` (anchor) `state` [`note`] |
+| `evidence` | `claim` (region) `kind` `support` (anchor) `status` [`note`] |
 | `decision` | `about` `verdict` `who` `change` `time` [`note`] |
 | `referrer` | `id` `key` |
 | `text` | the anchor, `chars` (count), then `s` |
@@ -809,7 +809,7 @@ An example:
 why o:3f9a12c4 chars=[1042,1187] @ commit=c:77e0b1d2
 region o:3f9a12c4 chars=[1042,1187] r:a81f3320
 run chars=[1042,1120] change=o:d2c417e9 basis=witnessed by=model model="example-model-1" asked="A. Author" prompt=withheld sealed=true
-evidence claim=chars=[1042,1120] kind=cites support=o:4410cc2e rows=[q3] cols=[revenue] r:09be77a1 state=current
+evidence claim=chars=[1042,1120] kind=cites support=o:4410cc2e rows=[q3] cols=[revenue] r:09be77a1 status=current
 decision about=o:d2c417e9 verdict=accept who="A. Author" change=o:5e02d9b7 time=1767225600000
 run chars=[1120,1187] change=o:0b77a3f1 basis=inferred by=person who="A. Author" method="text-alignment" confidence="exact-text" sealed=false
 end lines=5

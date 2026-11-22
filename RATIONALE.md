@@ -212,7 +212,7 @@ so it can be challenged.
 | **Content-defined chunks and tree for blobs** | Fixed-size chunks rewrite everything after an insertion. *LBFS*, *Borg*, *restic* and *FastCDC* established content-defined chunking; the gear rolling hash of FastCDC is used in its simplest form, with every parameter and the table fixed by the format so that a blob's hash does not depend on who stored it. The tree above the chunks is divided by the same idea, as in prolly trees. | §1.4 |
 | **Veiled indirects** | Salting content defeats deduplication; leaving hashes bare lets short content be guessed. A commitment on the reference, opened by a small record that can itself be withheld, gives both. | §1.4 |
 | **The pack** | *SQLite*: no canonical bytes to hash or sign; its engine in every file. *Git packfiles*: delta compression and a separate index file make a weekend reader impossible; not built for one growing file. *ZIP*: no content addressing; central directory rewritten on every change. *CAR (IPLD)*: content-addressed, but no commit trailer, crash recovery or index. | §2, §3 |
-| **Permanent element identities in every sequence** | *Position-based edit logs* (and this project's own first drafts) needed four interlocking mechanisms to keep attribution and structure attached to an edited sequence: runs, self-carried regions, an insertion bias and history replay. *Automerge* and *Peritext* show the better decomposition: give every element a permanent identity and attach everything to identities. Those systems are replication libraries with their own storage and no notion of attribution, evidence or a hashed, sealed history; the idea is taken, the format is not. Here an element's identity is the change that inserted it and a number, so identity is attribution, and removed elements stay as markers so anchors can always be placed. | §1.7, §4.3 |
+| **Permanent element identities in every sequence** | *Position-based edit logs* (and this project's own first drafts) needed four interlocking mechanisms to keep attribution and structure attached to an edited sequence: runs, self-carried regions, an insertion bias and history replay. *Automerge* and *Peritext* show the better decomposition: give every element a permanent identity and attach everything to identities. Those systems are replication libraries with their own storage and no notion of attribution, evidence or a hashed, sealed history; the idea is taken, the format is not. Here an element's identity is the change that inserted it and a number, so identity is attribution, and removed elements stay as tombstones so anchors can always be placed. | §1.7, §4.3 |
 | **Work kept apart from attribution** | *Git shallow clones* drop history wholesale, with its authorship. *Redaction* breaks hashes. A change keeps who and what in the object and the operations in one value beside it, behind a veil, so a copy can withhold what earlier drafts said and still verify authorship. | §1.7, §13.3 |
 | **Three kinds of axis, each resolved without history** | *W3C Web Annotation selectors* re-find text by quoting it, which is matching. *Media Fragments* address time and space but say nothing about edits. *Operational transformation* replays history. Here a sequence region names elements, a continuous region is mapped through a frame the object holds, and a keyed region names keys: all three resolve against the current state alone and never guess. | §4 |
 | **Pins and one staleness test** | Build systems track staleness of files, not regions; document formats do not track it at all. A pin's digest follows references, so a pin to a container notices a change in anything it shows. | §4.4, §5.3 |
@@ -227,7 +227,7 @@ so it can be challenged.
 | **The web envelope's read-back** | A page opened from disk cannot fetch its own file; *single-file web apps* store data as script or JSON text, not as range-readable, hash-verified records. | §13.2 |
 | **The mark** | Metadata, boxes and chunks are stripped by re-encoding platforms. Only pixels survive, and QR is the standard way to put a short reference in pixels; what is new is treating it as a content address for a linked universe. | §13.4 |
 | **Two layers of the light cone** | *Retrieval by similarity* returns fragments without telling you what you did not see. *Stored summaries* go stale silently, and a universe that depends on them cannot be navigated until a model has read it. *Tables of contents* cover headings and nothing else. Here an outline is computed for anything — sizes, kinds, headings, who changed what and when — and is always current; summaries are pinned derivations that attach to its parts and are written only where the outline cannot tell siblings apart. | §10.2 |
-| **The host measures; the kernel breaks** | *Host text layout* (CSS, TextKit, DirectWrite paragraphs) takes a whole paragraph and returns its lines, which makes every host a second layout engine and makes lines differ wherever hosts do. *A host line iterator* ("what fits in this width") was this project's own first answer and ran in the spike; a reviewer pointed out that it is the same fault at a smaller size, and that the web offers no such call, so every web binding would have carried a line breaker. Where a line ends is layout, and layout has one implementation. The kernel therefore carries the Unicode line-breaking and bidirectional algorithms and asks a host one thing: what a run of text measures. It costs kernel size, not yet measured. | §7.7, §9.3 |
+| **The host measures; the kernel breaks** | *Host text layout* (CSS, TextKit, DirectWrite paragraphs) takes a whole paragraph and returns its lines, which makes every host a second layout engine and makes lines differ wherever hosts do. *A host line iterator* ("what fits in this width") was this project's own first answer and ran in the spike; a reviewer pointed out that it is the same fault at a smaller size, and that the web offers no such call, so every web binding would have carried a line breaker. Where a line ends is layout, and layout has one implementation. The kernel therefore carries the Unicode line-breaking and bidirectional algorithms and asks a host one thing: what a piece of text measures. It costs kernel size, not yet measured. | §7.7, §9.3 |
 | **Rows, and three rules for pages** | *TeX's page builder* and *CSS fragmentation* are far larger than a small kernel can carry and depend on a full box model. Treating the flow as unbreakable rows, filling greedily, and applying three rules (no heading at the foot; no split of a short block; two lines on each side of a split) gives conventional pages from sixty lines of code. It is not optimal page-breaking and does not claim to be. | §7.7 |
 | **The recipe** | *Notebooks and build files* record how to regenerate an output, apart from the output and by path. *Generation metadata* in image files records a prompt with nothing binding it to inputs. A derived object here names its sources by pin and the change that made it; that change's origin holds the model, prompt and parameters; so "make it again" is one action and "how was this made" is one question. | §5.3 |
 
@@ -269,10 +269,10 @@ the same places.
 *Sequences.* Removed: runs as a mechanism, self-anchors, the insertion
 bias, per-change lists of revisions, the `remap` operation, the split of an
 operation into shape and content, and every rule for carrying an anchor
-through history. Added: element identities, boundaries, and a frame on
+through history. Added: element identities, boundaries, and a scale on
 continuous axes. An anchor is now resolved from the current revision alone.
 
-It costs three things. Removed elements are kept as markers for good, so a
+It costs three things. Removed elements are kept as tombstones for good, so a
 heavily edited sequence carries a record of its deletions (compact — three
 or four small numbers per run — but permanent, and visible in a published
 copy as "something was removed here by this change"). Finding an element by
@@ -374,11 +374,11 @@ Not shown by any of this: anything at scale; grids, floats, clocks, audio,
 video or 3D; a second person's implementation; a model writing summaries;
 a real model transmuting.
 
-The cost of keeping markers was measured on a simulation: a text first
+The cost of keeping tombstones was measured on a simulation: a text first
 typed as 10 000 characters, then edited 20 000 times with a mixture of
 replacements, insertions and deletions, ended with 57 771 characters,
-131 925 markers and a `seq` of about 779 KiB — some thirteen bytes for
-every character present. With every marker forgotten it is about 211 KiB.
+131 925 tombstones and a `seq` of about 779 KiB — some thirteen bytes for
+every character present. With every tombstone forgotten it is about 211 KiB.
 Most of the remainder is the price of knowing which change wrote each
 stretch of text, which the format exists to know.
 
@@ -439,7 +439,7 @@ argued here; the rest are listed with where each is argued.
 - **Fonts shape and measure on the host; the kernel breaks the lines.**
   The first intention had the format own layout entirely. The kernel
   decides every break by the Unicode algorithms and asks the host only
-  what a run of text measures (§7.7).
+  what a piece of text measures (§7.7).
 
 ## Honest limits
 

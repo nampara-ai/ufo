@@ -59,7 +59,7 @@ pages: open, universal, and independent of any application.
 9. **Element.** Every item of a sequence — every character of a text — has
    a permanent identity: the change that inserted it and a number. A
    `splice` names elements, not positions. Removed elements stay as
-   markers among collaborators, and may be forgotten on publication. The
+   tombstones among collaborators, and may be forgotten on publication. The
    order of a sequence is a function of facts all copies share, so
    concurrent edits converge. So every byte has an origin, read and never reconstructed, and
    operations mean the same thing whatever else has changed, which is what
@@ -74,7 +74,7 @@ pages: open, universal, and independent of any application.
 11. **Anchor.** An object and a region on its axes. Axes are *sequence*,
     *continuous* or *keyed*. A sequence region is two boundaries, each
     fixed to an element; a continuous region is in the axis's base
-    coordinates, mapped through a frame the object holds; a keyed region is
+    coordinates, mapped through a scale the object holds; a keyed region is
     a list of keys. An anchor is resolved against the current revision
     alone — no history, no replay — and is reported detached, never
     re-found by matching, when what it named is gone. A span of a text is
@@ -94,7 +94,7 @@ pages: open, universal, and independent of any application.
 ## Presentation (SPEC §7–§9)
 
 14. **Eleven primitives.** Text (characters plus spans for structure and
-    style), path, raster, samples, region (maps space), group (lays out by
+    style), path, raster, samples, pane (maps space), group (lays out by
     flow, grid or absolute position), clock (maps time), Portal (presents
     another object, here or in another universe), surface (drawn by a
     program, and may hold children), data, formula (a pure expression over
@@ -109,7 +109,7 @@ pages: open, universal, and independent of any application.
     unchanged in all the project's readers, which composes a face into a
     *display list* — text into blocks, lines and rows, rows into pages, by
     a fixed algorithm that breaks every line itself and asks the host only
-    what a run of text measures; the
+    what a piece of text measures; the
     **presenters**, which are the host's own drawing and
     audio for the four basic items and carried programs for anything else;
     a thin host **binding** that knows no medium; and the universe. A

@@ -68,7 +68,7 @@ Its properties are its **manifest**:
 | `requests` | list of requests, each `{capability, scope, required, why, without}` as §9.3 defines |
 | `tests` | list of refs to test objects (§12.6) |
 | `axes` | the axes its surface offers to anchors, if any beyond `x`, `y`, `t`: each with a name and a kind (§4.2) |
-| `state` | the latest snapshot (§12.2): a byte string, kept outside the node |
+| `snapshot` | the latest snapshot (§12.2): a byte string, kept outside the node |
 | `docs` | ref to a text: documentation and instructions for people and agents |
 | `poster` | ref to a rendition shown when the Compute-let cannot or may not run |
 
@@ -134,16 +134,16 @@ it is not yet specified.
      and the table, as `ufo:table`, likewise. No code of the module can refer to it: it did
      not exist when the module was validated, and a module MUST NOT export
      or import any name beginning `ufo:` (**N1**).
-  2. *Regions.* The *entry region* of a function is every instruction of its
-     body that is not inside a `loop`. The region of a `loop` is every
+  2. *Stretches.* The *entry stretch* of a function is every instruction of its
+     body that is not inside a `loop`. The stretch of a `loop` is every
      instruction inside it that is not inside a nested `loop`. Every
      instruction of the body counts one, including `block`, `loop`,
      `if`, `else` and `end`. The `loop` instruction itself belongs to the
-     region that contains it; the `end` that closes a loop belongs to the
-     loop's region; the final `end` of a body belongs to the entry region.
+     stretch that contains it; the `end` that closes a loop belongs to the
+     loop's stretch; the final `end` of a body belongs to the entry stretch.
   3. *Charge.* At the very start of each function body, and immediately
      after each `loop` instruction, insert a charge for the size *n* of that
-     region:
+     stretch:
      `global.get F` `i64.const n` `i64.sub` `global.set F` `global.get F`
      `i64.const 0` `i64.lt_s` `if` `unreachable` `end`,
      where *F* is the counter. A region is charged in full on entry, whether
@@ -163,7 +163,7 @@ it is not yet specified.
      `local.get T` `f.ne` `if (result f)` `f.const nan` `else`
      `local.get T` `end`, where *T* is one local of that type appended to
      the function's locals for the purpose. Inserted instructions are never
-     counted in a region.
+     counted in a stretch.
 
   The reader sets the counter before each call it makes into the module. A
   trap from an exhausted counter is reported as *out of fuel* and is
@@ -190,7 +190,7 @@ it is not yet specified.
   calls into the module: `checkpoint` asks for one when the current call
   returns. Running a Compute-let changes its state in the reader and writes
   nothing to the universe (**S1**). The state is recorded — a change that
-  sets `state`, with origin `tool` and the person as `asked` — when the
+  sets `snapshot`, with origin `tool` and the person as `asked` — when the
   person saves, and before a promotion (§12.6). Earlier snapshots remain in
   history and can be restored.
 - **[M7] Replay.** A reader MAY record the fuel, times, inputs, messages,
@@ -203,7 +203,7 @@ it is not yet specified.
   verification by others and shared sessions rest on.
 - **[M8]** A Compute-let that traps, exhausts its fuel or exceeds its memory
   limit is stopped. Its last snapshot is intact; its surface shows the last
-  frame it drew, marked as stopped.
+  picture it drew, marked as stopped.
 
 A Compute-let with no granted capability still draws and sounds: it emits
 display-list items through `draw`, whose raster and samples items may take
@@ -277,7 +277,7 @@ A module outside it stays carried (**N6**) until a later version of the
 profile can describe it.
 
 Control flow is flat. `block`, `loop` and `if` — whose operand is its
-condition — each open a region that a later `end` statement closes, with
+condition — each open a stretch that a later `end` statement closes, with
 `else` between for an `if`. These five are statements only, never
 operands.
 
@@ -323,7 +323,7 @@ axis `funcs`.
   restrictions of §12.2, and that it exports and imports no name beginning
   `ufo:` other than its imports from `ufo:host/1`. The kernel checks the
   restrictions as it instruments the module; validity is the judgment of
-  the host's engine when the kernel loads it (`run`, §9.3), which the
+  the host's engine when the kernel loads it (`engine`, §9.3), which the
   WebAssembly specification makes the same in every engine. A module that does not
   print, or does not pass, is inconsistent (§1.9). It is not run.
 - **[N2]** Printing is deterministic: the same description yields the same
@@ -336,8 +336,8 @@ axis `funcs`.
 - **[N4] Meaning, not mechanics.** Origin attaches to statements, and to
   the properties of functions and modules. Every other byte of a printed
   module — the framing of sections, lengths, indices, the order of types —
-  is **derived** by the rules above and has no origin but them. Every byte
-  of a module is thus either stated, with an origin, or derived (**R8**).
+  is **implied** by the rules above and has no origin but them. Every byte
+  of a module is thus either stated, with an origin, or implied (**R8**).
 - **[N5] By content.** A function's **unit hash** is the SHA-256 of the
   encoded value `[params, results, locals, body]`. It names what the
   function is, apart from where it is: it does not change when the function
@@ -381,7 +381,7 @@ bytes. It is part of the kernel, there is one implementation of it (**K1**),
 and it is the only writer of module bytes: no reader, writer, agent or
 application supplies bytes for a described module, and what a reader runs
 is what the kernel printed and then instrumented (**M4**). A reader stores
-no bytes for a described module; a derived store (§3.4) MAY keep them,
+no bytes for a described module; a cache (§3.4) MAY keep them,
 under the module's digest. A model never types bytes. It reads a function
 through `unit`, one statement to a line, each with its identity and the
 change that wrote it; it writes statements through `propose`, as it would
@@ -473,7 +473,7 @@ handle; resources are named by small integers the program chooses.
 | Shaders | `shader.create` (WGSL source; the reply reports errors) |
 | Pipelines | `pipeline.render`, `pipeline.compute`, `bindgroup.create`, `pipeline.destroy` |
 | Passes | `pass.begin` (targets: the surface or a texture), `pass.pipeline`, `pass.bind`, `pass.vertex`, `pass.index`, `pass.viewport`, `pass.scissor`, `pass.draw`, `pass.draw-indexed`, `pass.dispatch`, `pass.end` |
-| Frame | `submit` (everything queued is drawn to the surface for this frame) |
+| Tick | `submit` (everything queued is drawn to the surface for this tick) |
 | Readback | `read` (a texture's pixels; used for export and for tests) |
 
 Rules that are already fixed:

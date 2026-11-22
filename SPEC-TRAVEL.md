@@ -91,13 +91,13 @@ the gaps. The kernel therefore contains no HTML, a binding contains no
 envelope-writing logic, and nothing travels twice.
 
 Finding a pack inside a file is the one thing the kernel knows about three
-foreign containers: a pair of markers in HTML text, a box in ISO media, a
+foreign containers: a pair of delimiters in HTML text, a box in ISO media, a
 chunk in PNG. It is admitted under **V3** because it cannot be data or
 composition — it happens before any universe is open — and it is not
 decoding (**B1**): nothing of the container is interpreted but where the
 pack begins and ends. Reading is the reverse and also
 the kernel's: given the bytes of any file, the kernel finds the pack — at
-the start of a working form, between the markers of a web envelope, in the
+the start of a working form, between the delimiters of a web envelope, in the
 box or chunk of §13.4 — so a binding never parses an envelope (**K2**).
 
 - **[E1] Read-back.** The binding gives the kernel the text of the pack's
@@ -171,7 +171,7 @@ receiving decides the default.
   universe: collaborators. A shared copy is whole by default — content,
   attribution and working history. *Publishing* is sending to readers
   outside the work. A published copy holds content and attribution and
-  withholds working history by default, and its `note` frame says so
+  withholds working history by default, and its `absent` frame says so
   (§2.5). The person states which they are doing, can change what is
   included either way, and sees the result before it leaves (**E12**).
   Markers of removed elements may be forgotten first (§1.10).
@@ -213,7 +213,7 @@ choosing to publish, and **E12** shows it to them.
 - The names, keys, times and software of everyone who changed a live
   object, and the identifiers of the models used.
 - For each sequence, how much each change contributed that has since been
-  removed, and where it sat, unless the markers were forgotten before
+  removed, and where it sat, unless the tombstones were forgotten before
   publishing (§1.10). What the removed elements said is not there.
 - The notes on evidence and decisions, the parameters of origins, and any
   fields an application added to changes.

@@ -49,7 +49,7 @@ words, and rules that carry a label such as **[C3]**. A labeled rule is a
 requirement in full, whether or not it uses one of those words; where it is
 written in the indicative, it states what every conforming reader and writer
 does. Everything else is explanation. The conformance suite tests every
-labeled rule that a file, or a run of the kernel, can show. A few rules
+labeled rule that a file, or the kernel at work, can show. A few rules
 bind what a writer or a reader does where no file records it — **L1**,
 **L5**, **M9**, **R2**, **E12**, **H6** — and can be tested only where a
 harness watches the software at work. They are obligations all the same.
@@ -350,7 +350,7 @@ entries map the byte at position *d* of the identity, counting from zero,
 written as a two-digit lowercase hexadecimal key, to the `map` node for
 that longer prefix. Every object is in the map, change objects included. The object map is
 therefore a function of its contents alone: the same set of revisions has the
-same root hash however it was built. The map of no objects is a leaf with
+same hash at its root however it was built. The map of no objects is a leaf with
 no entries. A reader MUST treat an object map of any other shape as
 malformed: an interior node covering 32 identities or fewer, a child that
 is empty, entries out of order or under the wrong prefix.
@@ -455,10 +455,10 @@ of its elements in order, as a list of runs. A run is
 `[change, first, count]`: *count* elements with consecutive numbers from
 *first*, inserted by *change*. A fourth item, `false`, marks the run as
 **removed**: its elements hold no content and stay where they were, as
-markers, so that whatever was attached to them can still be placed. The
+**tombstones**, so that whatever was attached to them can still be placed. The
 runs not marked removed, in order, account for the property's items
 exactly. Runs are an encoding and nothing more: two adjacent runs with the
-same change, consecutive numbers and the same state MUST be written as one.
+same change, consecutive numbers, both removed or both not, MUST be written as one.
 A reader knows a property is a sequence property because `seq` has an
 entry for it.
 
@@ -469,7 +469,7 @@ nothing is inserted. `del` is a list of runs
 naming elements to remove, each of which MUST not already be removed; `old`
 is their content in sequence order. `ins` is a text, a byte string or a
 list, matching the property; its items become new elements directly after
-`after`. `forget` is a list of runs naming removed elements whose markers
+`after`. `forget` is a list of runs naming removed elements whose tombstones
 are to be discarded (§1.10); it is refused if any of them is not removed,
 or is named by an anchor in the current revision of any object in the
 object map. A `splice` on a property
@@ -585,17 +585,17 @@ The format version is the `v` of the commit. A reader MUST refuse to write a
 universe whose version it does not implement and MAY read one in a degraded,
 clearly labeled mode.
 
-### 1.10 Markers, and readiness for merging
+### 1.10 Tombstones, and readiness for merging
 
 **Markers are kept among collaborators.** A removed element stays in `seq`
-as a marker for two reasons: an anchor may name it, and a collaborator's
+as a tombstone for two reasons: an anchor may name it, and a collaborator's
 operation, made without knowing of the removal, may name it as the place to
 insert. A working form, and every copy shared with collaborators, keeps
-all markers.
+all tombstones.
 
 **A published copy may forget them.** Before publishing to outside readers
-(§13.3), a writer MAY commit a change whose splices `forget` markers. A
-marker may be forgotten only if no anchor in the universe names it. The
+(§13.3), a writer MAY commit a change whose splices `forget` tombstones. A
+tombstone may be forgotten only if no anchor in the universe names it. The
 change is an ordinary one: it has an actor, it is in the Chronicle, and the
 published copy's head is the commit that made it. Its effects are stated
 plainly to the person: anchors held outside the universe that name a
@@ -606,7 +606,7 @@ longer be merged into the compacted one where they name forgotten
 elements.
 
 *The cost.* In a simulation of a heavily edited text, `seq` came to about
-thirteen bytes for every character present with all markers kept, and
+thirteen bytes for every character present with all tombstones kept, and
 under four with them forgotten ([RATIONALE.md](RATIONALE.md)). `seq` is
 kept outside its node, so an edit rewrites only the chunks near it (§1.4).
 
@@ -647,7 +647,7 @@ ranks are compared when a commit has two parents.
 
 The pack is modeled on the way git stores a repository: immutable records
 named by hash are the only truth, and everything that makes them fast to
-find is derived and disposable. It is meant to be simple enough that a
+find can be rebuilt and is disposable. It is meant to be simple enough that a
 reader can be written from this section alone (§3.3).
 
 ### 2.1 Frames
@@ -668,9 +668,9 @@ frame     = kind (1 byte)  codec (1 byte)  length (unsigned LEB128, shortest for
 | `0x01` | chunk | a chunk record |
 | `0x02` | node | a node record |
 | `0x03` | seal | a signature (§14.2), encoded as a value |
-| `0x04` | index | a derived lookup table (§2.4) |
+| `0x04` | index | a lookup table that can be rebuilt (§2.4) |
 | `0x05` | head | marks a committed state (§2.2) |
-| `0x06` | note | what this pack deliberately lacks (§2.5), encoded as a value |
+| `0x06` | absent | what this pack deliberately lacks (§2.5), encoded as a value |
 
 `codec` is `0` for identity or `1` for raw DEFLATE (RFC 1951). With codec
 `1` the payload, whose length the frame states, is the decoded length as an
@@ -681,7 +681,7 @@ The same record MAY appear in more than one frame.
 
 The payload of each kind has a required form: a chunk decodes to between 1
 and 65 536 bytes; a node decodes to one value that is a map with a text `k`;
-a seal or a note is one value that is a map; an index is 24 + 40 × *n*
+a seal or an absent frame is one value that is a map; an index is 24 + 40 × *n*
 bytes for its stated *n*; a head is 72 bytes with codec 0. A frame whose
 payload has that form is well-formed even if what it says is wrong: a head
 whose check fails is a well-formed frame that is not a valid head. The hash of a record is always taken over
@@ -713,7 +713,7 @@ frame. To commit, a writer:
 4. appends the head frame;
 5. makes the head durable, and only then reports success.
 
-Seal and note frames are appended the same way, followed by a head that
+Seal and absent frames are appended the same way, followed by a head that
 names the same commit as before.
 
 The head frame has codec 0 and a payload of exactly 72 bytes:
@@ -814,7 +814,7 @@ To find a record, a reader searches each index in the chain, newest first,
 by binary search, reading only the entries it probes, and then scans the
 frames after the newest index's coverage.
 
-- **[P9]** The index is derived and carries no authority. A reader MAY ignore
+- **[P9]** The index is rebuilt from the frames and carries no authority. A reader MAY ignore
   it and MUST be able to rebuild it by scanning frames. Every record is
   verified by hash when read (**C2**), so a wrong index cannot cause wrong
   content to be accepted. Before concluding that a record is absent, a
@@ -834,7 +834,7 @@ by where the missing record is referenced from, not by anything the pack
 says about itself.
 
 - **Linked universes** (§1.8). A commit named only by an anchor's `u` may
-  be missing; the universe it fixes is then linked. A `note` frame MAY list
+  be missing; the universe it fixes is then linked. An `absent` frame MAY list
   such commits under `links`, each `{commit, hints}`: zero or more
   locations where the records of that universe may be found. A component
   named by hash and not carried (**K3**) is listed the same way, under
@@ -847,20 +847,20 @@ says about itself.
   other than the head, an origin's `prompt`, or an entry of the head's
   object map for an object that is not live and not part of attribution.
 - **Absent blobs.** A pack MAY omit the chunks of large blobs. It then
-  carries a `note` frame listing, for each, `{blob, len, hints}`: the blob
+  carries an `absent` frame listing, for each, `{blob, len, hints}`: the blob
   hash, its length and zero or more locations where the chunks may be
   found. Blob nodes themselves are never omitted.
 
 - **[P11]** A missing record of any of these kinds is unavailable (§1.9),
   and the reader says which kind. A missing record that is none of them —
   one that current content or attribution needs, in this universe or in a
-  nested one — is malformed storage, whatever any `note` says.
+  nested one — is malformed storage, whatever any `absent` frame says.
 - **[P12]** A reader MUST present everything that is present, MUST show for
   each absent blob an inspectable placeholder at the authored size (or a
   carried face, §8.1, if one is present), and MUST verify by hash anything
   it later obtains.
 
-A `note` frame MAY also record `history: true` as a courtesy to tools; it
+An `absent` frame MAY also record `history: true` as a courtesy to tools; it
 has no effect on classification.
 
 ### 2.6 Compaction
@@ -903,7 +903,7 @@ as malformed. A writer MUST NOT produce anything exceeding one.
 | --- | --- |
 | Chunk record | 65 536 bytes |
 | Node record, decoded | 16 MiB |
-| Seal or note payload | 1 MiB |
+| Seal or absent payload | 1 MiB |
 | Nesting depth of a value | 64 |
 | Entries in one map or list | 2²⁰ |
 | Interior levels of the object map above a leaf | 16 |
@@ -972,9 +972,9 @@ are requirements on the project, not on files.
   second, and no allocation beyond **P17**. Every input that ever caused a
   failure is kept in the conformance corpus.
 
-### 3.4 Derived stores
+### 3.4 Caches
 
-- **[P21]** A reader MAY build, on its own device, any derived store it finds
+- **[P21]** A reader MAY build, on its own device, any **cache** it finds
   useful — a search index, a table of which objects refer to which, the
   changes that touched each object, a database such as SQLite. Such a store
   is disposable: it is built from the pack, can be deleted without loss, is
@@ -1026,7 +1026,7 @@ element: `[change, number, 0]` is the place just before that element, and
 the two ends of the sequence. A region whose two boundaries are the same is
 a point: a caret.
 
-A region over several axes is their product: a rectangle of a frame for a
+A region over several axes is their product: a rectangle of a picture for a
 span of time is a region on `t`, `x` and `y`. A coordinate space may have
 any number of axes of each kind. Space in three dimensions is three
 continuous axes, `x`, `y` and `z`, and is as much a part of the anchor
@@ -1059,17 +1059,17 @@ end is "before the element that follows" takes in what is typed at its
 end, and one whose end is "after its last element" does not. Whoever makes
 the anchor chooses.
 
-**Continuous axis.** An object MAY hold, in a property `frames`, for any of
+**Continuous axis.** An object MAY hold, in a property `scales`, for any of
 its continuous axes, a list `[a, b, c]` — *a* and *b* positive integers, *c* an integer, or a
 float on an axis whose positions are floats:
-the axis's *frame*, mapping base coordinates to current ones. A position
+the axis's **scale**, mapping base coordinates to current ones. A position
 *x* in base coordinates is now at *x·a/b + c*; with integer positions the
 division rounds toward negative infinity. Whoever makes an anchor from a
 current position *y* writes the base position *(y − c)·b/a*, rounded the
 same way; an anchor made from a position and resolved at once may
-therefore land one unit below it, and never above. An axis with no frame has the
-frame `[1, 1, 0]`. A change that moves everything on an axis — trimming the
-start of a recording, rescaling a drawing — sets the frame in the same
+therefore land one unit below it, and never above. An axis with no scale has the
+scale `[1, 1, 0]`. A change that moves everything on an axis — trimming the
+start of a recording, rescaling a drawing — sets the scale in the same
 change, as an ordinary `set`, and regions follow with no further act. A
 region is clipped to the axis's present extent.
 
@@ -1126,7 +1126,7 @@ The **digest** is the SHA-256 of these bytes, in order:
      its entry, or for a list of refs a list of those refs in order;
    - on a continuous axis, the object's properties.
 
-   A Compute-let's `state` is left out of every covered value: it is the
+   A Compute-let's `snapshot` is left out of every covered value: it is the
    state of a machine, not content.
 3. For each *followed* object, in ascending order of identity: its identity
    and then its current revision hash, or 32 zero bytes if it is no longer
@@ -1174,7 +1174,7 @@ as two integers; the product is rounded toward negative infinity. Outside
 its interval the clock's content is not present. A clock MAY carry `repeat`,
 a count or `forever`: its interval then recurs end to end. A clock has no
 layout of its own: its children occupy the box the clock was given, in
-order from back to front, and are arranged by being groups or regions.
+order from back to front, and are arranged by being groups or panes.
 
 A clock is in one of three modes:
 
@@ -1182,11 +1182,11 @@ A clock is in one of three modes:
 | --- | --- |
 | `locked` | the parent, by the formula above; pausing or scrubbing the parent pauses or scrubs the child |
 | `free` | the child's own running time: it starts at `offset` when the parent enters the interval and then advances with the root clock at `rate`, whatever the parent does. Scrubbing the parent out of the interval and back restarts it. When a face is sampled at a stated time with no history of scrubbing, a free clock reads as a locked one would |
-| `held` | a formula (§7.3), typically of presentation state: a slider that scrubs an animation, a key that advances a deck |
+| `held` | a formula (§7.3), typically of a setting: a slider that scrubs an animation, a key that advances a deck |
 
 The time at the top of a presentation is the **root clock**, supplied by the
 reader. The reader MAY drive it from real time, from a scrub position, from a
-recorded log, or frame by frame for export.
+recorded log, or picture by picture for export.
 
 - **[T1]** No component reads real time. Every component that asks the time
   receives the time of the clock it was placed under.
@@ -1312,7 +1312,7 @@ together are the object's **recipe**: everything needed to make it again.
 it, and the recipe must still be found.
 
 - A **rendition** is an asset with a derivation: a document rendered to
-  pages, a video encoded for broad playback, a poster frame.
+  pages, a video encoded for broad playback, a poster picture.
 - A **transmutation** is a set of described objects whose derivation has
   `how` `transmute`, made by a model: a deck from a report, a narration
   from a document.
@@ -1420,7 +1420,7 @@ The basis a reader shows for copied content is the weakest along the chain:
 a witnessed copy of text whose origin was inferred is shown as inferred.
 
 **Later findings.** Origin is never revised (**R1**), but knowledge may
-arrive after content does: another device's history, an alignment run
+arrive after content does: another device's history, an alignment pass
 afterward. A change records such a finding in `attributions`, each
 `{about, origin}`: an anchor to content already present and an origin with
 its basis. `why` returns the original origin and every later finding, in
@@ -1431,7 +1431,7 @@ latest.
 - **[R1]** The origin recorded when content is introduced is never changed
   or removed by any later change, including acceptance, editing nearby,
   moving, copying, or a later finding.
-- **[R2] Three states, visibly.** A reader MUST present witnessed, inferred
+- **[R2] Three bases, visibly.** A reader MUST present witnessed, inferred
   and unknown origins so that each is distinguishable at a glance from the
   others, in every place it presents origin, including projections for
   agents. Inferred is never shown as witnessed. Unknown is never shown as
@@ -1485,7 +1485,7 @@ that last set it.
   universe, `why` MUST return a change and its origin: for an element of a
   sequence, by its identity; for any other property value, by the revision that set it; for a
   byte of a blob, by the change that first referred to the blob; for a
-  statement of a function, as for any element; for a derived byte of a
+  statement of a function, as for any element; for an implied byte of a
   printed module, "computed by the printer" from the description (**N4**).
   The bytes of records
   themselves — encodings, hashes, maps — are computed by the kernel from
@@ -1520,7 +1520,7 @@ revised once, with reasons, before anything is frozen.
 | Formula operators | 64 | 52 | a spreadsheet's essentials, and `ask`; anything larger is a Compute-let |
 | Base host functions | 12 | 10, plus 2 exports | small enough to implement identically on every host |
 | Capabilities | 20 | 18 | each is something only a host can provide (**H4**) |
-| Operations across all capabilities | 64 | 55 written or sketched: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `run` 6, `text` 3, `present` 2, `blobs` 1, `gpu` 27 (Appendix E). `objects` exposes the projections and actions | seven optional capabilities are unwritten. The limit will not hold once they are, unless `gpu` shrinks: a decision owed |
+| Operations across all capabilities | 64 | 55 written or sketched: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `engine` 6, `text` 3, `present` 2, `blobs` 1, `gpu` 27 (Appendix E). `objects` exposes the projections and actions | seven optional capabilities are unwritten. The limit will not hold once they are, unless `gpu` shrinks: a decision owed |
 | Concepts | 40 | 39 | what a newcomer must learn; each is justified in §6.2, and a new concept must displace one |
 | All defined terms, including names for compositions and structural terms | 130 | 144 | **over the limit.** Earlier counts took a row that names several terms as one, and left out terms the text defines. Either terms go or the limit moves: a decision owed |
 
@@ -1593,7 +1593,7 @@ the second column says how.
 | Light cone | outlines, with the summaries attached to their parts |
 | Rendition | an asset with a derivation |
 | Root | an entry in the universe object's `roots` |
-| Snapshot | a blob of Compute-let state |
+| Snapshot | a blob holding the state of a Compute-let |
 | Span | an anchor on a text's elements, with a role and properties |
 | Transclusion | a Portal whose target is a region of another object |
 | Transmutation | described objects with a derivation that a model performed |
@@ -1672,7 +1672,7 @@ seal   = { commit: hash, key: bytes .size 32, time: uint,
            ? name: tstr, signature: bytes .size 64 }
            ; signature = Ed25519 over the 10 bytes "ufo-seal-1" followed by the
            ; SHA-256 of the encoding of this map without `signature` (section 10.2)
-note   = { ? history: bool,
+absent = { ? history: bool,
            ? blobs: [ * { blob: hash, len: uint, hints: [ * tstr ] } ],
            ? links: [ * { commit: hash, hints: [ * tstr ] } ] }
 
@@ -1695,7 +1695,7 @@ principal = { ? key: bytes .size 32, ? name: tstr }
 `change-p` is the `p` of an object of type `ufo.change`, and `work` is the
 value its indirect stands for. In these schemas `uint` and `int` are within
 the integer range of §1.2. A key this schema does not list is unrecognized
-and preserved in `obj`, `commit`, `seal`, `note`, `work` and in properties;
+and preserved in `obj`, `commit`, `seal`, `absent`, `work` and in properties;
 in `map` and `blob` nodes, whose shape must be a function of their
 contents, it is malformed. Values are compared exactly: an integer is never
 equal to a float.
@@ -1753,13 +1753,13 @@ code (§9.3, §5.3, §12.3):
 ```
 request = { capability: tstr, ? scope: value, required: bool, why: tstr, without: tstr }
 
-text-run        = { s: tstr, font: [ + (tstr / hash) ], size: float, weight: uint,
+text-piece        = { s: tstr, font: [ + (tstr / hash) ], size: float, weight: uint,
                     slant: bool, dir: "ltr" / "rtl" }
-measure-request = { run: text-run, at: [ * uint ] }       ; offsets, in characters of `s`
+measure-request = { piece: text-piece, at: [ * uint ] }       ; offsets, in characters of `s`
 measure-reply   = { adv: [ * float ], asc: float, desc: float }   ; one advance for each offset
-locate-request  = { run: text-run, x: float }
+locate-request  = { piece: text-piece, x: float }
 locate-reply    = { at: uint }
-edit-request    = { mount: rect, s: tstr, run: text-run, id: uint } / { unmount: uint }
+edit-request    = { mount: rect, s: tstr, piece: text-piece, id: uint } / { unmount: uint }
 present-raster  = { child: tstr, w: uint, h: uint }       ; the reply is a raster source (§9.2)
 present-deliver = { child: tstr, event: event }
 
@@ -1828,13 +1828,13 @@ decision. The file ends with a chain of two indexes and four heads.
 | `gear` | the first entries of the chunking table and the hash of the whole table |
 | `blobs` | 8 blobs: empty; three bytes; just under the minimum chunk; zero bytes at and just over the maximum chunk; one mebibyte of a stated pseudo-random stream, with its chunk count and first chunk lengths; the same with ten bytes inserted in the middle, which shares all but one chunk with it; and forty mebibytes, which is a tree of two levels |
 | `value_kept_outside` | a value, the blob that holds it, the indirect that names it, and the veiled form with its salt and opening (§1.4) |
-| `object_maps` | root hashes of maps with 1, 32, 33 and 9 000 entries: a leaf, the largest leaf, the smallest interior node, and three levels |
+| `object_maps` | hashes of the root nodes of maps with 1, 32, 33 and 9 000 entries: a leaf, the largest leaf, the smallest interior node, and three levels |
 | `minimal_pack` | every record of `minimal.ufx` with its offset and hash; the index; the head; the root hash. Removing its last byte leaves no valid head |
 | `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its `seq`, and what its span resolves to; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; ten anchors resolved at the last commit, on sequence and continuous axes, including a replaced word, a point at a removed element, clipping, and a dropped object |
 | `resolve_sequence` | a sequence with removed elements, and nine regions resolved against it (§4.3) |
 | `merge_readiness` | two writers diverging from one text, with insertions at the same place, inside their own earlier insertions and after an element the other removes; the order of elements and the text, identical whichever writer's operations are taken first (§1.10) |
 | `digests` | two pins at the last commit of `history.ufx`, each with its salt, its covered value as bytes, the objects followed and the digest (§4.4): a passage of the text with the span that touches it, and the face object, whose ref to the text is followed |
-| `resolve_continuous` | six regions resolved through a frame: shift, integer rounding of both signs, clipping, detachment, floats |
+| `resolve_continuous` | six regions resolved through a scale: shift, integer rounding of both signs, clipping, detachment, floats |
 | `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§8.3) |
 | `printer` | the described module of `module.ufx` — a function with operands folded, a function with a loop, a call, a global and named locals, three exports and a memory — as encoded values, and the 119 bytes the printer makes of it |
 | `instrumentation` | three modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |

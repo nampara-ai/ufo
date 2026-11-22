@@ -41,7 +41,7 @@ residual field or the reverse, only the portable fact is stored.
 
 | Cursive record | In a UFO |
 | --- | --- |
-| Note source (Markdown) | a text with `syntax` `text/markdown`; `chars` is the source, exactly; spans derived by Cursive's parser, with `markup` spans over markup (§5.1) |
+| Note source (Markdown) | a text with `syntax` `text/markdown`; `chars` is the source, exactly; spans written by Cursive's parser, with `markup` spans over markup (§5.1) |
 | Attribution segment `[from, to)` in editor positions | not stored; it is the `seq` of the text, whose elements name their changes. Cursive converts between its positions and character positions using its own parse of the same source |
 | Generation record: prompt, model, operation, conversation, original and generated text | one change. `origin` is `{basis: witnessed, by: model, model, prompt, context, asked, parameters}`; the prompt and conversation are text objects; the generated text is the `ins` of the change's splices; the original text is their `old` |
 | Parent and derived-from generation ids | `origin.context` pins to the earlier changes; which is which is kept in `io.cursive.lineage` on the change |
@@ -68,7 +68,7 @@ residual field or the reverse, only the portable fact is stored.
 | Separate attribution of formatting marks | portable: a change that sets a span has its own `by`. The opaque mark signature is Cursive's | `io.cursive.mark` on the span |
 | Open vocabularies: operation, mode, macro id, decline reason, mark policy | application meaning | `io.cursive.*` on the change |
 | Event identifiers and their original order | the Chronicle orders changes; Cursive's ids are its own | `io.cursive.event` on the change |
-| Diagnostics, projection-saved witnesses | derived or local; a UFO's digests and conservation check do this work | not written |
+| Diagnostics, projection-saved witnesses | recomputed or local; a UFO's digests and conservation check do this work | not written |
 
 ### 16.4 Reading back, and the test
 

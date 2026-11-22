@@ -30,13 +30,13 @@ summaries.*
 | Object | Type | Content |
 | --- | --- | --- |
 | `video` | `ufo.clock` | interval 0 to 20 min; holds `stage` |
-| `stage` | `ufo.group` | `absolute`, 1920 × 1080; its children are everything below that appears in the frame |
+| `stage` | `ufo.group` | `absolute`, 1920 × 1080; its children are everything below that appears in the picture |
 | `footage` | `ufo.raster` | source: asset `footage.mp4`; time: the enclosing clock's |
 | `sound` | `ufo.samples` | source: the same asset |
 | `dataset` | `ufo.data` | the figures; rows and columns keyed |
 | `table-clock` | `ufo.clock` | interval 1:32 to 2:12, `locked`; holds `table-portal` |
 | `table-portal` | `ufo.portal` | `of` `table-view`; `table-clock` is a child of `stage` placed at the upper right |
-| `table-view` | `ufo.group` | `grid`, `each` over `dataset` sorted by `state("sort")`; header cells carry `on` handlers that set `sort` |
+| `table-view` | `ufo.group` | `grid`, `each` over `dataset` sorted by `setting("sort")`; header cells carry `on` handlers that set `sort` |
 | `info-clock` | `ufo.clock` | interval 8:00 to 8:45; holds `info-portal` |
 | `info-portal` | `ufo.portal` | `of` `info-surface` |
 | `info-surface` | `ufo.surface` | Compute-let `infographic`, granted `objects` read scope on `dataset` |
@@ -55,7 +55,7 @@ caption clock present at that time; "when is this sentence spoken" by
 finding the clock whose Portal anchors it.
 
 **Clocks.** `table-clock` and `info-clock` are `locked`: scrubbing the video
-scrubs them. The table's sort order is presentation state, so sorting while
+scrubs them. The table's sort order is a setting, so sorting while
 the video plays changes no byte (**S1**). `info-surface` receives the locked
 time through `time()` (**T1**) and reads `dataset` through its granted
 capability; its figures are computed live. If the person denies the grant,
@@ -73,11 +73,11 @@ on `t` covering the chapter, and a pin to the matching region of `transcript`.
 `top` pins `video` whole. Because a digest follows refs (§4.4), a
 chapter summary goes stale when any caption or the footage within it
 changes, and so does `top`. Trimming the video's start by ten seconds is
-a `set` of the clock's frame on `t`; every chapter pin resolves through the
-frame and stays attached.
+a `set` of the clock's scale on `t`; every chapter pin resolves through the
+scale and stays attached.
 
 **Export.** A standard video file is `video` sampled over 0 to 20 min at a
-frame rate; `info-surface` is run frame by frame from its snapshot (**M5**),
+picture rate; `info-surface` is run tick by tick from its snapshot (**M5**),
 the table in its default sort.
 
 ### 15.2 A game inside a document
@@ -106,7 +106,7 @@ the Portal shows the poster and says why. Without `audio` the game is
 silent.
 
 **What the host interface provides.** The ten base functions; the four
-capabilities above and `present`; `frame(time)` at the display's rate with
+capabilities above and `present`; `tick(time)` at the display's rate with
 fuel set per call. Nothing else.
 
 **The game's world is format data.** The three conditions of §7.5 hold:
@@ -115,7 +115,7 @@ fuel set per call. Nothing else.
   above the second door" by an anchor to `level-1` with a region on `x`,
   `y`, `z`, and to a spawn point by its key on `nodes`. A cut-scene is
   cited by a region on `t`. These hold through edits to the level like any
-  anchors; rescaling the level sets its frames.
+  anchors; rescaling the level sets its scales.
 - *What sits in the world is data, with attribution and summaries.* The
   terminal showing the manual is `terminal-portal`, an object whose
   `place.at` names the node it sits on. Every node of every level was set
@@ -231,7 +231,7 @@ nine faces and sent two ways.*
 | --- | --- | --- |
 | `report` | `ufo.text` | about two thousand words; embed spans for two charts, the photograph and the projector |
 | `figures` | `ufo.data` | quarterly figures |
-| `chart-a`, `chart-b` | `ufo.region` | axes, bars and labels as paths and text under `each` over `figures` |
+| `chart-a`, `chart-b` | `ufo.pane` | axes, bars and labels as paths and text under `each` over `figures` |
 | `photo` | `ufo.asset` | the photograph's original JPEG bytes; presented by a raster |
 | `projector` | `ufo.computelet` | the assumptions tool; requests `objects` read on `figures` |
 | `approved.pdf` | `ufo.asset` | `from` `{sources: [pin report, pin figures, …], how: render}`; with it, page images in a baseline format, since a reader does not decode PDF (§9.4) |
@@ -245,7 +245,7 @@ nine faces and sent two ways.*
 | Spreadsheet | sampled | `figures` presented as a grid; export as a table file |
 | Image | sampled | any object at one moment, one viewport (§8.4) |
 | Fixed document | carried | the page images of `approved.pdf`, shown with a stale mark if any pin has moved; the PDF itself is exported byte for byte |
-| Slide deck | transmuted | `deck`: a `held` clock over regions, with Portals to `chart-a` and `chart-b`; `from` pins `report` and `figures`; origin `model` |
+| Slide deck | transmuted | `deck`: a `held` clock over panes, with Portals to `chart-a` and `chart-b`; `from` pins `report` and `figures`; origin `model` |
 | Narrated video | transmuted, then sampled | `narration`: a text (transmuted) and its synthesized voice (an audio asset: carried, with a model as origin), each with `from` pinning what it was made from; `video`: a clock ordering the deck's regions against the narration; exported by sampling |
 | 3D view | transmuted, then sampled | `scene`: a `ufo.data` object in the glTF model (§7.5) whose rows describe bars, labels, lights and a camera for `figures`, with `from` pinning `figures`; `scene-surface`: a `ufo.surface` whose Compute-let, `scene-presenter`, requests `gpu` and `objects` read on `scene` and `figures`. Bar heights are read from `figures` as it now is, so the view is live; the arrangement and styling in `scene` are what was transmuted |
 | Application | sampled | `projector` presented alone, full size |
@@ -296,8 +296,8 @@ and leave the mark as the way back to the universe (**E19**, **E20**).
 
 Nothing was added to §1–§4 to represent these examples. They did shape
 three decisions made while drafting: clocks became a primitive symmetrical
-with regions, rather than a property; presentation state was separated from
-universe state, so that sorting a table inside a video is not an edit; and
+with regions, rather than a property; settings were separated from
+the universe's state, so that sorting a table inside a video is not an edit; and
 references to other universes were made identical for nested and linked
 content.
 
