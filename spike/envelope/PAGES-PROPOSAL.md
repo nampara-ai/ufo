@@ -58,3 +58,6 @@ Why this and not the alternatives:
 
 Turn Pages off and delete the branch. The spike is throwaway; a standing
 demonstration site is a separate decision.
+
+
+**Approved by the owner, 2026-11-22**, as written: the `pages` branch may be created and pushed once the envelopes are built, holding only them and the index page. The owner turns Pages on.
