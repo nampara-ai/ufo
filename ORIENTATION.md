@@ -10,6 +10,11 @@ each disagreement in the draft specification ([SPEC.md](SPEC.md)).
 Nothing described here has been built or run. The specification is a draft
 for review.
 
+These are working notes for the project's owner. They discuss three founding
+documents that are not published; the specification itself does not depend
+on them, and public rationale is in [RATIONALE.md](RATIONALE.md). Section 8
+records the decisions taken at the first review and what changed.
+
 ## 1. What UFO is
 
 A UFO is one file that holds a body of work as a *description of what the
@@ -125,11 +130,10 @@ In rough order of how much they worry me.
    survives, because the insertion records where it was copied from.
    Anchors into the moved text do not: they detach. Carrying anchors across
    moves by following the copy record looks possible and is not specified.
-6. **Privacy of history.** The record that makes a UFO trustworthy is also
-   every prompt and every discarded draft. Sending the whole history by
-   default is right for collaborators and wrong for publication. The
-   specification requires the reader to say so and offer a truncated copy
-   (E11). The right default deserves a decision from the project's owner.
+6. **Privacy of history.** Decided at review: attribution travels, working
+   history stays home unless included (SPEC §9.3). What remains open is how
+   much attribution itself reveals — names, times, the number and size of
+   edits — and whether that is acceptable for anonymous publication.
 7. **Who holds linked content.** A reference by hash can never be silently
    redirected, and it can also simply never be found. The format can verify
    content from anywhere; it cannot make anyone keep it.
@@ -167,8 +171,10 @@ becomes a single hash that a signature can cover, and that both forms of
 the file hold identical bytes.
 
 **What it costs:** SQLite's decades of hardening, its universal inspection
-tools and its archival standing. This is the decision I most want reviewed.
-It is isolated: only SPEC §2 would change if it is reversed.
+tools and its archival standing.
+
+**Decided at review:** approved as canonical, on the model of git. SPEC §2
+and §3 now define what the database would have supplied.
 
 ### 6.2 An envelope that is both a web page and an archive
 
@@ -186,6 +192,15 @@ errors, and both the brief and Supplement A forbid depending on that.
 (SPEC §9.2, E3). The archive view is dropped. If an archive view is wanted,
 it should be a separate envelope whose outer format is the archive.
 
+**Correction to the brief (approved at review).** The sentence in Part
+Twelve beginning "Browsers read from the front and archive tools find their
+index at the end" should be struck, together with the offer that the
+envelope "may also be a valid archive", and Part Four's lesson from
+self-contained portable executables should not be applied to HTML. The
+accurate statement is: *a travel-form envelope is valid in exactly one
+foreign format. A web envelope is a conforming HTML document and nothing
+else, because any bytes after the page are part of the page.*
+
 ### 6.3 Envelopes through platforms that re-encode
 
 *Supplement A* says a UFO posted as a video to a chat application can be
@@ -193,8 +208,8 @@ opened as the full universe "from that same file" by anyone with a reader.
 
 Most messaging and social platforms re-encode video and images and discard
 anything they do not recognise. The universe will often not survive the
-trip. **Resolution:** the envelopes are specified as valid, with this limit
-stated plainly (SPEC §9.4). The claim should be softened in the supplement.
+trip. **Resolution, approved at review:** these envelopes are best-effort
+carriers and readers must say so (SPEC §9.4, E17).
 
 ### 6.4 Two meanings of "presenter"
 
@@ -317,12 +332,10 @@ source-edit ledger and shadow pipeline are close to the specification's
   occasionally compacted. The format's Chronicle is chained by
   construction.
 - It sometimes establishes attribution after the fact, by aligning text,
-  and records how precise the result was. The format's law is stricter:
-  origin is recorded when content is introduced or it is unknown. The
-  mapping keeps Cursive's estimates as its own fields and reports the
-  portable origin as unknown (SPEC §13.3). That is lossless for Cursive and
-  honest for everyone else, but it means some text Cursive shows as
-  AI-written will appear to other readers as of unknown origin.
+  and records how precise the result was. Decided at review: origin has
+  three states — witnessed, inferred, unknown — and Cursive's aligned
+  attribution maps to inferred, with its method and precision grade (SPEC
+  §8.5, §13.2).
 - It keeps two provenance stores, the Chronicle and an element-level
   journal. A UFO has one history.
 
@@ -339,14 +352,50 @@ to a PDF renderer, an office suite, a media transcoder and a 3D engine.
 That layer is the clearest example I have seen of what Supplement B
 forbids.
 
-## 7. Questions for review
+## 7. Questions raised at the first review, and their answers
 
-1. Is the pack acceptable in place of SQLite (6.1)?
-2. Is dropping the archive view of the web envelope acceptable (6.2)?
-3. Should history travel by default, with a warning and an offer to
-   truncate, or should publication truncate by default (problem 6)?
-4. Should the three founding documents be added to this public repository?
-   The specification cites them throughout, and I have not published them
-   without being asked.
-5. Is `unknown` the right portable origin for content whose attribution an
-   application has only estimated (6.15)?
+1. Pack in place of SQLite: **approved**, as canonical.
+2. Dropping the archive view of the web envelope: **approved**.
+3. History on leaving: **split in two** — attribution travels, working
+   history is private unless included, with hash stubs.
+4. Founding documents: **not published**; the specification stands alone.
+5. Estimated attribution: **a third origin state, inferred.**
+
+## 8. What changed in version 0.2
+
+- **Pack (SPEC §2, §3).** Checksummed 67-byte head with an exact recovery
+  procedure; index layout; a limits table; total parsing and mandatory
+  fuzzing; compaction that preserves every hash; line-count targets and a
+  "weekend test" for an independent reader; SQLite permitted only as a
+  disposable local cache.
+- **Change records (SPEC §1.7).** An operation now has a shape, kept in the
+  change, and content, kept in salted records. This is what makes
+  withholding possible: anchors are carried by shapes alone, so they still
+  resolve when the content of history is absent. Revisions are salted so
+  that the hash of a withheld draft cannot be used to guess it.
+- **What travels (SPEC §9.3).** Three layers — content, attribution, working
+  history — defined by reachability; a required display of exactly what
+  will leave; nothing removed from the owner's copy.
+- **Origin (SPEC §8.5).** `basis`: witnessed, inferred (with method and
+  confidence) or unknown; readers must show the three differently. A copy is
+  now recorded on the change's origin, one source per change, rather than
+  on individual operations.
+- **Three dimensions (SPEC §5.5, §14.4).** Confirmed and tightened: a scene
+  is a data object plus a surface whose Compute-let draws it. The optional
+  third axis that version 0.1 allowed on regions was a hidden step toward a
+  scene profile and has been removed.
+- **Standing alone.** Every reference to the founding documents is gone from
+  the specification. RATIONALE.md carries the public reasoning.
+- **Weight.** CORE.md states the format in two pages. The glossary went from
+  47 concepts to 37; the ten removed are compositions and are now listed as
+  such (Agent, Asset, Border, Chronicle, Coordinate space, Ledger, Light
+  cone, Membrane, Rendition, Transmutation).
+- **Found on re-reading and fixed.** A summary's scope was stored twice (in
+  `of` and in its derivation); a Portal had a timing property duplicating
+  the clock primitive; text was stored as a list of segments whose
+  boundaries would have made the conservation check ambiguous; the
+  presenter map could dispatch on object type, which was an extension point
+  in disguise; a rule required replaying printer operations before running
+  a module, which a file with withheld history could not satisfy; a module's
+  `units` axis was used in an example but never declared; section 3 was an
+  empty placeholder.

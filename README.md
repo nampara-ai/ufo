@@ -9,8 +9,11 @@ every part of it came from.
 
 | Document | What it is |
 | --- | --- |
-| [SPEC.md](SPEC.md) | The draft specification, version 0.1 |
-| [ORIENTATION.md](ORIENTATION.md) | What the project is, its hardest open problems, and the decisions in the draft that most need review |
+| [CORE.md](CORE.md) | The whole format in two pages |
+| [SPEC.md](SPEC.md) | The draft specification, version 0.2 |
+| [RATIONALE.md](RATIONALE.md) | Why the format is shaped as it is |
+| [ORIENTATION.md](ORIENTATION.md) | Working notes: open problems and the record of design decisions |
+| [reviews/](reviews/) | Independent reviews of the draft, unedited |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How changes are judged |
 
 The design in one paragraph: a universe is a set of objects stored as
