@@ -38,6 +38,35 @@ take and give them.
 | `pack_bytes()` | — | the whole pack as it now stands |
 | `find_pack(ptr, len)` | the text of a web envelope's pack element | the pack's bytes, decoded |
 
+### As implemented (kernel side; `roundtrip.mjs`, `more-edits.mjs`, NOTES.md)
+
+Where the table above left something open, or the kernel departs from it:
+
+- `open_tools` takes the pack's bytes raw, as `open` does. Compressed
+  records in a tools pack are not inflated (there is no `pending` round for
+  it); `vectors/tools.ufx` has none.
+- `pack_bytes` gives one encoded value, a byte string; `find_pack` takes one
+  encoded text (the text of the pack elements, concatenated) and gives a
+  byte string, or null if the text is not standard base64 with padding.
+  White space around the whole text is not counted; inside it, it is refused.
+- `propose` gives `commit` and `root` as the same 32 bytes (the hash of a
+  commit is the root hash, SPEC 1.6) and `change` as the change's 16-byte
+  identity, which is the first 16 bytes of `random`. `o` and `random` are
+  byte strings; `block_at` gives `o` as a byte string too.
+- **Departure:** the change has `origin` only if it inserts something. SPEC
+  1.7 has `origin` "absent if the change introduces none", so a removal with
+  nothing put records no origin.
+- The change may hold a second operation: a `set` that removes an inline
+  span the edit left with no extent (SPEC 5.1).
+- `press` looks for the span key in the text the tools universe's primary
+  face presents, and in what that text holds (children, embedded children).
+- `block_at` gives `key` null for characters that lie in no block span, and
+  null as a whole for an anchor into another universe.
+- `binding.mjs`: `openTools`, `press`, `blockAt`, `propose`, `packBytes`,
+  `findPack`; its `encode` now writes byte strings (`Uint8Array`) and
+  tagged values (`{tag, v}`, as `decode` gives them), which the arguments
+  need.
+
 ## What counts as passing
 
 Per platform, each of: opened; two faces read; one paragraph edited

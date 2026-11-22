@@ -16,6 +16,7 @@ mod query;
 mod small;
 mod spell;
 mod value;
+mod write;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -131,6 +132,7 @@ use query::query as answer;
 
 static mut PACK: Option<Pack> = None; // the open pack
 static mut SCANNED: Option<Pack> = None; // a pack given to `open`, until `ready`
+static mut TOOLS: Option<Pack> = None; // the tools universe, opened beside the working one
 static mut OUT: Vec<u8> = Vec::new();
 
 #[no_mangle]
@@ -210,7 +212,9 @@ pub unsafe extern "C" fn sample(p: *mut u8, n: usize) -> *const u8 {
 }
 #[cfg(not(feature = "cut-layout"))]
 unsafe fn run(params: &V) -> Option<V> {
-    let pk = PACK.as_ref()?;
+    // `of: "tools"` samples the tools universe; anything else, the working one
+    let tools = params.get("of").and_then(|o| o.s()) == Some("tools");
+    let pk = if tools { TOOLS.as_ref()? } else { PACK.as_ref()? };
     let root = pk.head;
     let u = pk.object(&root, &[0; 16])?;
     let face = |medium: &str| -> Option<Obj> {
@@ -230,7 +234,7 @@ unsafe fn run(params: &V) -> Option<V> {
         plain(pk, &root, &of(&primary)?, &mut s, 0);
         return Some(map(vec![("text", V::T(s))]));
     }
-    let mut cx = Ctx { pk, root, chain: Vec::new(), blocks: 0, measure: &host };
+    let mut cx = Ctx { pk, root, chain: Vec::new(), blocks: 0, measure: &host, tools };
     let mut list = Vec::new();
     if mode == "pages" {
         let f = face("pages").unwrap_or(primary);
@@ -277,6 +281,60 @@ pub unsafe extern "C" fn query(p: *mut u8, n: usize) -> *const u8 {
     let q = decode(&Vec::from_raw_parts(p, n, n.max(1))).unwrap_or(V::Null);
     OUT = encode(&PACK.as_ref().and_then(|pk| answer(pk, &q)).unwrap_or(V::Null));
     OUT.as_ptr()
+}
+
+// ---- for the envelope spike (spike/envelope/PLAN.md): tools beside the working universe, one edit, the pack back ----
+unsafe fn taken(p: *mut u8, n: usize) -> V {
+    decode(&Vec::from_raw_parts(p, n, n.max(1))).unwrap_or(V::Null)
+}
+unsafe fn given(v: Option<V>) -> *const u8 {
+    OUT = encode(&v.unwrap_or(V::Null));
+    OUT.as_ptr()
+}
+/// Takes ownership of a buffer from `alloc` holding a tools pack, and opens it beside the working one.
+/// Returns 1 if it holds a universe. Its compressed records, if it has any, are not inflated.
+#[no_mangle]
+pub unsafe extern "C" fn open_tools(p: *mut u8, n: usize) -> i32 {
+    TOOLS = scan_pack(Vec::from_raw_parts(p, n, n.max(1))).and_then(open_pack);
+    TOOLS.is_some() as i32
+}
+/// `{key}`: the handler the span `key` of the tools universe holds for a press, or null. Nothing in
+/// the working universe is looked at: only what the reader presents as tools acts.
+#[no_mangle]
+pub unsafe extern "C" fn press(p: *mut u8, n: usize) -> *const u8 {
+    let q = taken(p, n);
+    let find = || {
+        let pk = TOOLS.as_ref()?;
+        let face = pk.object(&pk.head, &pk.object(&pk.head, &[0; 16])?.p.get("roots")?.get("primary")?.tag(REF)?.id()?)?;
+        layout::handler(pk, &face.p.get("of")?.tag(REF)?.id()?, q.get("key")?.s()?, 0)
+    };
+    given(find())
+}
+/// `{src}`, the `src` of a text item of the working universe: `{o, key, lo, hi, text}`, the block that holds it.
+#[no_mangle]
+pub unsafe extern "C" fn block_at(p: *mut u8, n: usize) -> *const u8 {
+    let q = taken(p, n);
+    given(PACK.as_ref().and_then(|pk| layout::block_at(pk, q.get("src")?)))
+}
+/// `{o, lo, hi, ins, who, time, random}`: one edit through the gate. `{commit, change, root}`, or `{refused: reason}`.
+#[no_mangle]
+pub unsafe extern "C" fn propose(p: *mut u8, n: usize) -> *const u8 {
+    let q = taken(p, n);
+    let r = match PACK.as_mut() {
+        Some(pk) => write::propose(pk, &q),
+        None => Err("no pack is open"),
+    };
+    given(Some(r.unwrap_or_else(|why| map(vec![("refused", t(why))]))))
+}
+/// The whole pack as it now stands, as a byte string.
+#[no_mangle]
+pub unsafe extern "C" fn pack_bytes() -> *const u8 {
+    given(PACK.as_ref().map(|pk| V::B(pk.bytes().to_vec())))
+}
+/// The text of a web envelope's pack elements: the pack's bytes, as a byte string, or null if it is not base64.
+#[no_mangle]
+pub unsafe extern "C" fn find_pack(p: *mut u8, n: usize) -> *const u8 {
+    given(taken(p, n).s().and_then(write::unbase64).map(V::B))
 }
 /// For the conformance run only: the break at each position of a UTF-8 string, by UAX #14.
 #[cfg(feature = "conformance")]

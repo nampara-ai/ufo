@@ -31,6 +31,7 @@ struct Style {
     deco: u8,  // 0 none, 1 underline, 2 strike
     start: f64, // indents, on the side lines start from and on the other
     end: f64,
+    press: V, // in a tools universe: the key of the span whose `on` handler the characters lie under
 }
 pub struct Ctx<'a> {
     pub pk: &'a Pack,
@@ -38,6 +39,7 @@ pub struct Ctx<'a> {
     pub chain: Vec<(H, Id)>,
     pub blocks: u32,
     pub measure: &'a dyn Fn(&V) -> Option<V>,
+    pub tools: bool, // what is composed is the reader's tools: its items say what pressing them names
 }
 fn fl(x: f64) -> V {
     V::F(x)
@@ -46,7 +48,7 @@ fn black() -> V {
     V::L(vec![fl(0.0), fl(0.0), fl(0.0), fl(1.0)])
 }
 fn plain_style() -> Style {
-    Style { size: 16.0, weight: 400, slant: false, color: black(), font: V::L(vec![t("serif")]), line: 1.4, align: 0, dir: 0, deco: 0, start: 0.0, end: 0.0 }
+    Style { size: 16.0, weight: 400, slant: false, color: black(), font: V::L(vec![t("serif")]), line: 1.4, align: 0, dir: 0, deco: 0, start: 0.0, end: 0.0, press: V::Null }
 }
 /// A row of the reader's own words, where an object cannot be presented.
 fn label_row(cx: &mut Ctx, s: &str, w: f64) -> Vec<Row> {
@@ -146,13 +148,14 @@ struct Span<'a> {
     b: usize,
     block: bool,
     role: &'a str,
+    key: &'a str,
     v: &'a V,
 }
 /// Step 2: the spans that resolve, in key order.
 fn spans<'a>(o: &'a Obj, els: &[El]) -> Vec<Span<'a>> {
     let mut out = Vec::new();
     if let Some(V::M(m)) = o.p.get("spans") {
-        for (_, v) in m {
+        for (key, v) in m {
             let Some(reg) = v.get("at").and_then(|a| a.tag(ANCHOR)).and_then(|a| a.get("a")).and_then(|a| a.get("chars")) else { continue };
             let r = reg.l();
             if r.len() != 3 {
@@ -161,7 +164,7 @@ fn spans<'a>(o: &'a Obj, els: &[El]) -> Vec<Span<'a>> {
             let (Some(a), Some(b)) = (boundary(els, &r[1]), boundary(els, &r[2])) else { continue }; // detached: takes no part
             let block = v.get("kind").and_then(|k| k.s()) == Some("block");
             if a < b || (block && a == b) {
-                out.push(Span { a, b, block, role: v.get("role").and_then(|r| r.s()).unwrap_or(""), v });
+                out.push(Span { a, b, block, role: v.get("role").and_then(|r| r.s()).unwrap_or(""), key, v });
             }
         }
     }
@@ -194,6 +197,12 @@ fn restyle(st: &mut Style, v: &V) {
     word("align", ["start", "center", "end"], &mut st.align);
     word("direction", ["ltr", "rtl", "auto"], &mut st.dir);
     word("decoration", ["none", "underline", "strike"], &mut st.deco);
+}
+/// In a tools universe, a span with an `on` handler gives its key to the characters under it.
+fn pressed(cx: &Ctx, st: &mut Style, s: &Span) {
+    if cx.tools && s.v.get("on").is_some() {
+        st.press = t(s.key);
+    }
 }
 const HEADING: [f64; 6] = [2.0, 1.5, 1.25, 1.1, 1.0, 1.0];
 fn level(s: &Span) -> usize {
@@ -343,6 +352,7 @@ fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Opti
             chain.push(k);
             for j in chain {
                 role_style(&mut st, &sp[j], &text);
+                pressed(cx, &mut st, &sp[j]);
             }
             (before, after, keep, code) = match s.role {
                 "heading" => (line1, line1 * 0.5, true, false),
@@ -375,6 +385,7 @@ fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Opti
                     child = child_of(s);
                 }
                 role_style(&mut cs, s, &text);
+                pressed(cx, &mut cs, s);
             }
             if left_out {
                 continue;
@@ -439,6 +450,9 @@ fn text_item(s: &[char], x: f64, y: f64, st: &Style, adv: f64, rtl: bool, src: O
     }
     if let Some(a) = src {
         m.push(("src", a));
+    }
+    if st.press != V::Null {
+        m.push(("press", st.press.clone()));
     }
     V::L(vec![t("text"), map(m)])
 }
@@ -787,4 +801,36 @@ fn plain_text(pk: &Pack, uni: &H, o: &Obj, region: Option<&V>, out: &mut String,
             out.push('\n');
         }
     }
+}
+
+// ---- for the reader's tools: what a press names, and the block an item lies in ----
+/// The handler a span of the tools universe holds for a press: the texts its primary face presents are searched.
+pub fn handler(pk: &Pack, id: &Id, key: &str, depth: u32) -> Option<V> {
+    let o = pk.object(&pk.head, id)?;
+    if let Some(h) = o.p.get("spans").and_then(|s| s.get(key)).and_then(|s| s.get("on")).and_then(|on| on.get("press")) {
+        return Some(h.clone());
+    }
+    let mut inside: Vec<&V> = o.p.get("children").map(|c| c.l().iter().collect()).unwrap_or_default();
+    if let Some(V::M(m)) = o.p.get("spans") {
+        inside.extend(m.iter().filter_map(|(_, s)| s.get("child")));
+    }
+    inside.iter().filter(|_| depth < 16).filter_map(|c| c.tag(REF)?.id()).find_map(|c| handler(pk, &c, key, depth + 1))
+}
+/// The block of a text that holds the characters an item's `src` names: its span's key, its positions, its characters.
+pub fn block_at(pk: &Pack, src: &V) -> Option<V> {
+    let a = src.tag(ANCHOR)?;
+    let id = a.get("o")?.id()?;
+    if a.get("u").is_some() {
+        return None; // of another universe: not this one's to edit (1.8)
+    }
+    let o = pk.object(&pk.head, &id)?;
+    let chars: Vec<char> = o.p.get("chars")?.s()?.chars().collect();
+    let els = elements(o.seq.as_ref()?.get("chars")?)?;
+    if els.iter().filter(|e| e.live).count() != chars.len() {
+        return None; // X1
+    }
+    let p = boundary(&els, a.get("a")?.get("chars")?.l().get(1)?)?;
+    let sp = spans(&o, &els);
+    let b = blocks(&sp, 0, chars.len()).into_iter().find(|b| b.a <= p && p < b.b)?;
+    Some(map(vec![("o", V::B(id.to_vec())), ("key", b.span.map_or(V::Null, |k| t(sp[k].key))), ("lo", V::Int(b.a as i64)), ("hi", V::Int(b.b as i64)), ("text", V::T(chars[b.a..b.b].iter().collect()))]))
 }

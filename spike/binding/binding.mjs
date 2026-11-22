@@ -29,6 +29,8 @@ export function encode(v) {
       if (h !== null) out.push(0xf9, h >> 8, h & 255); else if (Math.fround(v) === v) { f.setFloat32(0, v); out.push(0xfa, ...new Uint8Array(f.buffer, 0, 4)); } else { f.setFloat64(0, v); out.push(0xfb, ...new Uint8Array(f.buffer)); } }
     else if (typeof v === 'string') { const s = new TextEncoder().encode(v); head(3, s.length); out.push(...s); }
     else if (Array.isArray(v)) { head(4, v.length); v.forEach(put); }
+    else if (v instanceof Uint8Array) { head(2, v.length); for (const x of v) out.push(x); }   // a byte string
+    else if (typeof v.tag === 'number' && 'v' in v && Object.keys(v).length === 2) { head(6, v.tag); put(v.v); }   // a tagged value, as `decode` gives it
     else { const ks = Object.keys(v).sort((a, b) => a.length - b.length || (a < b ? -1 : 1)); head(5, ks.length); for (const k of ks) { put(k); if (FLOATS.has(k)) { put.float = true; put(v[k]); put.float = false; } else put(v[k]); } }
   };
   put(v); return Uint8Array.from(out);
@@ -51,6 +53,7 @@ export async function start(wasmBytes, measure, inflate) {
   const answer = ({ piece, at }) => { const cps = [...piece.s], whole = measure(piece, piece.s); return { adv: at.map(o => measure(piece, cps.slice(0, o).join('')).adv), asc: whole.asc, desc: whole.desc }; };
   const imports = { 'ufo:host/1': { host_measure(req, n, out, cap) { const r = encode(answer(decode(mem().slice(req, req + n)))); if (r.length > cap) return 0; mem().set(r, out); return r.length; } } };
   ex = (await WebAssembly.instantiate(wasmBytes, imports)).instance.exports;
+  const call = (f, v) => { const q = encode(v); const p = f(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); };
   return {
     // Two phases, because a browser inflates only asynchronously and a wasm import cannot wait: the kernel lists the
     // compressed payloads it holds, the host inflates them, and `ready` finishes opening. A payload that does not
@@ -67,6 +70,13 @@ export async function start(wasmBytes, measure, inflate) {
     print: id => { const p = ex.print(give(id)); return mem().slice(p, p + ex.out_len()); },
     query: q => { const b = encode(q); const p = ex.query(give(b), b.length); return decode(mem().slice(p, p + ex.out_len())); },
     sample: params => { const q = encode(params); const p = ex.sample(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); },
+    // for the envelope spike (spike/envelope/PLAN.md): each takes and gives values, and does nothing else
+    openTools: pack => ex.open_tools(give(pack), pack.length) === 1,
+    press: key => call(ex.press, { key }),
+    blockAt: src => call(ex.block_at, { src }),
+    propose: edit => call(ex.propose, edit),
+    packBytes: () => { const p = ex.pack_bytes(); return decode(mem().slice(p, p + ex.out_len())); },
+    findPack: text => call(ex.find_pack, text),
   };
 }
 // The host's inflate in a browser (and in Node 20 and later): raw DEFLATE through a DecompressionStream.

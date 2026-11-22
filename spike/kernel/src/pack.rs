@@ -12,6 +12,7 @@ pub struct Pack {
     d: Vec<u8>,
     pub head: H,
     index: usize,             // offset of the newest index frame, or 0
+    head_at: usize,           // offset of the head frame that gives the state
     after: Map<H, usize>, // records in frames no index covers
     pub unread_tail: usize,
     /// Every compressed chunk or node frame, in the order of the pack: what the host is to inflate.
@@ -121,7 +122,7 @@ impl Pack {
         if d.len() < 8 || d[..8] != SIG {
             return None;
         }
-        let mut pk = Pack { d, head: [0; 32], index: 0, after: Map::new(), unread_tail: 0, pending: Vec::new() };
+        let mut pk = Pack { d, head: [0; 32], index: 0, head_at: 0, after: Map::new(), unread_tail: 0, pending: Vec::new() };
         let mut off = 8;
         while let Some(f) = pk.frame(off) {
             if (f.kind == 1 || f.kind == 2) && f.codec == 1 {
@@ -139,6 +140,13 @@ impl Pack {
     }
     /// The second half, once the host has inflated what it could: the head, and the records no index covers.
     pub fn open(mut pk: Pack) -> Option<Pack> {
+        pk.reopen()?;
+        Some(pk)
+    }
+    /// 2.3: finds the current state afresh, from the bytes as they now stand.
+    fn reopen(&mut self) -> Option<()> {
+        let pk = self;
+        pk.after = Map::new();
         let n = pk.d.len();
         let mut found = if n >= 83 { pk.valid_head(n - 75, 0).map(|h| (h, n)) } else { None };
         if found.is_none() {
@@ -157,6 +165,7 @@ impl Pack {
         pk.head = commit;
         pk.index = index;
         pk.unread_tail = n - end;
+        pk.head_at = end - 75;
         // records after the newest index's coverage are found by scanning (2.4)
         let mut off = 8;
         if index != 0 {
@@ -179,7 +188,7 @@ impl Pack {
             }
             off = f.next;
         }
-        Some(pk)
+        Some(())
     }
     fn find(&self, h: &H) -> Option<usize> {
         if let Some(&o) = self.after.get(h) {
@@ -385,5 +394,96 @@ impl Pack {
             off = f.next;
         }
         (recs, seals)
+    }
+}
+
+// ---- writing (2.2, 2.4): a commit is an append of records, an index and a head ----
+fn frame_into(d: &mut Vec<u8>, kind: u8, payload: &[u8]) {
+    d.extend([kind, 0]);
+    let mut n = payload.len();
+    while n >= 0x80 {
+        d.push(n as u8 | 0x80);
+        n >>= 7;
+    }
+    d.push(n as u8);
+    d.extend(payload);
+}
+impl Pack {
+    pub fn bytes(&self) -> &[u8] {
+        &self.d
+    }
+    /// Appends the records that are not here yet, an index that covers every frame up to itself, and a
+    /// head naming `commit`; then finds the state afresh. On any failure the pack is as it was.
+    pub fn commit(&mut self, recs: &[(u8, Vec<u8>)], commit: &H) -> Option<()> {
+        let was = self.d.len();
+        if self.unread_tail != 0 || self.write(recs, commit).is_none() || self.head != *commit {
+            self.d.truncate(was);
+            self.reopen();
+            return None;
+        }
+        Some(())
+    }
+    /// Takes off what lies after the first `len` bytes: a commit that was appended and is not wanted.
+    pub fn cut(&mut self, len: usize) {
+        self.d.truncate(len);
+        self.reopen();
+    }
+    fn write(&mut self, recs: &[(u8, Vec<u8>)], commit: &H) -> Option<()> {
+        for (kind, bytes) in recs {
+            let h = sha256(&[&[*kind], bytes]);
+            if self.record(*kind, &h).is_none() {
+                self.after.entry(h, self.d.len());
+                frame_into(&mut self.d, *kind, bytes);
+            }
+        }
+        let commit_at = self.find(commit)?;
+        // 2.4: the new index covers from the end of the newest index's coverage to its own offset
+        let field = |d: &[u8], at: usize, k: usize| le(&d[at + k..at + k + 8]);
+        let index = |pk: &Pack, at: usize| pk.frame(at).filter(|f| f.kind == 4 && f.len >= 24 && f.len == 24 + 40 * le(&pk.d[f.start..f.start + 8])).map(|f| f.start);
+        let (at, mut prev) = (self.d.len(), self.index);
+        let mut off = match index(self, prev) {
+            Some(p) => field(&self.d, p, 16).max(8),
+            None => 8,
+        };
+        if off == 8 {
+            prev = 0; // no index, or one that cannot be read: everything is listed again
+        }
+        let mut ents: Vec<(H, usize)> = Vec::new();
+        while off < at {
+            let f = self.frame(off)?;
+            if f.kind == 1 || f.kind == 2 {
+                ents.push((self.hash_at(off)?, off)); // a record that cannot be read would be hidden: refuse
+            }
+            off = f.next;
+        }
+        // the merge rule: absorb the index before, while it has no more than twice as many entries
+        while let Some(p) = index(self, prev) {
+            let n = field(&self.d, p, 0);
+            if prev == 0 || n > 2 * ents.len() {
+                break;
+            }
+            ents.extend((0..n).map(|i| (self.d[p + 24 + 40 * i..p + 56 + 40 * i].try_into().unwrap_or([0; 32]), field(&self.d, p, 56 + 40 * i))));
+            prev = field(&self.d, p, 8);
+        }
+        crate::small::sort(&mut ents); // by hash, then by offset: the lowest offset of each record is kept
+        ents.dedup_by(|b, a| a.0 == b.0);
+        let mut p = Vec::new();
+        for n in [ents.len(), prev, at] {
+            p.extend((n as u64).to_le_bytes());
+        }
+        for (h, o) in &ents {
+            p.extend(h);
+            p.extend((*o as u64).to_le_bytes());
+        }
+        frame_into(&mut self.d, 4, &p);
+        // 2.2: the head
+        let mut p = commit.to_vec();
+        for n in [commit_at, at, self.head_at, self.d.len() + 75] {
+            p.extend((n as u64).to_le_bytes());
+        }
+        let check = sha256(&[&p]);
+        p.extend(&check[..8]);
+        frame_into(&mut self.d, 5, &p);
+        self.reopen()
     }
 }
