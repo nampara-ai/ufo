@@ -3560,10 +3560,10 @@ revised once, with reasons, before anything is frozen.
 | Frame kinds | 6 | 6 | |
 | Formula operators | 64 | 52 | a spreadsheet's essentials, and `ask`; anything larger is a Compute-let |
 | Base host functions | 12 | 10, plus 2 exports | small enough to implement identically on every host |
-| Capabilities | 20 | 16 | each is something only a host can provide (**H4**) |
-| Operations across all capabilities | 64 | 32 written or sketched: `text` 3, `present` 2, `gpu` 27 (Appendix E); `objects` reuses the projections and actions | the rest are unwritten; the count is part of the interface's true size |
+| Capabilities | 20 | 18 | each is something only a host can provide (**H4**) |
+| Operations across all capabilities | 64 | 55 written or sketched: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `run` 6, `text` 3, `present` 2, `blobs` 1, `gpu` 27 (Appendix E). `objects` exposes the projections and actions | seven optional capabilities are unwritten. The limit will not hold once they are, unless `gpu` shrinks: a decision owed |
 | Concepts | 40 | 39 | what a newcomer must learn; each is justified in §16, and a new concept must displace one |
-| All defined terms, including names for compositions and structural terms | 130 | 129 | the full total of §16's three tables |
+| All defined terms, including names for compositions and structural terms | 130 | 144 | **over the limit.** Earlier counts took a row that names several terms as one, and left out terms the text defines. Either terms go or the limit moves: a decision owed |
 
 ### 12.2 Size of the player
 
@@ -3575,7 +3575,7 @@ These limits change only on measurement.
 | Kernel, DEFLATE-compressed | 128 KiB, firm | this is the size that travels: every envelope carries the kernel compressed, so this is the limit every file pays for |
 | Kernel, compiled WebAssembly | 256 KiB, as guidance | derived from the compressed limit at the measured ratio of 48%; no longer a limit of its own |
 | Kernel source: its own code, excluding tests and anything borrowed | 6 000 lines | set from the compiled limit at the measured density of about 40 bytes a line; one engineer reads it in a working day |
-| Binding source, per host | 600 lines | readable in minutes; this now includes executing the drawing contract (§6.2) |
+| Binding source, per host | 600 lines | the base functions, the drawing contract and the kernel's own capabilities. Each optional capability a host offers is counted apart, and reported |
 | Web binding, as shipped | 16 KiB | |
 | Tools universe (§6.6), as carried | 24 KiB | description only; no code |
 | Web envelope holding one paragraph | 256 KiB | the compressed kernel in base64 (171 KiB at its limit), the binding, the tools universe inside the pack in base64 (32 KiB), the static face, the rest of the pack |
@@ -3587,15 +3587,21 @@ These limits change only on measurement.
 The kernel's lines are budgeted by part, so that growth is noticed where it
 happens:
 
-| Part of the kernel | Lines |
-| --- | --- |
-| Hashing, values, pack, recovery, index, compaction | 800 |
-| Objects, object map, blobs, changes, conservation, sequences | 800 |
-| Anchors, resolution, pins, digests, derivations, travel layers | 600 |
-| Formulas, including arithmetic that must be identical everywhere | 700 |
-| Composition: layout, clocks, hit testing, presentation state, pagination | 1 500 |
-| Projections, outlines, search, difference, actions, undo | 900 |
-| Printing, module checking, instrumentation, promotion | 700 |
+| Part of the kernel | Lines | What is known |
+| --- | --- | --- |
+| Values, hashing, pack, index, recovery, compaction; finding and writing a pack in an envelope | 900 | the miniature read all of this but compaction and envelopes, in about 560 |
+| Objects, object map, blobs and chunking, changes, conservation, sequences | 700 | the miniature read objects, blobs and sequences in about 115, and wrote nothing |
+| Anchors, resolution, pins, digests, derivations, the layers of what travels | 500 | not measured |
+| Formulas, with the mathematics routines they need | 700 | not measured |
+| Composition: text with line breaking and bidirectional ordering, flow, grid, absolute, clocks, pages, plain text, presentation state, hit testing | 1 500 | the miniature did text, flow, pages and plain text, without the two Unicode algorithms, in 491 |
+| Projections, outlines, search, difference, actions, undo, the agent's spelling of values | 800 | not measured |
+| Code and machines: printing; decoding and instrumenting modules; lifting; promotion; running Compute-lets through `run`; snapshots and replay; capabilities | 900 | the miniature's printer was 344, for part of the instruction set |
+
+These are allocations, not measurements. Two are known to be tight:
+composition, which has gained the two Unicode algorithms since the
+miniature ran, and code and machines, of which the miniature covered
+least. No validator is budgeted, because whether a module is valid is the
+host engine's judgment (**N1**).
 
 **The measurement behind these.** A throwaway kernel of 1 613 lines — the
 reading half of the first two rows (675 lines), composition of text into
@@ -4043,8 +4049,8 @@ tested.
 ## 16. Glossary
 
 Every defined term of this document is in one of three tables. There are
-129 in all: 39 concepts, 21 names for compositions, and 69 structural
-terms.
+144 in all: 39 concepts, 35 names for compositions, and 70 structural
+terms. A row that names two or three terms counts as that many.
 
 **Concepts.** What a newcomer must learn. A concept is listed here only if
 it cannot be expressed as a composition of the others; the third column
@@ -4112,16 +4118,24 @@ the second column says how.
 | Snapshot | a blob of Compute-let state |
 | Span | an anchor on a text's elements, with a role and properties |
 | Transclusion | a Portal whose target is a region of another object |
-| Transmutation | described objects with a derivation whose `how` is `transmute` |
+| Transmutation | described objects with a derivation that a model performed |
 | Unit | a function object |
 | Recipe | a derivation's `from`, with the origin of the change it names |
 | Working form, travel form | a pack alone; a pack in an envelope |
-| Content, attribution, working history | the three sets of records, by reachability, that decide what travels |
+| Content layer, attribution layer, working history | the three sets of records, by reachability, that decide what travels |
 | Carried presenter, component | a Compute-let on a surface; a Compute-let the player relies on |
-| Tools universe | a nested universe that is the interface to the kernel's functions |
+| Tools universe | a universe that is the interface to the kernel's functions, presented with the universe being worked on as its subject |
+| Subject | a universe that a presenter hands to what it presents |
+| Onboard tools | the kernel's projections and actions, and the tools universe |
+| Renderer | a Compute-let that measures, draws and encodes for canonical exports |
+| Plain-text face | an object's text in reading order |
+| Nested, linked | of another universe: its commit is in the file, or is not |
+| Profile | a versioned set of types, properties and axes, declared as a feature |
+| Poster | the rendition shown when a Compute-let cannot or may not run |
+| Program hash, unit hash | the hash of what a Compute-let would run and may ask for; the hash of a function's content |
 
 **Structural terms.** Words for the parts of records and for the states
-things can be in, each defined where it is first used: chunk, node, value, ref, indirect, veiled, opening, frame (of a pack), head, index, note, signature (of a pack), offset, reachable, identity, type, property, sequence property, run, removed (of an element), boundary, revision hash, root hash, object map, universe object, lineage, work (of a change), region, frame (of an axis), digest, flick, basis (witnessed, inferred, unknown), finding, malformed, inconsistent, unavailable, unrecognized, whole, live, withheld, detached, current, stale, compaction, presentation state, row, outline, player, base presenter, drawing contract, port, manifest, module, statement, derived (of bytes), lifted, fuel, test, test change, promotion, static face, plain-text head, envelope template, mark, sharing, publishing, export, determinism tier, occurrence.
+things can be in, each defined where it is first used: chunk, node, value, ref, indirect, veiled, opening, frame (of a pack), head, index, note, signature (of a pack), offset, reachable, identity, type, property, sequence property, run, removed (of an element), boundary, revision hash, root hash, object map, universe object, lineage, work (of a change), region, frame (of an axis), digest, flick, basis (witnessed, inferred, unknown), finding, malformed, inconsistent, unavailable, unrecognized, whole, live, withheld, detached, current, stale, compaction, presentation state, root clock, row, outline, player, base presenter, drawing contract, port, manifest, module, statement, derived (of bytes), lifted, fuel, test, test change, promotion, static face, plain-text head, envelope template, mark, sharing, publishing, export, determinism tier, occurrence.
 
 ---
 
