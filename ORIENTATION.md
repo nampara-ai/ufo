@@ -815,3 +815,36 @@ been reviewed.
 
 Next, after the owner's review: the strict spec-first reader test, then
 the envelope spike.
+
+## 18. Version 0.8: the specification in parts (owner's decision, 2026-11-22)
+
+The specification is now a core and four profiles, with the worked
+examples and the application mapping as companions. Section numbers run
+through all the documents. Entries above this one, and
+`spike/FINDINGS.md`, cite the single document's numbers of their time;
+this table converts them.
+
+| Up to 0.7 | From 0.8 | Document |
+| --- | --- | --- |
+| §0–§4 | §0–§4 | SPEC.md (core) |
+| §8.1, §8.2, §8.3, §8.5 | §5.1–§5.4 | SPEC.md |
+| §12 (intro), §12.1 | §6, §6.1 | SPEC.md |
+| §16 glossary, §15 checklist | §6.2, §6.3 | SPEC.md |
+| §5.1–§5.7 | §7.1–§7.7 | SPEC-PRESENTATION.md |
+| §8.4 Portals | §7.8 | SPEC-PRESENTATION.md |
+| §7.1–§7.4 | §8.1–§8.4 | SPEC-PRESENTATION.md |
+| §6.1–§6.6 | §9.1–§9.6 | SPEC-PLAYER.md |
+| §7.5, §11.7, §11.8 | §10.1, §10.2, §10.3 | SPEC-PLAYER.md |
+| §12.2, §12.3 | §11.1, §11.2 | SPEC-PLAYER.md |
+| §11.1–§11.6 | §12.1–§12.6 | SPEC-EXECUTION.md |
+| §9.1–§9.5 | §13.1–§13.5 | SPEC-TRAVEL.md |
+| §10.1–§10.6 | §14.1–§14.6 | SPEC-TRAVEL.md |
+| §14 | §15 | EXAMPLES.md |
+| §13 | §16 | MAPPING.md |
+
+Appendices keep their letters: C, D and F with the core, A with
+presentation, B with the player, E with execution. Rule labels are
+unchanged.
+
+Words: the core is about 19 000; presentation 8 900; the player 8 600;
+execution 4 600; travel and trust 4 200; the two companions 4 000.

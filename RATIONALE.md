@@ -87,7 +87,7 @@ progress:
 - the same content stored several times in different formats;
 - layers of compatibility code wrapped around one another.
 
-The specification's budgets (SPEC §12) and its deletion test (SPEC §5.4)
+The specification's budgets (SPEC §6) and its deletion test (SPEC §7.4)
 exist to hold that line. A proposed addition must show that it cannot be
 expressed as data, as a formula, or as a composition of what exists.
 
@@ -213,23 +213,23 @@ so it can be challenged.
 | **Veiled indirects** | Salting content defeats deduplication; leaving hashes bare lets short content be guessed. A commitment on the reference, opened by a small record that can itself be withheld, gives both. | §1.4 |
 | **The pack** | *SQLite*: no canonical bytes to hash or sign; its engine in every file. *Git packfiles*: delta compression and a separate index file make a weekend reader impossible; not built for one growing file. *ZIP*: no content addressing; central directory rewritten on every change. *CAR (IPLD)*: content-addressed, but no commit trailer, crash recovery or index. | §2, §3 |
 | **Permanent element identities in every sequence** | *Position-based edit logs* (and this project's own first drafts) needed four interlocking mechanisms to keep attribution and structure attached to an edited sequence: runs, self-carried regions, an insertion bias and history replay. *Automerge* and *Peritext* show the better decomposition: give every element a permanent identity and attach everything to identities. Those systems are replication libraries with their own storage and no notion of attribution, evidence or a hashed, sealed history; the idea is taken, the format is not. Here an element's identity is the change that inserted it and a number, so identity is attribution, and removed elements stay as markers so anchors can always be placed. | §1.7, §4.3 |
-| **Work kept apart from attribution** | *Git shallow clones* drop history wholesale, with its authorship. *Redaction* breaks hashes. A change keeps who and what in the object and the operations in one value beside it, behind a veil, so a copy can withhold what earlier drafts said and still verify authorship. | §1.7, §9.3 |
+| **Work kept apart from attribution** | *Git shallow clones* drop history wholesale, with its authorship. *Redaction* breaks hashes. A change keeps who and what in the object and the operations in one value beside it, behind a veil, so a copy can withhold what earlier drafts said and still verify authorship. | §1.7, §13.3 |
 | **Three kinds of axis, each resolved without history** | *W3C Web Annotation selectors* re-find text by quoting it, which is matching. *Media Fragments* address time and space but say nothing about edits. *Operational transformation* replays history. Here a sequence region names elements, a continuous region is mapped through a frame the object holds, and a keyed region names keys: all three resolve against the current state alone and never guess. | §4 |
-| **Pins and one staleness test** | Build systems track staleness of files, not regions; document formats do not track it at all. A pin's digest follows references, so a pin to a container notices a change in anything it shows. | §4.4, §8.3 |
-| **The change as an object, with origin, evidence and decision apart** | *Version control* records who committed, not who or what wrote each span, on what evidence, with what human decision. *C2PA* attests to whole assets after the fact, not to spans as they are written. *Track changes* is per application and lost on export. | §1.7, §8.5 |
-| **Origin with a basis: witnessed, inferred, unknown** | Attribution systems either assert authorship or stay silent. None distinguishes what was recorded at the moment from what was worked out later. | §8.5 |
-| **Eleven primitives and a display list** | *HTML and CSS* are a full description language, but far too large to interpret in a small kernel, and their meaning is whatever a browser version does. *SVG* has no flow layout, data or time model worth the name. *PDF* is depiction. *Scene and timeline formats* each cover one medium. | §5, §6.2 |
-| **Formulas stored as structure** | *Spreadsheet formula text* needs a parser and differs between products. *Vega expressions* are JavaScript text. Structure needs no parser and has one meaning. | §5.3 |
-| **Handlers that propose changes** | Interactive documents either embed a scripting language, with its security history, or cannot edit their own data. A declarative handler that yields a verified, attributed change needs neither. | §5.6 |
-| **The host interface** | *WASI* assumes files, sockets and clocks, which is the authority a document must not have, and has no drawing or input. The *component model* is not yet uniformly available in browsers. Ten functions and named capabilities can be stated in either later. | §6.3 |
-| **Code as description: statements as elements, printed by the kernel** | *Source text and a compiler* put the meaning in a language outside the format and the record of why in commit messages beside it. *Bytes plus a ledger of operations on them* (this project's own earlier draft) needed keys for the parts of a module, hashes with keys substituted for indices, a replay of all history to verify, a separate printer program, and a whole function resent for every change. *Unison* names code by content, for one language. Here the description is WebAssembly's own instructions as values, so there is no new language; each statement is an element like a character of text, so attribution, anchors, diffs and merging come from the core; and printing is a small pure function. | §11.3–§11.5 |
-| **Metering inserted by the reader** | Runtimes with built-in fuel exist outside browsers only. Metering inserted by the toolchain must be trusted or re-verified by a second copy of the rule. Inserting it in the kernel at load means there is one rule and nothing to trust. | §11.2 |
-| **The web envelope's read-back** | A page opened from disk cannot fetch its own file; *single-file web apps* store data as script or JSON text, not as range-readable, hash-verified records. | §9.2 |
-| **The mark** | Metadata, boxes and chunks are stripped by re-encoding platforms. Only pixels survive, and QR is the standard way to put a short reference in pixels; what is new is treating it as a content address for a linked universe. | §9.4 |
-| **Two layers of the light cone** | *Retrieval by similarity* returns fragments without telling you what you did not see. *Stored summaries* go stale silently, and a universe that depends on them cannot be navigated until a model has read it. *Tables of contents* cover headings and nothing else. Here an outline is computed for anything — sizes, kinds, headings, who changed what and when — and is always current; summaries are pinned derivations that attach to its parts and are written only where the outline cannot tell siblings apart. | §11.7 |
-| **The host measures; the kernel breaks** | *Host text layout* (CSS, TextKit, DirectWrite paragraphs) takes a whole paragraph and returns its lines, which makes every host a second layout engine and makes lines differ wherever hosts do. *A host line iterator* ("what fits in this width") was this project's own first answer and ran in the spike; a reviewer pointed out that it is the same fault at a smaller size, and that the web offers no such call, so every web binding would have carried a line breaker. Where a line ends is layout, and layout has one implementation. The kernel therefore carries the Unicode line-breaking and bidirectional algorithms and asks a host one thing: what a run of text measures. It costs kernel size, not yet measured. | §5.7, §6.3 |
-| **Rows, and three rules for pages** | *TeX's page builder* and *CSS fragmentation* are far larger than a small kernel can carry and depend on a full box model. Treating the flow as unbreakable rows, filling greedily, and applying three rules (no heading at the foot; no split of a short block; two lines on each side of a split) gives conventional pages from sixty lines of code. It is not optimal page-breaking and does not claim to be. | §5.7 |
-| **The recipe** | *Notebooks and build files* record how to regenerate an output, apart from the output and by path. *Generation metadata* in image files records a prompt with nothing binding it to inputs. A derived object here names its sources by pin and the change that made it; that change's origin holds the model, prompt and parameters; so "make it again" is one action and "how was this made" is one question. | §8.3 |
+| **Pins and one staleness test** | Build systems track staleness of files, not regions; document formats do not track it at all. A pin's digest follows references, so a pin to a container notices a change in anything it shows. | §4.4, §5.3 |
+| **The change as an object, with origin, evidence and decision apart** | *Version control* records who committed, not who or what wrote each span, on what evidence, with what human decision. *C2PA* attests to whole assets after the fact, not to spans as they are written. *Track changes* is per application and lost on export. | §1.7, §5.4 |
+| **Origin with a basis: witnessed, inferred, unknown** | Attribution systems either assert authorship or stay silent. None distinguishes what was recorded at the moment from what was worked out later. | §5.4 |
+| **Eleven primitives and a display list** | *HTML and CSS* are a full description language, but far too large to interpret in a small kernel, and their meaning is whatever a browser version does. *SVG* has no flow layout, data or time model worth the name. *PDF* is depiction. *Scene and timeline formats* each cover one medium. | §7, §9.2 |
+| **Formulas stored as structure** | *Spreadsheet formula text* needs a parser and differs between products. *Vega expressions* are JavaScript text. Structure needs no parser and has one meaning. | §7.3 |
+| **Handlers that propose changes** | Interactive documents either embed a scripting language, with its security history, or cannot edit their own data. A declarative handler that yields a verified, attributed change needs neither. | §7.6 |
+| **The host interface** | *WASI* assumes files, sockets and clocks, which is the authority a document must not have, and has no drawing or input. The *component model* is not yet uniformly available in browsers. Ten functions and named capabilities can be stated in either later. | §9.3 |
+| **Code as description: statements as elements, printed by the kernel** | *Source text and a compiler* put the meaning in a language outside the format and the record of why in commit messages beside it. *Bytes plus a ledger of operations on them* (this project's own earlier draft) needed keys for the parts of a module, hashes with keys substituted for indices, a replay of all history to verify, a separate printer program, and a whole function resent for every change. *Unison* names code by content, for one language. Here the description is WebAssembly's own instructions as values, so there is no new language; each statement is an element like a character of text, so attribution, anchors, diffs and merging come from the core; and printing is a small pure function. | §12.3–§12.5 |
+| **Metering inserted by the reader** | Runtimes with built-in fuel exist outside browsers only. Metering inserted by the toolchain must be trusted or re-verified by a second copy of the rule. Inserting it in the kernel at load means there is one rule and nothing to trust. | §12.2 |
+| **The web envelope's read-back** | A page opened from disk cannot fetch its own file; *single-file web apps* store data as script or JSON text, not as range-readable, hash-verified records. | §13.2 |
+| **The mark** | Metadata, boxes and chunks are stripped by re-encoding platforms. Only pixels survive, and QR is the standard way to put a short reference in pixels; what is new is treating it as a content address for a linked universe. | §13.4 |
+| **Two layers of the light cone** | *Retrieval by similarity* returns fragments without telling you what you did not see. *Stored summaries* go stale silently, and a universe that depends on them cannot be navigated until a model has read it. *Tables of contents* cover headings and nothing else. Here an outline is computed for anything — sizes, kinds, headings, who changed what and when — and is always current; summaries are pinned derivations that attach to its parts and are written only where the outline cannot tell siblings apart. | §10.2 |
+| **The host measures; the kernel breaks** | *Host text layout* (CSS, TextKit, DirectWrite paragraphs) takes a whole paragraph and returns its lines, which makes every host a second layout engine and makes lines differ wherever hosts do. *A host line iterator* ("what fits in this width") was this project's own first answer and ran in the spike; a reviewer pointed out that it is the same fault at a smaller size, and that the web offers no such call, so every web binding would have carried a line breaker. Where a line ends is layout, and layout has one implementation. The kernel therefore carries the Unicode line-breaking and bidirectional algorithms and asks a host one thing: what a run of text measures. It costs kernel size, not yet measured. | §7.7, §9.3 |
+| **Rows, and three rules for pages** | *TeX's page builder* and *CSS fragmentation* are far larger than a small kernel can carry and depend on a full box model. Treating the flow as unbreakable rows, filling greedily, and applying three rules (no heading at the foot; no split of a short block; two lines on each side of a split) gives conventional pages from sixty lines of code. It is not optimal page-breaking and does not claim to be. | §7.7 |
+| **The recipe** | *Notebooks and build files* record how to regenerate an output, apart from the output and by path. *Generation metadata* in image files records a prompt with nothing binding it to inputs. A derived object here names its sources by pin and the change that made it; that change's origin holds the model, prompt and parameters; so "make it again" is one action and "how was this made" is one question. | §5.3 |
 
 ## The name, the ending and the mark
 
@@ -336,7 +336,7 @@ saw scored every result.
 opened real packs, including the normative vectors, and presented one small
 universe as plain text, as a scrolling view and as pages, with a text from
 a nested universe shown through a Portal. It read; it wrote nothing. It
-needed an algorithm the specification did not have (now §5.7). In it the
+needed an algorithm the specification did not have (now §7.7). In it the
 host broke lines; the specification has since moved line breaking into
 the kernel, and what that adds to the kernel's size is not measured.
 Built without the standard library and passed through a size optimiser, it
@@ -421,25 +421,25 @@ argued here; the rest are listed with where each is argued.
   inventions above and in the specification (§2).
 - **Summaries are optional, and there is no stored tree of them.** The
   first intention was a summary at every level. The outline is computed
-  for everything; a summary is written where it pays (§11.7).
+  for everything; a summary is written where it pays (§10.2).
 - **Code is not named by a hash of its bytes alone.** A function has an
   identity, as every object has, and a *unit hash* of its content; a
-  Compute-let has a *program hash*, to which grants attach (§11.3).
+  Compute-let has a *program hash*, to which grants attach (§12.3).
 - **Executable bytes may arrive compiled elsewhere.** The first intention
   was that the printer alone ever writes executable bytes. A module made
   by another toolchain is carried as an asset and lifted to description
   when first maintained, within the instructions that can be described
-  (§11.3).
+  (§12.3).
 - **The printer is part of the kernel**, not of each Compute-let, so
-  there is one (§11.4).
+  there is one (§12.4).
 - **Tests are declarative objects the reader runs**, not a test runner
-  carried as a program (§11.6).
+  carried as a program (§12.6).
 - **A canonical export is reproducible given a named renderer**, not by a
-  rendering profile written into the format (§7.4).
+  rendering profile written into the format (§8.4).
 - **Fonts shape and measure on the host; the kernel breaks the lines.**
   The first intention had the format own layout entirely. The kernel
   decides every break by the Unicode algorithms and asks the host only
-  what a run of text measures (§5.7).
+  what a run of text measures (§7.7).
 
 ## Honest limits
 

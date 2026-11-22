@@ -7,6 +7,11 @@ the end of this file. The agreement is reproduced below without change,
 from <https://www.openwebfoundation.org/the-agreements/the-owf-1-0-agreements-granted-claims/owfa-1-0>,
 with its blanks filled in.
 
+The agreement below names version 0.7, which was one document. From
+version 0.8 the specification is `SPEC.md` and its parts, `SPEC-*.md`. The
+agreement is to be applied again, naming those files, at the next released
+version; until then this file records what was granted and for what.
+
 It grants everyone a copyright licence to the specification, and a promise
 not to assert, against any implementation of the specification, the
 signatory's patent claims that implementing it necessarily infringes. It

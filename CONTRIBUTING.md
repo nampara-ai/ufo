@@ -1,7 +1,7 @@
 # Contributing
 
 The project is at the specification stage. The most useful contributions
-are reviews of [SPEC.md](SPEC.md): places where it is ambiguous, untestable,
+are reviews of the specification, [SPEC.md](SPEC.md) and its parts: places where it is ambiguous, untestable,
 larger than it needs to be, or wrong.
 
 ## How a change is judged
@@ -31,16 +31,16 @@ these. A "yes" to any of the first six means stop and redesign.
     at the border instead?
 
 An addition to the specification must also pass the deletion test (SPEC
-§5.4, rule V3) and restate the budgets of SPEC §12. A simplification must
+§7.4, rule V3) and restate the budgets of SPEC §6. A simplification must
 pass the opposite test: it may remove mechanism, never reach. Whoever
 removes a concept shows what it now composes from, and that every worked
-example of SPEC §14 still works.
+example of SPEC §15 still works.
 
 ## The terms of a contribution
 
 *Proposed by the project's owner, and pending review by counsel.*
 
-- **To the specification** (`SPEC.md`, `CORE.md`): under the Open Web
+- **To the specification** (`SPEC.md`, its parts `SPEC-*.md`, `CORE.md`): under the Open Web
   Foundation's [Contributor License Agreement 1.0](https://www.openwebfoundation.org/the-agreements/the-owf-1-0-agreements-granted-claims),
   in its form covering copyright and patents. The
   [Final Specification Agreement](SPEC-LICENSE.md) is then applied to each

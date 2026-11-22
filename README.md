@@ -10,12 +10,14 @@ every part of it came from.
 | Document | What it is |
 | --- | --- |
 | [CORE.md](CORE.md) | The whole format in about four pages |
-| [SPEC.md](SPEC.md) | The draft specification, version 0.7 |
+| [SPEC.md](SPEC.md) | The draft specification, version 0.8: the core — storage, memory, addressing |
+| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md), [SPEC-PLAYER.md](SPEC-PLAYER.md), [SPEC-EXECUTION.md](SPEC-EXECUTION.md), [SPEC-TRAVEL.md](SPEC-TRAVEL.md) | The specification's four profiles, each readable after the core |
+| [EXAMPLES.md](EXAMPLES.md), [MAPPING.md](MAPPING.md) | Companions: four worked examples; mapping an application's records. Not normative |
 | [RATIONALE.md](RATIONALE.md) | Why the format is shaped as it is |
 | [VISION-TRACE.md](VISION-TRACE.md) | Each element of the vision: where it is specified, what has tested it, and how solid it is |
 | [vectors/](vectors/) | Byte-level test vectors (normative) |
 | [tools/](tools/) | Non-normative tooling |
-| [spike/](spike/) | Throwaway code and findings of the measurement spike; to be deleted once reviewed |
+| [spike/](spike/) | Findings of the measurement spike, and the throwaway kernel that generates the provisional vectors. Not an implementation |
 | [NAMING.md](NAMING.md) | The decision on the file-name ending (`.ufx`) and media type, with the candidates compared and the dated checks |
 | [registration/](registration/) | Draft media type registration; not submitted |
 | [brand/](brand/) | Design brief for the default icon |
@@ -34,7 +36,7 @@ Three licences, by what a thing is:
 
 | What | Licence | Why |
 | --- | --- | --- |
-| The specification: [SPEC.md](SPEC.md) and [CORE.md](CORE.md) | [Open Web Foundation Final Specification Agreement 1.0](SPEC-LICENSE.md) | a copyright licence, and a promise not to assert necessary patent claims against any implementation of the specification |
+| The specification: [SPEC.md](SPEC.md), its parts `SPEC-*.md`, and [CORE.md](CORE.md) | [Open Web Foundation Final Specification Agreement 1.0](SPEC-LICENSE.md) | a copyright licence, and a promise not to assert necessary patent claims against any implementation of the specification |
 | Test vectors: everything in [vectors/](vectors/) | [CC0 1.0](vectors/LICENSE) | they are meant to be copied into every implementation's tests, with no conditions |
 | Everything else: code, tooling and the other documents | [Apache License 2.0](LICENSE), with [NOTICE](NOTICE) | an express patent grant from every contributor |
 

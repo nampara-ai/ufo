@@ -56,84 +56,84 @@ Three cautions.
 | # | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- | --- |
 | 1 | An open, universal primitive of computing that outlives any application | SPEC §0; RATIONALE "The ambition"; the pack's re-implementability, §3.3 | Two independent readers built the storage layer of an earlier version from the text; a kernel miniature read the current one | **Thin.** There is still no reader anyone can use, no second writer, no file anyone has opened outside a test |
-| 2 | One universe presents as anything: document, plain text, image, video, audio, data, diagram, 3D, application, game | §5 (vocabulary), §5.7 (composition), §7 (faces), §14 | One small universe presented by one kernel as plain text, as a view and as pages, drawn in a browser | **Tested in miniature for a document. Thin for everything else.** Rules for grid, absolute position and clocks were written after the review and have not run; floats, charts from data, video, audio and 3D have less |
-| 3 | The file stands alone: carries its player and onboard tools, opens with nothing but a browser | §6.1, §6.6, §9.2 | A kernel and a 79-line binding ran in a browser, served from a local server, not from inside an envelope | **Thin.** The envelope template and the tools universe do not exist. The review found the tools universe could not work as specified; how it reaches the universe being worked on has been redesigned (§6.6) and not tried. Reading the pack back from a page opened from disk, compiling WebAssembly under the stated security policy, and phones are all untested |
-| 4 | Description, not depiction; the description changes only when the work changes | §7.1 (S1), §5.3, §5.7 | The three faces above were sampled from one description. The kernel that did it could not write, so that it wrote nothing shows little | **Tested in miniature**, for text only |
-| 5 | Compute-lets are full machines — application, operating system, machine, environment — running live inside other universes through Portals | §11.1, §11.2, §8.4, §5.6, §6.3 | Fuel instrumentation of three small hand-assembled modules; printed modules run as plain WebAssembly under tests | **Thin beyond metering and printing.** How a module is started, the snapshot and the replay log now have formats, unrun. Running out of call stack is not yet deterministic. Seven optional capabilities have no operations. Nothing has run inside a Portal or drawn through `draw` |
-| 6 | The printer and ledger replace the source tree: code is description, and its bytes are a face of it | §11.3–§11.6 | Two language models built a 300-to-400-instruction program and fresh instances maintained it from a ledger alone: 8 builds and 16 maintenance runs at four levels, scored on hidden tests, all passing. Of those, the adopted design had 2 builds and 4 maintenance runs, through a tool that addressed statements by number. The printer written twice, agreeing byte for byte on six modules and with a hand-assembled vector | **Tested in miniature.** No model has edited code by element identity through `propose`, or read the Chronicle itself as the ledger. The claim at the size of a real program is still the project's largest unproven one. Lifting a compiled module, promotion and tests-as-objects have not run |
-| 7 | Every byte has a known origin; provenance is intrinsic | §1.7 (elements), §8.5 (R8), §11.3 (N4) | The kernel miniature read `seq` and resolved spans by element identity; the trial printer showed each statement with the change that wrote it, and subjects used that to find a bug | **Specified, untested** as a whole: `why`, `origin.sources` for copies, later findings and attribution of derived bytes have never run |
-| 8 | The light cone: overview to exact bytes at a cost that scales with the question | §11.7, §7.5, §14.3 | Two models answered three questions over a 199 000-character corpus in four universes, with the structural layer alone and with both layers; cost recorded per question | **Tested in miniature**, on an object model outside the kernel, with summaries written by a script. 62 objects is not scale. Ranges in an outline, the matching of summaries to parts, and stale summaries during navigation did not run |
-| 9 | Universes nest and link without limit, through membranes with explicit rules | §1.8, §10.4, §8.4 (O7, O8) | Normative vectors `nested.ufx` and `linked.ufx`; the kernel miniature presented a nested text through a Portal and showed a label for a linked one | **Tested in miniature** for nesting. **Thin for linking:** a linked universe is a hash, a label and, since the review, a hint of where to look. Transfer between people and encryption are not specified enough to try |
-| 10 | AI transmutation is a first-class operation of the format | §8.3 (D3, D4), §11.8 (`derive`, `refresh`, `recipe`), §4.4 | Pins, staleness through a ref and through a chain of derivations, the recipe, one-step regeneration and its refusal when the prompt is withheld, with a deterministic function standing in for the model | **Tested in miniature.** The transmutation itself happens outside the format; what the format does — supply inputs, bind outputs, know when they part, hold the recipe — is what ran. No real model was in the loop |
+| 2 | One universe presents as anything: document, plain text, image, video, audio, data, diagram, 3D, application, game | §7 (vocabulary), §7.7 (composition), §8 (faces), §15 | One small universe presented by one kernel as plain text, as a view and as pages, drawn in a browser | **Tested in miniature for a document. Thin for everything else.** Rules for grid, absolute position and clocks were written after the review and have not run; floats, charts from data, video, audio and 3D have less |
+| 3 | The file stands alone: carries its player and onboard tools, opens with nothing but a browser | §9.1, §9.6, §13.2 | A kernel and a 79-line binding ran in a browser, served from a local server, not from inside an envelope | **Thin.** The envelope template and the tools universe do not exist. The review found the tools universe could not work as specified; how it reaches the universe being worked on has been redesigned (§9.6) and not tried. Reading the pack back from a page opened from disk, compiling WebAssembly under the stated security policy, and phones are all untested |
+| 4 | Description, not depiction; the description changes only when the work changes | §8.1 (S1), §7.3, §7.7 | The three faces above were sampled from one description. The kernel that did it could not write, so that it wrote nothing shows little | **Tested in miniature**, for text only |
+| 5 | Compute-lets are full machines — application, operating system, machine, environment — running live inside other universes through Portals | §12.1, §12.2, §7.8, §7.6, §9.3 | Fuel instrumentation of three small hand-assembled modules; printed modules run as plain WebAssembly under tests | **Thin beyond metering and printing.** How a module is started, the snapshot and the replay log now have formats, unrun. Running out of call stack is not yet deterministic. Seven optional capabilities have no operations. Nothing has run inside a Portal or drawn through `draw` |
+| 6 | The printer and ledger replace the source tree: code is description, and its bytes are a face of it | §12.3–§12.6 | Two language models built a 300-to-400-instruction program and fresh instances maintained it from a ledger alone: 8 builds and 16 maintenance runs at four levels, scored on hidden tests, all passing. Of those, the adopted design had 2 builds and 4 maintenance runs, through a tool that addressed statements by number. The printer written twice, agreeing byte for byte on six modules and with a hand-assembled vector | **Tested in miniature.** No model has edited code by element identity through `propose`, or read the Chronicle itself as the ledger. The claim at the size of a real program is still the project's largest unproven one. Lifting a compiled module, promotion and tests-as-objects have not run |
+| 7 | Every byte has a known origin; provenance is intrinsic | §1.7 (elements), §5.4 (R8), §12.3 (N4) | The kernel miniature read `seq` and resolved spans by element identity; the trial printer showed each statement with the change that wrote it, and subjects used that to find a bug | **Specified, untested** as a whole: `why`, `origin.sources` for copies, later findings and attribution of derived bytes have never run |
+| 8 | The light cone: overview to exact bytes at a cost that scales with the question | §10.2, §10.1, §15.3 | Two models answered three questions over a 199 000-character corpus in four universes, with the structural layer alone and with both layers; cost recorded per question | **Tested in miniature**, on an object model outside the kernel, with summaries written by a script. 62 objects is not scale. Ranges in an outline, the matching of summaries to parts, and stale summaries during navigation did not run |
+| 9 | Universes nest and link without limit, through membranes with explicit rules | §1.8, §14.4, §7.8 (O7, O8) | Normative vectors `nested.ufx` and `linked.ufx`; the kernel miniature presented a nested text through a Portal and showed a label for a linked one | **Tested in miniature** for nesting. **Thin for linking:** a linked universe is a hash, a label and, since the review, a hint of where to look. Transfer between people and encryption are not specified enough to try |
+| 10 | AI transmutation is a first-class operation of the format | §5.3 (D3, D4), §10.3 (`derive`, `refresh`, `recipe`), §4.4 | Pins, staleness through a ref and through a chain of derivations, the recipe, one-step regeneration and its refusal when the prompt is withheld, with a deterministic function standing in for the model | **Tested in miniature.** The transmutation itself happens outside the format; what the format does — supply inputs, bind outputs, know when they part, hold the recipe — is what ran. No real model was in the loop |
 
 ## The four layers and the membrane
 
 | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
 | The object: identity, type, history, provenance | §1.3–§1.6 | Two independent readers of an earlier form; byte-level vectors; the kernel miniature, by the vectors' author, on the current form | **Tested in miniature** in its current form. Tested independently only in a form since changed |
-| The view: any object inside any other through a Portal | §8.4, §5.7 | A Portal to a text in a nested universe, composed in line with the surrounding document | **Tested in miniature**, for one Portal presenting text |
-| The memory: an append-only Chronicle with origin, evidence, decision | §1.7, §8.5 | Conservation replayed by two independent readers on an earlier design, and once by the reviewer on the current vectors; a ledger used by models to find a planted bug | **Tested in miniature** for conservation; **specified, untested** for evidence, decisions, findings and `why` |
-| The attention: the light cone | §11.7 | See row 8 | **Tested in miniature** |
-| The membrane | §10.4, §9.3 | Nothing | **Specified, untested**; the layers of what travels have no vector, and no published copy has been built or read |
+| The view: any object inside any other through a Portal | §7.8, §7.7 | A Portal to a text in a nested universe, composed in line with the surrounding document | **Tested in miniature**, for one Portal presenting text |
+| The memory: an append-only Chronicle with origin, evidence, decision | §1.7, §5.4 | Conservation replayed by two independent readers on an earlier design, and once by the reviewer on the current vectors; a ledger used by models to find a planted bug | **Tested in miniature** for conservation; **specified, untested** for evidence, decisions, findings and `why` |
+| The attention: the light cone | §10.2 | See row 8 | **Tested in miniature** |
+| The membrane | §14.4, §13.3 | Nothing | **Specified, untested**; the layers of what travels have no vector, and no published copy has been built or read |
 
 ## Faces
 
 | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
-| Sampled faces | §5.7, §6.2, §7.1, §7.3, §7.4 | Text, view and pages, by one kernel | **Tested in miniature** for text in a vertical flow |
-| Carried faces | §8.3, §7.1 | Nothing | **Specified, untested** |
-| Transmuted faces, and their staleness | §8.3, §4.4 | See row 10 | **Tested in miniature** |
-| The face registry | §7.2 | The kernel miniature chose between two face objects by `medium` | **Specified, untested** beyond that |
-| Export as sampling; two determinism tiers | §7.4 | A page image, through the host's drawing | **Specified, untested** for the ordinary tier. **Thin** for the canonical tier: it rests on a renderer that does not exist. The interface to one was written after the review; no engine is chosen and the size of a real one is known only from the spike's measurements of existing libraries |
+| Sampled faces | §7.7, §9.2, §8.1, §8.3, §8.4 | Text, view and pages, by one kernel | **Tested in miniature** for text in a vertical flow |
+| Carried faces | §5.3, §8.1 | Nothing | **Specified, untested** |
+| Transmuted faces, and their staleness | §5.3, §4.4 | See row 10 | **Tested in miniature** |
+| The face registry | §8.2 | The kernel miniature chose between two face objects by `medium` | **Specified, untested** beyond that |
+| Export as sampling; two determinism tiers | §8.4 | A page image, through the host's drawing | **Specified, untested** for the ordinary tier. **Thin** for the canonical tier: it rests on a renderer that does not exist. The interface to one was written after the review; no engine is chosen and the size of a real one is known only from the spike's measurements of existing libraries |
 
 ## The player
 
 | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
-| One kernel, compiled once, run everywhere | §6.1 (K1) | One throwaway kernel, in one browser engine and one other runtime | **Specified, untested** as a claim about every host |
-| Eleven primitives covering every medium | §5.1, Appendix A | Text, group, path and Portal were composed | **Thin.** Seven primitives have never been composed. Appendix A gained types and domains after the review |
-| Formulas | §5.3 | Nothing | **Thin** as reviewed: operators were named, few defined. Fifty-two are now defined; unrun and unreviewed |
-| The drawing contract and base presenters | §6.2, Appendix C | Four of eight item kinds executed on a canvas | **Specified, untested** for raster, samples, surface, hit and input |
-| The binding knows no medium | §6.1 (K2), §12.2 | A 79-line binding: a value codec, one host function, the drawing loop for two kinds of item. That one function broke lines, which the kernel now does; the binding's part is now to measure | **Tested in miniature**, generously; **specified, untested** in its present form |
-| The host interface and capability contract | §6.3, Appendix E | One operation, in a form since replaced | **Specified, untested** for the contract and for the kernel's own capabilities; **thin** for the seven optional capabilities, which have no operations |
-| Budgets | §12 | One measurement, of a miniature: 78.4 KiB, 40 bytes of WebAssembly per line, compressing to 48%, built without the standard library and size-optimised. The kernel's limits were reset from it: 128 KiB compressed, firm; 6 000 lines | **Thin.** One miniature is a narrow base for limits on a kernel four times its size; every other number is still a target |
+| One kernel, compiled once, run everywhere | §9.1 (K1) | One throwaway kernel, in one browser engine and one other runtime | **Specified, untested** as a claim about every host |
+| Eleven primitives covering every medium | §7.1, Appendix A | Text, group, path and Portal were composed | **Thin.** Seven primitives have never been composed. Appendix A gained types and domains after the review |
+| Formulas | §7.3 | Nothing | **Thin** as reviewed: operators were named, few defined. Fifty-two are now defined; unrun and unreviewed |
+| The drawing contract and base presenters | §9.2, Appendix C | Four of eight item kinds executed on a canvas | **Specified, untested** for raster, samples, surface, hit and input |
+| The binding knows no medium | §9.1 (K2), §11.1 | A 79-line binding: a value codec, one host function, the drawing loop for two kinds of item. That one function broke lines, which the kernel now does; the binding's part is now to measure | **Tested in miniature**, generously; **specified, untested** in its present form |
+| The host interface and capability contract | §9.3, Appendix E | One operation, in a form since replaced | **Specified, untested** for the contract and for the kernel's own capabilities; **thin** for the seven optional capabilities, which have no operations |
+| Budgets | §6 | One measurement, of a miniature: 78.4 KiB, 40 bytes of WebAssembly per line, compressing to 48%, built without the standard library and size-optimised. The kernel's limits were reset from it: 128 KiB compressed, firm; 6 000 lines | **Thin.** One miniature is a narrow base for limits on a kernel four times its size; every other number is still a target |
 
 ## Decode at the border
 
 | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
-| The kernel holds no decoder; the host decodes a baseline | §6.4, §6.5 | Nothing | **Specified, untested**; the baseline list has not been checked on any host |
-| Foreign documents converted once, originals kept | §6.4, §8.3, §11.3 (N6) | Nothing | **Thin.** No conversion has been attempted; lifting a compiled module is specified in a paragraph |
+| The kernel holds no decoder; the host decodes a baseline | §9.4, §9.5 | Nothing | **Specified, untested**; the baseline list has not been checked on any host |
+| Foreign documents converted once, originals kept | §9.4, §5.3, §12.3 (N6) | Nothing | **Thin.** No conversion has been attempted; lifting a compiled module is specified in a paragraph |
 
 ## Behavior and trust
 
 | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
-| Fuel metering inserted by the reader | §11.2 (M4) | Three instrumented modules, assembled by hand, validated and run in one engine; reproduced by the reviewer | **Tested in miniature.** What ran is three hand-made outputs of the rule. No instrumenter exists |
-| Deterministic execution, snapshot, replay | §11.2 (M5–M7) | Nothing | **Thin.** Formats for the snapshot and the replay log were written after the review. Exhausting the call stack still differs between engines; a rule to meter depth is designed and not yet specified |
-| Live modification gated by tests | §11.6 | The trial's dry run (`check` with tests against a candidate) is the nearest thing | **Thin**: it rests on the row above |
-| Seals | §10.2 | One seal verified by an independent reader and separately in another runtime | **Tested** |
-| Grants and the capability contract | §10.3, §6.3 | Nothing | **Specified, untested** |
-| A self-carried reader cannot vouch for itself | §10.6 | Nothing | **Specified, untested** |
+| Fuel metering inserted by the reader | §12.2 (M4) | Three instrumented modules, assembled by hand, validated and run in one engine; reproduced by the reviewer | **Tested in miniature.** What ran is three hand-made outputs of the rule. No instrumenter exists |
+| Deterministic execution, snapshot, replay | §12.2 (M5–M7) | Nothing | **Thin.** Formats for the snapshot and the replay log were written after the review. Exhausting the call stack still differs between engines; a rule to meter depth is designed and not yet specified |
+| Live modification gated by tests | §12.6 | The trial's dry run (`check` with tests against a candidate) is the nearest thing | **Thin**: it rests on the row above |
+| Seals | §14.2 | One seal verified by an independent reader and separately in another runtime | **Tested** |
+| Grants and the capability contract | §14.3, §9.3 | Nothing | **Specified, untested** |
+| A self-carried reader cannot vouch for itself | §14.6 | Nothing | **Specified, untested** |
 
 ## Travel
 
 | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
 | The pack: append-only, recoverable, indexable | §2, §3 | Two independent readers, including recovery from four truncations; the kernel miniature | **Tested.** Frames, heads, the index and recovery are little changed since the independent readers; the records inside the frames have changed (see the object) |
-| The web envelope | §9.2 | Nothing | **Thin** (row 3) |
-| Video and image envelopes, and the mark | §9.4 | Nothing | **Specified, untested** |
-| What leaves: content, attribution, working history | §9.3 | Nothing | **Specified, untested** |
-| Platform declarations, media type | §9.5, `registration/` | The name was checked against live registries | **Specified, untested** |
+| The web envelope | §13.2 | Nothing | **Thin** (row 3) |
+| Video and image envelopes, and the mark | §13.4 | Nothing | **Specified, untested** |
+| What leaves: content, attribution, working history | §13.3 | Nothing | **Specified, untested** |
+| Platform declarations, media type | §13.5, `registration/` | The name was checked against live registries | **Specified, untested** |
 
 ## The worked examples
 
 | Example | Realized in | Exercised by | Status |
 | --- | --- | --- | --- |
-| Interactive video | §14.1 | Nothing | **Thin**: composition under clocks has rules written after the review and has not run |
-| Game inside a document | §14.2 | The trial's program is a game core, built and changed by models through the printer; nothing else of the example | **Thin**: execution is thin (row 5) |
-| Body of research | §14.3 | A miniature of it: one corpus, three nested studies, a conclusion traced to its evidence | **Tested in miniature** |
-| Quarterly Review | §14.4 | The spike's universe is a fragment of it: the report as text, view and pages | **Thin** for the charts, the grid and the deck, whose composition has not run; **specified, untested** for the rest; one face of nine tested in miniature |
+| Interactive video | §15.1 | Nothing | **Thin**: composition under clocks has rules written after the review and has not run |
+| Game inside a document | §15.2 | The trial's program is a game core, built and changed by models through the printer; nothing else of the example | **Thin**: execution is thin (row 5) |
+| Body of research | §15.3 | A miniature of it: one corpus, three nested studies, a conclusion traced to its evidence | **Tested in miniature** |
+| Quarterly Review | §15.4 | The spike's universe is a fragment of it: the report as text, view and pages | **Thin** for the charts, the grid and the deck, whose composition has not run; **specified, untested** for the rest; one face of nine tested in miniature |
 
 ## What this says
 

@@ -45,7 +45,7 @@ pages: open, universal, and independent of any application.
    inconsistent, unavailable or unrecognized, and opening a file runs
    nothing.
 
-## Memory (SPEC §1.7, §8.5)
+## Memory (SPEC §1.7, §5.4)
 
 7. **Change.** An object recording one commit: its *work* (the operations
    and a note, kept outside the node so that it can be withheld), actor,
@@ -69,7 +69,7 @@ pages: open, universal, and independent of any application.
     origin recorded with content is never altered; later findings are added
     beside it. History is only extended.
 
-## Addressing (SPEC §4, §1.8, §10.4)
+## Addressing (SPEC §4, §1.8, §14.4)
 
 11. **Anchor.** An object and a region on its axes. Axes are *sequence*,
     *continuous* or *keyed*. A sequence region is two boundaries, each
@@ -91,7 +91,7 @@ pages: open, universal, and independent of any application.
     with fixed rules: nested content is verified, immutable and given no
     authority; references cannot be redirected; transfers carry no grants.
 
-## Presentation (SPEC §5–§7)
+## Presentation (SPEC §7–§9)
 
 14. **Eleven primitives.** Text (characters plus spans for structure and
     style), path, raster, samples, region (maps space), group (lays out by
@@ -142,7 +142,7 @@ pages: open, universal, and independent of any application.
     is fixed field by field: one record per line, every identity reusable
     as an argument.
 
-## Behavior (SPEC §6.3, §10, §11)
+## Behavior (SPEC §9.3, §14, §12)
 
 18. **Compute-let.** A complete machine carried as an object: application,
     operating system, machine and environment. One WebAssembly module in a
@@ -174,7 +174,7 @@ pages: open, universal, and independent of any application.
     it labels what it says as the file's account, and an installed reader
     checks it.
 
-## Travel and attention (SPEC §9, §11.7)
+## Travel and attention (SPEC §13, §10.2)
 
 21. **Forms.** A pack alone is the working form. The travel form is an
     envelope: by default a valid web page carrying kernel, binding, tools
@@ -199,7 +199,7 @@ pages: open, universal, and independent of any application.
     cannot tell siblings apart. The cost of an answer scales with the
     question.
 
-## Readers and applications (SPEC §9.5, §10.3, §13)
+## Readers and applications (SPEC §13.5, §14.3, §16)
 
 24. **The reader ladder.** The same file works on three rungs, each a
     binding and shell around the same kernel: any browser opening a web
@@ -214,7 +214,7 @@ pages: open, universal, and independent of any application.
     That this loses nothing is a claim worked on paper for one
     application, and not yet run.
 
-## Limits it holds itself to (SPEC §12)
+## Limits it holds itself to (SPEC §6)
 
 Eleven primitives, three layouts, three axis kinds, four operations, ten
 host functions, 39 concepts; a kernel of at most 128 KiB as it travels,

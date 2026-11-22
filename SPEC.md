@@ -1,10 +1,10 @@
-# The Universal File Object (UFO) Specification
+# The Universal File Object (UFO) Specification: Core
 
-**Version 0.7 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
+**Version 0.8 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
 
-This document specifies the UFO format: a single file that holds a universe of
-described meaning, carries the small player and tools that present and edit
-it, records where every byte of it came from, and can be extended by people
+The UFO format is a single file that holds a universe of described
+meaning, carries the small player and tools that present and edit it,
+records where every byte of it came from, and can be extended by people
 and AI without loss.
 
 The aim is an open, universal primitive of computing, in the way the PDF
@@ -12,14 +12,32 @@ became one: owned by no application and outliving all of them. One universe
 can present as anything a computer can present — document, plain text,
 image, video, audio, data, diagram, three-dimensional scene, application,
 game — and universes nest and link into bodies of work of any size. Text is
-implemented first. Every other medium is designed here, now, on the same
+implemented first. Every other medium is designed now, on the same
 foundations.
 
-It is written to be built from, and to stand alone: it depends on no other
-document. It contains no code. Where it chooses a technology it gives the
-reason, so the choice can be challenged. [CORE.md](CORE.md) states the whole
-format in about four pages; [RATIONALE.md](RATIONALE.md) explains why the format is
-shaped as it is.
+This document is the core of the specification: storage, memory and
+addressing. It is written to be built from, and to stand alone: a reader
+of packs, objects, changes and anchors can be written from this document
+and its test vectors and nothing else. It contains no code. Where it
+chooses a technology it gives the reason, so the choice can be challenged.
+[CORE.md](CORE.md) states the whole format in about four pages;
+[RATIONALE.md](RATIONALE.md) explains why the format is shaped as it is.
+
+**The parts of the specification.**
+
+| Document | Sections | Holds |
+| --- | --- | --- |
+| [SPEC.md](SPEC.md), the core | §0–§6, Appendices C, D, F | storage, memory and addressing: records, objects, changes, the pack, anchors, text, derivation, the Chronicle; limits, the glossary, the test vectors |
+| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the eleven primitives, formulas, composition, Portals, faces |
+| [SPEC-PLAYER.md](SPEC-PLAYER.md) | §9–§11, Appendix B | the kernel, the drawing contract, the host interface, onboard tools, the light cone, the agent interface, the player's budgets |
+| [SPEC-EXECUTION.md](SPEC-EXECUTION.md) | §12, Appendix E | Compute-lets, code as description, the printer, the ledger, tests |
+| [SPEC-TRAVEL.md](SPEC-TRAVEL.md) | §13–§14 | envelopes, what leaves a reader, the reader ladder, trust |
+| [EXAMPLES.md](EXAMPLES.md) | §15 | four worked examples; a companion, not normative |
+| [MAPPING.md](MAPPING.md) | §16 | mapping an application's own records; a companion, not normative |
+
+Section numbers run through all the documents and none is used twice, so
+§9.3 names one place whichever document cites it. Rule labels such as
+**[C3]** are likewise unique across them.
 
 ## 0. Reading this document
 
@@ -36,24 +54,31 @@ bind what a writer or a reader does where no file records it — **L1**,
 **L5**, **M9**, **R2**, **E12**, **H6** — and can be tested only where a
 harness watches the software at work. They are obligations all the same.
 
-Every term is defined once, in **bold**. §16 lists them all, in three
+Every term is defined once, in **bold**. §6.2 lists them all, in three
 tables: the concepts a newcomer must learn, the names given to compositions
 of those concepts, and the structural terms of the storage layer.
 
 *Reader* means any software that opens a UFO. *Writer* means any software that
 changes one. *Person* means the human using a reader. *Agent* means software,
-usually a language model, acting through the agent interface (§11.8). *Host*
+usually a language model, acting through the agent interface (§10.3). *Host*
 means the platform a reader runs on: a browser, an operating system.
 
 ### 0.2 Status of each section
 
 | Sections | Status in this draft |
 | --- | --- |
-| §1–§4 core, pack, anchors | Complete, with a schema (Appendix C) and byte-level vectors (Appendix F); names and tag numbers provisional |
-| §5–§7 vocabulary, player, faces | The drawing contract and the capability contract are complete. Composition (§5.7) is an algorithm for text, vertical flow and pages; grid, absolute and inline flow, floats and clocks are rules, not yet algorithms. Capability operations are written for `text`, `objects` and `present` and sketched for `gpu` |
-| §8–§11 profiles | Complete; execution and promotion of Compute-lets in structure only |
-| §9.4 video and image envelopes | Complete in structure; the `ufo:` scheme provisional |
-| §12 budgets | Targets set before measurement; one measurement so far, of a miniature |
+| §1–§4 records, pack, anchors | Complete, with a schema (Appendix C) and byte-level vectors (Appendix F); names and tag numbers provisional |
+| §5 text, assets, derivation, the Chronicle | Complete |
+| §7–§8 vocabulary, composition, faces | Composition (§7.7) is an algorithm for text, flow, grid, absolute position, clocks and pages; floats and hit testing are rules, not yet algorithms |
+| §9–§11 player, tools, attention | The drawing contract and the capability contract are complete. Operations are written for the kernel's own capabilities and sketched for `gpu`; seven optional capabilities have none |
+| §12 execution | Complete in structure; exhausting the call stack is not yet deterministic |
+| §13–§14 travel and trust | Complete in structure; the `ufo:` scheme provisional |
+| §6, §11 limits and budgets | Targets set before measurement; one measurement so far, of a miniature |
+
+A section's being complete says that the text is there. It does not say
+that anything has run. A requirement counts as settled only when
+something exercises it: a test vector, a test, or running code. Until
+then it is open, however fully it is written.
 
 What has been exercised, and how, is in [VISION-TRACE.md](VISION-TRACE.md).
 
@@ -106,7 +131,7 @@ A **value** is one of:
 | map | text keys to values, keys unique |
 | **ref** | the identity of an object in the same universe (§1.5) |
 | **anchor** | a reference to an object, or to a region of one (§4) |
-| **formula** | an expression that computes a value (§5.3) |
+| **formula** | an expression that computes a value (§7.3) |
 | **indirect** | a stand-in for a value stored outside the node, in a blob (§1.4) |
 
 Values are encoded in CBOR (RFC 8949) using the core deterministic encoding
@@ -137,7 +162,7 @@ one key with its value.
 byte-string type and compact integers. A canonical text encoding would need
 binary-to-text escapes and number-spelling rules, which are a well-known
 source of disagreement between implementations. Models and people never read the encoding
-directly; they read projections (§7.5).
+directly; they read projections (§10.1).
 
 ### 1.3 Records
 
@@ -154,7 +179,7 @@ node) followed by the record's bytes. A record is identified only by its hash.
   index entry or a head. A reader MUST compute the hash of the bytes it
   obtained and MUST treat a difference from the hash it asked for as
   malformed storage. A frame carries no hash of its own; a scan computes
-  each record's hash, and `verify` (§7.5) reports any record reachable from
+  each record's hash, and `verify` (§10.1) reports any record reachable from
   the head that is absent or wrong, and any chunk or node frame that is not
   reachable from any head in the file.
 - **[C3]** A reader MUST preserve, when copying or rewriting a universe, every
@@ -255,7 +280,7 @@ value outside when its encoding exceeds 4 096 bytes.
 
 **Veiled indirects.** A hash can be guessed if what it hashes is short or
 predictable, and a copy of a universe may hold a reference to content it
-deliberately lacks (§9.3). Where that matters, the indirect is *veiled*:
+deliberately lacks (§13.3). Where that matters, the indirect is *veiled*:
 `[kind, hash, true]`, where the hash is not the blob's but that of an
 **opening**: a chunk of exactly 48 bytes, 16 of random salt followed by the
 32 bytes of the blob's hash. Whoever holds the opening can find the blob;
@@ -290,7 +315,7 @@ universe that diverge may each produce a revision 5 of the same object; the
 revision hash, not the number, is what distinguishes them, and every
 reference to a specific revision uses the hash. The salt ensures that the
 hash of an earlier revision, which remains visible in `prev` when the
-revision itself is withheld (§9.3), cannot be used to guess what it held.
+revision itself is withheld (§13.3), cannot be used to guess what it held.
 
 A reader checks that a revision's `id` is the identity under which the
 object map lists it and, where `prev` is present, that the previous
@@ -299,7 +324,7 @@ revision has the same `id` and `type` and a `rev` one less.
 An **edge** is a property whose value is, or contains, a ref. The property
 name is the relation; the direction is from the object that owns the property
 to the object named. The core defines no separate edge structure. Readers
-MUST be able to answer "which objects refer to this one" (§7.5).
+MUST be able to answer "which objects refer to this one" (§10.1).
 
 Type and property names are case-sensitive. Names beginning `ufo.` are
 reserved for this specification. Other parties MUST use a reverse-DNS prefix
@@ -343,7 +368,7 @@ A commit is the node:
 
 `change` is a hash, not an identity, so the commit chain binds each change
 to its place in history even when the object map of that commit is not at
-hand (§9.3). A commit with more than one parent is a merge. Merging
+hand (§13.3). A commit with more than one parent is a merge. Merging
 divergent copies is a later feature, `ufo.merge`; until it is specified a
 writer MUST NOT produce such a commit and a reader classifies one as
 unavailable.
@@ -358,9 +383,9 @@ and type `ufo.universe`. Its properties are:
 | --- | --- |
 | `lineage` | 16 random bytes fixed in the first commit; shared by every later state and every fork. Required; every other property here is optional |
 | `roots` | map from names to refs: the named entry points |
-| `components` | map from a role — `tools`, `renderer`, or a prefixed name — to an indirect holding the component's bytes, or an anchor naming a universe, that the universe carries for it (§6.6, §7.4) |
-| `faces` | list of refs to face objects (§7.2) |
-| `summaries` | map from an object's identity, in lowercase hexadecimal, to a list of refs to the summaries whose scope lies in that object (§11.7). The kernel keeps it as `derive` writes them |
+| `components` | map from a role — `tools`, `renderer`, or a prefixed name — to an indirect holding the component's bytes, or an anchor naming a universe, that the universe carries for it (§9.6, §8.4) |
+| `faces` | list of refs to face objects (§8.2) |
+| `summaries` | map from an object's identity, in lowercase hexadecimal, to a list of refs to the summaries whose scope lies in that object (§10.2). The kernel keeps it as `derive` writes them |
 | `features` | map from feature name to `{v: integer, required: boolean}` |
 
 The root named `primary` is the face a reader presents first.
@@ -380,17 +405,17 @@ the universe: one commit. Its properties are:
 | Property | Value |
 | --- | --- |
 | `work` | a veiled indirect (§1.4) to `{ops, note}`: the operations, and optionally why the change was made, in the actor's words |
-| `actor` | `{who, with}`: the principal (§10.1) who committed the change, and the name and version of the software used |
+| `actor` | `{who, with}`: the principal (§14.1) who committed the change, and the name and version of the software used |
 | `time` | milliseconds since 1970-01-01T00:00:00Z, as the actor reported it |
-| `origin` | where content introduced by this change came from (§8.5); absent if the change introduces none |
-| `evidence` | list of support links recorded by this change (§8.5); optional |
-| `decisions` | list of decisions recorded by this change (§8.5); optional |
-| `attributions` | list of later findings about the origin of content already present (§8.5); optional |
+| `origin` | where content introduced by this change came from (§5.4); absent if the change introduces none |
+| `evidence` | list of support links recorded by this change (§5.4); optional |
+| `decisions` | list of decisions recorded by this change (§5.4); optional |
+| `attributions` | list of later findings about the origin of content already present (§5.4); optional |
 
 Everything that says what earlier content was — the operations and the note
 — is in `work`, one value kept outside the node behind a veil. A copy of a
 universe can therefore withhold it whole, revealing nothing of it, and keep
-everything that says who and what made the content that is there (§9.3).
+everything that says who and what made the content that is there (§13.3).
 Content that an operation and the present state have in common — a large
 file that was added and is still there — is one blob, named from both.
 
@@ -453,7 +478,7 @@ that does not exist creates it, as the kind of value `ins` is. A `splice` on a p
 `val` removes a sequence property and its `seq` entry.
 
 Only this specification defines operations, and these four are all of
-them. Machine code is edited with them too (§11.3). Applications express
+them. Machine code is edited with them too (§12.3). Applications express
 their edits in them.
 
 The **laws of change** follow. They hold for every medium.
@@ -471,7 +496,7 @@ The **laws of change** follow. They hold for every medium.
   before, `prev` naming the revision before, and `by` naming this change;
   every other object has the revision it had; the change object is added.
   The parent state of the first commit is empty. A reader MUST be able to
-  perform this check for any commit whose `work` is present (§7.5
+  perform this check for any commit whose `work` is present (§10.1
   `verify`), and MUST say so where it is not.
 - **[L4] Refusal.** A writer MUST reject a change whole if an `old` does not
   match what is there, an element named by `after` or `del` is not in the
@@ -482,12 +507,12 @@ The **laws of change** follow. They hold for every medium.
 - **[L5] No silent reconstruction.** Origin is *witnessed* when the writer
   records it as the content is introduced. An origin established in any
   other way — by aligning text, by matching, by inference — MUST be recorded
-  as *inferred*, with its method (§8.5). No component may record or present
+  as *inferred*, with its method (§5.4). No component may record or present
   an inferred or unknown origin as witnessed, and a reader MUST NOT infer an
   origin the universe does not record.
 - **[L6] Append-only.** A change object is never modified or dropped. A commit
   is never rewritten. History is only extended. A copy may withhold history
-  (§9.3); every hash that named the absent records remains.
+  (§13.3); every hash that named the absent records remains.
 - **[L7] No silent deletion.** `drop` removes an object from the current
   object map only. Its revisions remain in history. Removing a ref never
   drops the object it named.
@@ -522,7 +547,7 @@ it was at that commit, together with everything it referred to then, which
 is the one way to fix a composite thing exactly: a pin fixes one revision
 of one object (§4.4). What such an anchor needs — the revisions, at that
 commit, of the object named and of every object it reaches by refs, and
-their blobs — is content (§9.3) and is kept where other history is
+their blobs — is content (§13.3) and is kept where other history is
 withheld. The rest of that commit's object map is not required.
 
 **Editing a nested universe** is done in the file that nests it. The new
@@ -548,7 +573,7 @@ separately:
 | --- | --- | --- |
 | **malformed** | the bytes break a container, encoding or hash rule | refuse the affected records; never present them as content |
 | **inconsistent** | well-formed records break a law of change or a profile rule (a failed conservation check, a `seq` that does not account for its sequence) | refuse to present or extend the affected state; offer the last consistent commit |
-| **unavailable** | well-formed, but needs a feature, codec or record this reader does not have, including a record the sender withheld (§9.3) | preserve; present what can be presented; say what is missing and why |
+| **unavailable** | well-formed, but needs a feature, codec or record this reader does not have, including a record the sender withheld (§13.3) | preserve; present what can be presented; say what is missing and why |
 | **unrecognized** | an object type, property, node kind, tagged value or operation this reader does not interpret | preserve untouched; show an inspectable placeholder |
 
 - **[C12]** Opening a universe executes nothing in it, changes no reader
@@ -569,7 +594,7 @@ insert. A working form, and every copy shared with collaborators, keeps
 all markers.
 
 **A published copy may forget them.** Before publishing to outside readers
-(§9.3), a writer MAY commit a change whose splices `forget` markers. A
+(§13.3), a writer MAY commit a change whose splices `forget` markers. A
 marker may be forgotten only if no anchor in the universe names it. The
 change is an ordinary one: it has an actor, it is in the Chronicle, and the
 published copy's head is the commit that made it. Its effects are stated
@@ -628,8 +653,8 @@ reader can be written from this section alone (§3.3).
 ### 2.1 Frames
 
 The **pack** is the byte format that holds a universe's records. Alone in a
-file it is the working form (§9.1); it is also the payload of every envelope
-(§9.2).
+file it is the working form (§13.1); it is also the payload of every envelope
+(§13.2).
 
 A pack is an 8-byte signature followed by frames:
 
@@ -642,7 +667,7 @@ frame     = kind (1 byte)  codec (1 byte)  length (unsigned LEB128, shortest for
 | --- | --- | --- |
 | `0x01` | chunk | a chunk record |
 | `0x02` | node | a node record |
-| `0x03` | seal | a signature (§10.2), encoded as a value |
+| `0x03` | seal | a signature (§14.2), encoded as a value |
 | `0x04` | index | a derived lookup table (§2.4) |
 | `0x05` | head | marks a committed state (§2.2) |
 | `0x06` | note | what this pack deliberately lacks (§2.5), encoded as a value |
@@ -661,7 +686,7 @@ bytes for its stated *n*; a head is 72 bytes with codec 0. A frame whose
 payload has that form is well-formed even if what it says is wrong: a head
 whose check fails is a well-formed frame that is not a valid head. The hash of a record is always taken over
 its decoded bytes. Only chunk and node frames may be compressed. Other
-codecs are features (§1.6) and MUST NOT be used in a travel form (§9.2),
+codecs are features (§1.6) and MUST NOT be used in a travel form (§13.2),
 so that what travels can always be read.
 
 All fixed-width integers in a pack are unsigned and little-endian. An
@@ -750,7 +775,7 @@ bytes.** Every reader and every tool starts there.
   interrupted write and the writer truncates them. If there is one, the file
   is damaged in the middle: it is malformed, no writer may append to it, and
   the reader offers what can be salvaged.
-- **[P8]** `verify` (§7.5) scans every frame. A pack whose final head does
+- **[P8]** `verify` (§10.1) scans every frame. A pack whose final head does
   not lie on a frame boundary reached by that scan is malformed.
 
 The previous-head offsets let a reader list every committed state from the
@@ -816,8 +841,8 @@ says about itself.
   `blobs`. A hint carries no authority (**C11**): whatever is fetched is
   verified by hash.
 
-- **Withheld history** (§9.3). A missing record is *withheld* if it is
-  reachable only through references that §9.3 defines as working history:
+- **Withheld history** (§13.3). A missing record is *withheld* if it is
+  reachable only through references that §13.3 defines as working history:
   the `prev` of a revision, a change's `work`, the object map of a commit
   other than the head, an origin's `prompt`, or an entry of the head's
   object map for an object that is not live and not part of attribution.
@@ -832,7 +857,7 @@ says about itself.
   nested one — is malformed storage, whatever any `note` says.
 - **[P12]** A reader MUST present everything that is present, MUST show for
   each absent blob an inspectable placeholder at the authored size (or a
-  carried face, §7.1, if one is present), and MUST verify by hash anything
+  carried face, §8.1, if one is present), and MUST verify by hash anything
   it later obtains.
 
 A `note` frame MAY also record `history: true` as a courtesy to tools; it
@@ -846,7 +871,7 @@ is the only way space is reclaimed. It keeps one of two sets of records:
 
 - *everything* reachable from the head commit, discarding only frames no
   longer referenced — superseded indexes, the bytes of interrupted writes;
-- *content and attribution* as §9.3 defines them, discarding working
+- *content and attribution* as §13.3 defines them, discarding working
   history. This is the same set a published copy holds.
 
 - **[P13] Every hash survives.** Compaction copies records. It MUST NOT
@@ -895,8 +920,8 @@ from a file: nesting depth of universes being presented (default 8);
 running Compute-lets (default 16); active media decoders (default 8);
 mounted editable regions (default 64); items in one display list (default
 2²⁰); blob bytes verified or decoded for one presentation; and fuel per
-Compute-let per call (§11.2). Formula evaluation is bounded by a fixed
-figure, not a configurable one (§5.3), so that every reader computes the
+Compute-let per call (§12.2). Formula evaluation is bounded by a fixed
+figure, not a configurable one (§7.3), so that every reader computes the
 same result.
 
 ### 3.2 Hostile files
@@ -929,12 +954,12 @@ platform has.
 
 An independent, read-only pack reader that lists, verifies and extracts
 records is to need no more than 500 lines in a general-purpose language.
-The kernel's own share is budgeted in §12.2.
+The kernel's own share is budgeted in §11.1.
 
 Two obligations bind every release of the reference implementation. They
 are requirements on the project, not on files.
 
-- **[P19] The weekend test.** §1, §2, §3, §4.1–§4.4, §10.2 and Appendices
+- **[P19] The weekend test.** §1, §2, §3, §4.1–§4.4, §14.2 and Appendices
   C and F MUST be sufficient to write that independent reader, including the
   conservation check. The test is run for real
   before the format is frozen: someone with no other knowledge of the
@@ -1007,7 +1032,7 @@ any number of axes of each kind. Space in three dimensions is three
 continuous axes, `x`, `y` and `z`, and is as much a part of the anchor
 model as a line of text: a volume is a region on all three, a moment in an
 animated scene adds `t`, and a part of the scene is a key. Every object
-declares the axes it offers. The primitives' axes are fixed by §5.1; a data
+declares the axes it offers. The primitives' axes are fixed by §7.1; a data
 object declares its own, in `axes` (Appendix A), which is how a described
 space of any dimension — a scene, a map, a volume of measurements — becomes
 addressable.
@@ -1059,7 +1084,7 @@ region is clipped to the axis's present extent.
   similar-looking content.
 - **[A2]** Resolution is a function of the anchor and the revision alone.
   It needs no earlier revision and no operation, and therefore works
-  unchanged in a copy whose history is withheld (§9.3).
+  unchanged in a copy whose history is withheld (§13.3).
 - **[A3]** Two readers resolving the same anchor against the same revision
   MUST obtain the same result.
 - **[A4] Content that moves is anchored where it lives.** A frame carries
@@ -1075,7 +1100,7 @@ region is clipped to the axis's present extent.
   shows such an anchor says so.
 
 A move — a cut and a paste — removes elements and inserts new ones.
-Attribution follows the new elements (§8.5). Anchors to the old elements
+Attribution follows the new elements (§5.4). Anchors to the old elements
 detach; they do not follow the move.
 
 ### 4.4 Pins and staleness
@@ -1124,7 +1149,7 @@ something present in those five minutes does. Appendix F has vectors.
 
 A pin is **current** if, resolved against the object's current revision,
 its region is attached and has the same digest; and, where what it pins is
-itself derived (§8.3), that derivation is current. Otherwise it is
+itself derived (§5.3), that derivation is current. Otherwise it is
 **stale**. A pin fixes one revision of one object, and says whether what
 that object shows has changed since. It does not keep what the object
 referred to; an anchor that names a commit does (§1.8).
@@ -1134,7 +1159,7 @@ this — names something that never changes, and is always current. A newer
 commit of another universe is offered as an update (**C9**).
 
 This one test is how every derived thing in a universe knows whether it still
-reflects its sources (§8.3).
+reflects its sources (§5.3).
 
 ### 4.5 Clocks
 
@@ -1157,7 +1182,7 @@ A clock is in one of three modes:
 | --- | --- |
 | `locked` | the parent, by the formula above; pausing or scrubbing the parent pauses or scrubs the child |
 | `free` | the child's own running time: it starts at `offset` when the parent enters the interval and then advances with the root clock at `rate`, whatever the parent does. Scrubbing the parent out of the interval and back restarts it. When a face is sampled at a stated time with no history of scrubbing, a free clock reads as a locked one would |
-| `held` | a formula (§5.3), typically of presentation state: a slider that scrubs an animation, a key that advances a deck |
+| `held` | a formula (§7.3), typically of presentation state: a slider that scrubs an animation, a key that advances a deck |
 
 The time at the top of a presentation is the **root clock**, supplied by the
 reader. The reader MAY drive it from real time, from a scrub position, from a
@@ -1173,1012 +1198,14 @@ description sampled at the same times yields the same result.
 
 ---
 
-## 5. The primitive vocabulary
-
-### 5.1 The eleven primitives
-
-Everything a universe presents is described with these and nothing else.
-Ten are object types; the eleventh, the formula, is a value. A clock maps
-time as a region maps space.
-
-| Primitive | Type | What it describes | Axes it offers |
-| --- | --- | --- | --- |
-| **Text** | `ufo.text` | characters with structure and style (§8.1) | `chars` (sequence) |
-| **Path** | `ufo.path` | vector geometry with fill and stroke | `x`, `y` (continuous) |
-| **Raster** | `ufo.raster` | a grid of pixels from an asset, a surface, or a video at a moment | `x`, `y`; `t` if timed |
-| **Samples** | `ufo.samples` | audio from an asset or a surface | `t` (continuous) |
-| **Region** | `ufo.region` | a two-dimensional coordinate space with a transform and a clip, holding children | `x`, `y`; `children` (keyed) |
-| **Group** | `ufo.group` | an ordered composition of children under a layout rule | `children` (keyed) |
-| **Clock** | `ufo.clock` | a time mapping and interval (§4.5), holding children | `t`; `children` (keyed) |
-| **Portal** | `ufo.portal` | a reference to another object, presented through its own description (§8.4) | those of its parent |
-| **Surface** | `ufo.surface` | a region whose content a Compute-let produces live (§11.1); it may hold children that the Compute-let places within what it draws (§5.6) | `x`, `y`, `t`, plus any the Compute-let declares; `children` (keyed) |
-| **Data** | `ufo.data` | typed values and tables | `rows`, `cols` (keyed) |
-| **Formula** | a value | a pure expression computing a value from data, time, input and other values (§5.3) | — |
-
-Every primitive object MAY carry `label` (text, the accessible name), `role`
-(text, a semantic hint such as `heading`, `figure`, `button`) and `lang`.
-
-A property that says how something looks, where it sits or when it is
-present MAY be a formula; so may the geometry of a path. A property that
-says what something is MUST NOT be: content (`chars`, `rows`), structure
-(`children`, `spans`), references (`of`, `source`, `computelet`), and
-`from`. Appendix A marks which is which.
-
-Property tables for each primitive are in Appendix A.
-
-### 5.2 Layout
-
-A group lays out its children by one of three rules:
-
-| Rule | Behavior |
-| --- | --- |
-| `flow` | children are placed one after another along the inline direction and wrap to new lines along the block direction, within the group's width. A child marked `block` starts and ends a line. A child marked `float` is placed at the start or end edge and later content wraps beside it. |
-| `grid` | children are placed in cells of declared rows and columns. Track sizes are fixed lengths, fractions of the remaining space, or the largest minimum size of the children in the track. |
-| `absolute` | each child is placed at its own `x`, `y`, `w`, `h` in the group's coordinate space, in list order from back to front. |
-
-- **[V1] Parents size children.** Layout proceeds from the root down. A parent
-  gives each child a finite available size; a child reports the size it uses
-  within that; no child's size can depend on a later sibling or on its
-  parent's final size. Layout therefore terminates in one pass per level.
-- **[V2]** Lengths are in the units of the nearest enclosing region. The root
-  region's unit is the CSS reference pixel (1/96 inch).
-
-### 5.3 Formulas
-
-A **formula** is a list whose first item is an operator name and whose
-remaining items are arguments: values or further formulas. It is stored as
-structure, never as text to be parsed; a readable spelling is a projection.
-
-| Group | Operators |
-| --- | --- |
-| reference | `get` (a property of an object, by ref and key path), `cell` (a table cell by row and column key), `col` (a column as a list), `arg` (a named value supplied by the enclosing `each`, or by the Portal that presents this, §5.6), `size` (the laid-out width and height of an earlier sibling in the same group), `ask` (the records of a projection, §7.5) |
-| environment | `time` (the enclosing clock's time), `input` (the pointer's position and pressed state within the enclosing region, and the `src` of the item under it), `view` (the available width and height), `state` (a named value of presentation state) |
-| arithmetic | `+ − × ÷ mod neg abs min max floor ceil round sqrt pow exp ln sin cos atan2` |
-| logic | `= ≠ < ≤ > ≥ and or not if` |
-| text | `concat len slice format` (numbers and dates to text by a stated pattern) |
-| lists | `list count sum mean nth sort filter map range` |
-
-`filter`, `map` and `sort` take a formula applied to each item, which refers
-to the item with `arg`.
-
-- **[F1] Pure.** A formula has no effect and reads nothing but its arguments
-  and the environment operators above.
-- **[F2] Terminating.** There is no recursion and no unbounded loop. The
-  dependency graph among formulas MUST be acyclic; a formula in a cycle
-  evaluates to an error value. One composition evaluates at most 10⁷
-  operator applications; a formula reached after that evaluates to an error
-  value. The figure is fixed here, not left to readers, so that all readers
-  agree.
-- **[F3] Deterministic.** Arithmetic is IEEE 754 binary64. Because every
-  reader runs the same compiled kernel (§6.1), every operator, including the
-  transcendental ones, gives bit-identical results everywhere.
-- **[F4]** An error value propagates through operators and presents as a
-  visible, inspectable marker. It never presents as a plausible number.
-- **[F5] No coercion, no locale.** An operator applied to a value of the
-  wrong type yields an error value. `sort` orders numbers numerically and
-  text by Unicode scalar value. `format` takes a number and a pattern of
-  fixed decimals, grouping and percent, or a time in flicks or milliseconds
-  and a pattern of ISO 8601 fields in UTC; it never consults the host's
-  locale or time zone. `size` of anything but an earlier sibling is an error
-  value, which keeps layout to one pass (**V1**).
-
-**Operators, exactly.** Arguments are evaluated left to right before an
-operator is applied, except that `if`, `and` and `or` evaluate only what
-they need. Each application counts one toward the bound of **F2**.
-Integers and floats are both numbers here; arithmetic is done in binary64,
-and a result that is not finite is an error value.
-
-| Operators | Defined as |
-| --- | --- |
-| `+ − × neg abs min max` | as IEEE 754 |
-| `÷` | division; by zero, an error value |
-| `mod` | *a* − *b* × floor(*a* ÷ *b*): the result has the sign of *b* |
-| `floor ceil round` | to an integer; `round` takes halves away from zero |
-| `sqrt pow exp ln sin cos atan2` | the results of the routines of the same names in the FreeBSD mathematics library (msun), which the kernel carries, so that they are the same everywhere |
-| `= ≠` | exact comparison of two values; a number never equals a text |
-| `< ≤ > ≥` | of two numbers, or of two texts by scalar value; anything else, an error value |
-| `and or not if` | on booleans; `if(c, a, b)` |
-| `concat len slice` | `len` counts the scalar values of a text or the items of a list; `slice(x, from, to)` takes those from index *from* up to but not including *to*, counted from 0 and clipped to the ends |
-| `format` | `format(n, pattern)`: a pattern is `0` followed optionally by `.` and one `0` for each decimal place, optionally containing `,` to group thousands, optionally ending `%`, which multiplies by 100. For a time, a pattern made of `YYYY`, `MM`, `DD`, `hh`, `mm`, `ss` and any other characters, in UTC |
-| `list count sum mean nth range` | `sum` of nothing is 0 and `mean` of nothing an error value; `nth(list, i)` counts from 0 and is an error value outside the list; `range(a, b)` is the integers from *a* up to but not including *b*, at most 2²⁰ of them |
-| `sort filter map` | `sort(list, key)` is stable and ascending by the key formula's value, or by the items themselves |
-| `get cell col` | `get(ref, path)` is the value at a key path of an object's properties; `cell(ref, row, col)` a cell's value, a formula there being evaluated; `col(ref, col)` a column's values in the table's order. A missing object, key or cell is an error value |
-| `arg size time input view state` | `size(key)` is `[w, h]`; `time` is in flicks; `input` is `[x, y, pressed, src]`, `src` being the anchor carried by the item under the pointer (§6.2); `view` is `[w, h]`; `state(name)` is null until set |
-| `ask` | `ask(projection, argument…)` is the records a projection of §7.5 returns for those arguments, as a list of maps from field name to value. A projection is a function of a commit, so `ask` is as pure as `get`. It reads the universe the formula is in, or a subject it was given (§5.6). Each record counts one toward the bound of **F2** |
-
-**Repetition.** A group MAY carry `each`: a formula yielding a list or a ref
-to a data object, and `as`, a name. Its single child is then a template,
-presented once per item with `arg` bound. This is how a table becomes rows
-of text, and a dataset becomes the bars of a chart.
-
-**Presentation state** is a small map of named values held by the reader for
-one presentation: a sort column, a selected tab, a scroll position, a slider.
-Primitives declare which input sets which state (`on`, Appendix A). It is not
-part of the universe and changing it changes no byte. Each presentation of
-an object through a Portal has its own state: two Portals onto one table
-sort independently, and nothing inside a nested or linked universe can read
-or set the state of what presents it; what it is given, it is given in
-`with` (§5.6). An action that edits
-the universe is a change (§1.7), made through the onboard tools.
-
-### 5.4 The deletion test
-
-- **[V3]** A primitive, a layout rule, a formula operator, a host interface
-  function or a kernel feature may be added to this specification only with
-  a written demonstration that it cannot be expressed as data, as a formula,
-  or as a composition of what exists, and with the budgets of §12 restated.
-
-The test applied to this draft:
-
-| Candidate | Outcome | Why |
-| --- | --- | --- |
-| Constraint layout | deleted | `absolute` with formulas over `view` and the `size` of earlier siblings expresses one-directional constraints in a single pass. Simultaneous constraints, which need a solver, are not offered; a layout that truly needs one computes positions in a Compute-let |
-| Stack layout | deleted | a one-row or one-column `grid`; back-to-front stacking is `absolute` |
-| Paragraph, heading, list item | moved, not deleted | they are block spans of a text (§8.1). The text profile has ten roles whose default presentation the kernel knows (Appendix A), and §12.1 counts them: a small document vocabulary lives inside the text primitive |
-| Page | deleted | a region of fixed size holding a group |
-| Slide | deleted | a region under a clock |
-| Chart | deleted | data, formulas and paths under `each` |
-| Table view | deleted | a `grid` group under `each` over a data object |
-| Timeline, canvas | deleted | clocks holding children; a region with `absolute` children |
-| Scene graph, camera, mesh, material | deleted from the format | data that a surface's Compute-let reads and draws (§5.5) |
-| Edge | deleted | a property holding a ref (§1.5) |
-| Playback settings on a Portal | deleted | looping is a clock's `repeat`; muting is a samples' `gain`; whether time runs unprompted is the clock's mode; controls are the tools' interface (§6.6) |
-| A table from media type to presenter | deleted | a surface names its Compute-let directly; nothing is dispatched by type (**H5**) |
-| An ordering axis beside `children` | deleted | a keyed axis already survives reordering |
-| Rendition, transmutation, summary as separate mechanisms | deleted | one derivation record (§8.3) |
-| Ledger as a separate store | deleted | the Chronicle's changes to a Compute-let's code (§11.5) |
-| Printer operations, item keys, a stored module | deleted | a module is objects and sequences, edited by the four operations and printed by the kernel (§11.3) |
-| A summary tree | deleted | the outline is the tree; a summary attaches to a scope by its pins (§11.7) |
-
-### 5.5 What the familiar media are
-
-These are compositions, shown to make the vocabulary concrete. None is a
-type the kernel knows.
-
-| Medium | Composition |
-| --- | --- |
-| Document | a text, presented as a `flow` group; Portals at positions in it |
-| Paginated document | the same text sampled into regions of page size (§7.4) |
-| Spreadsheet | a data object; a `grid` group under `each` presenting it; cells may hold formulas |
-| Chart | a region holding paths and text under `each` over a data object |
-| Diagram | a data object of nodes and links; a layout Compute-let, or formulas, giving positions; paths and text |
-| Slide deck | a clock in `held` mode over a list of regions, advanced by input |
-| Video | a clock holding clocks, each bringing a raster, samples, text, paths or Portals into presence for an interval |
-| Recorded footage | a raster whose source is a video asset and whose time is the clock's |
-| Animation | any of the above with formulas of `time` |
-| Interface | regions, groups, text and paths with `on` handlers setting presentation state |
-| Application, game | a surface |
-| 3D scene | a data object in the glTF model, with `x`, `y`, `z` and `t` axes; a surface that names it in `of` and whose Compute-let draws it using the `gpu` capability; children placed by anchors into the scene |
-
-Conversations are text objects whose spans carry speaker and time, with
-the Chronicle recording origin as for any text.
-
-**Three dimensions, explicitly.** A 3D scene is drawn by a program, and
-everything about it that is content is format data, readable by the kernel
-and by any agent without running that program.
-
-*The scene is a data object.* It follows the object model of glTF 2.0
-(ISO/IEC 12113): its tables are `scenes`, `nodes`, `meshes`, `materials`,
-`textures`, `cameras`, `lights` and `animations`, each row holding the
-properties glTF defines for that object, with keys in place of glTF's array
-indices and geometry and images in assets. It declares four continuous
-axes, `x`, `y`, `z` and `t`, with the scene's bounds and duration as their
-extents, beside its keyed axes. A glTF file converts to such an object at
-the border without loss, and exports from one (**B3**). The kernel does not
-interpret these tables; it stores, anchors, attributes and summarizes them
-as it does any data.
-
-*Anchors reach into it three ways.* To a part: a key on `nodes`, `meshes`
-or any other table. To a place: a region on `x`, `y`, `z`. To a time: a
-region on `t`. A comment on a doorway, evidence for the dimensions of a
-beam, a summary of the east wing and a decision about a material are all
-ordinary anchors to the scene object, and survive edits by the ordinary
-rules: keys persist, and rescaling the scene sets the frames of its axes.
-
-*Attribution is ordinary.* Each row was set by a change, so `why` on a node
-answers who or what placed it, from what prompt, on what evidence.
-
-*The light cone covers it.* Its outline lists its tables and nodes as any
-data object's does, and summaries may pin regions of it — a table, a set
-of nodes, a volume (§11.7). The
-plain-text face of a scene is that of any data object (§7.3): the kernel
-knows nothing of a scene's hierarchy.
-
-*What appears inside the scene is format data too.* A surface names the
-object it presents in `of`. Its children — a Portal onto a spreadsheet, a
-region holding a page of text — are objects, each with `place.at`: an
-anchor into the scene naming the node on which the child sits. That node's
-row gives its position, orientation and the size of the rectangle, in
-scene units. So "the spreadsheet is on the north wall" is a fact in the
-universe, with an origin, which an agent can read and change; the program
-only draws it (§5.6).
-
-*The program holds no content.* The scene's presenter is a carried
-Compute-let drawing through the `gpu` capability. Its memory holds the
-state of a machine — a camera being moved, a cache of buffers — never
-anything that is part of the work (**M9**). Without `gpu` the surface shows
-its poster (**H2**), and everything above remains readable.
-
-The format therefore has no 3D object type, no 3D operation, no 3D
-display-list item and no scene profile, and three dimensions are not
-opaque to it.
-
-**The removed profiles.** Timelines, grids, canvases, scenes and
-conversations were once planned as profiles. Each is a row of the table
-above, and each is worked through in §14: timelines in §14.1, grids in
-§14.1 and §14.4, canvases in the charts of §14.4, scenes in §14.2 and
-§14.4, conversations in §13.2. If any medium is found that these
-compositions cannot express, the remedy is to restore or add a profile,
-under the deletion test, not to narrow what a universe may be.
-
-### 5.6 Interfaces that edit, and surfaces that hold children
-
-Two small additions let description do work that would otherwise need a
-program, and let programs take part in composition.
-
-**Handlers that propose changes.** An `on` handler (Appendix A) may carry
-`propose`: a list of operations (§1.7) in which any field may be a formula.
-When the event occurs, the kernel evaluates the formulas — against data,
-presentation state and the event — and submits the result as a change, with
-origin `{basis: witnessed, by: person}` naming the person using the reader.
-It is verified and committed, or refused, like any change (**L4**). A
-checkbox, a form, an editable cell and a button that adds a row are
-therefore description, with no Compute-let.
-
-A handler may instead carry `act`: the name of any action of §11.8 and its
-arguments, in which any field may be a formula. The kernel performs it as
-the act of the person using the reader. `propose` is the commonest case and
-keeps its own spelling. An action that needs something only the person can
-supply — a file to import, a place to save, a recipient — makes the reader
-ask for it.
-
-**Subjects.** A Portal MAY pass values to what it presents, in `with`; the
-description presented reads them with `arg`, and a Portal there MAY have
-`arg` as its `of`. This is what lets an interface work on something other
-than itself. An `ask` reads, and an action changes, the universe that holds
-the formula or handler, unless it is aimed at a **subject**: an anchor to
-another universe that the presenter supplied in `with`. A presenter can
-supply as a subject only itself, or a subject it was itself given, so
-nesting a universe never gives it power over anything but what its
-presenter chose to hand it. A reader hands the universe being worked on to
-the tools it has chosen (§6.6).
-
-**Editable text.** A text primitive, or a region of one, marked `editable`
-accepts text entry. The host supplies the editing surface it already has —
-caret, selection, input methods, accessibility — through the `text`
-capability and reports each committed edit as an input event `edit` giving
-the range replaced and the text that replaced it. The kernel turns the
-range into the identities of the elements concerned and submits a
-`splice`. The host
-knows it is editing a run of text and nothing more (**K2**).
-
-**Children of a surface.** A surface MAY have `children`, a keyed map of
-objects: Portals, or regions, groups and texts directly. Where each child
-sits is stated in the child's `place.at`, an anchor into the object the
-surface presents (its `of`), so that the arrangement is data. The kernel
-does not draw the placement; the surface's Compute-let does, using the
-`present` capability: it asks for a child to be presented at a size in
-pixels, receives a raster it can draw or use as a texture, and passes back
-any input that falls on the child, translated into the child's coordinates. Parents still size children (**V1**), the child is
-composed by the kernel exactly as it would be anywhere, and the limits on
-nesting apply (**O7**). This is how a Portal appears on a wall of a 3D
-scene, on a screen inside a game, or in a custom interface.
-
-### 5.7 Composition
-
-To compose is to turn description into a display list (§6.2). This section
-is normative, and all of it is the kernel's: the host is asked only what a
-run of text measures.
-
-**Rows.** Composing an object for a width yields a list of **rows**. A row
-is an unbreakable strip across the flow: a height; a *gap*, the space it
-asks for above itself; the display-list items in it, placed from its top
-left; and three facts used only when breaking pages — whether it may end a
-page, which block it belongs to, and which line of how many it is.
-
-| Object | Its rows |
-| --- | --- |
-| a text | by the steps below |
-| a group with `flow` | the rows of its children, in order. The first row of each child after the first has the larger of its own gap and the group's `gap`. A child of a flow is a block unless its `place` is `inline`. Consecutive inline children share lines: each is placed after the last at its own width, a new line beginning when the next does not fit, and each line is one row, as tall as its tallest child |
-| a group with `grid` | one row: its tracks are sized as below and each child composed in its cell |
-| a group with `absolute`; a region | one row, of the object's `h`: each child composed at its own `w` and placed at its `x`, `y`, in list order, back to front |
-| a path, raster or samples; a surface | one row, of its `h`, holding its item |
-| a Portal that states `h` | one row of that height: the target composed at the Portal's width, its rows stacked, then fitted into the Portal's rectangle by `fit` and clipped (**O2**) |
-| a Portal that states no `h` | the rows of its target, composed in the target's universe (§1.8) at the Portal's width: it takes the height they need, as a text does. Where **O4** or **O7** says so, one row showing its label |
-| a clock | one row, as tall as its tallest child: the children present at the time of composition, each composed at the time the clock gives it (§4.5), one over another in list order |
-
-**A grid's tracks.** `cols` and `rows` are lists of track sizes: a length,
-a fraction `[n, "fr"]`, or `"fit"`. A fixed column has its length. A `fit`
-column is as wide as the widest of its children, each measured as the width
-of its longest line when composed in the width left by the fixed columns,
-or its own `w`. What then remains is shared among fraction columns in
-proportion. Rows are sized the same way from their children composed at
-their column widths; fraction rows share what remains of the group's `h`,
-and count as `fit` if it has none. A child sits in the cell its `row` and
-`col` name, counted from 0, across the tracks its `span` gives, placed by
-`align`. Under `each`, the copies of the template fill cells in order, row
-by row.
-
-**A text into rows.**
-
-1. *Check.* Apply **X1**. A text that fails is a single row saying so.
-2. *Spans.* Resolve each span's region (§4.3). A detached span takes no
-   part.
-3. *Blocks.* Each character belongs to the innermost block span covering
-   it: of those that cover it, the one that starts latest; of those, the
-   one that ends earliest; of those, the first by key. Maximal runs of
-   consecutive characters with the same innermost span are blocks.
-   Characters under no block span form paragraphs of their own. A block
-   span that covers no character is a block too, an empty one, at its
-   place among the others: an empty paragraph is a row one line high, and a
-   line of its own in the plain-text face. Blocks at one place are ordered
-   by key.
-4. *Style.* A block's style is the text's (Appendix A), then the defaults
-   of its span's role, then the span's own properties. Block spans that
-   enclose it apply first, outermost first: their indents add and their
-   other properties are inherited.
-5. *Runs.* Within a block, each character's style is the block's, changed
-   by each inline span covering it, in order of start and then of key.
-   Characters under a `markup` span are left out. Maximal sequences of one
-   style are runs. An `embed` character whose child is a block ends the
-   lines before it and contributes the child's rows, composed at the
-   block's width; any other embedded child is an inline box, of its own
-   width and height, in the list of runs.
-6. *Lines.* The kernel breaks lines; no host does.
-   - *Levels.* The characters' embedding levels are those of the Unicode
-     Bidirectional Algorithm (UAX #9), with the block's `direction` as the
-     paragraph direction, `auto` meaning the first strong character's.
-   - *Opportunities.* A line may end where the Unicode Line Breaking
-     Algorithm (UAX #14) allows, with its default rules and no tailoring;
-     an inline box may be followed or preceded by a break; U+000A in a
-     `code` block, and U+2028 anywhere, end a line. In a `code` block
-     lines end nowhere else.
-   - *Fill.* The kernel asks `measure` (§6.3) for the advance of each run
-     up to each opportunity in it. A line takes content up to the last
-     opportunity at which what precedes it, less trailing spaces, is no
-     wider than the width left after indents. If the first opportunity is
-     already too far, the line ends at the last place before it that fits
-     and is not before a combining mark or a joiner (classes CM and ZWJ),
-     taking at least one character.
-   - *Fragments.* A line's content is cut into fragments, each of one run
-     and one level, and put in visual order by rule L2 of UAX #9. The
-     kernel asks `measure` for each fragment's own advance. Fragments are
-     placed left to right, the line starting at the indent for a
-     left-to-right block and ending at it for a right-to-left one; `align`
-     moves the line within whatever width is left over.
-   - *Height.* The row's height is the largest, over the line, of each
-     fragment's size × `line` and each inline box's height. Its baseline
-     lies below the row's top by (height − ascent − descent) ÷ 2 + ascent,
-     with the largest ascent and descent on the line. An inline box sits
-     with its bottom on the baseline.
-7. *Items.* Each fragment is a `text` item with `dir` from its level, whose
-   `src` is an anchor to exactly its characters, by element boundaries,
-   with `u` when the text is in another universe. A list item's marker is a
-   `text` item on the first line's baseline, measured like any fragment and
-   ending 0.4 of the size before the indent. A numbered item's number is
-   one more than that of the nearest earlier item of its level, if no
-   heading and no item of a shallower level lies between them; otherwise it
-   is 1, or the item's `start`. An underline or a strike is a `path` item:
-   a line 0.06 of the size thick, 0.1 of the size below the baseline or 0.3
-   above it, in the text's color.
-8. *Spacing.* The gap of a block's first row is the larger of the space the
-   block asks before itself and the space the block before it asked after
-   itself. Its other rows have no gap. The rows of a heading may not end a
-   page.
-
-The data for both Unicode algorithms is that of Unicode 16.0. A later
-version is a new version of the text profile (§1.6).
-
-**A view** is the rows stacked from the top, each below the last by its
-gap.
-
-**Pages.** Given rows, and the height available on a page — the page's
-height less its top and bottom margins — pages are filled in order:
-
-1. Starting a page at row *i*, take rows while they fit. The gap of the
-   first row on a page does not count. A row taller than a page is taken
-   alone, and is clipped. Let *j* be the first row not taken.
-2. Move *j* back while either of these applies, until neither does.
-   (a) Row *j* − 1 may not end a page: *j* becomes *j* − 1.
-   (b) Rows *j* − 1 and *j* are lines of one block: if the block has three
-   lines or fewer, or fewer than two of its lines would remain on this
-   page, *j* becomes the block's first line; otherwise, if only the block's
-   last line would move to the next page, *j* becomes *j* − 1.
-3. If that would leave the page empty, *j* is as step 1 left it.
-4. The page is rows *i* to *j* − 1, and the next page starts at *j*.
-
-Each page is a region of the page's size, clipping, that holds its rows at
-the margins. A header and a footer, if given (Appendix A), are composed at
-the width between the side margins with `state("page")` and
-`state("pages")`, and placed in the top and bottom margins, one line from
-the rows. Breaking pages never changes a line: lines are broken once, for
-the page's width.
-
-- **[V4]** Composition is a function of the description, the sampling
-  parameters, the presentation state and the replies of `measure`. Given
-  the same of each, every kernel produces the same display list. Where two
-  hosts measure the same text differently — other fonts, other shaping —
-  its lines, and so its pages, may differ between them. With the same
-  fonts and one renderer they do not (§7.4).
-
-Not yet an algorithm, and not exercised: floats (§5.2) and hit testing.
-The line-breaking steps above replace a host operation that an earlier
-draft and the measurement spike used; they have not themselves been run.
-
----
-
-## 6. The player
-
-### 6.1 Four parts
-
-Every UFO is presented by a **player** of exactly four parts.
-
-1. The **kernel**: one program, compiled once to WebAssembly, that reads the
-   pack, verifies records, resolves refs and anchors, checks and applies
-   changes, evaluates formulas, performs layout and composes a display list.
-   It knows the core and the primitives. It knows no medium, application or
-   foreign format.
-2. The **presenters**: what turns display-list items into output. There are
-   four **base presenters** — for text, path, raster and samples items — and
-   they are the host's own drawing and audio facilities, reached through the
-   binding. Anything else that draws is a **carried presenter**: a
-   Compute-let attached to a surface (§11.1), carried in the universe that
-   needs it, which itself draws by emitting display-list items or through
-   the `gpu` capability.
-3. The **binding**: the host-specific code that connects the kernel to a
-   host. It supplies bytes, executes display lists with the host's
-   facilities, delivers input, and provides the capabilities the host has.
-   It is the only part that differs by host.
-4. The **universe**: the description. Everything that makes one UFO differ
-   from another is here, as data.
-
-A base presenter is not a WebAssembly component, because a component that
-only forwarded each item to a host call would be an empty layer.
-
-- **[K1] One implementation.** The kernel and every carried component exist
-  as one compiled WebAssembly artifact each, identified by hash. The
-  project's readers — in a browser, as an installed web app, native, on the
-  command line and behind the agent interface — all run those same
-  artifacts, and MUST NOT contain a second implementation of any kernel
-  function in any language. Independent implementations of the format by
-  others are welcome and are measured against the same conformance suite
-  (§12.3).
-- **[K2] No domain knowledge outside the kernel.** A binding and any native
-  shell know the display-list items of §6.2, the input events and the
-  capabilities of §6.3, and the baseline media types of §6.5. They MUST NOT
-  contain logic specific to any object type, property, profile, operation
-  or foreign document format, and they do not parse a pack or an envelope:
-  the kernel locates the pack within the bytes of a file (§9.2).
-- **[K3] Carried by content.** A component is named by its hash. A universe
-  MUST NOT depend on the copy it carries being the one used: a reader that
-  holds a component with the same hash uses its own.
-- **[K4] Pay for what you use.** A universe carries only the components its
-  content requires. A universe with no 3D scene carries no scene presenter,
-  and no ordinary universe carries a renderer for canonical exports (§7.4). The universe object's
-  `components` names those it does carry (§1.6), so that copying and
-  compaction keep them.
-
-The kernel is itself a sandboxed component: it has no authority over the
-host except through the host interface.
-
-### 6.2 The drawing contract
-
-To present, the kernel **composes**: given a face (§7), an available size,
-the root clock's time and the presentation state, it produces a **display
-list**. Executing display lists is the whole of what a host draws and
-plays, and this section is the whole of what a binding knows about
-presentation. It is part of the frozen host interface (§6.3): once
-published, items are never removed or changed.
-
-A display list is an encoded value (§1.2): a list of items, each a list
-whose first element names its kind. The schema is in Appendix C.
-
-| Item | Fields |
-| --- | --- |
-| `push` | `m`: six floats, a transform; `clip`: a rectangle or a path; `alpha`: 0 to 1. All optional |
-| `pop` | none; ends the innermost `push` |
-| `text` | `s`: the characters of one line; `x`, `y`: where its baseline starts; `font`: a list of family names and font assets, in order of preference; `size`; `weight` (100 to 900); `slant` (boolean); `color`; `dir`: `ltr` or `rtl`; `adv`: the advance the host reported for this line |
-| `path` | `d`: segments `M`, `L`, `Q`, `C`, `Z` with their coordinates; `fill`, `stroke`: a color or gradient; `width`; `join`: `miter`, `round`, `bevel`; `cap`: `butt`, `round`, `square`; `dash`; `rule`: `nonzero` or `evenodd` |
-| `raster` | `source`: a blob in a baseline format, a surface's identifier, or `{mem, w, h}` naming RGBA pixels in the emitting component's memory; `from`, `to`: source and destination rectangles; `smooth`; and for video `t`, a time in flicks, and `rate`, two integers |
-| `samples` | `source`: a blob in a baseline format, or `{mem, n, hz, channels}` naming samples in the emitting component's memory; `at`: when on the root clock the source's `t` is to sound; `t`; `rate`; `gain`; `pan` |
-| `surface` | `id`, `to`: a rectangle handed to a running Compute-let, which fills it with its own display list |
-| `hit` | `id`, `shape`: a rectangle or path; `events`: which input events it takes |
-
-Every item MAY also carry `src`, the anchor of the description it came
-from, and `label` and `role`, from which the binding builds the host's
-accessibility tree. `role` is one of `heading`, `paragraph`, `list`,
-`item`, `link`, `button`, `image`, `table`, `row`, `cell`, `input` and
-`region`, which every host's accessibility interface has, with `level` for
-a heading or an item; any other role reaches the host as a plain label. A binding does not interpret `src`; it hands it back
-with input, so that anything on screen can be traced to its object and from
-there to its origin (§7.5 `why`).
-
-- **[W1] Space.** The origin is the top left of the surface, `x` to the
-  right, `y` downward, in CSS reference pixels. A transform `[a b c d e f]`
-  maps `(x, y)` to `(a·x + c·y + e, b·x + d·y + f)`. Each `push` composes
-  its transform with, and intersects its clip with, those in force; `pop`
-  restores them.
-- **[W2] Order.** Items are painted in list order, each over what came
-  before, by source-over compositing in sRGB with premultiplied alpha.
-- **[W3] Paths.** A host fills and strokes exactly the stated geometry.
-  Strokes are centered on the path; the miter limit is 4. After
-  anti-aliasing, coverage MUST match the exact geometry to within half a
-  device pixel at every edge.
-- **[W4] Text.** A host draws the characters of `s` on one line starting at
-  the baseline point, in the first font of the list it has, falling back
-  through the list and then to its own default. It MUST NOT break, wrap,
-  justify or truncate the line: the kernel has already broken it, using the
-  host's own measurements (§6.3 `text`), and `adv` MUST equal the advance
-  the host then draws.
-- **[W5] Rasters.** A host decodes the source, maps the `from` rectangle to
-  the `to` rectangle, with bilinear filtering if `smooth` and nearest
-  neighbor if not. For video it shows the frame at `t`; if `rate` is not
-  zero it goes on advancing at that rate until the next display list
-  arrives, which is the only thing a host knows about playback.
-- **[W6] Samples.** A host sounds the source so that its position `t` is
-  heard at root-clock time `at`, advancing at `rate`, scaled by `gain`.
-- **[W7] Input.** A host reports input as events (below), each with the `id`
-  of the innermost `hit` item under it, coordinates local to that item, and
-  the root clock's time.
-- **[W8] Nothing else.** A host executes these eight kinds and no others,
-  and adds nothing of its own to a surface. An item of a kind it does not
-  know is skipped and logged.
-
-**Input events**, also encoded values: `pointer` (`down`, `up`, `move`,
-`enter`, `leave`; position; buttons; pointer identifier), `key` (`down`,
-`up`; the key's name as the UI Events specification gives it; modifiers),
-`text` (characters committed by the host's input method), `edit` (for an
-editable region: the range replaced and its replacement, §5.6), `scroll`,
-`focus`, `resize`.
-
-**Conformance of a binding** is tested against this section alone: a corpus
-of display lists with reference results. Path and raster items are compared
-to reference images, requiring every channel of at least 99.5% of pixels to
-be within 8 of 255. Text items are tested for position and advance, not for
-glyph shapes, which belong to the host's fonts. Input is tested by
-synthetic events against `hit` items.
-
-A canonical export does not use the host for drawing at all: the same
-display list is executed by a renderer named by hash (§7.4).
-
-Composition is a projection (§7.1): the display list is never stored.
-
-### 6.3 The host interface
-
-The **host interface** is the complete set of functions a sandboxed
-component — the kernel, a presenter, a Compute-let — may import. It is small,
-and once published it is frozen: functions are never removed or changed.
-
-Base functions, available to every component with no grant:
-
-| Function | Purpose |
-| --- | --- |
-| `draw(list)` | submit the component's display list for the current frame, in its own surface's coordinates |
-| `input(buffer) → count` | read the input events delivered since the last call (§6.2), each with a clock time |
-| `time() → flicks` | the component's clock time (**T1**) |
-| `random(buffer)` | fill with random bytes; from a recorded seed during replay |
-| `send(port, message)` / `receive(port, buffer) → length` | exchange messages on a port the component was given |
-| `checkpoint()` | ask the reader to record the component's state now (§11.2) |
-| `capability(name) → handle` | obtain a granted capability, or learn that it is absent or denied |
-| `call(handle, operation, in, out) → status` | use a capability. The status is *done*, with the reply in `out`; *failed*; or *pending*, in which case the reply arrives later as a message on the handle |
-| `log(message)` | emit a diagnostic the reader may show; has no other effect |
-
-The reader calls two functions the component exports: `frame(time)`, once
-per presented frame, and `message(port)`, when a message or a pending reply
-arrives.
-
-Every capability operation may answer *pending*. Hosts differ in what they
-can answer at once — a browser decodes media and reads files only
-asynchronously — so a component is written to continue when the reply
-comes. During replay (§11.2), replies are delivered from the record at the
-same points.
-
-A **port** is a small integer naming one end of a channel: to the component
-that presents this one, to a child it presents, or to another Compute-let
-the surface's `ports` property connects it to. A message is one encoded
-value of at most 64 KiB.
-
-A **capability** is a named, granted authority. Everything beyond the base
-functions is a capability.
-
-**The contract.** It is the same for every capability, and it is complete:
-adding a capability adds a row to the table below and a set of operations,
-and changes nothing here.
-
-*Request.* A Compute-let's manifest (§11.1) lists its requests. Each is
-`{capability, scope, required, why, without}`: the capability's name; a
-scope in that capability's own terms; whether the program cannot run
-without it; a sentence for the person saying why it is wanted; and a
-sentence saying what the person loses if it is refused.
-
-*Offer.* When a program is about to start, the reader works out, for each
-request, one of four states:
-
-| State | Meaning |
-| --- | --- |
-| *granted* | the host has it and the person has allowed it, for this scope or a wider one |
-| *undecided* | the host has it and the person has not yet been asked |
-| *denied* | the person refused, or revoked |
-| *absent* | the host does not have it |
-
-*Asking.* For each *undecided* request the reader asks the person, showing
-the program's identity, who sealed it if anyone, the capability in plain
-words, the exact scope, and the program's `why` and `without` as the
-program's own words. The person answers yes, no, or yes with a narrower
-scope, for this session or until revoked. A reader MUST NOT ask on merely
-opening a universe: it asks when the person acts to run the program.
-
-*Start.* If every required request is *granted*, the program starts. If
-any is *denied* or *absent*, it does not: its poster is shown at its
-authored size with a plain statement of what is missing and, if denied, the
-means to grant it (**H2**). Optional requests never prevent a start.
-
-*Use.* `capability(name)` returns a handle or the state. Every `call` on a
-handle is checked against the granted scope; a call outside it fails and
-is logged. A program MAY call `capability` again later: the answer can
-change while it runs.
-
-*Revocation.* The person can revoke any grant at any time. The handle
-becomes invalid at once, calls on it fail with *revoked*, and the program
-receives a message on the handle's port. A program that held a required
-capability is stopped at the end of its current call and its poster shown.
-
-| Capability | Scope | Gives | If absent or denied | Held by default by |
-| --- | --- | --- | --- | --- |
-| `store` | one pack | read and append its bytes; the exclusive lock | no reader | the kernel only |
-| `text` | — | `measure`, `locate`, `edit` (below) | no reader | the kernel only |
-| `media` | — | decode a baseline asset (§6.5) to pixels or samples at a time | the asset's poster or label | the kernel only |
-| `inflate` | — | decode and encode DEFLATE (§2.1) | compressed records are unavailable | the kernel only |
-| `verify` | — | check an Ed25519 signature | seals are shown as unchecked | the kernel only |
-| `run` | — | run a module in the host's WebAssembly engine | no Compute-let runs; posters are shown | the kernel only |
-| `blobs` | a set of hashes | read those blobs | — | a renderer (§7.4) |
-| `encode` | — | encode pixels or samples to a baseline format, or pages to PDF | that export is not offered | the kernel, on export |
-| `objects` | an anchor, and `read` or `propose` | read objects within the anchor; submit changes to them, which are verified like any change | the program runs on what it carries | nobody |
-| `present` | the surface's own children | present a child into a raster; route input to it | children are not shown | a Compute-let whose surface has children |
-| `gpu` | the surface | accelerated graphics (Appendix E) | poster, or the program's own fallback through `draw` | nobody |
-| `audio` | the surface | a low-latency stream of generated samples | silence | nobody |
-| `input.raw` | the surface | unbuffered pointer, gamepad and device input | ordinary `input` events | nobody |
-| `time.precise` | — | timing finer than a frame | frame times | nobody |
-| `net` | a list of origins | requests to those origins | the program runs offline | nobody |
-| `camera`, `microphone` | the device | capture while the surface is visible | none | nobody |
-| `files` | one file or folder the person picks | read it, or save to it | the reader's own save | nobody |
-
-`text` has three operations. `measure`: given a run — its characters, font
-list, size, weight, slant and direction — and a list of offsets into it,
-the advance of the run's text up to each offset, as the host would draw
-it, and the run's ascent and descent. That is all a host contributes to
-layout: where lines break and how they are ordered is the kernel's (§5.7).
-`measure` answers at once, never *pending*, as do `inflate` and `verify`.
-For a canonical export the renderer answers it in the host's place (§7.4).
-`locate`: given a fragment as it was drawn and a horizontal offset within
-it, the nearest character position. `edit`: mount or unmount the host's editing surface on a
-rectangle with given text (§5.6). The operations of `objects` are the
-projections and actions of §7.5 and §11.8, confined to the scope. Those of
-`present` are `raster` (child key, width, height → a raster source) and
-`deliver` (child key, input event). The operations of `gpu` are sketched in
-Appendix E.
-
-The kernel's own capabilities are part of the frozen interface, and their
-operations are these:
-
-| Capability | Operations |
-| --- | --- |
-| `store` | `size`; `read(offset, length)`; `lock`, `unlock`; `append(bytes)`; `sync`, returning when what was appended is durable; `truncate(length)` (**P7**); `replace(bytes)`, which writes a whole new file and puts it in the old one's place atomically (**P5**, §2.6) |
-| `inflate` | `inflate(bytes, length)`; `deflate(bytes)` |
-| `verify` | `ed25519(key, message, signature)` |
-| `media` | `info(source)`: its kind, pixel size, duration and sample rate. Pixels and samples never enter the kernel; the host decodes when it executes a raster or samples item (§6.2) |
-| `encode` | `image(format, parameters)`, `audio(format, parameters)`, `video(format, parameters)`, `pages(parameters)`: the host encodes what it has just drawn or played for an export |
-| `run` | `load(bytes)`, giving a module or the engine's refusal of it as invalid; `start(module, snapshot)`; `call(instance, export, arguments, fuel)`, giving results, or a trap and its kind; `read` and `write` of an instance's exported memory, globals and table; `drop` |
-
-A kernel is itself WebAssembly and cannot run a module: `run` is how it
-asks the host's engine to. The operations of `audio`, `input.raw`,
-`time.precise`, `net`, `camera`, `microphone` and `files` are not yet
-written.
-
-- **[H1]** A component obtains a capability only if its manifest requests it
-  (§11.1), the person has granted it (§10.3), and the host offers it.
-- **[H2] Degradation.** Every capability has a defined result when absent or
-  denied, given in the table. A program whose required request is not
-  granted is replaced, in place and at its authored size, by its poster and
-  a plain statement; one whose optional request is not granted runs
-  without it. Nothing is ever left blank or broken.
-- **[H3] Narrowing.** A component holding a capability MAY ask the kernel
-  for a handle with a smaller scope and pass that to a component it
-  presents. It can never pass a broader one. The kernel is the first holder
-  and narrows everything it passes on.
-- **[H4]** New capabilities are added to this specification by name, under
-  the deletion test (**V3**). Adding one never changes the base functions or
-  the contract. A capability is something only a host can provide; anything
-  that can be computed inside the sandbox is a Compute-let, not a
-  capability.
-- **[H5]** There is no other extension mechanism. Readers have no plugins,
-  no registered handlers and no per-type code paths.
-- **[H6]** A reader MUST show the person, at any time, every grant in force,
-  and what each program has done with it during the session.
-
-The interface is specified as plain WebAssembly imports under the module
-name `ufo:host/1`, with arguments passed as offsets and lengths in the
-component's memory and structured arguments encoded as values (§1.2).
-
-The frozen surface is the ten base functions, the two exports, the drawing
-contract of §6.2 and the capability contract above. The operations of each
-capability are part of this specification too and are counted in §12.
-
-### 6.4 Decode at the border, encode at the border
-
-- **[B1]** The kernel contains no decoder for any image, audio, video, font
-  or document format, and no encoder for any.
-
-Foreign content enters a universe at the **border**: the moment of import.
-Exactly one of three treatments applies, in this order of preference.
-
-1. **Host-decodable media stay as assets.** A file in a baseline format
-   (§6.5) is stored as its exact original bytes (§8.2) and decoded by the
-   host, through the `media` capability, when presented.
-2. **Structured documents are transmuted once.** A foreign document — word
-   processing, spreadsheet, presentation, diagram, structured data, marked-up
-   text — is converted to native description by any capable tool or agent.
-   The original bytes are kept as an asset. The conversion is recorded as a
-   derivation (§8.3) whose source is that asset.
-3. **Anything else is preserved with a carried face.** The original bytes are
-   kept as an asset together with a rendition in a baseline format, produced
-   once at the border (§7.1): page images for a fixed-layout document, a
-   still for an unknown image format. If live decoding is truly needed, the
-   decoder is a Compute-let on a surface, carried only by universes that
-   hold that format (**M3**).
-
-- **[B2]** Import never discards or alters the original bytes.
-- **[B3]** Export encodes at the border the same way: through the host's
-  `encode` capability, or, for a canonical export, through the renderer
-  (§7.4).
-
-### 6.5 Baseline asset formats
-
-A conforming reader presents assets in these formats through its host:
-
-| Kind | Formats |
-| --- | --- |
-| Image | PNG, JPEG, WebP, GIF, and SVG presented as a static image with scripts and external references disabled |
-| Audio | MP3, AAC in MP4, FLAC, PCM in WAV |
-| Video | H.264 (8-bit, 4:2:0) with AAC in MP4 |
-| Font | OpenType and TrueType, bare or as WOFF2 |
-
-This list is proposed from the formats decoded by current browsers and
-operating systems. It has not been tested by this project and MUST be
-confirmed on every rung of the reader ladder before it is frozen. H.264 in
-particular depends on the host's licensing position.
-
-- **[B4]** An asset outside the baseline MUST be imported under treatment 2
-  or 3 of §6.4, so that every conforming reader can show something for it.
-
-### 6.6 Onboard tools
-
-A UFO is inspected and edited with tools it carries. The **onboard tools**
-are two things.
-
-1. *Functions of the kernel*: the projections of §7.5 and the actions of
-   §11.8. Because they are in the kernel, every reader on every rung has
-   them, and so does every web envelope.
-2. *An interface to those functions*, which is itself a universe, the
-   **tools universe**: text, groups, regions and paths. It reads the
-   universe being worked on with `ask` (§5.3), changes it through handlers
-   that `act` (§5.6), and shows it through a Portal whose `of` is
-   `arg("subject")`. The reader presents the tools universe and gives it
-   the working universe as its subject. Nothing in a tools universe names
-   any particular universe, so one tools universe, with one hash, serves
-   every file. It is carried under `components.tools` as a nested universe
-   (§1.8); a reader that holds the same one uses its own copy (**K3**), and
-   a reader MAY substitute a newer one.
-
-- **[K5]** A web envelope MUST carry a tools universe sufficient to: choose
-  among faces; show for anything on screen its origin, evidence and
-  decisions; edit text and data; add an asset; accept, reject or revise a
-  contribution; verify the universe and its seals; show what will travel;
-  and save or send the result.
-- **[K6]** The tools interface contains no logic of its own. Everything it
-  does is a formula, a presentation-state change, or an action of §11.8 on
-  its subject, performed by the kernel as the act of the person using it.
-  It adds no code to the binding and none to the kernel.
-
-**What one change is.** While a person types, edits accumulate in the
-reader. They become one change when the person pauses, moves elsewhere,
-saves, or after a few seconds — never one change per keystroke — and
-pointer motion is never a change. A change made by an agent or a tool is
-committed as it is proposed.
-
-**Undo** is a change like any other: the kernel builds the operations that
-reverse a stated earlier change of the same person, verified against the
-current state, and commits them with origin `tool` and the reversed change
-named in `origin.context`. If later edits make the reversal impossible it
-is refused (**L4**). History therefore shows both the act and its undoing.
-
-The tools universe counts toward the envelope weight of §12.2. It is
-carried under `components.tools` (§1.6).
-
----
-
-## 7. Faces
-
-### 7.1 Three ways a face appears
-
-A **face** is a presentation of a universe, or of an object in it. Every
-face is produced in one of three ways, and a reader MUST show the person
-which.
-
-| Kind | Produced | Stored | Adds information |
-| --- | --- | --- | --- |
-| **sampled** | by the kernel composing authored description, on demand | no | no |
-| **carried** | once, as a **rendition**: an asset derived from the description and kept beside it | yes | only if a model made it |
-| **transmuted** | by AI, as a **transmutation**: new described objects derived from others | yes, as objects | yes |
-
-The classification is derived, not declared, from the derivation (§8.3) of
-what the face presents: *carried* if it is an asset with a derivation;
-*transmuted* if it is described objects with a derivation that a model
-performed, whatever its `how`; otherwise *sampled*. A transmuted face is itself description,
-so it is then sampled like any other, and it remains transmuted however
-much a person edits it afterward: the attribution of each part says who
-wrote what. A carried face made by a model — synthesized narration, a
-generated image — is carried, and its origin says it came from a model. The
-reader shows both facts: how the face is produced, and where its content
-came from.
-
-- **[S1]** Viewing a face writes nothing to the universe.
-- **[S2]** For a carried or transmuted face, the reader MUST show whether its
-  derivation is current or stale (§4.4).
-- **[S3]** A stale carried face MAY be shown, marked as reflecting an earlier
-  state. It MUST NOT be shown as current.
-
-A **projection** is anything generated on demand and never stored: a display
-list, an outline, a listing for an agent, a difference between revisions. A
-sampled face is a projection. Projections have no authority.
-
-### 7.2 The face registry
-
-A face object has type `ufo.face` and properties:
-
-| Property | Value |
-| --- | --- |
-| `of` | ref to the object presented; absent for a face that is offered but not yet made |
-| `recipe` | for a face not yet made: what `derive` would be given to make it (§8.3) — `sources` as anchors, `how`, and the origin's `model`, `prompt` and `parameters`. A reader lists such a face as available on request. The prompt it names is content: a live object refers to it |
-| `medium` | a hint for the person's choice: `document`, `pages`, `text`, `data`, `image`, `video`, `audio`, `deck`, `space`, `application` |
-| `label` | text |
-| `sampling` | map of sampling parameters that fix the face: viewport size, page size, time range, frame rate, camera (see §7.4) |
-
-The universe object's `faces` lists the faces the universe offers. A reader
-presents that list as a choice. A reader MAY also offer faces it can sample
-without a registry entry — the plain-text face and the data face exist for
-any universe that holds text or data.
-
-### 7.3 The plain-text face
-
-The **plain-text face** of an object is its text in reading order, without
-layout or style. It is Unicode text, in lines ended by U+000A.
-
-| Object | Its plain text |
-| --- | --- |
-| a text | one line for each block (§5.7), in order: the block's characters, without those under `markup` spans. A list item's line begins with two spaces for each level above the first, then its marker — `•`, its number and a full stop, or its literal text — and a space. An empty line separates two blocks unless both are list items. An embedded child contributes its own plain text in place: within the line if that is a single line, otherwise as lines of its own |
-| a group, region or clock | the plain text of its children, in list order, each starting a new line; for a group under `each`, that of each copy of its template |
-| a Portal | the plain text of what it presents — the object, or the region its anchor names — where that is in this universe or in a universe nested in the file (§1.8). Content from another universe is marked: a line holding the Portal's label and a colon, then the content with `> ` before each of its lines. Where the target is in a linked universe, where the chain of **O7** already holds it, or beyond the reader's limit on nesting (§3.1): one line, the Portal's label, followed for a linked universe by a space and `(ufo:` the commit hash in lowercase hexadecimal `)` |
-| a data object | its tables in key order. For each: a line of the columns' labels, then a line for each row, in the table's order; cells in the order of their columns, separated by U+0009. A cell that holds a formula gives its value. A tab or a line break inside a cell is written as a space |
-| a surface | the plain text of what it presents, then that of its children |
-| anything else | its label |
-
-The plain-text face of a universe is that of the object its `primary` root
-presents. It is a function of the file: a linked universe contributes its
-label and reference whether or not a reader could find its records.
-
-- **[S4]** Every reader MUST be able to produce the plain-text face of any
-  object. It is what a text editor, a search index, a screen reader and a
-  language model have in common.
-
-### 7.4 Export is sampling
-
-An **export** samples a face with stated parameters and encodes the result
-at the border (**B3**). Nothing is converted; the description stays where it
-is.
-
-| Export | Sampling | Parameters |
-| --- | --- | --- |
-| Plain text | the plain-text face | — |
-| Table file | a data object's rows | columns, order |
-| Image | one moment, one viewport | time, viewport, resolution |
-| Paged document | the flow, broken into page-sized regions | page size, margins |
-| Video | a span of time at a frame rate | time range, frame rate, viewport, resolution |
-| Audio | a span of time, samples only | time range, sample rate |
-| Original bytes | an asset, exactly | — |
-
-There are two **determinism tiers**.
-
-- **Live.** Presentation uses the host's text shaping and rasterization. Two
-  readers produce equivalent results: the same content, structure, order and
-  layout decisions made by the kernel, with glyph shapes and anti-aliasing
-  as the host renders them.
-- **Canonical.** A canonical export is reproducible given a named renderer.
-  **[S5]** The same universe, face, parameters and renderer MUST yield
-  identical bytes on every reader; this follows from **M5**.
-
-The **renderer** is a component identified by its hash, like any other
-(**K3**): a Compute-let with no surface, which the reader runs and
-addresses on one port. It does three things, and takes nothing from the
-host but bytes:
-
-| Message to the renderer | Reply |
-| --- | --- |
-| `{measure: measure-request}` | a `measure-reply` (§6.3): during a canonical export the kernel sends `measure` here, not to the host |
-| `{render: {list, w, h, scale}}` | `{pixels: {mem, w, h}}`, and `{samples: {mem, n, hz, channels}}` if the list sounds: the display list of §6.2, executed |
-| `{encode: {format, parameters}}` | `{bytes: {mem, len}}`: what was last rendered, encoded |
-
-Replies name ranges of the renderer's own memory, which the reader reads.
-The renderer reads the fonts, images and other blobs a display list names
-through one capability, `blobs`, whose scope is those hashes and whose one
-operation is `read(hash, offset, length)`.
-
-A renderer declares what it reproduces: which display-list items, and which
-formats of raster, samples and font. An export is canonical only if all it
-draws is within that declaration; otherwise the reader does not call it
-canonical, and says which item prevents it. A surface drawn through `gpu`
-is within it only for a renderer that carries those operations in software
-(Appendix E). The export's parameters name the renderer by hash, and a
-canonical export kept as a rendition records them in its origin (§8.3).
-
-A renderer is used only when a canonical export is requested. It is never
-part of an ordinary file's player, is not counted in the player's budgets
-(§12.2), and nothing else in a reader depends on it. A universe that wants
-its canonical exports to be possible anywhere carries one under
-`components.renderer`; otherwise a reader holds one, or finds one by a
-location hint (§2.5). A web envelope opened as a page reaches no network
-(§9.2), so it makes canonical exports only with a renderer it carries.
-
-This specification defines no rasterizer and no shaping algorithm, and
-chooses no renderer: an existing engine may fill the role, and a different
-one may later, without any file changing its meaning. The engines measured
-so far, for text and paths alone, come to about 0.9 MiB; decoders and
-encoders for the formats of §6.5 would add to that, and have not been
-measured.
-
-An export is a fixed performance. It carries no structure, history or
-behavior, unless it is an envelope (§9.2). Importing an exported file creates
-a new asset; it does not recover the description.
-
-### 7.5 Projections for agents and people
-
-The kernel offers these projections. They are the onboard tools' vocabulary
-and the agent interface's (§11.8).
-
-| Projection | Returns |
-| --- | --- |
-| `overview` | the universe's lineage, root hash, seals, faces and features, and its outline (§11.7) |
-| `object(ref)` | an object's type, properties, revision and the objects that refer to it |
-| `text(anchor)` | the plain-text face of a region |
-| `search(query)` | objects and regions matching by type, property, text, hash, origin, actor or time |
-| `history(anchor)` | the changes that produced the content of a region, newest first |
-| `why(anchor)` | for a region: its origin, the evidence recorded for it and the decisions made about it (§8.5) |
-| `diff(a, b)` | the operations separating two commits or two revisions |
-| `expand(anchor)` | the outline of an object or region: its parts, each with its size, when and by whom it last changed, and its summary where one exists (§11.7) |
-| `recipe(ref)` | for a derived object: its sources with the state of each, how it was made, by what and at whose request (§8.3) |
-| `verify(commit)` | the result of the conservation check and every profile check, by validation class |
-| `leaving(parameters)` | exactly what a send, share or export with those parameters would carry (**E12**) |
-| `sample(face, parameters)` | a face: as text, as a display list, or as an encoded export |
-| `items(ref)` | a module's functions, globals and exports, with name, signature, size, origin and tests (§11.5) |
-| `unit(ref)` | a function: its signature, and its statements one to a line, each with its identity and the change that wrote it |
-| `calls(ref)`, `unit-history(ref)` | which functions call which; the changes that touched a function, newest first |
-
-Projections for agents are dense, regular text designed for a language
-model: one record per line, fields in a fixed order, hashes abbreviated to a
-unique prefix with the full value available on request, no raw binary. The
-rules and an example are in Appendix B. Each projection states the commit it
-was computed from, so that an answer can be checked later.
-
----
-
-## 8. Profiles for content and memory
+## 5. Content and memory
 
 A **profile** is a versioned set of object types, properties, axes and
 operations layered on the core. Each is declared as a feature (§1.6). This
 section defines `ufo.text/1`, `ufo.asset/1`, `ufo.derivation/1`,
 `ufo.portal/1` and `ufo.chronicle/1`.
 
-### 8.1 Text
+### 5.1 Text
 
 A text object (`ufo.text`) holds characters and their structure.
 
@@ -2219,7 +1246,7 @@ boundary in the same change, with a `set`.
 
 Block spans do not partially overlap one another: any two are disjoint or
 nested. Blocks are separated by their spans, not by characters: `chars`
-holds no paragraph separators, and the plain-text face (§7.3) writes a line
+holds no paragraph separators, and the plain-text face (§8.3) writes a line
 break between blocks. Blocks at the same position are ordered by span key.
 An inline span left with no extent is removed in the same change; a block
 span is kept. A `markup` span covers characters that are part of a foreign
@@ -2251,7 +1278,7 @@ native text instead writes clean characters and spans, with no `syntax`.
 How each role is presented by default — spacing, indent, list markers and
 numbering — is in Appendix A; any of it may be overridden on the span.
 
-### 8.2 Assets
+### 5.2 Assets
 
 An asset (`ufo.asset`) preserves a file's exact bytes.
 
@@ -2267,7 +1294,7 @@ it. The `bytes` axis is a sequence of bytes.
 - **[X4]** Exporting an asset's original bytes MUST reproduce them exactly
   and MUST be offered separately from any export of a presentation of it.
 
-### 8.3 Derivation
+### 5.3 Derivation
 
 Any object produced from other content carries a `from` property:
 
@@ -2278,7 +1305,7 @@ Any object produced from other content carries a `from` property:
 | `by` | ref to the change that performed the derivation |
 
 Who or what performed it, and with what, is the `origin` of that change
-(§8.5): for a model, the model, the prompt, the parameters and who asked;
+(§5.4): for a model, the model, the prompt, the parameters and who asked;
 for a tool, its name, version and parameters. `from` and that origin
 together are the object's **recipe**: everything needed to make it again.
 `by` is recorded because an object's own `by` moves on when a person edits
@@ -2289,8 +1316,8 @@ it, and the recipe must still be found.
 - A **transmutation** is a set of described objects whose derivation has
   `how` `transmute`, made by a model: a deck from a report, a narration
   from a document.
-- Summaries (§11.7), native description converted from a foreign document
-  (§6.4) and a described module lifted from a carried one (§11.3) are
+- Summaries (§10.2), native description converted from a foreign document
+  (§9.4) and a described module lifted from a carried one (§12.3) are
   derivations too.
 
 Each object a derivation creates carries a `from`. Its `sources` are those
@@ -2305,7 +1332,7 @@ once.
   current otherwise. Readers MUST compute this; it is never stored.
 - **[D2]** A derived object is never treated as independent of its sources:
   a reader showing it MUST be able to lead the person to each source region.
-- **[D3] Made again in one step.** `refresh` (§11.8) repeats a recipe. The
+- **[D3] Made again in one step.** `refresh` (§10.3) repeats a recipe. The
   kernel does not run models: a writer that has the model takes the recipe
   from `recipe` — the same sources, resolved as they now are; the same
   `how`, model, prompt and parameters — runs it, and hands the result to
@@ -2315,11 +1342,11 @@ once.
   the earlier derivation made, add objects and drop some; `recipe` lists
   those a person has edited since, so that a writer can ask before
   replacing them. The earlier revisions remain in history. Where part of the recipe is withheld
-  — a prompt, in a copy published without working history (§9.3) — the
+  — a prompt, in a copy published without working history (§13.3) — the
   recipe still says how the object was made, and `refresh` is refused with
   that reason.
 - **[D4] Transmutation is an operation of the format.** A model's
-  contribution enters through `derive` (§11.8): the kernel, not the model
+  contribution enters through `derive` (§10.3): the kernel, not the model
   or the application, computes the pins from the sources actually supplied
   and binds them to the new objects and to the change's origin in one
   commit. Every reader can therefore show, for any transmuted content, what
@@ -2328,73 +1355,7 @@ once.
   inputs exactly, bind its outputs to them, know when the two have parted,
   and hold what is needed to do it again.
 
-### 8.4 Portals
-
-A **Portal** (`ufo.portal`) is a region in a parent that presents one other
-object. Each Portal is an **occurrence**: an object in its own right, with
-its own identity, distinct from what it presents.
-
-| Property | Value |
-| --- | --- |
-| `of` | what is presented: a ref (the object, as it now is); an anchor (a region of it as it now is, so that it follows edits); a pin (the same, marked when what it shows has changed since the pin was made, §4.4); an anchor that names a commit (§1.8) — exactly what was there, in another universe or in an earlier state of this one, and for a universe object, the face its `primary` root names; or `arg` (§5.6) |
-| `face` | preferred face of the target: a ref, or for a target in another universe an anchor, to a face object there; or a `medium` hint; absent lets the reader choose |
-| `with` | map from names to values: what this Portal gives to what it presents (§5.6) |
-| `place` | how it sits in the parent: `inline`, `block`, `float-start`, `float-end` (in a flow); by `x`, `y`, order (in an `absolute` group); by cell (in a `grid`); by `at`, an anchor into the space its parent surface presents (§5.6) |
-| `w`, `h` | authored size |
-| `align`, `fit`, `crop` | alignment in the available space; `contain`, `cover`, `fill` or `none`; fractions cut from each edge |
-| `label` | accessible name; also what the plain-text face shows |
-
-A Portal's position is its place in its parent: in a text, the character
-covered by its `embed` span; in a group or region, its entry among the
-children; in time, the interval of the clock that holds it. Each is
-addressable by an anchor and survives edits by the rules of §4.3. A Portal
-has no timing of its own: how its target's time relates to its parent's is
-the clock it is placed under (§4.5).
-
-- **[O1] Inert.** A Portal is data. A reader that does not interpret Portals
-  shows the label. Nothing is presented, decoded or run until a reader
-  chooses to present the target.
-- **[O2] Parents size children.** The parent gives the Portal its width, and
-  the Portal's own `h` its height; the target is presented inside that
-  rectangle by `fit`. A Portal that states no height takes the height its
-  target's rows need at that width, as a text does (§5.7). A target never
-  sets its Portal's width, nor its height where one is stated.
-- **[O3] Occurrences are never shared.** Duplicating a Portal, by any means,
-  gives the copy a new identity. Both may present the same target.
-- **[O4] Missing targets.** A Portal whose target is absent or unavailable
-  shows an inspectable placeholder at the authored size.
-- **[O5] One drop, one owner.** Content dropped over nested Portals is claimed
-  by exactly one: the deepest that accepts it.
-- **[O6] No stale binding.** An import started for a Portal names that
-  Portal's identity and the target it had; the change that binds the
-  result gives that target as `old`. If the Portal no longer exists or has
-  changed target when the import completes, **L4** refuses the binding; the
-  imported asset remains in the universe, unreferenced.
-- **[O7] Guarded nesting.** A reader tracks the chain of objects currently
-  being presented, by revision hash and across universes. An object already
-  on the chain is shown as a link, not expanded. The limits of **C13** apply.
-  A global "already seen" set MUST NOT be used: the same object may
-  legitimately appear in independent places.
-- **[O8] Other universes are verified and read-only.** A target in another
-  universe is verified record by record like any file, presented read-only,
-  and given no authority by the universe that presents it.
-- **[O9] Edits are ordinary changes.** Inserting, moving, resizing or
-  rebinding a Portal is one change. Pointer motion is not history.
-- **[O10] Authority is never inherited.** A Compute-let presented through a
-  Portal runs under the presenting reader's sandbox with only what that
-  person grants (§10.3).
-
-**Transclusion** is a Portal whose `of` is an anchor or a pin to a region of
-another object, in this universe or another. The presented content remains
-what its own Chronicle says it is: `why` on any part of it answers from the
-source's history. With an anchor the Portal shows the region as it now is.
-With a pin it shows the same, and says when what it shows has changed
-since the pin was made. With an anchor that names a commit — of another
-universe, or an earlier one of this — it shows exactly what was there,
-which cannot change beneath it; a later state is offered as an update
-(**C9**).
-
-### 8.5 The Chronicle: origin, evidence, decision
+### 5.4 The Chronicle: origin, evidence, decision
 
 The Chronicle (§1.7) keeps three kinds of fact apart. None can be inferred
 from another, and no operation merges them.
@@ -2406,7 +1367,7 @@ the change that introduced the content:
 | --- | --- |
 | `basis` | `witnessed`, `inferred` or `unknown` |
 | `by` | `person`, `model` or `tool`; absent when the basis is `unknown` or the content was copied |
-| `who` | for `person`: a principal (§10.1) |
+| `who` | for `person`: a principal (§14.1) |
 | `model` | for `model`: the model's identifier as its provider states it |
 | `prompt` | for `model`: a ref to the text object holding the prompt, or the conversation it was part of |
 | `context` | list of pins to what the contribution was made from or answers: for a model, what it was given; for an undo or a refresh, the earlier change |
@@ -2479,7 +1440,7 @@ latest.
 
 A witnessed origin is still a statement by the change's actor: software
 reporting its own part in an act. Whether to believe the actor is the
-business of seals (§10.2), and a reader shows, beside any origin, whether
+business of seals (§14.2), and a reader shows, beside any origin, whether
 the commit that recorded it is covered by a seal.
 
 **Evidence** — what supports content. An entry in a change's `evidence`:
@@ -2493,7 +1454,7 @@ the commit that recorded it is covered by a seal.
 
 - **[R3]** `consulted` records that a source was available to a model. It is
   not a claim that the source supports the content.
-- **[R4]** A derivation's sources (§8.3) say what something was made from.
+- **[R4]** A derivation's sources (§5.3) say what something was made from.
   They are not evidence that it is true. A summary MUST NOT be the `support`
   of any evidence.
 - **[R5]** Evidence whose `support` pin is stale is shown as stale.
@@ -2533,1009 +1494,7 @@ that last set it.
 
 ---
 
-## 9. Forms of the file
-
-### 9.1 The working form
-
-The **working form** is a pack in a file by itself. The format is UFO; its
-file-name ending is `.ufx`, read as "UFO Exchange", and its media type is
-`application/vnd.ufx` (registration drafted, not yet submitted). A file is
-a UFO file or a UFX file; both are correct. The ending and the media type
-identify the pack wherever it is stored; the name UFO remains in the
-format's own identifiers — the signature, type names, `ufo:` names.
-Native readers and agents work on this form. A person's own working form
-is whole (§2.5); one saved from a published copy lacks what its sender
-withheld, and says so.
-
-### 9.2 The travel form
-
-The **travel form** is an **envelope**: a file that is valid in a common
-format, shows an outer face to software that knows nothing of UFO, and
-carries a pack and the player. The default envelope is a web page. Its file
-name ends `.ufx.html`.
-
-The web envelope is a conforming HTML document, encoded in UTF-8, valid
-against the HTML Standard as it stood on the date of this specification
-(the conformance suite names the snapshot). It contains, in this order:
-
-1. The doctype, then a comment of at most 512 bytes — the **plain-text
-   head** — giving in plain words the title, the fact that this is a UFO,
-   the date of export, and one sentence on how to open it. It is UTF-8
-   text, with any run of hyphens in the title reduced to one.
-2. A `head` whose first element declares the character encoding, followed
-   by the title and a content security policy that permits only the
-   envelope's own scripts, identified by hash, and WebAssembly compilation,
-   and forbids all network access.
-3. A **static face**: the plain-text face (§7.3) of the primary face, as
-   escaped HTML text, up to a size the exporter chooses, followed by a plain
-   explanation of how to open the file with scripts enabled. This is what a
-   script-disabled previewer shows. The binding hides it once the player is
-   running.
-4. The pack, as the text of one or more consecutive `script` elements of
-   type `application/x-ufo-pack`, each holding at most 64 MiB of the pack
-   in standard base64 (RFC 4648 §4) with no line breaks; every element but
-   the last holds a whole number of 3-byte groups.
-5. The kernel, compressed with DEFLATE and then base64-encoded, as the text
-   of a `script` element of type `application/x-ufo-kernel`, labeled with
-   the hash of the uncompressed component.
-6. The binding, as a module script.
-
-Other components the universe needs are records in the pack (**K4**).
-
-The fixed parts of this document — everything but the title, the static
-face, the pack and the kernel — are an **envelope template**: bytes with
-four gaps, in that order. The binding supplies it: in a web envelope, the
-fixed parts of the very page it is running in, the binding included;
-elsewhere, a copy the reader holds. To write an envelope the kernel fills
-the gaps. The kernel therefore contains no HTML, a binding contains no
-envelope-writing logic, and nothing travels twice.
-
-Finding a pack inside a file is the one thing the kernel knows about three
-foreign containers: a pair of markers in HTML text, a box in ISO media, a
-chunk in PNG. It is admitted under **V3** because it cannot be data or
-composition — it happens before any universe is open — and it is not
-decoding (**B1**): nothing of the container is interpreted but where the
-pack begins and ends. Reading is the reverse and also
-the kernel's: given the bytes of any file, the kernel finds the pack — at
-the start of a working form, between the markers of a web envelope, in the
-box or chunk of §9.4 — so a binding never parses an envelope (**K2**).
-
-- **[E1] Read-back.** The binding gives the kernel the text of the pack's
-  script elements; the kernel reads bytes on request by decoding the base64
-  group that holds them. The file is never fetched and the universe is
-  stored once.
-- **[E2] Lossless.** Decoding item 4 yields the pack byte for byte.
-  Converting between the working form and the travel form therefore
-  preserves the root hash, and a reader MUST check that it does.
-- **[E3] Valid.** A web envelope MUST be a conforming HTML document with no
-  parse errors. No envelope of any kind may depend on error recovery, a
-  parser flaw or undefined behavior. A web envelope is a web page and
-  nothing else: bytes after the end of a page are part of the page, so it
-  cannot also be an archive.
-- **[E4] Self-sufficient.** A web envelope requires nothing but a browser:
-  no network, no installation, no account. A browser, here, is one that
-  offers WebAssembly with 64-bit integers passed to and from script, script
-  modules, a two-dimensional canvas, and decompression of raw DEFLATE
-  streams. The conformance suite names the versions of the common browsers
-  from which that holds.
-- **[E5] Saving.** From a web envelope, saving produces a new travel-form
-  file, containing the extended pack, which the person downloads or shares.
-  Where the host offers the `files` capability, the reader MAY write the
-  file the person chooses instead.
-- **[E6] Opened as a file.** A reader of rung 2 or 3 (§9.5) that is given a
-  web envelope reads the pack in place by range and runs its own kernel,
-  never the embedded one (§10.6). If the universe needs a later format
-  version than that kernel implements, the reader says so and offers to
-  update itself.
-
-*Costs, stated plainly.* Base64 adds one third to the pack's size. It is
-accepted because arbitrary bytes cannot appear in a conforming HTML
-document, a page opened from local disk cannot read its own file, and a
-second readable copy would store the universe twice. Records are compressed
-individually first (§2.1), so described content is usually smaller in the
-envelope than raw. A browser parses the whole page before any script runs,
-and holds the pack's text in memory, so time to first interaction grows
-with file size and a web envelope has a practical ceiling of some hundreds
-of megabytes; a carried video is decoded from a second in-memory copy.
-Above 256 MiB a reader SHOULD propose leaving large blobs out (§2.5) or
-using the working form. Some phone file previewers show local web pages
-with scripts disabled; there the static face is what is seen, with its
-instruction for opening the file in the browser.
-
-*Durability, stated plainly.* The pack is designed to be readable for
-decades from this document alone (§3.3). The self-opening property of the
-web envelope lasts as long as browsers support the handful of interfaces
-its binding uses. When they no longer do, the pack inside is still there
-and still readable.
-
-### 9.3 Leaving a reader
-
-- **[E7] Default distribution rule.** Whatever leaves a reader — sent,
-  shared, exported, downloaded, copied out — leaves in the travel form,
-  unless the person deliberately chooses the working form.
-- **[E8]** A travel form carries the newest kernel and binding the exporting
-  reader holds.
-
-**What travels.** A universe has three layers, defined by reachability.
-
-| Layer | What it is | Travels |
-| --- | --- | --- |
-| **Content** | the current revision of every **live** object — one reachable from the universe object by refs, indirects and anchors, without passing through a change — what a live object's anchor names in an earlier commit (§1.8), any earlier revision that a live object pins as support for evidence, and the blobs all of those name | always |
-| **Attribution** | for every change that an element or a `by` of a live object names, that a live object's `from` names, that an included change's `sources` names, or that records evidence, a decision or a finding about live content: the change object, which holds its actor, time, origin, evidence, decisions and findings (§1.7); the objects its evidence names as support; every commit node; every seal | always |
-| **Working history** | everything else: the `work` of every change — its operations and its note; changes that contributed nothing now present; earlier revisions; earlier object maps; prompts and conversations; objects that are no longer live, and changes that touched only those; summaries whose sources are all working history; earlier Compute-let snapshots | depends on the membrane crossed |
-
-The trail of work is the context for whoever continues it, so who is
-receiving decides the default.
-
-- **[E9] Two defaults.** *Sharing* is sending to people who work on the
-  universe: collaborators. A shared copy is whole by default — content,
-  attribution and working history. *Publishing* is sending to readers
-  outside the work. A published copy holds content and attribution and
-  withholds working history by default, and its `note` frame says so
-  (§2.5). The person states which they are doing, can change what is
-  included either way, and sees the result before it leaves (**E12**).
-  Markers of removed elements may be forgotten first (§1.10).
-- **[E10] Stubs.** Withholding removes records and nothing else. Every hash
-  that names a withheld record stays where it was: in `prev`, in commits, in
-  `work`, in `origin.prompt`. The recipient's reader can therefore check
-  the whole commit chain and every seal; check that each change it holds is
-  the one its commit names; resolve every anchor, since resolution needs
-  no history (**A2**); and answer `why` for all content present, since
-  element identities and `origin.sources` never point into withheld
-  records (§8.5). It cannot run the conservation check on a change whose
-  `work` is withheld, and says so (**L3**).
-- **[E11] Withheld is not missing.** A reader MUST present a withheld record
-  as withheld by the sender — "prompt withheld" — and never as damaged,
-  absent by accident, or nonexistent.
-- **[E12] Show what will travel.** Before any send, share or export of a
-  universe, the reader MUST show the person exactly what will leave: the
-  faces and objects, and their size; the principals, models, times and
-  number of changes named in the attribution; whether working history is
-  included; which seals; which blobs are absent. The person confirms or
-  changes it. The reader MUST NOT send anything it did not show.
-- **[E13] Nothing is lost at home.** Withholding applies only to the copy
-  that leaves. A reader MUST NOT remove working history from the person's
-  own working form as a consequence of sending, and copies the person makes
-  for themselves — backups, their other devices — are whole.
-- **[E14]** A recipient extends a received universe by committing on its
-  head as usual. If working history is supplied later, its records are
-  recognised by hash and fill the stubs.
-- **[E15]** A travel form holds every blob of its content unless the person
-  deliberately leaves some out (§2.5). The static face of such an envelope
-  MUST say what is absent, and its content security policy MAY then permit
-  the origins named in its location hints.
-- **[E16]** A web envelope opened in a browser MAY offer, once, to install a
-  native reader where one exists. It MUST work fully if the offer is ignored.
-
-*What a published copy reveals, plainly.* The person should know this before
-choosing to publish, and **E12** shows it to them.
-
-- The names, keys, times and software of everyone who changed a live
-  object, and the identifiers of the models used.
-- For each sequence, how much each change contributed that has since been
-  removed, and where it sat, unless the markers were forgotten before
-  publishing (§1.10). What the removed elements said is not there.
-- The notes on evidence and decisions, the parameters of origins, and any
-  fields an application added to changes.
-- The objects that evidence names as support, in full, including sources
-  consulted for text that was later deleted.
-- The lineage, which is the same in every copy and fork of a universe and
-  so links them.
-- For a withheld blob: its hash, which tells someone who already holds the
-  same file that it was once here.
-
-It does not reveal what any earlier draft, prompt or deleted passage said.
-Those are named only behind veils (§1.4) and by hashes of salted revisions
-(§1.5), and pins are salted (§4.4). It reveals nothing of what the operations were: not
-which properties were edited, not how often, not in what order. A person who needs to reveal less than this starts a
-new universe from an export (§2.6).
-
-### 9.4 Video and image envelopes
-
-A universe can also travel inside a video or an image, so that software
-that knows nothing of UFO — a player, a gallery, a chat application — shows
-a face of it. An envelope shows one outer face and carries the pack as data
-its format defines as ignorable.
-
-| Envelope | Outer face | Pack carried in | File name ends |
-| --- | --- | --- | --- |
-| Video | a carried video face: H.264 with AAC in MP4 (§6.5) | a top-level `uuid` box (ISO/IEC 14496-12) whose 16-byte type is the first 16 bytes of the SHA-256 of the ASCII text `ufo-pack-1`, placed after `moov` and `mdat` | `.ufx.mp4` |
-| Image | a carried still face: PNG | one or more consecutive private ancillary chunks of type `ufOb`, placed after `IDAT` and before `IEND`, whose data concatenated is the pack | `.ufx.png` |
-
-- **[E17]** Each envelope MUST be valid under its own standard and play or
-  display correctly in software that ignores the pack. The outer face is a
-  rendition (§8.3) of a face of the universe inside, with pins, so a reader
-  can tell whether it is current.
-- **[E18]** The kernel finds the pack in such a file by walking the
-  container's boxes or chunks (§9.2), and the reader then proceeds as for a
-  working form. These envelopes carry no player.
-- **[E19] The mark.** The outer face SHOULD carry a **mark**: a QR code
-  (ISO/IEC 18004) encoding `ufo:` followed by the commit hash in lowercase
-  hexadecimal and, optionally, `?at=` and a location hint. In a video it is
-  shown for at least the first and last two seconds; in an image it sits in
-  a corner. A reader that is shown a file bearing a mark but no pack treats
-  the mark as a reference to a linked universe (§1.8): it obtains the
-  records from the hint or anywhere else and verifies them against the hash.
-  The person MAY turn the mark off.
-
-*The limit, plainly.* Platforms that re-encode video or images — most
-messaging and social platforms — discard the box or chunk. What arrives is
-then an ordinary video or image, and the universe is not in it.
-
-*The path past it.* The mark is made of pixels, so it survives re-encoding.
-It turns a stripped envelope from a dead copy into a verifiable pointer:
-anyone with a reader can still reach the exact universe the face was made
-from, provided its records are kept somewhere reachable. Where bytes are
-preserved, the universe arrives whole and the mark is not needed.
-
-- **[E20]** A reader creating a video or image envelope MUST tell the person
-  that re-encoding platforms strip the universe, and whether the mark is
-  present and where it points. The web envelope remains the form to use
-  when the universe itself must arrive.
-
-### 9.5 The reader ladder
-
-The same file works at every rung. Each rung is a binding and shell around
-the same kernel (**K1**).
-
-| Rung | Host | Adds |
-| --- | --- | --- |
-| 1 | any modern browser, opening a web envelope | nothing to install |
-| 2 | the reader installed as a web app | offline use, opening `.ufx` and `.ufx.html` files, in-place saving where the platform allows |
-| 3 | native readers and the command-line reader | file association, the working form on disk, permission prompts, seal verification, the agent interface |
-
-**File-type declarations.** A native reader registers the format with its
-platform by declaration only. These are the declarations; they contain no
-logic, and a reader MUST NOT register anything broader.
-
-*macOS and iOS.* An exported uniform type identifier and a document type:
-
-| Key | Value |
-| --- | --- |
-| `UTTypeIdentifier` | `ai.nampara.ufx` |
-| `UTTypeDescription` | UFO file |
-| `UTTypeConformsTo` | `public.data`, `public.composite-content` |
-| `UTTypeTagSpecification` | `public.filename-extension`: `ufx`; `public.mime-type`: `application/vnd.ufx` |
-| `CFBundleDocumentTypes` | one entry: `LSItemContentTypes` the identifier above; `CFBundleTypeRole` `Editor`; `LSHandlerRank` `Owner`; the document icon of the brand brief |
-
-*Windows.* Per-user registration by the installer, with the person's
-consent (**U10**):
-
-| Key | Value |
-| --- | --- |
-| `.ufx` | default `UFO.File.1`; `Content Type` `application/vnd.ufx`; `PerceivedType` `document` |
-| `UFO.File.1` | default `UFO file`; `DefaultIcon` the document icon; `shell\open\command` the reader with `"%1"` |
-
-*Linux and other freedesktop systems.* A shared-MIME-info entry and a
-desktop entry naming it:
-
-```
-<mime-type type="application/vnd.ufx">
-  <comment>UFO file</comment>
-  <acronym>UFO</acronym>
-  <expanded-acronym>Universal File Object</expanded-acronym>
-  <glob pattern="*.ufx"/>
-  <magic priority="80">
-    <match type="string" offset="0" value="\x89UFO\r\n\x1a\n"/>
-  </magic>
-</mime-type>
-```
-
-The travel forms are files of their envelope's own type — `text/html`,
-`video/mp4`, `image/png` — and are opened by default in whatever opens
-those. A reader MAY additionally offer itself for `*.ufx.html`, `*.ufx.mp4`
-and `*.ufx.png` where a platform can match a double ending (freedesktop
-globs can; Windows and Apple platforms match the last ending only), and
-MUST NOT take over `.html`, `.mp4` or `.png` in general.
-
----
-
-## 10. Trust
-
-### 10.1 Principals
-
-A **principal** is a party that acts: a person, an organization, an agent
-acting for one. It is a map with either or both of `key`, an Ed25519 public
-key (RFC 8032), and `name`, text.
-
-- **[U1] Claims are claims.** A principal recorded in a change is a claim
-  made by whoever wrote the change. It is established only for commits
-  covered by a seal from that key (§10.2). A reader MUST show the
-  difference.
-
-### 10.2 Seals
-
-A **seal** is a signature over a root hash. It is a `seal` frame (§2.1)
-holding `{commit, key, time, name, signature}`, where `signature` is the
-Ed25519 signature of the bytes `"ufo-seal-1"` followed by the SHA-256 of
-the encoded value `{commit, key, time, name}`. The name and time are thus
-signed with the hash, and remain the signer's own claims about themselves.
-A reader checks that the commit a seal names is in the pack; a seal says
-nothing about any other commit.
-
-Because a commit fixes all history before it, sealing the latest commit
-vouches for the state, not for the authorship of every earlier change.
-Earlier seals, on earlier commits, remain valid for those commits. A
-universe's authorship history is thus a chain: each sealed commit, and the
-changes since the previous one.
-
-- **[U2]** Readers verify seals and state in plain words who sealed which
-  state, or that the universe is unsealed. Hash verification establishes
-  integrity; only a seal establishes identity. A reader MUST NOT present one
-  as the other.
-- **[U3]** Writers preserve every seal frame whose commit is retained.
-- **[U4] Keys stay home.** No signing key, password, token or credential is
-  ever stored in a universe, an envelope or a reader's distributed files.
-
-Which keys a person trusts is the reader's business and is never read from
-the file.
-
-### 10.3 Permissions
-
-- **[U5] Requests, not possessions.** A universe can contain requests for
-  capabilities (§11.1). It cannot contain grants. A **grant** is recorded by
-  the reader, outside every universe, for one person, one Compute-let
-  identified by its program hash (§11.1), and one capability with a stated
-  scope. A reader with nowhere durable to keep grants — a page opened from
-  disk — keeps them until the page closes.
-- **[U6]** Asking, granting, narrowing and revoking follow the contract of
-  §6.3. Grants are narrow by default.
-- **[U7]** A grant made for one program hash carries to a successor only when
-  the successor was promoted (§11.6) in this reader with the person's
-  approval, and requests nothing new. A file that arrives from elsewhere
-  begins with no grants, whatever it contains.
-- **[U8] Delegation.** A principal may pass a capability to another by a
-  token: an encoded value `{issuer, audience, capability, scope, expires,
-  parent}` signed as a seal is, where `parent` is the hash of the token it
-  derives from. A token MUST be equal to or narrower than its parent. No
-  shared secret is involved. Within one reader, **H3** applies.
-- **[U9]** The reader's own checks — record hashes, conservation where
-  content is present, fuel metering, seal verification, permission
-  enforcement, the limits of §3.1 — cannot be disabled or weakened by
-  anything in a file.
-
-### 10.4 Membranes
-
-A **membrane** is any boundary between universes. Universes nest and link
-without limit (§1.8), and every such boundary is a membrane with explicit
-rules about what crosses it. There are four crossings.
-
-| Crossing | What crosses | Rule |
-| --- | --- | --- |
-| **Nesting** | a universe's records sit inside another's pack | verified on its own terms; immutable; read-only; no authority from the parent (**C10**, **O8**) |
-| **Reference** | an anchor names a commit elsewhere | names exact content; cannot be redirected; verified wherever found (**C9**) |
-| **Transfer** | a file moves between people | carries its content, attribution, seals and requests; carries its working history to collaborators by default and to outside readers only by choice (§9.3); carries no grants; the recipient's reader decides everything (**U5**, **U7**) |
-| **Capability** | a component reaches beyond its sandbox | only by a requested, granted, scoped, revocable capability (**H1**) |
-
-Copying content from one universe into another crosses a reference
-membrane: the change's `copied` anchor names the source commit, so the
-content's origin remains answerable (§8.5).
-
-Encryption of universes in transit and at rest is a later phase. The design
-leaves room for it as a codec (§2.1) over record payloads, which keeps
-hashes, deduplication and verification meaningful to key holders.
-
-### 10.5 Conduct of readers
-
-- **[U10]** No component may run by exploiting a parser flaw, bypass an
-  operating system's security controls, remove quarantine markings, or alter
-  system settings or file associations without the person's consent.
-- **[U11]** Any local network service a reader offers is off by default.
-  When enabled it listens only on the local machine unless the person
-  chooses otherwise, and requires authentication for every request that can
-  change a universe.
-
-### 10.6 Security and privacy, gathered
-
-**Who enforces the rules.** Every guarantee in this document that begins "a
-reader MUST" is kept by the reader's code. In a reader the person
-installed — rungs 2 and 3 — that code came from a publisher they chose,
-and such a reader runs only its own kernel, or one sealed by a key it
-trusts for kernels. A web envelope opened as a page is different: its
-kernel and binding came with the file. There, the only boundary the person
-can rely on is the browser's own sandbox, which confines the page whatever
-it contains.
-
-- **[U12] An envelope cannot vouch for itself.** Anything a web envelope's
-  embedded reader displays about seals, origins or permissions is the
-  file's own account. The embedded reader MUST label it so — "this file
-  states that it is sealed by…" — and MUST offer the way to check it: open
-  the file in an installed reader. An installed reader never runs an
-  embedded kernel or binding (**E6**).
-- **[U13]** A page opened from disk has nowhere safe to keep a signing key.
-  Changes made there are recorded with the principal as a claim (**U1**) and
-  can be sealed later in a reader that holds the person's key.
-
-**Threats this document addresses, and where.** Hostile packs: §3.
-Decompression and declared-size attacks: **P15**, **P18**. Runaway
-composition: the formula bound (**F2**) and the display-list bound (§3.1).
-Runaway or hostile programs: fuel, memory limits and the sandbox (§11.2).
-Hostile nested universes: read-only, isolated state, no inherited authority
-(**O8**, §5.3, **O10**). Self-granted authority: **U5**, **U7**. Forged
-history: the commit chain (§1.6), seals (§10.2). Tests weakened
-to pass a change: **G1**. What a published copy reveals: §9.3.
-
-**Known and accepted.** The lineage links every copy of a universe. Hashes
-of blobs are visible to anyone holding the same bytes. Under the encryption
-planned for a later phase, record hashes would remain visible to parties
-without keys unless records are also salted; that design is not settled.
-Consent prompts are only as good as the attention paid to them.
-
----
-
-## 11. Profiles for behavior and attention
-
-This section defines `ufo.computelet/1`, `ufo.code/1` (described modules,
-their printing and their ledger) and `ufo.summary/1`.
-
-### 11.1 The Compute-let
-
-A **Compute-let** (`ufo.computelet`) is a complete single-purpose machine
-carried as an object. It is four things that computing has kept apart:
-
-- an *application*: it does something for a person, on a surface;
-- an *operating system*, in the one sense that matters here: it needs none
-  beneath it. What a program asks of an operating system — to be scheduled,
-  to send and receive, to draw, to keep its state — reaches it only as the
-  ten functions of the host interface (§6.3), the same on every host;
-- a *machine*: sealed memory and a clock of its own, which can be
-  snapshotted, resumed, copied and moved exactly (§11.2). Opening it starts
-  the machine; saving checkpoints it; copying forks it; sending moves it;
-- an *environment*: its manifest declares everything it may see or touch.
-
-A Compute-let runs live wherever it is presented: alone, as the primary
-face of a universe; inside a document, a video or a scene, through a Portal;
-or inside another Compute-let's surface (§5.6). It may contain other
-Compute-lets. Its machine code is described (§11.3), the kernel's printer
-makes its bytes (§11.4), and the ledger is the record of why it is as it
-is (§11.5).
-
-Its properties are its **manifest**:
-
-| Property | Value |
-| --- | --- |
-| `module` | ref to its module: a described module, or an asset holding a carried one (§11.3) |
-| `requests` | list of requests, each `{capability, scope, required, why, without}` as §6.3 defines |
-| `tests` | list of refs to test objects (§11.6) |
-| `axes` | the axes its surface offers to anchors, if any beyond `x`, `y`, `t`: each with a name and a kind (§4.2) |
-| `state` | the latest snapshot (§11.2): a byte string, kept outside the node |
-| `docs` | ref to a text: documentation and instructions for people and agents |
-| `poster` | ref to a rendition shown when the Compute-let cannot or may not run |
-
-The Compute-let's **program hash** is the SHA-256 of the encoded value
-`{module, requests, tests, axes}`, in which `module` stands for the SHA-256
-of the module's bytes — as the kernel prints them (§11.4), or as carried —
-and `tests` for the list of the SHA-256 of each test's encoded properties.
-It fixes exactly what would run and everything the program may ask for: it
-changes when any statement, test or request does, and it does not change
-when the program merely runs or its documentation is edited. Grants are
-given to a program hash (**U5**), so a grant never passes to changed code
-except by promotion (**U7**).
-
-A Compute-let has one module. Larger programs are composed, not linked: a
-Compute-let presents others as children of its surface (§5.6) and exchanges
-messages with them over ports.
-
-Every program a universe carries is a Compute-let, including a renderer
-(§7.4) and any carried presenter, whether its module is described or
-carried (§11.3).
-
-- **[M1]** A Compute-let sees only the base host functions and the
-  capabilities in its manifest that have been granted. Nothing else exists
-  for it.
-- **[M2]** A Compute-let is inert until a reader chooses to run it. Opening
-  a universe runs nothing (**C12**).
-- **[M3]** A carried presenter is a Compute-let attached to a surface, and
-  nothing more. It is placed where it is wanted, by the author or by the
-  tool that imported the content; a raster or samples primitive that needs
-  a format decoded names that surface as its source. Nothing is dispatched
-  by type (**H5**).
-- **[M9] No private content.** Whatever a Compute-let presents that is part
-  of the work — a scene, a level, a document, the placement of things within
-  them — lives in objects, which it reads through the `objects` capability
-  and names in its surface's `of` and `children`. Its snapshot holds the
-  state of the machine. A reader, an agent or another presenter MUST be able
-  to find, anchor, attribute and summarize that content without running
-  the Compute-let.
-
-### 11.2 Execution
-
-A module is WebAssembly as version 2.0 of its core specification defines
-it, restricted for determinism: no vector instructions, one memory, one
-table, and imports only from `ufo:host/1`. `memory.grow` succeeds whenever
-the result is within the module's declared maximum; a reader that cannot
-supply that memory stops the Compute-let (**M8**) and never lets the
-instruction fail. One behavior is left to engines: the depth at which the
-call stack is exhausted. A reader reports it as an *engine limit*, apart
-from every other trap, and a record that meets one is not a valid replay.
-Bounding depth by instrumentation, as fuel is bounded, would remove this;
-it is not yet specified.
-
-- **[M4] Fuel.** Printed and carried modules contain no metering. Before running any
-  module the kernel **instruments** it by the rule below, which is normative
-  and the same in every reader; test vectors are in Appendix F.
-
-  1. *Counter.* Append one global of type mutable `i64`, initial value 0,
-     after all the module's globals, and export it as `ufo:fuel`, after all
-     the module's exports. So that a reader can take a snapshot (**M6**),
-     also export, before it and in this order: the memory, as `ufo:memory`,
-     if the module does not export it; each of the module's own globals it
-     does not export, as `ufo:global:` followed by its index in decimal;
-     and the table, as `ufo:table`, likewise. No code of the module can refer to it: it did
-     not exist when the module was validated, and a module MUST NOT export
-     or import any name beginning `ufo:` (**N1**).
-  2. *Regions.* The *entry region* of a function is every instruction of its
-     body that is not inside a `loop`. The region of a `loop` is every
-     instruction inside it that is not inside a nested `loop`. Every
-     instruction of the body counts one, including `block`, `loop`,
-     `if`, `else` and `end`. The `loop` instruction itself belongs to the
-     region that contains it; the `end` that closes a loop belongs to the
-     loop's region; the final `end` of a body belongs to the entry region.
-  3. *Charge.* At the very start of each function body, and immediately
-     after each `loop` instruction, insert a charge for the size *n* of that
-     region:
-     `global.get F` `i64.const n` `i64.sub` `global.set F` `global.get F`
-     `i64.const 0` `i64.lt_s` `if` `unreachable` `end`,
-     where *F* is the counter. A region is charged in full on entry, whether
-     or not every branch in it is taken.
-  4. *Bulk.* Immediately before each `memory.copy`, `memory.fill` and
-     `memory.init`, charge one for every 16 bytes of its length operand,
-     rounded up, computed at run time from that operand.
-  5. *Calls out.* The reader subtracts 100 from the counter for each base
-     host function called, and 1 000 plus one for every 16 bytes passed for
-     each `call`.
-  6. *Floats.* Immediately after each instruction that can produce a NaN
-     whose bits are not fixed by WebAssembly — the `f32` and `f64` forms of
-     `add`, `sub`, `mul`, `div`, `sqrt`, `min`, `max`, `ceil`, `floor`,
-     `trunc` and `nearest`, and `f32.demote_f64` and `f64.promote_f32` —
-     insert a sequence that replaces any NaN with the canonical quiet NaN
-     of its type (`0x7fc00000`, `0x7ff8000000000000`): `local.tee T`
-     `local.get T` `f.ne` `if (result f)` `f.const nan` `else`
-     `local.get T` `end`, where *T* is one local of that type appended to
-     the function's locals for the purpose. Inserted instructions are never
-     counted in a region.
-
-  The reader sets the counter before each call it makes into the module. A
-  trap from an exhausted counter is reported as *out of fuel* and is
-  distinguishable from every other trap. Because the reader inserts the
-  metering itself, there is nothing for a file to omit and nothing for the
-  reader to trust, and because the rule is fixed, the same module with the
-  same fuel traps at the same instruction everywhere.
-- **[M5] Determinism.** Given the same module, state, fuel, clock times,
-  inputs, messages, capability replies and random seed, a Compute-let MUST
-  behave identically on every reader, including the point at which it runs
-  out of fuel.
-- **[M6] State.** A Compute-let's state is its memory, globals and tables,
-  its clock time, its position in the random stream and the input and
-  messages not yet delivered to it. A **snapshot** is the exact content of
-  all of these, as one encoded value kept in a blob: `{memory, globals,
-  table, time, random, pending}` — the memory's bytes; the globals' values,
-  each as its 4 or 8 bytes, little-endian, in index order, concatenated;
-  the table as a list of function indices and nulls; the clock time; the
-  number of blocks drawn from the random stream; and the undelivered input
-  events and messages in order. The hash of a snapshot is the SHA-256 of
-  that encoding. `random` yields, 32 bytes at a time, the SHA-256 of a
-  32-byte seed followed by a block counter from 0, as 8 bytes,
-  little-endian; the reader chooses the seed at start and records it. A reader takes a snapshot only between
-  calls into the module: `checkpoint` asks for one when the current call
-  returns. Running a Compute-let changes its state in the reader and writes
-  nothing to the universe (**S1**). The state is recorded — a change that
-  sets `state`, with origin `tool` and the person as `asked` — when the
-  person saves, and before a promotion (§11.6). Earlier snapshots remain in
-  history and can be restored.
-- **[M7] Replay.** A reader MAY record the fuel, times, inputs, messages,
-  capability replies and seeds delivered to a Compute-let, as a blob: a
-  list of encoded values in order of delivery, each `[kind, …]` — `["seed",
-  bytes]`, `["call", export, arguments, fuel]`, `["time", flicks]`,
-  `["input", event]`, `["message", port, value]`, `["reply", handle,
-  value]`. Replaying the record from
-  the matching snapshot reproduces its behavior. This is what tests,
-  verification by others and shared sessions rest on.
-- **[M8]** A Compute-let that traps, exhausts its fuel or exceeds its memory
-  limit is stopped. Its last snapshot is intact; its surface shows the last
-  frame it drew, marked as stopped.
-
-A Compute-let with no granted capability still draws and sounds: it emits
-display-list items through `draw`, whose raster and samples items may take
-their source from its own memory (§6.2).
-
-### 11.3 Code is description
-
-A program's machine code is described, like everything else in a universe.
-Its bytes are a face of that description (§7.1): sampled from it by a pure,
-deterministic function, and so always verifiable against it, as an image is
-a face of a document. There is no source tree, no build step, and no ledger
-apart from the Chronicle.
-
-A **module** object (`ufo.module`) holds:
-
-| Property | Value |
-| --- | --- |
-| `funcs` | list of refs to function objects, in the order of the function index space, imported functions first |
-| `memory` | `{initial, maximum}`, in pages; absent if the module has no memory |
-| `globals` | map from a name to `{type, mutable, init}` |
-| `exports` | map from an exported name to a ref to a function, the text `memory`, or `{global: name}` |
-| `data` | map from a name to `{at, bytes}`: bytes placed at a fixed address when the module starts |
-| `table` | list of refs to functions, or null for an empty entry: the table for indirect calls, if any |
-
-A function object (`ufo.func`) holds:
-
-| Property | Value |
-| --- | --- |
-| `name` | text, for people and agents. It appears nowhere in the bytes |
-| `params`, `locals` | lists of `[name, type]`; a type is `i32`, `i64`, `f32` or `f64` |
-| `results` | list of types |
-| `body` | a sequence property (§1.7): a list of statements |
-| `import` | in place of `body`, for a function the host supplies: its name in `ufo:host/1` |
-
-A **statement** is one tree in WebAssembly's own vocabulary. An instruction
-is a list: its standard text-format name; then its immediates; then its
-operands, each a tree; then, optionally, a map of attributes. A bare
-integer is an `i32.const`. A bare text reads the local or parameter of that
-name, or else the global of that name. A tree is printed by printing its
-operands in order and then the instruction. An instruction written without
-operands takes them from the stack, as WebAssembly defines, so that every
-function body within what can be described (below) can be written: flat,
-folded, or anywhere between. A bare float is an `f64.const`.
-
-| Instruction | Immediates |
-| --- | --- |
-| `local.get`, `local.set`, `local.tee` | the local's name |
-| `global.get`, `global.set` | the global's name |
-| `call` | a ref to the function object |
-| `call_indirect` | a function type, `[[parameter types], [result types]]` |
-| `block`, `loop` | a label: a text, possibly empty |
-| `br`, `br_if` | the label of an enclosing `block`, `loop` or `if`, or a depth |
-| `br_table` | a list of labels, then the default label |
-| `i32.const`, `i64.const` | the number |
-| `f32.const`, `f64.const` | the number, as a float where it is finite and the constant's type holds it exactly; otherwise an integer giving the constant's bits |
-| every other instruction | none |
-
-The attributes are `result` (a type, on `block`, `loop` and `if`), `label`
-(on `if`), and `offset` and `align` (on loads and stores). A `br` names the
-innermost enclosing construct that has its label; a construct with an
-empty label can be named only by depth. `funcs`, `table` and the maps of a
-module are ordinary properties, set whole or by key; only `body` is a
-sequence.
-
-**What can be described.** This version of the profile describes modules
-that use the instructions of WebAssembly 1.0, the sign-extension and
-saturating-conversion instructions, and `memory.copy` and `memory.fill`,
-with one result to a block, four value types, active data segments and one
-table of function references. That is narrower than what may run (§11.2).
-A module outside it stays carried (**N6**) until a later version of the
-profile can describe it.
-
-Control flow is flat. `block`, `loop` and `if` — whose operand is its
-condition — each open a region that a later `end` statement closes, with
-`else` between for an `if`. These five are statements only, never
-operands.
-
-Every statement is an element (§1.7). It has a permanent identity, names
-the change that inserted it, and through that change has an origin (§8.5).
-Code is therefore edited with `splice`, as text is: a fix to one statement
-is an operation on one statement, and its record is the statement removed
-and the statement put in its place. Statements are always addressed by
-their identities, never by number: a number moves with every edit above
-it, and an identity does not. An anchor addresses statements by a region on
-`body` and survives edits around them (§4.3). A module offers the keyed
-axis `funcs`.
-
-**Printing.** A module's bytes are a function of its description:
-
-- Sections appear in the order type, import, function, table, memory,
-  global, export, element, code, data, each only if not empty. There are no
-  custom sections and no start section.
-- The type section lists each distinct function type once, in order of
-  first use: by each function of `funcs` in turn, its own type and then
-  the types its `call_indirect` instructions name.
-- Functions are in the order of `funcs`. Globals, exports and data segments
-  are in the order of their keys in the encoded map (§1.2): by length of
-  name, then by bytes. A function's or global's index is its position in
-  that order.
-- An imported function is an entry of the import section: module name
-  `ufo:host/1`, the field name its `import` gives, and its type.
-- A global's initial value is a constant of its type. A data segment is
-  active, at offset `i32.const` *at*. A `table`, if present, is one table
-  of function references of exactly the list's length, filled by one active
-  element segment at offset 0.
-- Locals are declared as the code section encodes them: one entry for each
-  run of consecutive locals of one type.
-- A body is its statements printed in order, then `end`.
-- A load or store has its natural alignment unless `align` says otherwise.
-- Every length and index is an unsigned LEB128 in shortest form, and every
-  integer constant a signed LEB128 in shortest form. A bare integer or an
-  `i32.const` from 2³¹ to 2³² − 1 stands for the same 32 bits read as
-  signed.
-
-- **[N1]** Before running a described module, the kernel prints it and
-  checks that the result is a valid WebAssembly module within the
-  restrictions of §11.2, and that it exports and imports no name beginning
-  `ufo:` other than its imports from `ufo:host/1`. The kernel checks the
-  restrictions as it instruments the module; validity is the judgment of
-  the host's engine when the kernel loads it (`run`, §6.3), which the
-  WebAssembly specification makes the same in every engine. A module that does not
-  print, or does not pass, is inconsistent (§1.9). It is not run.
-- **[N2]** Printing is deterministic: the same description yields the same
-  bytes on every reader. Appendix F has a vector.
-- **[N3]** A change to a module, or to a function a module lists, is
-  verified as any change is (**L3**, **L4**), and further: the kernel
-  prints the module as the change would leave it, and refuses the change
-  whole if **N1** fails. A change to the code of a Compute-let is
-  committed only by promotion (§11.6), whether or not it has tests.
-- **[N4] Meaning, not mechanics.** Origin attaches to statements, and to
-  the properties of functions and modules. Every other byte of a printed
-  module — the framing of sections, lengths, indices, the order of types —
-  is **derived** by the rules above and has no origin but them. Every byte
-  of a module is thus either stated, with an origin, or derived (**R8**).
-- **[N5] By content.** A function's **unit hash** is the SHA-256 of the
-  encoded value `[params, results, locals, body]`. It names what the
-  function is, apart from where it is: it does not change when the function
-  is renamed, when other functions come and go, or when it is copied to
-  another universe together with the functions it calls; and two functions
-  with the same statements, calling the same functions, have the same one
-  in any file. `items` and `unit` show it and `search` finds by it. Equal
-  bodies kept outside their nodes are stored once (§1.4). A copied function
-  keeps its identity and is recorded with `copied`, as any copy is (§8.5);
-  its history is found by following that.
-
-**Carried modules.** A program compiled elsewhere enters a universe as what
-it is: a file. It is an asset (§8.2) of media type `application/wasm`,
-whose origin names the tool that produced it. A Compute-let's `module` may
-name such an asset, and it runs under the same checks, sandbox and
-metering. Its bytes are all the format knows of it. Like a text in a
-foreign syntax (**X3**), it is not edited in place.
-
-- **[N6]** A carried module that is within what can be described becomes
-  maintainable by being **lifted**: one recorded change that writes a
-  described module from it — each function's instructions as statements
-  without operands, in order, with names taken from its exports and its
-  name section where it has one, and its other custom sections left behind
-  — as a derivation (§8.3) that pins the asset. Lifting is exact: printing
-  the lifted module MUST yield a valid module in which every function has
-  the same instructions in the same order as the original. The asset
-  remains. A module outside what can be described cannot be lifted, and a
-  reader says which of its features prevents it.
-
-*Reason.* An earlier draft stored a module's bytes and changed them through
-a second vocabulary of operations, which needed keys for the parts of a
-module, hashes with keys in place of indices, a replay of all history to
-verify, and a whole function sent again for each change. The core already
-had what replaces all of it. [RATIONALE.md](RATIONALE.md) has the
-measurements that decided it.
-
-### 11.4 The printer
-
-The **printer** is the function of §11.3 that turns a described module into
-bytes. It is part of the kernel, there is one implementation of it (**K1**),
-and it is the only writer of module bytes: no reader, writer, agent or
-application supplies bytes for a described module, and what a reader runs
-is what the kernel printed and then instrumented (**M4**). A reader stores
-no bytes for a described module; a derived store (§3.4) MAY keep them,
-under the module's digest. A model never types bytes. It reads a function
-through `unit`, one statement to a line, each with its identity and the
-change that wrote it; it writes statements through `propose`, as it would
-any content (§11.8); and the kernel refuses a change whose module would not
-validate (**N3**).
-
-### 11.5 The ledger
-
-The ledger of a Compute-let is the part of the Chronicle made of changes to
-its module, its functions, its tests and its manifest. It is not a separate
-structure: it obeys the laws of §1.7 and is navigated by the projections of
-§7.5.
-
-For each function, and for each statement of it, the ledger answers:
-
-| Question | Answered by |
-| --- | --- |
-| What caused it? | the `origin` of the change that inserted the statement, or last set the property: prompt, model, requester |
-| What did it replace? | that change's operation, which holds the statements removed |
-| What justifies it? | evidence of kind `tested-by`, written at promotion (§11.6): from each function a change touched to each test that then passed |
-| What has run it? | evidence of kind `exercised-by`, which a reader MAY record with a replay (**M7**): from each function the replay entered — the entry charges of **M4** count them — to the replay |
-| What was decided? | decisions about that change |
-
-The projections of code are in §7.5. Search covers name, signature,
-digest, call relationships, prompt text, test coverage and revision.
-
-### 11.6 Tests and promotion
-
-A test object (`ufo.test`) holds:
-
-| Property | Value |
-| --- | --- |
-| `run` | either `{call, arguments}`: an exported function and values to pass; or `{replay}`: the bytes of a recorded replay (**M7**) |
-| `from` | the bytes of the snapshot to start from, or `live` to start from a copy of the running state |
-| `expect` | either `{returns}`: the values the call must return; or `{state}`: the hash the snapshot taken afterward must have; or `{draws}`: the hash of the display list last drawn |
-| `fuel` | the fuel allowed |
-| `judges` | list of refs to functions in the module that exist to serve this test |
-
-A change to a Compute-let is **promoted** by this sequence, which the
-reader, not the Compute-let, carries out:
-
-1. The kernel applies the change to a copy of the state and prints the
-   candidate (§11.4). On refusal, stop.
-2. The reader verifies the candidate (**N1**). On failure, stop.
-3. The reader runs the tests named by the manifest *as it was before the
-   change* against the candidate, each from the state its `from` names, in
-   a shadow instance. The running instance is not touched.
-4. If every test passes, the reader obtains the person's approval, unless
-   the person has approved in advance changes by this actor to this
-   Compute-let for the present session. A test change (**G1**) is never
-   approved in advance.
-5. The reader records the live state (**M6**), commits the change, starts
-   the candidate from that state and switches the surface to it. The
-   candidate's memory, globals and tables are those of the live instance; a
-   global the change added takes its declared initial value; a data segment
-   the change altered is not applied again. The
-   previous revision remains in history.
-6. If anything fails or approval is refused, the candidate is discarded.
-
-A change to a function that the modules of several Compute-lets list is
-promoted for each of them, and committed only if every one passes. The
-change that commits a promotion records, as evidence of kind `tested-by`,
-each test that passed against each function it touched.
-
-- **[G1] The judge is outside the change.** The tests that gate a change are
-  those in force before it. A change that adds, alters or removes a test
-  object, alters a manifest's `tests`, or touches any function a test lists
-  under `judges`, is a **test change**. It MUST NOT be combined with any other operation, and it is
-  committed only with a decision of verdict `approve` from the person,
-  given for that change.
-- **[G2]** The running Compute-let never observes a candidate that failed.
-- **[G3] Rollback** is promotion of an earlier revision, with the live state
-  carried across in the same way and the same tests applied.
-
-### 11.7 The light cone
-
-Any universe can be read from the whole at low resolution down to exact
-bytes. Two layers make that possible. The first is computed and is always
-there. The second is written, and is optional.
-
-**The structural layer.** For any object or region the kernel computes an
-**outline**: a bounded list of its parts, each with what a reader needs in
-order to decide whether to go further. An outline is a projection (§7.1).
-It is a function of the commit alone, is never stored and never stale, and
-needs no model.
-
-| Outline of | Its parts |
-| --- | --- |
-| a universe | its roots and faces; the universes it nests or links to; its other objects, grouped by type |
-| a group, region, clock or surface | its children, in order |
-| a Portal | what it presents, followed into the universe it is in |
-| a text, or a region of one | its sections: of the heading levels within it, the shallowest that has two or more headings, each section running to the next heading of that level or above. Where there are no headings, its blocks |
-| a data object | its tables and columns, and its rows in ranges |
-| a module | its functions |
-| a function | its statements, in ranges |
-| a change | its operations |
-
-Each part is shown with its anchor; its type and its label, heading, name
-or — for a block of text — its first 60 characters; its **size**, the
-length of the plain-text face beneath it (§7.3), or for bytes their number;
-when it last changed, by which actor and with what basis; and, if it is
-derived, whether it is stale. A universe is shown with its count of objects
-by type, the times of its first and last changes, and its actors.
-
-A text with one heading or none is outlined by its blocks, and what comes
-before a first heading is a part of its own. For a region of a sequence,
-"last changed" is the latest change that inserted an element in it; a
-removal shows only in the time of the object as a whole.
-
-An outline lists at most 64 parts. Where there are more, consecutive parts
-are shown 64 to a range, and ranges 64 to a range of ranges, each range
-with the labels of its first and last parts, their number and the total of
-their sizes, so that every reply is bounded and any part is reached in a
-number of steps logarithmic in the number of parts. A universe's other
-objects are in order of type name, then label, then identity. `history` is
-bounded the same way: the 64 newest changes, then older ones in ranges. Sizes and times are totals over what lies beneath a part;
-a reader MAY keep them in a derived store (§3.4) under revision hashes,
-which a commit changes only along the path it touched.
-
-**The model layer.** A summary (`ufo.summary`) condenses a stated scope in
-words. It is a derivation (§8.3) with `how` `summarize`: its `from.sources`
-are pins to exactly what it condenses — an object, a region, a set of them,
-another universe. Beyond `from` it has:
-
-| Property | Value |
-| --- | --- |
-| `line` | a text of at most 160 characters: what the scope is, and what distinguishes it from its siblings |
-| `paragraph`, `page` | optionally, texts of at most 800 and 4 000 characters |
-
-A summary belongs to a scope by its pins, and to nothing else: the tree is
-the outline's. The universe object lists every summary in `summaries`
-(§1.6), under the object its first source names, so that an object's
-summaries are found without a search, and travel as content (§9.3).
-Wherever an outline shows a part, it shows beside it the `line` of the
-summary whose first source resolves, in the current revision, to exactly
-that part — the most recently written, if several — and whether it is
-current. A summary of a scope that is no part of the outline — a stretch
-of a recording's time, a passage that a new heading has since divided — is
-shown with the smallest part that contains it, with its own anchor, so
-that nothing written drops out of view.
-
-- *Who writes them.* Any writer that has a model, through `derive`
-  (§11.8): a reader, when the person asks or has asked that it be done
-  before sharing; an agent, which having had to read a scope to find its
-  way MAY leave a summary for whoever comes next, where it is allowed to
-  write. The kernel writes none, and opening a universe causes none to be
-  written (**C12**).
-- *Where they are worth writing.* Where the outline does not discriminate:
-  a scope longer than a page whose parts cannot be told apart by their
-  outline lines — untitled sections, recordings, interviews, tables of
-  prose, code. A summary of a scope shorter than a page costs as much to
-  read as the scope, and SHOULD NOT be written.
-- *When they are made again.* A summary whose pins are stale is shown as
-  stale, beside an outline that is current. It is made again with
-  `refresh`, on request or before sharing, not on every edit. An edit
-  stales only the summaries on the path from the edited scope upward
-  (§4.4), so the cost of bringing a universe's summaries up to date follows
-  the size of what changed.
-
-- **[Z1] A summary is a claim; its pins are the evidence.** A stale summary
-  MUST be marked stale wherever it is shown and MUST NOT be silently used.
-- **[Z2] Navigation, not knowledge.** A summary is never a source: it may not
-  be evidence (**R4**). Every projection that returns summary text labels it
-  as a summary and gives the pins beneath it, so that whoever reads it can
-  cite the content and not the summary.
-- **[Z3]** `expand` on any anchor returns its outline; on a part that has
-  no parts, `text` returns its content. An observer can therefore always go
-  from the whole at low resolution to any part at full resolution, with or
-  without summaries, and the cost of doing so depends on the path taken,
-  not on the size of the universe. That is the cost to whoever is reading.
-  A reader computing an outline must total what lies beneath each part: a
-  pass over it the first time, and nothing afterward where it keeps the
-  totals (§3.4). A page opened from disk keeps them only while it is
-  open.
-
-A navigation structure that does not follow the structure of the work — an
-index by theme across many documents — is not a kind of summary. It is a
-text like any other, transmuted or written, whose links anchor the passages
-it gathers, and its outline is navigated in the same way.
-
-Lossless compression for storage and transport is a codec (§2.1) and is
-independent of summaries.
-
-Summaries of history pin changes. In a copy that withholds working history
-they remain readable, and their pins to withheld content report as
-unavailable rather than stale.
-
-### 11.8 The agent interface
-
-The projections of §7.5 and the actions below are functions of the
-kernel, so every reader has them. A reader of rung 3 also offers them
-to outside agents as tools under the Model Context Protocol:
-
-| Action | Effect |
-| --- | --- |
-| `propose(change)` | submit operations with origin, evidence and note; the kernel verifies and commits, or refuses whole and says why |
-| `try(change)` | everything `propose` would do short of committing: verify the change and, for a Compute-let, print the candidate and run its tests in a shadow (§11.6). It reports what `propose` would report, and changes nothing |
-| `call(computelet, export, arguments, from)` | run one exported function in a shadow instance started from a stated snapshot, and return its results. It changes nothing |
-| `test(computelet)` | run its tests against the current state and report |
-| `import(bytes)` | add an asset |
-| `derive(sources, how, origin, operations)` | write objects derived from the stated sources — a transmutation, a rendition, a summary — in one change: the kernel computes pins to exactly those sources, puts `from` on every object the operations create, and records the origin. A derivation can enter a universe no other way |
-| `refresh(object, operations)` | commit a derived object made again from its recipe (**D3**) |
-| `export(face or universe, parameters)` | sample and encode a face; or write the universe itself, as a travel form or a working form holding the layers the parameters state (§9.3) |
-
-Projections show a statement, or an item of any list that is a sequence,
-with its identity, and an operation names it by that identity. Characters
-and bytes are too many to show one by one: projections show them by
-position at the revision named in the header, and an operation may name
-them by positions together with that revision, which the kernel turns into
-identities using it. Either way, an edit made against a reading that is a
-little out of date lands on the elements that were read, or is refused
-(**L4**) if they are gone; it never lands on whatever now stands in the
-same place.
-
-- **[I1]** An agent sees a universe only through the kernel, and so sees
-  exactly what a person's reader sees.
-- **[I2]** Every action an agent takes that alters a universe is a change
-  whose `actor` names the agent and whose `origin` names the model, the
-  prompt and the principal who asked.
-- **[I3]** The interface is subject to **U11**.
-
----
-
-## 12. Budgets
+## 6. Limits and terms
 
 Elegance is measured. Each number below is a limit. Exceeding one is a
 design failure to be explained in writing and resolved by simplifying, or by
@@ -3546,15 +1505,15 @@ These numbers were set before any implementation exists. The first
 implementation MUST report the measured values, and this section is then
 revised once, with reasons, before anything is frozen.
 
-### 12.1 Size of the idea
+### 6.1 Size of the idea
 
 | Measure | Limit | Now | Reason |
 | --- | --- | --- | --- |
-| Primitives | 11 | 11 | these sufficed for all four worked examples (§14) |
-| Layout rules | 3 | 3 | two candidates were deleted (§5.4) |
-| Roles of a text that the kernel presents | 10 | 10 | the document vocabulary inside the text primitive (§8.1, Appendix A) |
-| Axis kinds | 3 | 3 | every anchor in §14 uses one of them |
-| Operations, in all | 5 | 4 | `remap` became a property; the printer's twelve operations became the same four (§11.3) |
+| Primitives | 11 | 11 | these sufficed for all four worked examples (§15) |
+| Layout rules | 3 | 3 | two candidates were deleted (§7.4) |
+| Roles of a text that the kernel presents | 10 | 10 | the document vocabulary inside the text primitive (§5.1, Appendix A) |
+| Axis kinds | 3 | 3 | every anchor in §15 uses one of them |
+| Operations, in all | 5 | 4 | `remap` became a property; the printer's twelve operations became the same four (§12.3) |
 | Node kinds | 5 | 4 | values kept outside a node are blobs |
 | Kinds of reference a value can hold | 5 | 4 | ref, anchor, formula, indirect; the link is gone |
 | Frame kinds | 6 | 6 | |
@@ -3562,491 +1521,10 @@ revised once, with reasons, before anything is frozen.
 | Base host functions | 12 | 10, plus 2 exports | small enough to implement identically on every host |
 | Capabilities | 20 | 18 | each is something only a host can provide (**H4**) |
 | Operations across all capabilities | 64 | 55 written or sketched: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `run` 6, `text` 3, `present` 2, `blobs` 1, `gpu` 27 (Appendix E). `objects` exposes the projections and actions | seven optional capabilities are unwritten. The limit will not hold once they are, unless `gpu` shrinks: a decision owed |
-| Concepts | 40 | 39 | what a newcomer must learn; each is justified in §16, and a new concept must displace one |
+| Concepts | 40 | 39 | what a newcomer must learn; each is justified in §6.2, and a new concept must displace one |
 | All defined terms, including names for compositions and structural terms | 130 | 144 | **over the limit.** Earlier counts took a row that names several terms as one, and left out terms the text defines. Either terms go or the limit moves: a decision owed |
 
-### 12.2 Size of the player
-
-Lines are non-blank, non-comment lines of the implementation language, Rust.
-These limits change only on measurement.
-
-| Measure | Limit | Reason |
-| --- | --- | --- |
-| Kernel, DEFLATE-compressed | 128 KiB, firm | this is the size that travels: every envelope carries the kernel compressed, so this is the limit every file pays for |
-| Kernel, compiled WebAssembly | 256 KiB, as guidance | derived from the compressed limit at the measured ratio of 48%; no longer a limit of its own |
-| Kernel source: its own code, excluding tests and anything borrowed | 6 000 lines | set from the compiled limit at the measured density of about 40 bytes a line; one engineer reads it in a working day |
-| Binding source, per host | 600 lines | the base functions, the drawing contract and the kernel's own capabilities. Each optional capability a host offers is counted apart, and reported |
-| Web binding, as shipped | 16 KiB | |
-| Tools universe (§6.6), as carried | 24 KiB | description only; no code |
-| Web envelope holding one paragraph | 256 KiB | the compressed kernel in base64 (171 KiB at its limit), the binding, the tools universe inside the pack in base64 (32 KiB), the static face, the rest of the pack |
-| Web envelope for each worked example of §14 | reported | no limit yet; measured and published with the first implementation |
-| Printer, as a part of the kernel | 16 KiB | it is a function of the kernel, within the kernel's limits above; it measured 11 KiB in miniature |
-| Implementations of any piece of format, layout or media logic in the project's readers | exactly 1 | **K1** |
-| Names of object types, properties, profiles, operations or foreign document formats appearing in a binding or native shell | 0 | **K2**; found by searching its source |
-
-The kernel's lines are budgeted by part, so that growth is noticed where it
-happens:
-
-| Part of the kernel | Lines | What is known |
-| --- | --- | --- |
-| Values, hashing, pack, index, recovery, compaction; finding and writing a pack in an envelope | 900 | the miniature read all of this but compaction and envelopes, in about 560 |
-| Objects, object map, blobs and chunking, changes, conservation, sequences | 700 | the miniature read objects, blobs and sequences in about 115, and wrote nothing |
-| Anchors, resolution, pins, digests, derivations, the layers of what travels | 500 | not measured |
-| Formulas, with the mathematics routines they need | 700 | not measured |
-| Composition: text with line breaking and bidirectional ordering, flow, grid, absolute, clocks, pages, plain text, presentation state, hit testing | 1 500 | the miniature did text, flow, pages and plain text, without the two Unicode algorithms, in 491 |
-| Projections, outlines, search, difference, actions, undo, the agent's spelling of values | 800 | not measured |
-| Code and machines: printing; decoding and instrumenting modules; lifting; promotion; running Compute-lets through `run`; snapshots and replay; capabilities | 900 | the miniature's printer was 344, for part of the instruction set |
-
-These are allocations, not measurements. Two are known to be tight:
-composition, which has gained the two Unicode algorithms since the
-miniature ran, and code and machines, of which the miniature covered
-least. No validator is budgeted, because whether a module is valid is the
-host engine's judgment (**N1**).
-
-**The measurement behind these.** A throwaway kernel of 1 613 lines — the
-reading half of the first two rows (675 lines), composition of text into
-lines, rows and pages with the plain-text face and Portals (491), and the
-printer for the instructions its test programs used (344) — compiled,
-without the standard library and after a size-optimising pass, to 78.4 KiB.
-Leaving out an inflater it borrowed, which is the host's to supply (§6.3),
-it was 67.3 KiB: an allocator of 4.2 KiB, and 40 bytes of WebAssembly for
-each line of its own code. It compressed to 48% of its size.
-
-The limits follow from that measurement, in this order. What a file pays
-for is what travels, and what travels is the compressed kernel: 128 KiB,
-firm. At 48%, that is about 267 KiB compiled, so 256 KiB is the guidance
-for the compiled size and is not policed separately. At 40 bytes a line,
-6 000 lines compile to about 239 KiB and compress to about 115 KiB, inside
-both. In base64 a kernel at its compressed limit is 171 KiB. The tools
-universe travels inside the pack, so its 24 KiB are 32 KiB in the page.
-With a binding of 16 KiB that leaves about 37 KiB of a 256 KiB envelope
-for the static face, the page's fixed text and the rest of the pack. Before
-this was measured the limits were 10 000 lines, 256 KiB compiled, 96 KiB
-compressed and a 192 KiB envelope, and they did not agree with one
-another. The miniature's web binding was 79 lines and 3.0 KiB compressed,
-for half of the drawing contract's items and one host function.
-
-### 12.3 Behavior
-
-| Measure | Limit | Reason |
-| --- | --- | --- |
-| Static face visible, web envelope, any device | first paint | it is plain HTML ahead of everything else |
-| Time to first interaction, one-paragraph envelope, mid-range phone | 500 ms | opening should feel like opening a photograph |
-| Time to first interaction, Quarterly Review (§14.4), mid-range phone | 1 000 ms | |
-| Tool calls for an agent to find and explain the origin of a unit of machine code, entering at `overview` | 3 + the depth of the outline | `overview`, one `expand` per level, `why`, `text` |
-| Share of the universe an agent expands to do so | reported | must fall as the universe grows |
-| Reopened universe has the same root hash on every reader tested | always | |
-| Canonical export bytes identical on every reader tested, for one renderer | always | **S5** |
-
-The conformance suite tests the one kernel against every labeled rule in
-this document, and includes: malformed and hostile packs; the fuzzing of
-**P20** and its corpus; writes interrupted at every byte offset of a commit
-(**P6**); corruption by bit flips, truncation and swapped ranges; compaction
-with every hash compared before and after (**P13**); the weekend test
-(**P19**); refused changes of every kind named in **L4**; anchors resolved
-after long edit histories; and a
-travel form with working history withheld, checked for what it reveals and
-what it still verifies (**E10**). Independent implementations, when they
-exist, are measured against the same suite.
-
----
-
-## 13. Mapping a rich editing application
-
-The provenance model of §1.7 and §8.5 belongs to the format. This section
-argues that an application with its own, richer provenance system can write
-its records into a UFO and read them back without loss. Cursive, a writing
-application that attributes every AI contribution to the prompt and
-generation behind it, is the example because its records are known in detail. It is not the authority,
-and this mapping has been worked on paper against its record definitions,
-which are not reproduced here; it has not been run, and losslessness is a
-claim to be tested (§13.4), not a result.
-
-### 13.1 The principle
-
-An application writes two things and only two:
-
-1. **Portable facts**, in the format's own terms. These are what any other
-   reader understands.
-2. **Residual fields**, as properties under the application's prefix, on the
-   same objects. These are what only it understands. Every other writer
-   preserves them (**C6**).
-
-No fact is written in both. If a portable fact can be computed from a
-residual field or the reverse, only the portable fact is stored.
-
-### 13.2 Cursive's records
-
-| Cursive record | In a UFO |
-| --- | --- |
-| Note source (Markdown) | a text with `syntax` `text/markdown`; `chars` is the source, exactly; spans derived by Cursive's parser, with `markup` spans over markup (§8.1) |
-| Attribution segment `[from, to)` in editor positions | not stored; it is the `seq` of the text, whose elements name their changes. Cursive converts between its positions and character positions using its own parse of the same source |
-| Generation record: prompt, model, operation, conversation, original and generated text | one change. `origin` is `{basis: witnessed, by: model, model, prompt, context, asked, parameters}`; the prompt and conversation are text objects; the generated text is the `ins` of the change's splices; the original text is their `old` |
-| Parent and derived-from generation ids | `origin.context` pins to the earlier changes; which is which is kept in `io.cursive.lineage` on the change |
-| Retrieved sources, with bibliographic fields and content hash | objects of type `io.cursive.source` holding those fields; evidence of kind `consulted` from the generated region to each (**R3**) |
-| User change record, made by typing in the editor | a change with `origin` `{basis: witnessed, by: person}` |
-| Attribution established by aligning text | `{basis: inferred, by: person` or `model, method: text-alignment, confidence}`, where Cursive's precision grade (`exact-mark`, `exact-text`, `single-window-text`, `fallback`) is the confidence (**R2**). If the alignment is done as the edit is saved, this is the `origin` of that change; if it is done later, it is an entry in a later change's `attributions` (§8.5) |
-| External or pasted content with no record | a change with `origin` `{basis: unknown}` |
-| Content written by the application itself (restore, system) | a change with `origin` `{basis: witnessed, by: tool}` |
-| Copy and paste with a transfer record | a change whose `origin` is `{basis: witnessed, copied: pin to the source region}`; the destination needs no new generation record, because origin follows `copied` (§8.5) |
-| Acceptance, unacceptance | decisions with verdict `accept` and `retract` about the generation's change (**R6**, **R7**) |
-| Generation deleted with a review action | the splice that removes the text, with a decision of verdict `reject` or `revise` |
-| Generation declined before entering the document | the generated text kept as a text object referenced by nothing in the document, its change carrying a decision of verdict `reject` |
-| Source-edit ledger entry: baseline hash, old text, contexts, replacement | a splice: the elements removed, `old`, `ins`, applied to the parent commit. The context fields exist to locate an edit unambiguously; element identities already do |
-| Shadow workspace result | the change computed from the shadow's bytes against the baseline (**L1**); the agent session is the `actor` |
-| Version, with label and source | a commit whose change carries `io.cursive.version` with the label and source. Every commit is restorable, but only these are Cursive's versions |
-| Snapshot, by content hash | a revision, by revision hash |
-| Restore | a change whose operations return the text to an earlier state, with `copied` pinning that revision |
-| Document duplicate (fork) | a copy of the pack: same lineage, same history, diverging from the next commit |
-
-### 13.3 What needs a residual field
-
-| Cursive fact | Why it has no portable form | Stored as |
-| --- | --- | --- |
-| Separate attribution of formatting marks | portable: a change that sets a span has its own `by`. The opaque mark signature is Cursive's | `io.cursive.mark` on the span |
-| Open vocabularies: operation, mode, macro id, decline reason, mark policy | application meaning | `io.cursive.*` on the change |
-| Event identifiers and their original order | the Chronicle orders changes; Cursive's ids are its own | `io.cursive.event` on the change |
-| Diagnostics, projection-saved witnesses | derived or local; a UFO's digests and conservation check do this work | not written |
-
-### 13.4 Reading back, and the test
-
-Cursive rebuilds its records from the Chronicle: segments from `seq`,
-generation records from changes with model origin, acceptance state by
-**R7**, versions from commits.
-
-Every reader, not only Cursive, then shows aligned attribution for what it
-is: inferred, by a named method, with a grade — distinct from text whose
-origin was witnessed, and distinct from text of unknown origin.
-
-When a Cursive document is sent, the default of §9.3 applies: who and what
-wrote the text that is present travels; prompts, conversations, declined
-generations and earlier versions stay behind unless the person includes
-them.
-
-The mapping is lossless if, for a Cursive document *D*: writing *D* to a
-whole UFO, opening that UFO in a reader that knows nothing of Cursive, making an
-edit there, and reading the result back into Cursive yields every record of
-*D* unchanged, plus records for the foreign edit. That round trip is a
-required conformance test for any application claiming to write this
-profile.
-
-One difference of principle remains and should be resolved in Cursive, not
-in the format: Cursive keeps a second, element-level journal beside its
-Chronicle. A UFO has one history. An application with two must choose which
-is its record of origin.
-
----
-
-## 14. Worked examples
-
-Each example is represented using only the core, the eleven primitives and
-the profiles of §8 and §11. Object names in `code` are labels for this
-text; real identities are 16 bytes.
-
-### 14.1 An interactive video
-
-*A twenty-minute explanatory video with a live table, a computed
-infographic, an anchored transcript, a document rendition and chapter
-summaries.*
-
-**Objects.**
-
-| Object | Type | Content |
-| --- | --- | --- |
-| `video` | `ufo.clock` | interval 0 to 20 min; holds `stage` |
-| `stage` | `ufo.group` | `absolute`, 1920 × 1080; its children are everything below that appears in the frame |
-| `footage` | `ufo.raster` | source: asset `footage.mp4`; time: the enclosing clock's |
-| `sound` | `ufo.samples` | source: the same asset |
-| `dataset` | `ufo.data` | the figures; rows and columns keyed |
-| `table-clock` | `ufo.clock` | interval 1:32 to 2:12, `locked`; holds `table-portal` |
-| `table-portal` | `ufo.portal` | `of` `table-view`; `table-clock` is a child of `stage` placed at the upper right |
-| `table-view` | `ufo.group` | `grid`, `each` over `dataset` sorted by `state("sort")`; header cells carry `on` handlers that set `sort` |
-| `info-clock` | `ufo.clock` | interval 8:00 to 8:45; holds `info-portal` |
-| `info-portal` | `ufo.portal` | `of` `info-surface` |
-| `info-surface` | `ufo.surface` | Compute-let `infographic`, granted `objects` read scope on `dataset` |
-| `transcript` | `ufo.text` | the narration; one block span per sentence |
-| `caption-n` | `ufo.clock` | one per sentence, each holding a Portal whose `of` is an anchor to that sentence's region of `transcript`, so that a corrected word appears in the caption at once |
-| `article` | `ufo.text` | the document form of the video |
-| `chapter-n`, `top` | `ufo.summary` | one per chapter, and one for the whole |
-
-**Coordinate spaces and anchors.** `video` offers `t`, and `stage` offers
-`x` and `y`. The Portal's position is the interval of `table-clock`
-(on `t`) and its rectangle in `stage` (on `x`, `y`). Sentences are tied
-to time by construction: caption clock *n* holds a Portal whose `of` is an
-anchor to sentence *n*'s region on `chars`; the clock's interval is the sentence's
-time range. "Which words are spoken at 3:10" is answered by finding the
-caption clock present at that time; "when is this sentence spoken" by
-finding the clock whose Portal anchors it.
-
-**Clocks.** `table-clock` and `info-clock` are `locked`: scrubbing the video
-scrubs them. The table's sort order is presentation state, so sorting while
-the video plays changes no byte (**S1**). `info-surface` receives the locked
-time through `time()` (**T1**) and reads `dataset` through its granted
-capability; its figures are computed live. If the person denies the grant,
-the surface shows the Compute-let's poster (**H2**).
-
-**Derivation and Chronicle.** `article` has `from` `{sources: [pin
-transcript, pin dataset], how: transmute}`. The change that wrote it has
-`origin` `{basis: witnessed, by: model, model, prompt, context, asked}` and, once reviewed, a
-decision. The face registry lists two faces: `video` (sampled) and `article`
-(transmuted). Editing `transcript` or `dataset` makes `article`'s pins stale
-(**D1**).
-
-**Summaries.** The sources of `chapter-n` are a pin to `video` with a region
-on `t` covering the chapter, and a pin to the matching region of `transcript`.
-`top` pins `video` whole. Because a digest follows refs (§4.4), a
-chapter summary goes stale when any caption or the footage within it
-changes, and so does `top`. Trimming the video's start by ten seconds is
-a `set` of the clock's frame on `t`; every chapter pin resolves through the
-frame and stays attached.
-
-**Export.** A standard video file is `video` sampled over 0 to 20 min at a
-frame rate; `info-surface` is run frame by frame from its snapshot (**M5**),
-the table in its default sort.
-
-### 14.2 A game inside a document
-
-*A design document containing the playable game, with editable levels, a
-live modification by an agent, text linked to the code, and shared play.*
-
-**Objects.**
-
-| Object | Type | Content |
-| --- | --- | --- |
-| `design` | `ufo.text` | the document; an `embed` span halfway down names `game-portal` |
-| `game-portal` | `ufo.portal` | `of` `game-surface`; `place` `block`; 960 × 540 |
-| `game-surface` | `ufo.surface` | Compute-let `game`; `of` the current level; children: `terminal-portal` |
-| `game` | `ufo.computelet` | module, tests, snapshot, poster; requests below |
-| `engine` | `ufo.module` | the game's functions |
-| `level-1` … | `ufo.data` | each level as a scene in the glTF model (§5.5): nodes for rooms, props and spawn points, with `x`, `y`, `z` axes for the level's space and `t` for its scripted time |
-| `manual` | `ufo.text` | the game's instructions, also readable on a terminal inside the game |
-| `terminal-portal` | `ufo.portal` | child of `game-surface`; `of` `manual`; `place.at` an anchor to node `terminal-screen` of `level-1` |
-| `test-1` … | `ufo.test` | calls with expected returns, and recorded replays with expected state |
-
-**Requests.** `gpu` (required), `audio` (optional), `input.raw` (optional),
-`objects` read on the level objects (required). Keyboard, pointer and touch
-arrive through the base `input` function and need no grant. Without `gpu`
-the Portal shows the poster and says why. Without `audio` the game is
-silent.
-
-**What the host interface provides.** The ten base functions; the four
-capabilities above and `present`; `frame(time)` at the display's rate with
-fuel set per call. Nothing else.
-
-**The game's world is format data.** The three conditions of §5.5 hold:
-
-- *Space is addressable.* A design note in `design` links to "the ledge
-  above the second door" by an anchor to `level-1` with a region on `x`,
-  `y`, `z`, and to a spawn point by its key on `nodes`. A cut-scene is
-  cited by a region on `t`. These hold through edits to the level like any
-  anchors; rescaling the level sets its frames.
-- *What sits in the world is data, with attribution and summaries.* The
-  terminal showing the manual is `terminal-portal`, an object whose
-  `place.at` names the node it sits on. Every node of every level was set
-  by a change, so `why` on a prop says who or what placed it. Each level
-  has an outline of its nodes, and may have a summary that pins its node
-  table; an agent can learn what is in level 3 without starting the game.
-- *Flat content in the world is data.* The manual on the terminal is the
-  same text object the document's appendix presents. The game asks for it
-  with `present` and draws the raster on the screen's node.
-
-The game's memory holds positions of moving things, scores and timers: the
-state of a machine in play, snapshotted with it (**M6**, **M9**).
-
-**Levels are objects.** A person edits `level-2` with the onboard tools as
-they would any table: a change with `set` operations. The game reads levels
-through its `objects` capability and is told of the new revision by
-`message`.
-
-**Live modification.** With the game paused — the reader has stopped its
-clock — an agent:
-
-1. calls `propose` with `set` operations on `level-3`;
-2. calls `propose` with a change that adds a function object for the new
-   mechanic and splices three statements into the update function, having
-   first checked it with `try`.
-
-The reader runs the promotion sequence (§11.6): the tests in force before
-the change run against the candidate in a shadow instance started from the
-paused state; on success, and with the person's approval, the candidate
-takes over from that state and the game resumes with the mechanic. The
-agent cannot make the tests easier in the same breath: touching a test or
-a function a test relies on is a test change, alone and approved (**G1**). A broken candidate is discarded and the
-paused game is untouched (**G2**).
-
-**Text linked to code.** The paragraph of `design` describing the mechanic
-carries a `link` span whose `href` is an anchor to the new function object,
-which survives later improvements to the function; a sentence about one
-check inside it anchors those statements. In the other direction,
-the agent's change records evidence `{claim: that unit, support: pin to the
-paragraph, kind: cites}`. `why` on the
-unit returns the prompt, the model, the tests and the paragraph.
-
-**Shared play, later.** Two people open their own copies. Their readers
-exchange only inputs, each stamped with a clock time, on a port. Each reader
-delivers the merged inputs to its own instance at the same clock times.
-Because execution is deterministic (**M5**) and time comes only from the
-clock (**T1**), both instances stay identical. This needs a transport
-capability and nothing in the core.
-
-### 14.3 A body of research
-
-*Four hundred documents, sixty datasets, twenty interviews with
-transcripts, twelve analysis Compute-lets; an agent asked why a conclusion
-was reached.*
-
-**Structure.** The corpus is one universe, `corpus`, whose objects include
-the final report and whose pack nests one universe per study (§1.8). Each
-study universe holds its documents as texts, its datasets as data objects,
-its interviews as clocks over audio assets with transcript texts anchored
-to time as in §14.1, and its Compute-lets. Studies shared with other
-corpora are linked rather than nested; the reference is identical.
-
-**Linking.** A passage quoted from a study into the report is a Portal
-whose `of` is a pin to the passage's region, in the study's universe at a
-stated commit (transclusion, §8.4). A chart in the report is a Portal to a
-group in the study that presents its dataset. Conclusions in the report
-carry evidence entries whose `support` pins regions of study documents and
-cells of datasets.
-
-**Outline and summaries.** The outline of `corpus` has a part for the
-report and one for each study, followed into its universe; a study's has
-its documents, datasets, interviews and Compute-lets; a document's has its
-sections. Four hundred documents are reached in four levels, with no model
-involved. Studies, documents and interviews also carry summaries, each
-pinning what it condenses; they matter most for the interviews, whose
-outlines are a row of dates.
-
-**The question.** "Why does the report conclude *C*?"
-
-| Step | Call | Reads |
-| --- | --- | --- |
-| 1 | `overview` | what the corpus is, and one line for each study and for the report, with their summaries |
-| 2 | `expand` on the report | one line per section of the report; the conclusions section is evident |
-| 3 | `expand` on that section | one line per conclusion, each with its anchor; *C* is one |
-| 4 | `why` on the pin for *C* | its origin (who or what wrote it, with what basis), its evidence (pins into two studies), its decisions |
-| 5 | `text` on each evidence pin | the exact supporting passages and cells, each checked against its pin |
-| 6 | `why` on a supporting passage | its own origin: say, a person's edit of a model's draft that consulted interview 7 between 12:40 and 14:05 |
-| 7 | `text` on that interview region | the words spoken |
-
-The agent entered at the whole and descended three levels
-without searching. It answers with the anchors from steps 4 to 7 and their
-origins. It has expanded one branch of the outline, a few passages of
-two studies and ninety seconds of one transcript. The other studies were
-seen only as single lines in step 1. `search` remains available as a
-shortcut; the light cone does not depend on it. A miniature of this
-example, with one corpus and three studies, has been run on a stand-in — an
-object model outside the kernel, with summaries written by a script and
-not by a model: see
-[RATIONALE.md](RATIONALE.md).
-
-If a supporting passage has changed since the conclusion was written, its
-pin is stale and step 4 says so (**R5**): the agent reports that the
-conclusion rests on evidence that has since moved.
-
-### 14.4 The Quarterly Review
-
-*A report, a dataset, two charts, a photograph and a Compute-let, opened as
-nine faces and sent two ways.*
-
-**What the author made.**
-
-| Object | Type | Content |
-| --- | --- | --- |
-| `report` | `ufo.text` | about two thousand words; embed spans for two charts, the photograph and the projector |
-| `figures` | `ufo.data` | quarterly figures |
-| `chart-a`, `chart-b` | `ufo.region` | axes, bars and labels as paths and text under `each` over `figures` |
-| `photo` | `ufo.asset` | the photograph's original JPEG bytes; presented by a raster |
-| `projector` | `ufo.computelet` | the assumptions tool; requests `objects` read on `figures` |
-| `approved.pdf` | `ufo.asset` | `from` `{sources: [pin report, pin figures, …], how: render}`; with it, page images in a baseline format, since a reader does not decode PDF (§6.4) |
-
-**Faces.**
-
-| Face | Kind | How |
-| --- | --- | --- |
-| Document | sampled | `report` composed as a flow; charts drawn from current `figures`; `projector` running in its Portal |
-| Plain text | sampled | §7.3 |
-| Spreadsheet | sampled | `figures` presented as a grid; export as a table file |
-| Image | sampled | any object at one moment, one viewport (§7.4) |
-| Fixed document | carried | the page images of `approved.pdf`, shown with a stale mark if any pin has moved; the PDF itself is exported byte for byte |
-| Slide deck | transmuted | `deck`: a `held` clock over regions, with Portals to `chart-a` and `chart-b`; `from` pins `report` and `figures`; origin `model` |
-| Narrated video | transmuted, then sampled | `narration`: a text (transmuted) and its synthesized voice (an audio asset: carried, with a model as origin), each with `from` pinning what it was made from; `video`: a clock ordering the deck's regions against the narration; exported by sampling |
-| 3D view | transmuted, then sampled | `scene`: a `ufo.data` object in the glTF model (§5.5) whose rows describe bars, labels, lights and a camera for `figures`, with `from` pinning `figures`; `scene-surface`: a `ufo.surface` whose Compute-let, `scene-presenter`, requests `gpu` and `objects` read on `scene` and `figures`. Bar heights are read from `figures` as it now is, so the view is live; the arrangement and styling in `scene` are what was transmuted |
-| Application | sampled | `projector` presented alone, full size |
-
-**The 3D view meets the three conditions of §5.5.** *Addressable:* `scene`
-declares `x`, `y`, `z` and `t`; the report's sentence "the third quarter
-towers over the rest" links to the bar by its key on `nodes`, and a
-reviewer's comment is anchored to a region of space above it. *Readable
-without the program:* each bar's node was written by the transmuting
-change, so `why` on it names the model and the prompt, and the scene has a
-summary pinned to its node table. *Flat content placed
-in it is data:* a caption panel beside the bars is a Portal child of
-`scene-surface` whose `of` is an anchor to the sentence in `report` and
-whose `place.at` names the node `caption-panel`; edit the sentence and the
-panel in the scene shows the new words.
-
-**It uses no hidden profile.** `scene` is a data object like
-`figures`. `scene-presenter` is a Compute-let like `projector`, carried in
-this universe and in no universe without a scene (**K4**). The kernel
-composes a `surface` item and hands it the rectangle; it does not know the
-content is three-dimensional. Exports of the view — a still, a turntable
-video — are the surface sampled over time (§7.4). A standard 3D model file
-is an export encoded by that Compute-let at the border (**B3**).
-
-The deck and video present the charts through Portals, not copies. They
-show current figures even when their own derivation is stale, and the stale
-mark says the narrative around them may no longer match.
-
-**Changing one figure.** A `set` on a cell of `figures`, in a change with
-origin `person` and a note. Then: the document, spreadsheet, image and
-application faces reflect it at the next composition. The pins of
-`approved.pdf`, `deck`, `narration`, `video` and `scene` that cover
-`figures` are stale (**D1**) — the 3D view already shows the new height,
-and the mark says its arrangement was designed for the old figures; each can be regenerated by a change that
-writes new revisions (**D3**). `history` on the cell shows who changed it,
-when and why.
-
-**Sending.** To a colleague: a web envelope (§9.2) opening every face above
-in a browser. Before it leaves, the reader shows what will travel (**E12**):
-the content; the attribution, naming the author, the model that produced the
-deck and narration, and forty-odd changes; not the prompts or the earlier
-drafts of the report, unless the author includes them. To a video-only
-channel: an MP4 envelope whose outer face is the exported narrated video,
-bearing its mark, on the understanding that the channel may strip the pack
-and leave the mark as the way back to the universe (**E19**, **E20**).
-
-### 14.5 What the examples required of the core
-
-Nothing was added to §1–§4 to represent these examples. They did shape
-three decisions made while drafting: clocks became a primitive symmetrical
-with regions, rather than a property; presentation state was separated from
-universe state, so that sorting a table inside a video is not an edit; and
-references to other universes were made identical for nested and linked
-content.
-
----
-
-## 15. Corner-painting checklist
-
-| Check | Result | Where |
-| --- | --- | --- |
-| The core contains no assumption that content is text, that layout is a page, or that time does not exist | Holds. §1 names no medium. Text first appears in §8.1 as one profile; a page is a composition (§5.4); time is an axis kind and a clock | §1, §4.2, §4.5 |
-| Anchors are generic and every profile defines how its anchors survive edits | Holds, more strongly: survival is defined once per axis kind in the core, and a profile only declares its axes | §4.2, §4.3 |
-| The clock model serves video, audio, animation, simulations and games | Holds: locked, free and held clocks cover §14.1 (video, audio, captions), animation by formulas of `time`, and Compute-lets through `time()` | §4.5, §14.1, §14.2 |
-| Presenters are sandboxed components behind a defined interface and can be carried as Compute-lets | Holds for every presenter a universe carries: each is a sandboxed Compute-let behind the host interface. The four base presenters are deliberately not components: they are the host's own facilities, behind the display list, which is equally a defined interface | §6.1, §6.2, §6.3, **M3** |
-| Every reference uses content addressing or stable identity, never file paths | Holds. Refs are identities; indirects and anchors name hashes; locations are hints without authority | **C11** |
-| Every derived artifact records what it was derived from | Holds. One derivation record with pins, for renditions, transmutations, summaries, derived spans and imports | §8.3 |
-| The host interface's optional capabilities have a defined request and degradation path | Holds | **H1**, **H2** |
-| Nesting depth, active decoders and active Compute-lets are bounded by the reader, not trusted to the file | Holds | §3.1, **C13**, **O7** |
-| The Chronicle and ledger share foundations so one navigation approach serves every medium | Holds, more strongly: code is edited by the same four operations as everything else, so the ledger is the Chronicle and nothing more; the same projections navigate both | §11.5, §7.5 |
-
-"Holds" here means the design satisfies the check on paper. None has been
-tested.
-
----
-
-## 16. Glossary
+### 6.2 Glossary
 
 Every defined term of this document is in one of three tables. There are
 144 in all: 39 concepts, 35 names for compositions, and 70 structural
@@ -4139,212 +1617,24 @@ things can be in, each defined where it is first used: chunk, node, value, ref, 
 
 ---
 
-## Appendix A. Properties of the primitives
+### 6.3 Corner-painting checklist
 
-All lengths are in the units of the enclosing region. Colors are sRGB with
-alpha, as four floats from 0 to 1. Properties in *italics* say what a thing
-is and MUST NOT be formulas (§5.1); all others may be.
-
-**Common to all:** `frames` (§4.3), `label`, `role`, `lang`, `opacity`, `visible`, `on` (map
-from an input event name — `press`, `enter`, `leave`, `key`, `change` — to
-`{set: state name, to: formula}`, `{propose: operations}` (§5.6), or
-`{deliver: true}` for surfaces), `from` (§8.3). Of the events: `press` is
-a pointer going down and up on the item, or Enter or Space while it has
-focus; `enter` and `leave` are the pointer's; `key` is a key going down
-while it has focus; `change` is an `edit` event delivered to it (§6.2).
-
-**In a parent:** `place` (including `at`, an anchor, for a child of a
-surface), `x`, `y`, `w`, `h`, `row`, `col`, `span`, `align`, `grow`,
-`margin`.
-
-| Primitive | Properties |
-| --- | --- |
-| Text | *`chars`*, *`spans`*, *`syntax`* (§8.1); `editable` (§5.6); and default style: `font` (list of family names or a ref to a font asset), `size`, `weight`, `slant`, `color`, `direction`, `line`, `align`, `decoration`. Spans override these |
-| Path | `d`: list of segments `[M x y]`, `[L x y]`, `[C x1 y1 x2 y2 x y]`, `[Q x1 y1 x y]`, `[Z]`; `fill` and `stroke`: a color or a gradient `{kind, stops, from, to}`; `width`, `join`, `cap`, `dash`, `rule` |
-| Raster | *`source`*: ref to an asset or surface; `time` (for video sources); `crop`; `fit`; `smooth` |
-| Samples | *`source`*: ref to an asset or surface; `gain`; `pan`; `time` |
-| Region | *`children`*; `w`, `h`; `transform`: six floats; `clip`: a path or boolean; `background`; `scroll` |
-| Group | *`children`*; `layout`: `flow`, `grid` or `absolute`; `direction`; `gap`; `rows`, `cols` (for `grid`); `each`, `as` |
-| Clock | *`children`*; `start`, `end`, `rate`, `offset`, `repeat`, `mode`; `drive` (formula, for `held`) |
-| Portal | §8.4 |
-| Surface | *`computelet`*: ref; *`of`*: ref to the object it presents, if it presents one; `w`, `h`; *`ports`*: map from port name to the surface it connects to; *`children`* |
-| Data | *`cols`*: map from column key to `{label, type, order}`; *`rows`*: map from row key to map from column key to value, each row out of line when large; a cell may hold a formula; `sort`: list of row keys giving the default order; *`axes`*: map from axis name to `{kind, low, high, unit}` for continuous axes the object offers beyond its keyed ones, and *`tables`*: for an object holding several tables, map from table name to `{cols, rows}` |
-
-**Types of these properties.**
-
-| Properties | Value |
-| --- | --- |
-| `x`, `y`, `w`, `h`, `gap`, `size`, `width` | a float, in the units of the enclosing region |
-| `margin` | one float, or four: top, right, bottom, left |
-| `opacity`, `gain` | a float from 0 to 1; `pan` from −1 to 1 |
-| `visible`, `smooth`, `slant`, `editable` | a boolean |
-| `place` | `block`, `inline`, `float-start`, `float-end`, or `{at: anchor}` for a child of a surface |
-| `row`, `col` | an integer from 0; `span` is `[rows, cols]`, `[1, 1]` if absent |
-| `align` | `start`, `center` or `end`; in a cell, one value or two, inline then block |
-| `grow` | a float: the share of a flow line's leftover width this inline child takes |
-| `fit` | `contain`, `cover`, `fill` or `none`; `crop` is four fractions from 0 to 1: top, right, bottom, left |
-| `children` | a list of refs, set as a whole; for a surface, a map from key to ref |
-| `layout` | `flow`, `grid` or `absolute`; `rows`, `cols` are lists of track sizes (§5.7) |
-| `transform` | six floats (**W1**); `clip` is a boolean, or a path's `d`; `background` is a color or gradient; `scroll` is `none`, `x`, `y` or `both` |
-| `fill`, `stroke` | a color, or a gradient `{kind: linear or radial, stops: [[offset, color], …], from, to}` with points in the item's own space |
-| `join`, `cap`, `rule` | `miter`, `round`, `bevel`; `butt`, `round`, `square`; `nonzero`, `evenodd`; `dash` is a list of floats |
-| `font` | a list of family names and refs to font assets; `weight` 100 to 900; `direction` `ltr`, `rtl` or `auto`; `line` a multiple of `size`; `decoration` `none`, `underline` or `strike` |
-| `source`, `computelet`, `of` | a ref; `time` is an integer of flicks |
-| `start`, `end`, `offset` | integers of flicks; `rate` two integers; `repeat` an integer or `forever`; `mode` `locked`, `free` or `held` |
-| `cols` | each `{label, type, order}`: `type` is `number`, `text`, `boolean`, `time` or `any`; `order` an integer; `sort` is a list of row keys |
-| a page's header and footer | sampling parameters `header` and `footer`: refs to groups (§5.7) |
-
-**Axes.** A sequence or keyed axis has the name of the property it is bound
-to. The continuous axes and their extents are:
-
-| Type | Axis | Extent |
+| Check | Result | Where |
 | --- | --- | --- |
-| Clock | `t` | `start` to `end`, in flicks |
-| Region, group, surface, raster, path, Portal | `x`, `y` | 0 to `w`, 0 to `h` |
-| Raster or samples from a timed source | `t` | 0 to the source's duration, in flicks |
-| Data | those it declares in `axes` | as declared |
-| Surface | those its Compute-let declares in `axes` (§11.1) | as declared |
+| The core contains no assumption that content is text, that layout is a page, or that time does not exist | Holds. §1 names no medium. Text first appears in §5.1 as one profile; a page is a composition (§7.4); time is an axis kind and a clock | §1, §4.2, §4.5 |
+| Anchors are generic and every profile defines how its anchors survive edits | Holds, more strongly: survival is defined once per axis kind in the core, and a profile only declares its axes | §4.2, §4.3 |
+| The clock model serves video, audio, animation, simulations and games | Holds: locked, free and held clocks cover §15.1 (video, audio, captions), animation by formulas of `time`, and Compute-lets through `time()` | §4.5, §15.1, §15.2 |
+| Presenters are sandboxed components behind a defined interface and can be carried as Compute-lets | Holds for every presenter a universe carries: each is a sandboxed Compute-let behind the host interface. The four base presenters are deliberately not components: they are the host's own facilities, behind the display list, which is equally a defined interface | §9.1, §9.2, §9.3, **M3** |
+| Every reference uses content addressing or stable identity, never file paths | Holds. Refs are identities; indirects and anchors name hashes; locations are hints without authority | **C11** |
+| Every derived artifact records what it was derived from | Holds. One derivation record with pins, for renditions, transmutations, summaries, derived spans and imports | §5.3 |
+| The host interface's optional capabilities have a defined request and degradation path | Holds | **H1**, **H2** |
+| Nesting depth, active decoders and active Compute-lets are bounded by the reader, not trusted to the file | Holds | §3.1, **C13**, **O7** |
+| The Chronicle and ledger share foundations so one navigation approach serves every medium | Holds, more strongly: code is edited by the same four operations as everything else, so the ledger is the Chronicle and nothing more; the same projections navigate both | §12.5, §10.1 |
 
-**Defaults of a text.** Where a text does not say: `font` is `["serif"]`,
-`size` 16, `weight` 400, `slant` false, `color` opaque black, `line` 1.4,
-`align` `start`, `direction` `ltr`. *One line*, below, is the text's `size`
-× `line`.
+"Holds" here means the design satisfies the check on paper. None has been
+tested.
 
-**Default presentation of text roles.** A block span is laid out as a block
-in the flow (§5.7). Unless the span says otherwise:
-
-| Role | Default |
-| --- | --- |
-| `paragraph` | space after equal to one line |
-| `heading` | `level` 1 to 6; size 2, 1.5, 1.25, 1.1, 1, 1 times the text's size; weight 700; space before one line and after half a line; its lines do not end a page |
-| `item` | indent of 1.5 times the text's size per `level`; space after a quarter of a line; a marker before the first line: `marker` is `bullet`, `number` (counting consecutive items at the same level) or literal text |
-| `quote` | indent of the text's size at both sides; space after one line |
-| `code` | a monospaced font; line breaks kept; no wrapping |
-| `emphasis`, `strong` | slant true; weight 700 |
-| `link` | `href` is followed on `press` |
-| `markup` | not presented |
-
-A table within a text is a `grid` group at an `embed` span.
-
-## Appendix B. Projections
-
-What a model reads is part of the format. This appendix fixes it exactly.
-
-**Form.** A projection is UTF-8 text, lines ended by U+000A. The first line
-is the header: the projection's name, its arguments as written by the
-caller, `@`, and `commit=` with the commit it was computed from. Every
-other line is one record: a *kind*, one space, then *fields* separated by
-one space, each `name=value`, always in the order given below. A field
-shown in brackets is omitted when it has no value. The last line is `end`
-followed by `lines=` and the count of record lines, so that truncation is
-detectable.
-
-**Values.**
-
-| Value | Written as |
-| --- | --- |
-| identity | `o:` and the shortest prefix of its lowercase hexadecimal, of at least 8 digits, that is unique among identities in the universe |
-| hash | the same rule among hashes of its kind, with `r:` for a revision, `c:` for a commit, `b:` for a blob |
-| element | the identity of the change that inserted it, a dot, and its number: `o:d2c417e9.12` |
-| region | `axis=[low,high]` for sequence and continuous axes, `axis=[key,key]` for keyed ones; several axes are several fields |
-| anchor | `o:…` then, if any, its regions, then `r:…`; written without spaces inside brackets |
-| integer, float | decimal; floats with the fewest digits that round-trip |
-| time | milliseconds as an integer; clock times in flicks with the suffix `f` |
-| text | a JSON string (RFC 8259) |
-| list | values separated by commas, in brackets |
-| state | one of `current`, `stale`, `detached`, `unresolved`, `withheld`, `absent` |
-| basis | one of `witnessed`, `inferred`, `unknown` |
-
-A value too long to show — text over 200 characters where the projection
-is not asked for the text itself — is written as its first 200 characters
-followed by `…` inside the string, with a `len=` field after it.
-
-Two rules bind every projection. It is a function of the commit and its
-arguments alone. And every identity, hash and anchor it shows can be
-passed back, exactly as written, as an argument to another projection.
-
-**Records.**
-
-| Projection | Arguments | Records, in order (`*` any number, `?` at most one) |
-| --- | --- | --- |
-| `overview` | — | `universe`; `seal`*; `feature`*; `component`*; `face`*; `lacks`?; `part`* |
-| `object` | identity | `object`; `prop`*; `run`*; `referrer`* |
-| `text` | anchor | `text` |
-| `search` | query | `hit`* |
-| `history` | anchor | `change`* newest first |
-| `why` | anchor | `region`; then for each part of it: `run` or `value`; `copied`*; `finding`*; `evidence`*; `decision`? |
-| `diff` | two commits or revisions | `op`* |
-| `expand` | anchor | `part`* |
-| `recipe` | identity | `source`*; `made` |
-| `verify` | commit | `check`*; `issue`* |
-| `leaving` | the parameters of an export | `layer`*; `seal`*; `lacks`? |
-| `sample` | face, parameters | as text: `text`; as a display list: `item`* |
-| `items` | identity of a module | `item`* |
-| `unit` | identity of a function | `unit`; `stmt`* |
-| `calls` | identity of a module | `call`* |
-| `unit-history` | identity of a function | `change`* newest first |
-
-| Record | Fields |
-| --- | --- |
-| `universe` | `lineage` `commit` `height` `objects` (count) `types` (count of objects of each type) `changes` (count) `first` `last` (times) `actors` (list) |
-| `seal` | `commit` `key` `state` (`valid`, `invalid`, `unchecked`) [`name`] [`time`] |
-| `feature` | `name` `v` `required` `supported` |
-| `component` | `role` `hash` `state` |
-| `face` | `id` `kind` (`sampled`, `carried`, `transmuted`) `state` `medium` `label` |
-| `lacks` | `history` (boolean) `blobs` (count) |
-| `part` | an anchor, then `type` `label` (its label, heading or name, or the first 60 characters of a block) `size` `changed` (time) `by` `basis` [`parts` (count)] [`derived` (state)] [`summary` (the text of its line) `summary-state`] |
-| `source` | an anchor, then `r` `state` |
-| `made` | `how` `change` `basis` [`by`] [`model`] [`tool`] [`asked`] [`prompt` (its text, or `withheld`)] [`parameters`] |
-| `object` | `id` `type` `rev` (number) `r` (revision hash) `by` |
-| `prop` | `key` then `value`, or `len` and `kind` when large |
-| `run` | a stretch of elements with one origin: the region, as positions, then `change` `basis` [`by`] [`who`] [`model`] [`tool`] [`asked`] [`prompt`] [`method`] [`confidence`] `sealed` (boolean) |
-| `value` | `key` then the same fields as `run` from `change` on |
-| `copied` | `from` (anchor) `basis` |
-| `finding` | `change` `basis` and the origin fields, as in `run` |
-| `evidence` | `claim` (region) `kind` `support` (anchor) `state` [`note`] |
-| `decision` | `about` `verdict` `who` `change` `time` [`note`] |
-| `referrer` | `id` `key` |
-| `text` | the anchor, `chars` (count), then `s` |
-| `hit` | the anchor, `type`, `s` (up to 80 characters around the match) |
-| `change` | `id` `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of identities) [`note`] |
-| `op` | `op` `obj` [`key`] [`after`] [`del`] then `old` and `new`, each a value; where the change's `work` is withheld, one record `op withheld` |
-| `check` | `rule` (a label of this document) `scope` `result` (`pass`, `fail`, `skipped`) [`reason`] |
-| `layer` | `name` (`content`, `attribution`, `history`) `included` (boolean) `objects` (count) `bytes` `actors` (list) `models` (list) `changes` (count) `first` `last` (times) |
-| `issue` | `class` (of §1.9) `record` `rule` `s` |
-| `item` | for `sample`: the display-list item as fields. For `items`: `id` `kind` `name` `size` `by` `basis` `tests` (count) [`signature`] |
-| `unit` | `id` `name` `signature` `r` `statements` (count) |
-| `stmt` | `e` (the statement's identity) `change` `depth` (of the blocks enclosing it) `s` (the statement, in the JSON spelling of its value, with functions shown by name) |
-| `call` | `from` `to` (identities) `count` |
-
-**Queries.** `search` takes a map with any of: `text`; `type`; `hash` (of a
-record, a blob or a unit); `basis`; `by`; `actor`; `model`; `after` and
-`before` (times); `calls` (a function); and `in`, an anchor to search
-within. Every field given must match. It returns the 64 best hits, then
-the rest in ranges, as an outline does (§11.7).
-
-**What an agent writes.** The arguments of an action (§11.8) are JSON. A
-value is spelled: `null`, `true`, `false`; a number with no fraction or
-exponent for an integer, and with one for a float; a string for a text; an
-array for a list; an object for a map. An object with one key beginning
-`$` spells the other kinds: `{"$ref": "o:3f9a12c4"}`; `{"$anchor": "…"}`,
-holding an anchor as projections write one; `{"$element":
-"o:d2c417e9.12"}`; `{"$bytes": "68656c6c6f"}`, in hexadecimal;
-`{"$formula": […]}`. A change is `{ops, origin, evidence, decisions,
-note}`, its operations having the fields Appendix C names. Projections use
-the same spelling wherever they show a value, and add `name` to a `$ref`
-whose object has one; a `name` given back is ignored.
-
-An example:
-
-```
-why o:3f9a12c4 chars=[1042,1187] @ commit=c:77e0b1d2
-region o:3f9a12c4 chars=[1042,1187] r:a81f3320
-run chars=[1042,1120] change=o:d2c417e9 basis=witnessed by=model model="example-model-1" asked="A. Author" prompt=withheld sealed=true
-evidence claim=chars=[1042,1120] kind=cites support=o:4410cc2e rows=[q3] cols=[revenue] r:09be77a1 state=current
-decision about=o:d2c417e9 verdict=accept who="A. Author" change=o:5e02d9b7 time=1767225600000
-run chars=[1120,1187] change=o:0b77a3f1 basis=inferred by=person who="A. Author" method="text-alignment" confidence="exact-text" sealed=false
-end lines=5
-```
+---
 
 ## Appendix C. Schema of the core records
 
@@ -4410,7 +1700,7 @@ in `map` and `blob` nodes, whose shape must be a function of their
 contents, it is malformed. Values are compared exactly: an integer is never
 equal to a float.
 
-The Chronicle's records (§8.5):
+The Chronicle's records (§5.4):
 
 ```
 origin   = { basis: "witnessed" / "inferred" / "unknown",
@@ -4424,7 +1714,7 @@ decision = { about: anchor / ref, verdict: tstr, who: principal, ? note: tstr }
 finding  = { about: anchor, origin: origin }
 ```
 
-The drawing contract (§6.2):
+The drawing contract (§9.2):
 
 ```
 display-list = [ * item ]
@@ -4458,7 +1748,7 @@ event  = [ "pointer", { phase: tstr, x: float, y: float, buttons: uint, pointer:
 ```
 
 The capability contract, the `text` operations, derivations and described
-code (§6.3, §8.3, §11.3):
+code (§9.3, §5.3, §12.3):
 
 ```
 request = { capability: tstr, ? scope: value, required: bool, why: tstr, without: tstr }
@@ -4470,7 +1760,7 @@ measure-reply   = { adv: [ * float ], asc: float, desc: float }   ; one advance 
 locate-request  = { run: text-run, x: float }
 locate-reply    = { at: uint }
 edit-request    = { mount: rect, s: tstr, run: text-run, id: uint } / { unmount: uint }
-present-raster  = { child: tstr, w: uint, h: uint }       ; the reply is a raster source (§6.2)
+present-raster  = { child: tstr, w: uint, h: uint }       ; the reply is a raster source (§9.2)
 present-deliver = { child: tstr, event: event }
 
 derivation = { sources: [ + anchor ], how: tstr, by: ref }   ; the `from` property; every source is a pin
@@ -4499,43 +1789,7 @@ the kernel, a presenter or a binding are in
 [CONTRIBUTING.md](CONTRIBUTING.md), with the deletion test (**V3**). One
 rule binds simplifications too: a simplification may remove mechanism,
 never reach. Whoever removes a concept shows what it now composes from, and
-that every worked example of §14 still works.
-
-## Appendix E. Accelerated graphics, sketched
-
-The `gpu` capability follows the model of WebGPU (W3C), which every
-current platform's graphics interface can serve, and uses its shading
-language, WGSL. The contract of §6.3 is complete without this appendix;
-the operations below are a sketch to be made exact with the first
-implementation that needs them. Each is one `call` on the capability's
-handle; resources are named by small integers the program chooses.
-
-| Group | Operations |
-| --- | --- |
-| Limits | `limits` (what the host offers: texture size, sample counts, formats) |
-| Buffers | `buffer.create`, `buffer.write`, `buffer.destroy` |
-| Textures | `texture.create`, `texture.write`, `texture.from` (a raster source from §6.2, including one returned by `present`), `texture.destroy`, `sampler.create` |
-| Shaders | `shader.create` (WGSL source; the reply reports errors) |
-| Pipelines | `pipeline.render`, `pipeline.compute`, `bindgroup.create`, `pipeline.destroy` |
-| Passes | `pass.begin` (targets: the surface or a texture), `pass.pipeline`, `pass.bind`, `pass.vertex`, `pass.index`, `pass.viewport`, `pass.scissor`, `pass.draw`, `pass.draw-indexed`, `pass.dispatch`, `pass.end` |
-| Frame | `submit` (everything queued is drawn to the surface for this frame) |
-| Readback | `read` (a texture's pixels; used for export and for tests) |
-
-Rules that are already fixed:
-
-- The surface is the only thing a program can draw to on screen. It cannot
-  read what lies outside it.
-- Every operation is charged fuel in proportion to the bytes it passes
-  (**M4**), and the reader bounds the memory a program's resources may
-  hold.
-- Results on screen are not required to be bit-identical between hosts.
-  Where they must be — a canonical export (§7.4), or a test with
-  `expect.draws` — the reader uses a software implementation of the same
-  operations, which is part of the renderer (§7.4), and `read`.
-- Shader source travels as data in the Compute-let and is given to the
-  host to compile. This is the one place a Compute-let hands a host code
-  that is not WebAssembly; the host's own validation of WGSL is the
-  boundary, as it is for web pages.
+that every worked example of §15 still works.
 
 ## Appendix F. Test vectors
 
@@ -4552,7 +1806,7 @@ vector on its own.
 | `vectors/minimal.ufx` | a whole pack of 2599 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
 | `vectors/history.ufx` | a pack of 27722 bytes holding three commits, built to exercise what the first does not (below) |
 | `vectors/nested.ufx`, `vectors/linked.ufx` | one universe twice, of 4031 and 2391 bytes: with the records of a second universe that its Portal names, and without them (§1.8). The root hash is the same |
-| `vectors/module.ufx` | a pack of 3714 bytes holding a described module of two functions (§11.3) |
+| `vectors/module.ufx` | a pack of 3714 bytes holding a described module of two functions (§12.3) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
 
 `history.ufx` extends the first pack. Its second commit, by a model,
@@ -4581,7 +1835,7 @@ decision. The file ends with a chain of two indexes and four heads.
 | `merge_readiness` | two writers diverging from one text, with insertions at the same place, inside their own earlier insertions and after an element the other removes; the order of elements and the text, identical whichever writer's operations are taken first (§1.10) |
 | `digests` | two pins at the last commit of `history.ufx`, each with its salt, its covered value as bytes, the objects followed and the digest (§4.4): a passage of the text with the span that touches it, and the face object, whose ref to the text is followed |
 | `resolve_continuous` | six regions resolved through a frame: shift, integer rounding of both signs, clipping, detachment, floats |
-| `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§7.3) |
+| `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§8.3) |
 | `printer` | the described module of `module.ufx` — a function with operands folded, a function with a loop, a call, a global and named locals, three exports and a memory — as encoded values, and the 119 bytes the printer makes of it |
 | `instrumentation` | three modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
 
