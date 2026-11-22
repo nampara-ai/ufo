@@ -1,6 +1,7 @@
 // Measures the spike kernel: after cargo, after wasm-opt -Oz, and that after raw DEFLATE at level 9.
 // Then cuts the parts away one after another (the `cut-` features of the kernel) and gives what each
 // step took off, and what cutting each part alone takes off. See ../SIZE-NOTES.md.
+// The kernel no longer inflates (the host does, through `pending`), so there is no inflate row.
 // Run from anywhere: node spike/tools/size.mjs [--quick]
 import fs from 'fs'; import zlib from 'zlib'; import { execFileSync } from 'child_process'; import { fileURLToPath } from 'url';
 const here = fileURLToPath(new URL('.', import.meta.url)), kernel = here + '../kernel', home = process.env.HOME;
@@ -30,7 +31,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try { row('nightly, panics compiled out (-Cpanic=immediate-abort)', measure(build([], { nightly: true, dir: 'size-nightly' })));
     row("the same, and the library's own small variants", measure(build([], { nightly: true, small: true, dir: 'size-nightly-small' }))); } catch (e) { console.log('nightly build failed:', String(e.stderr || e).split('\n').filter(l => /error/.test(l)).slice(0, 3).join(' | ')); }
   if (!process.argv.includes('--quick')) {
-    const steps = [['cut-inflate', '(b) inflate (miniz_oxide), given to the host'], ['cut-project', '(j) projections (project.rs, spell.rs)'], ['cut-query', '(i) queries (query.rs)'], ['cut-print', '(h) printer (print.rs)'],
+    const steps = [['cut-project', '(j) projections (project.rs, spell.rs)'], ['cut-query', '(i) queries (query.rs)'], ['cut-print', '(h) printer (print.rs)'],
       ['cut-lb-table', '(f) line breaking: table'], ['cut-lb', '(f) line breaking: code'], ['cut-bidi-table', '(g) bidi: tables'], ['cut-bidi', '(g) bidi: code'], ['cut-layout', '(e) composition (layout.rs)'],
       ['cut-pack', '(d) pack (pack.rs), less SHA-256 cut alone'], ['cut-values', '(c) values (value.rs), with SHA-256 cut alone'], ['cut-alloc', '(a) allocator (dlmalloc)']];
     // every build from here has the `keep` export, so that pack.rs stays whole until it is cut; what the export itself weighs is taken off the step that cuts it
@@ -42,7 +43,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       row(name, d); for (const k in sum) sum[k] += d[k]; prev = m; }
     row('(k) what is left: glue, exports, a stub allocator', prev); for (const k in sum) sum[k] += prev[k]; row('sum', sum);
     console.log('\ncut alone: what the whole loses');
-    for (const [fl, name] of [[['cut-inflate'], 'inflate'], [['cut-sha'], 'SHA-256'], [['cut-project'], 'projections'], [['cut-query'], 'queries and projections'], [['cut-print'], 'printer'], [['cut-lb-table'], 'line breaking table'], [['cut-lb-table', 'cut-lb'], 'line breaking, code and table'],
+    for (const [fl, name] of [[['cut-sha'], 'SHA-256'], [['cut-project'], 'projections'], [['cut-query'], 'queries and projections'], [['cut-print'], 'printer'], [['cut-lb-table'], 'line breaking table'], [['cut-lb-table', 'cut-lb'], 'line breaking, code and table'],
       [['cut-bidi-table'], 'bidi tables'], [['cut-bidi-table', 'cut-bidi'], 'bidi, code and tables'], [['cut-layout'], 'composition with both algorithms'], [['cut-alloc'], 'allocator (dlmalloc for one that never frees)']]) {
       const m = measure(build(['keep', ...fl])); row(name, { cargo: kept.cargo - m.cargo, opt: kept.opt - m.opt, deflate: kept.deflate - m.deflate }); }
   }

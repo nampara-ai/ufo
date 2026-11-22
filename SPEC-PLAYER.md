@@ -618,8 +618,9 @@ These limits change only on measurement.
 | Measure | Limit | Reason |
 | --- | --- | --- |
 | Kernel, DEFLATE-compressed | 128 KiB, firm | this is the size that travels: every envelope carries the kernel compressed, so this is the limit every file pays for |
-| Kernel, compiled WebAssembly | 256 KiB, as guidance | computed from the compressed limit at the measured ratio of 48%; no longer a limit of its own |
-| Kernel source: its own code, excluding tests and anything borrowed | 6 000 lines | set from the compiled limit at the measured density of about 40 bytes a line; one engineer reads it in a working day |
+| Kernel, compiled WebAssembly | 256 KiB, as guidance | computed from the compressed limit; not a limit of its own |
+| Kernel source: its own code, excluding tests, generated tables and anything borrowed | 7 000 lines | set from the compressed limit at the measured density of 16.7 compressed bytes a line, with a margin; see below |
+| The kernel's bytes, rebuilt from its source | identical | **[B5]** a kernel is named by its hash in every file that carries it. Anyone MUST be able to rebuild those exact bytes from the source, with a stable release of the compiler and tools the source names, and no others. A build that needs an unstable compiler, or that differs from one machine to the next, is not a kernel |
 | Binding source, per host | 600 lines | the base functions, the drawing contract and the kernel's own capabilities. Each optional capability a host offers is counted apart, and reported |
 | Web binding, as shipped | 16 KiB | |
 | Tools universe (§9.6), as carried | 24 KiB | description only; no code |
@@ -632,44 +633,43 @@ These limits change only on measurement.
 The kernel's lines are budgeted by part, so that growth is noticed where it
 happens:
 
-| Part of the kernel | Lines | What is known |
+| Part of the kernel | Lines | Measured so far, in the throwaway kernel |
 | --- | --- | --- |
-| Values, hashing, pack, index, recovery, compaction; finding and writing a pack in an envelope | 900 | the miniature read all of this but compaction and envelopes, in about 560 |
-| Objects, object map, blobs and chunking, changes, conservation, sequences | 700 | the miniature read objects, blobs and sequences in about 115, and wrote nothing |
-| Anchors, resolution, pins, digests, derivations, the layers of what travels | 500 | not measured |
-| Formulas, with the mathematics routines they need | 700 | not measured |
-| Composition: text with line breaking and bidirectional ordering, flow, grid, absolute, clocks, pages, plain text, presentation state, hit testing | 1 500 | the miniature did text, flow, pages and plain text, without the two Unicode algorithms, in 491 |
-| Projections, outlines, search, difference, actions, undo, the agent's spelling of values | 800 | not measured |
-| Code and machines: printing; decoding and instrumenting modules; lifting; promotion; running Compute-lets through `engine`; snapshots and replay; capabilities | 900 | the miniature's printer was 344, for part of the instruction set |
+| Values, hashing, pack, index, recovery, compaction; finding and writing a pack in an envelope | 900 | 886 lines read all of this but compaction and envelopes |
+| Objects, object map, blobs and chunking, changes, conservation, sequences | 900 | reading only; the write path is not written |
+| Anchors, resolution, pins, digests, derivations, the layers of what travels | 600 | 517 |
+| Formulas, with the mathematics routines they need | 700 | nothing |
+| Composition: text with line breaking and bidirectional ordering, flow, grid, absolute, clocks, pages, plain text, presentation state, hit testing | 1 900 | 1 293, for text, flow, pages, plain text and the two Unicode algorithms |
+| Projections, outlines, search, difference, actions, undo, the agent's spelling of values | 900 | 653, for six projections |
+| Code and machines: printing; decoding and instrumenting modules; lifting; promotion; running Compute-lets through `engine`; snapshots and replay; capabilities | 1 100 | 351, the printer for part of the instruction set |
 
-These are allocations, not measurements. Two are known to be tight:
-composition, which has gained the two Unicode algorithms since the
-miniature ran, and code and machines, of which the miniature covered
-least. No validator is budgeted, because whether a module is valid is the
-host engine's judgment (**N1**).
+These are allocations, not measurements. No validator is budgeted,
+because whether a module is valid is the host engine's judgment (**N1**),
+and no inflater, because inflating is the host's (§9.3).
 
-**The measurement behind these.** A throwaway kernel of 1 613 lines — the
-reading half of the first two rows (675 lines), composition of text into
-lines, rows and pages with the plain-text face and Portals (491), and the
-printer for the instructions its test programs used (344) — compiled,
-without the standard library and after a size-optimising pass, to 78.4 KiB.
-Leaving out an inflater it borrowed, which is the host's to supply (§9.3),
-it was 67.3 KiB: an allocator of 4.2 KiB, and 40 bytes of WebAssembly for
-each line of its own code. It compressed to 48% of its size.
+**The measurement behind these.** A throwaway kernel of 3 907 lines of its
+own, covering what the last column lists, built with a stable compiler,
+without the standard library, without general text formatting and
+without an inflater, then passed through a size-optimising pass: 150.5 KiB,
+and 70.1 KiB compressed. Of the compressed bytes, 2.0 KiB are the
+allocator and 4.3 KiB the tables of the two Unicode algorithms, which
+with their code come to 8.9 KiB; the kernel's own lines are 63.7 KiB, or
+16.7 compressed bytes each. Three clean builds, one from a copy of the
+source in another place, gave the same bytes (`spike/tools/repro.sh`),
+which is the test behind **B5**.
 
-The limits follow from that measurement, in this order. What a file pays
-for is what travels, and what travels is the compressed kernel: 128 KiB,
-firm. At 48%, that is about 267 KiB compiled, so 256 KiB is the guidance
-for the compiled size and is not policed separately. At 40 bytes a line,
-6 000 lines compile to about 239 KiB and compress to about 115 KiB, inside
-both. In base64 a kernel at its compressed limit is 171 KiB. The tools
+The limits follow, in this order. What a file pays for is what travels,
+and what travels is the compressed kernel: 128 KiB, firm. Less the
+allocator and the tables, that holds about 7 400 lines at the density
+measured. The budget is 7 000, so that a kernel at its budget is about
+120 KiB compressed and has room for the density of unwritten parts to
+differ: across the parts written it runs from 15 to 58 compiled bytes a
+line. In base64 a kernel at its compressed limit is 171 KiB. The tools
 universe travels inside the pack, so its 24 KiB are 32 KiB in the page.
 With a binding of 16 KiB that leaves about 37 KiB of a 256 KiB envelope
-for the static face, the page's fixed text and the rest of the pack. Before
-this was measured the limits were 10 000 lines, 256 KiB compiled, 96 KiB
-compressed and a 192 KiB envelope, and they did not agree with one
-another. The miniature's web binding was 79 lines and 3.0 KiB compressed,
-for half of the drawing contract's items and one host function.
+for the static face, the page's fixed text and the rest of the pack.
+Earlier limits were set from smaller kernels: 6 000 lines from one of
+1 613 that compiled to 40 bytes a line and compressed to 48%.
 
 ### 11.2 Behavior
 

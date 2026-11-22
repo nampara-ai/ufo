@@ -2,7 +2,7 @@
 // measure function and writes vectors/provisional/composition.json: the rows of the document face
 // at one width, the pages of the pages face, and the plain-text face (SPEC-PRESENTATION 7.7, 8.3).
 // Build the kernel first (see README.md). Run: node spike/compose-vectors.mjs
-import fs from 'fs'; import crypto from 'crypto'; import { start } from './binding/binding.mjs';
+import fs from 'fs'; import crypto from 'crypto'; import zlib from 'zlib'; import { start } from './binding/binding.mjs';
 const root = new URL('../', import.meta.url);
 const wasm = fs.readFileSync(new URL('spike/kernel/target/wasm32-unknown-unknown/release/ufo_spike_kernel.wasm', root));
 const pack = new Uint8Array(fs.readFileSync(new URL('vectors/compose.ufx', root)));
@@ -11,7 +11,7 @@ const STATUSES = JSON.parse(fs.readFileSync(new URL('../vectors/STATUS.json', im
 const factor = piece => piece.font.includes('monospace') ? 0.6 : piece.weight >= 700 ? 0.55 : 0.5;
 let requests = 0;
 const measure = (piece, s) => { requests++; return { adv: [...s].length * piece.size * factor(piece), asc: 0.8 * piece.size, desc: 0.2 * piece.size }; };
-const k = await start(wasm, measure); if (!k.open(pack)) throw new Error('compose.ufx does not open');
+const k = await start(wasm, measure, b => zlib.inflateRawSync(b)); if (!await k.open(pack)) throw new Error('compose.ufx does not open');
 const r6 = x => Math.round(x * 1e6) / 1e6;
 const row = r => ({ top: r6(r.top), gap: r6(r.gap), height: r6(r.h), may_end_page: !r.keep, block: r.block, line: r.line, lines: r.lines,
   text: r.items.filter(i => i[0] === 'text').map(([, i]) => ({ s: i.s, x: r6(i.x), y: r6(i.y), size: i.size, weight: i.weight, slant: !!i.slant, advance: r6(i.adv), font: i.font, dir: i.dir, marker: !i.src })) });

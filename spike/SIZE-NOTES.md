@@ -1,4 +1,230 @@
-# Spike kernel: a size build comparable with FINDINGS section 7
+# Spike kernel: sizes
+
+## 2026-11-22, later: one small sort, sorted lists for maps, no inflater
+
+Three changes to the kernel, applied in this order and measured after each.
+The sections under "Spike kernel: a size build comparable with FINDINGS
+section 7" below describe the build before them and are unchanged.
+
+### A. Sizes
+
+Same build and flags as before: stable 1.97.0, `opt-level="z"`, LTO, one
+codegen unit, panic=abort, strip; `wasm-opt -Oz --enable-bulk-memory
+--enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals`
+(binaryen 132); raw DEFLATE level 9 (`zlib.deflateRawSync`).
+
+| Build | After cargo | After `wasm-opt -Oz` | DEFLATE |
+| --- | ---: | ---: | ---: |
+| Before (the default build of the sections below) | 251 253 | 219 754 | 97 207 |
+| 1. one small sort | 230 223 | 200 193 | 91 824 |
+| 2. and sorted lists for the maps and sets | 190 340 | 163 843 | 76 617 |
+| **3. and no inflater: the default build now** | **180 147** | **154 154** | **71 742** |
+
+| What each change saved, in the order applied | After `wasm-opt -Oz` | DEFLATE |
+| --- | ---: | ---: |
+| 1. one small sort | −19 561 | −5 383 |
+| 2. sorted lists | −36 350 | −15 207 |
+| 3. no inflater | −9 689 | −4 875 |
+| All three | −65 600 (30%) | −25 465 (26%) |
+
+Other builds of the same source, for comparison (not the reported build):
+
+| Build | After cargo | After `wasm-opt -Oz` | DEFLATE |
+| --- | ---: | ---: | ---: |
+| Standard library (`--features std`) | 202 167 | 175 663 | 81 739 |
+| Nightly, panics compiled out | 175 404 | 152 597 | 71 532 |
+| The same, with the library's own small variants | 175 016 | 152 229 | 71 321 |
+
+Nightly now buys 1 925 optimised bytes and 421 deflated, where it bought
+30 677 and 9 647: what the library's small variants gave was the sort and the
+trees, and those are gone.
+
+### B. What was done
+
+**1. One sort (`small.rs`).** `sort_by` and `sort` in `small.rs` replace the
+library's `sort`, `sort_by` at all seven call sites (`value.rs` 1, `query.rs`
+2, `project.rs` 4, of which one was followed by `dedup`, kept: it is inlined
+and small). It is a **bottom-up merge sort of indices, stable**, at most
+n·log2 n comparisons, with two lists of n indices beside the data; the things
+are then put in order by swaps along the cycles of the permutation (fewer
+than n swaps). The two loops (`order`, 434 bytes; `permute`, 95) are compiled
+once and take the comparison and the swap as `&mut dyn FnMut`; per type there
+is only a comparison and a swap. Stability is needed in one place, the keys of
+a map being encoded (`value.rs`: two equal keys must keep their order); the
+other sorts are of whole values by `Ord`, where equal means identical.
+
+**2. Sorted lists (`small.rs`).** `Map<K, T>` is a `Vec<(K, T)>` kept in key
+order; `Set<K>` is `Map<K, ()>`. Finding is one binary search compiled once
+(`search`, 89 bytes, the comparison a `&mut dyn FnMut`); inserting moves what
+follows (O(n) each, so O(n²) to build a large set out of order; `pop_first`
+is O(n) too). It replaces every `BTreeMap` and `BTreeSet` in `pack.rs`,
+`query.rs` and `project.rs`. Iteration is in key order as before; a map built
+from a list keeps the last value of a repeated key, as `collect` did.
+`small.rs` is 133 lines and 2 762 bytes optimised by symbol, all types
+together.
+
+**3. No inflater.** `miniz_oxide` is gone from `Cargo.toml` and `Cargo.lock`.
+Opening is in two phases:
+
+- `open(ptr, len)` checks the signature and walks every frame, listing every
+  chunk or node frame with codec 1. It reads nothing from a record: the commit
+  a head names may itself be compressed, and so may the records after the
+  newest index, whose hashes are needed. If nothing is listed it finishes
+  opening and returns 1 if the pack holds a universe. If something is listed
+  it returns 1 **provisionally**; 0 is "not a pack".
+- `pending()` gives how many are listed. `pending_get(i)` gives, in the OUT
+  buffer (`out_len`), the encoded map `{bytes: <raw DEFLATE>, len: <declared
+  decoded length>}`. `pending_put(i, ptr, len)` takes a buffer from `alloc`
+  holding the inflated bytes; it keeps it and returns 1 only if `len` is the
+  declared length.
+- `ready()` finishes opening (the head, recovery, the records no index covers)
+  and returns 1 if the pack holds a universe. It may be called again.
+- A payload never handed back, or of the wrong length, leaves its record
+  unavailable (`record` gives None, as for a record that is not there);
+  nothing traps. Bytes of the right length that are not the record are
+  refused when the record is used, by its hash, as before.
+- All inflated payloads are held in memory at once, and `open` now always
+  walks the whole pack, where it used to read only the last head and what
+  followed the newest index. This is the simplest design, not the last word.
+
+`binding.mjs`: `start(wasm, measure, inflate)`; `open` is now `async` and
+does the above, `await`ing `inflate(bytes, len)`, which may return a Promise;
+a throw or a missing `inflate` hands nothing back. `browserInflate` (a
+`DecompressionStream('deflate-raw')`) is exported; Node 22 has that class, so
+it was run here against `history.ufx` and gives the same answers as
+`zlib.inflateRawSync`. Callers changed: `vectors.mjs`, `compose-vectors.mjs`,
+`binding/test.mjs` (`conformance.mjs` and `size.mjs` never open a pack).
+
+Of the vectors only `history.ufx` has compressed frames (four). Tried by
+hand on it: no `inflate`, one that throws, one that returns one byte too few
+(the pack opens, the four records are absent from `layers`: working history
+63 records instead of 67); zeros of the right length (accepted, 67 frames,
+refused by hash on use).
+
+### C. By part
+
+Method as in section 2 below (`node spike/tools/size.mjs`): parts cut one
+after another, each row what that step took off; the rows sum to the whole
+exactly. `small.rs` is used from values up, so it is counted with (c).
+
+| Part | Lines | After `wasm-opt -Oz` | DEFLATE | Bytes a line | Before |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| (a) allocator: dlmalloc | – | 4 554 | 2 048 | | 4 226 |
+| (b) inflate: given to the host | – | 0 | 0 | | 10 707 |
+| (c) values: `value.rs`, CBOR, SHA-256; and `small.rs` | 497 | 9 586 | 5 035 | 19 | 12 779 |
+| (d) pack: `pack.rs` | 389 | 12 567 | 5 787 | 32 | 14 429 |
+| (e) composition: `layout.rs` without the two algorithms, `run` | 790 | 36 530 | 17 767 | 46 | 36 799 |
+| (f) line breaking, code | 174 | 2 687 | 1 429 | 15 | 2 689 |
+| (f) line breaking, table | 287 | 5 655 | 2 564 | | 5 651 |
+| (g) bidi, code | 329 | 6 856 | 3 241 | 21 | 6 878 |
+| (g) bidi, tables | 147 | 2 927 | 1 881 | | 2 927 |
+| (h) printer: `print.rs` | 351 | 11 089 | 5 057 | 32 | 11 116 |
+| (i) queries: `query.rs` | 517 | 30 054 | 13 150 | 58 | 61 079 |
+| (j) projections: `project.rs`, `spell.rs` | 653 | 31 112 | 13 428 | 48 | 49 955 |
+| (k) everything else: exports, glue, the stub allocator | 207 | 537 | 355 | | 519 |
+| **Sum** | 3 907 + 434 | **154 154** | **71 742** | | 219 754 |
+
+Cut alone from the whole, as a check: projections 31 112 / 13 428; queries
+and projections 61 166 / 26 578; printer 11 243 / 4 808; line breaking code
+and table 8 323 / 3 549; bidi code and tables 9 453 / 4 541; SHA-256 1 399 /
+1 064. The cautions of section 2 on the deflated column still hold.
+
+**The kernel's own code** (the whole less the allocator and the tables):
+
+| | Lines by hand | Optimised | DEFLATE | Optimised a line | DEFLATE a line |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Before | 3 702 | 196 243 (with the inflater 206 950) | – | 53.0 | – |
+| Now | 3 907 | 141 018 | 65 249 | 36.1 | 16.7 |
+
+65 249 = 71 742 − 2 048 (allocator) − 2 564 − 1 881 (tables).
+
+Lines (`wc -l`): 4 483 in all; 434 generated (`linebreak_data.rs` 287,
+`bidi_data.rs` 147); 4 049 by hand, of which 142 are measuring stubs
+(`lib.rs` 97, `bidi.rs` 22, `linebreak.rs` 12, `value.rs` 11); **3 907**
+without them. Against before: `small.rs` +133, `pack.rs` 382 → 389 (its 14
+stub lines and the call to miniz_oxide went, the pending list came),
+`query.rs` 507 → 517, `project.rs` 446, `lib.rs` 253 → 304 (four exports).
+
+By symbol, in the default build with names: no `core::slice::sort`, no
+`alloc::collections::btree`, no `miniz_oxide`, no `core::fmt` or `alloc::fmt`
+(`strings | grep -c 3fmt`: 0, before and after `wasm-opt`). Panic paths are
+529 bytes, of which `slice_error_fail` 456, as before.
+
+### D. Reproducibility
+
+`spike/tools/repro.sh [work directory]` builds the default release wasm from
+scratch three times: twice from the source into two fresh target directories,
+and once from a copy of the source at another path. It runs `wasm-opt` on
+each and compares.
+
+```
+$ spike/tools/repro.sh /tmp/…/scratchpad/repro
+rustc:    rustc 1.97.0 (2d8144b78 2026-07-07)
+cargo:    cargo 1.97.0 (c980f4866 2026-06-30)
+wasm-opt: wasm-opt version 132 (version_132)
+flags:    cargo build --release --locked --target wasm32-unknown-unknown ; wasm-opt -Oz --enable-bulk-memory --enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals
+RUSTFLAGS: ''
+9c4e2b86b3e051acd078dcd7e8c0c447a787684c01a49b47528d496ffc4c9e79  a.wasm
+9c4e2b86b3e051acd078dcd7e8c0c447a787684c01a49b47528d496ffc4c9e79  b.wasm
+9c4e2b86b3e051acd078dcd7e8c0c447a787684c01a49b47528d496ffc4c9e79  c.wasm
+5a073cac18fd173df2f511f58e050fd4fcf90db2aa9fc8908489f8638802648b  a.opt.wasm
+5a073cac18fd173df2f511f58e050fd4fcf90db2aa9fc8908489f8638802648b  b.opt.wasm
+5a073cac18fd173df2f511f58e050fd4fcf90db2aa9fc8908489f8638802648b  c.opt.wasm
+180147 a.wasm
+154154 a.opt.wasm
+REPRODUCIBLE: the three builds are byte-identical, before and after wasm-opt
+```
+
+**Byte-identical, with nothing added**: no `--remap-path-prefix` is needed.
+The file holds no path at all (`strings` finds none): with `strip = true`
+and a panic handler that never looks at its argument, the panic locations,
+which are where source paths would be, are not kept.
+
+To rebuild the same bytes:
+
+- rustc 1.97.0 (2d8144b78 2026-07-07), target `wasm32-unknown-unknown`, host
+  x86_64-unknown-linux-gnu; cargo 1.97.0;
+- `Cargo.lock` as committed (`--locked`): dlmalloc 0.2.14, cfg-if (libc and
+  windows-sys are in the lock but not built for this target);
+- `cargo build --release --target wasm32-unknown-unknown`, no `RUSTFLAGS`,
+  no features, the `[profile.release]` of `Cargo.toml`;
+- binaryen `wasm-opt` version 132 with the flags above.
+
+Not tested: another machine, another host platform, another `CARGO_HOME`
+(the three builds shared one registry copy of dlmalloc; since no path is in
+the file this should not matter, but it was not tried).
+
+### E. Regression checks, on the default build as it now stands
+
+```
+$ cd spike/kernel && cargo build --release --target wasm32-unknown-unknown
+$ cd ../.. && node spike/vectors.mjs | tail -1
+agree 74 differ 0
+$ node spike/compose-vectors.mjs | tail -1
+composition.json: document face 29 rows, height 935.2 ; pages face 45 rows on 4 pages [[0,11],[11,22],[22,34],[34,45]] ; measure requests 2980
+$ git diff --stat vectors
+$                                   (nothing)
+$ cd spike/kernel && cargo build --release --target wasm32-unknown-unknown --features conformance --target-dir ../tools/target
+$ cd ../tools && node conformance.mjs
+LineBreakTest.txt: 16672 of 16672 pass
+BidiCharacterTest.txt: 91707 of 91707 pass
+BidiTest.txt: 770241 of 770241 pass
+```
+
+### F. Notes
+
+- The two library replacements saved 55 911 optimised bytes, where the
+  symbol count (section 2 below) said 46 614 and section 5 forecast about
+  40 000: the trees were also inlined into their callers, which the symbol
+  count could not see. Sorted lists alone took 36 350 against 19 992 by symbol.
+- Queries and projections were 111 034 together and are 61 166; they are
+  still the heaviest code per line (58 and 48 bytes) after composition (46).
+- Of section 5's list, still not applied: `Vec<String>` and `join` in
+  `project.rs`; slicing `str` by byte offset (`slice_error_fail`, 456).
+
+---
+
+## Earlier, 2026-11-22: a size build comparable with FINDINGS section 7
 
 The kernel in `kernel/` built the way the earlier, smaller one was measured:
 no standard library, dlmalloc, `opt-level="z"`, LTO, one codegen unit,

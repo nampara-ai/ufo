@@ -221,7 +221,7 @@ pages: open, universal, and independent of any application.
 
 Eleven primitives, three layouts, three axis kinds, four operations, ten
 host functions, 118 concepts for a newcomer to learn, 58 of them in the core, and five founding names; a kernel of at most 128 KiB as it travels,
-compressed, and 6 000 lines;
+compressed, and 7 000 lines, rebuilt to the same bytes by anyone;
 one implementation of everything in the project's readers; additions only
 by showing that data, formulas or composition cannot do the job; and
 simplifications that remove mechanism, never reach.

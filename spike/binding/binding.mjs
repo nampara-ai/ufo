@@ -1,5 +1,5 @@
-// Throwaway spike binding for the web. It knows encoded values, the kernel's four exports,
-// one host function (text measure) and the eight display-list items. It knows no medium.
+// Throwaway spike binding for the web. It knows encoded values, the kernel's exports,
+// two host functions (text measure, inflate) and the eight display-list items. It knows no medium.
 // ---- encoded values (SPEC 1.2), as much as a binding needs ----
 export function decode(b) {
   let p = 0; const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
@@ -41,7 +41,9 @@ function half(v) {
 }
 const FLOATS = new Set(['adv', 'asc', 'desc', 'w']);   // fields the contract types as float
 // ---- the kernel ----
-export async function start(wasmBytes, measure) {
+// `inflate(bytes, len)` is the host's raw DEFLATE: it returns the inflated bytes (`len` of them are expected) or a
+// Promise of them. In Node: b => zlib.inflateRawSync(b). In a browser: browserInflate, below.
+export async function start(wasmBytes, measure, inflate) {
   let ex; const mem = () => new Uint8Array(ex.memory.buffer);
   const give = bytes => { const p = ex.alloc(bytes.length); mem().set(bytes, p); return p; };
   // the text capability's `measure` (PLAYER 9.3): the advance of a piece up to each offset, its ascent and descent.
@@ -50,12 +52,25 @@ export async function start(wasmBytes, measure) {
   const imports = { 'ufo:host/1': { host_measure(req, n, out, cap) { const r = encode(answer(decode(mem().slice(req, req + n)))); if (r.length > cap) return 0; mem().set(r, out); return r.length; } } };
   ex = (await WebAssembly.instantiate(wasmBytes, imports)).instance.exports;
   return {
-    open: pack => ex.open(give(pack), pack.length) === 1,
+    // Two phases, because a browser inflates only asynchronously and a wasm import cannot wait: the kernel lists the
+    // compressed payloads it holds, the host inflates them, and `ready` finishes opening. A payload that does not
+    // inflate is not handed back, and its record is then unavailable.
+    open: async pack => {
+      if (ex.open(give(pack), pack.length) !== 1) return false;
+      for (let i = 0, n = ex.pending(); i < n; i++) {
+        const p = ex.pending_get(i), { bytes, len } = decode(mem().slice(p, p + ex.out_len()));
+        let out = null; try { out = inflate && await inflate(bytes, len); } catch { }
+        if (out) ex.pending_put(i, give(out), out.length);
+      }
+      return ex.ready() === 1;
+    },
     print: id => { const p = ex.print(give(id)); return mem().slice(p, p + ex.out_len()); },
     query: q => { const b = encode(q); const p = ex.query(give(b), b.length); return decode(mem().slice(p, p + ex.out_len())); },
     sample: params => { const q = encode(params); const p = ex.sample(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); },
   };
 }
+// The host's inflate in a browser (and in Node 20 and later): raw DEFLATE through a DecompressionStream.
+export const browserInflate = async bytes => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
 // ---- the drawing contract (SPEC 6.2) on a 2D canvas ----
 const css = c => `rgba(${c.slice(0, 3).map(x => Math.round(x * 255))},${c[3]})`;
 const fontOf = it => `${it.slant ? 'italic ' : ''}${it.weight} ${it.size}px ${it.font.map(f => /^[a-z-]+$/.test(f) ? f : JSON.stringify(f)).join(',')}`;

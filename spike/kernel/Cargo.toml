@@ -8,7 +8,6 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-miniz_oxide = { version = "0.8", default-features = false, features = ["with-alloc"] }
 dlmalloc = { version = "0.2", features = ["global"] } # the allocator, when built without the standard library
 
 [features]
@@ -16,7 +15,6 @@ std = [] # build with the standard library (its allocator, its panic machinery)
 # For measuring only (SIZE-NOTES.md): each replaces the entry points of one part with stubs.
 # A kernel built with any of them does not work.
 keep = [] # one more export, which reaches every entry point of pack.rs: cutting the parts above then leaves pack.rs whole
-cut-inflate = [] # inflating is asked of the host instead
 cut-sha = []
 cut-project = []
 cut-query = []

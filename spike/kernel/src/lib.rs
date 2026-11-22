@@ -13,6 +13,7 @@ mod pack;
 mod print;
 mod project;
 mod query;
+mod small;
 mod spell;
 mod value;
 use alloc::string::String;
@@ -96,12 +97,20 @@ fn encode(_: &V) -> Vec<u8> {
     Vec::new()
 }
 #[cfg(feature = "cut-pack")]
-fn open_pack(_: Vec<u8>) -> Option<Pack> {
+fn scan_pack(_: Vec<u8>) -> Option<Pack> {
+    None
+}
+#[cfg(feature = "cut-pack")]
+fn open_pack(_: Pack) -> Option<Pack> {
     None
 }
 #[cfg(not(feature = "cut-pack"))]
-fn open_pack(d: Vec<u8>) -> Option<Pack> {
-    Pack::open(d)
+fn scan_pack(d: Vec<u8>) -> Option<Pack> {
+    Pack::scan(d)
+}
+#[cfg(not(feature = "cut-pack"))]
+fn open_pack(pk: Pack) -> Option<Pack> {
+    Pack::open(pk)
 }
 #[cfg(feature = "cut-layout")]
 unsafe fn run(_: &V) -> Option<V> {
@@ -120,7 +129,8 @@ fn answer(_: &Pack, _: &V) -> Option<V> {
 #[cfg(not(feature = "cut-query"))]
 use query::query as answer;
 
-static mut PACK: Option<Pack> = None;
+static mut PACK: Option<Pack> = None; // the open pack
+static mut SCANNED: Option<Pack> = None; // a pack given to `open`, until `ready`
 static mut OUT: Vec<u8> = Vec::new();
 
 #[no_mangle]
@@ -130,10 +140,51 @@ pub extern "C" fn alloc(n: usize) -> *mut u8 {
     core::mem::forget(v);
     p
 }
-/// Takes ownership of a buffer from `alloc` holding a pack. Returns 1 if it holds a universe.
+/// Takes ownership of a buffer from `alloc` holding a pack. Returns 0 if it is not a pack. If it has
+/// compressed records (`pending` is not 0) the answer 1 is provisional: the host inflates them
+/// (`pending_get`, `pending_put`) and then asks `ready`. Otherwise 1 says it holds a universe.
 #[no_mangle]
 pub unsafe extern "C" fn open(p: *mut u8, n: usize) -> i32 {
-    PACK = open_pack(Vec::from_raw_parts(p, n, n.max(1)));
+    PACK = None;
+    SCANNED = scan_pack(Vec::from_raw_parts(p, n, n.max(1)));
+    match pending() {
+        0 => ready(),
+        _ => 1,
+    }
+}
+/// How many compressed payloads the kernel needs inflated before it can answer anything.
+#[no_mangle]
+pub unsafe extern "C" fn pending() -> usize {
+    SCANNED.as_ref().map_or(0, |pk| pk.pending.len())
+}
+/// The i-th of them, an encoded map: `bytes`, raw DEFLATE, and `len`, what it must inflate to.
+#[cfg(not(feature = "cut-pack"))]
+#[no_mangle]
+pub unsafe extern "C" fn pending_get(i: usize) -> *const u8 {
+    let v = SCANNED.as_ref().and_then(|pk| pk.compressed(i)).map(|(b, n)| map(vec![("bytes", V::B(b.to_vec())), ("len", V::Int(n as i64))]));
+    OUT = encode(&v.unwrap_or(V::Null));
+    OUT.as_ptr()
+}
+/// Takes ownership of a buffer from `alloc` holding the i-th inflated. Returns 1 if it is of the
+/// declared length and was kept. A payload never given, or refused here, leaves its record unavailable.
+#[cfg(not(feature = "cut-pack"))]
+#[no_mangle]
+pub unsafe extern "C" fn pending_put(i: usize, p: *mut u8, n: usize) -> i32 {
+    let got = Vec::from_raw_parts(p, n, n.max(1));
+    match SCANNED.as_mut().and_then(|pk| pk.pending.get_mut(i)) {
+        Some(e) if e.len == n => {
+            e.got = Some(got);
+            1
+        }
+        _ => 0,
+    }
+}
+/// Finishes opening, after the host has inflated what it could. Returns 1 if the pack holds a universe.
+#[no_mangle]
+pub unsafe extern "C" fn ready() -> i32 {
+    if let Some(pk) = SCANNED.take() {
+        PACK = open_pack(pk);
+    }
     PACK.is_some() as i32
 }
 #[no_mangle]

@@ -2,7 +2,7 @@
 use crate::pack::*;
 use crate::query::*;
 use crate::value::*;
-use alloc::collections::BTreeMap;
+use crate::small::{Map, Set};
 use crate::spell::*;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -10,7 +10,7 @@ use alloc::vec::Vec;
 struct Cx<'a> {
     pk: &'a Pack,
     commit: H,
-    revs: BTreeMap<Id, H>,
+    revs: Map<Id, H>,
     chain: Vec<(H, V)>,
     lines: Vec<String>,
 }
@@ -44,7 +44,7 @@ impl<'a> Cx<'a> {
         cat!("o:", prefix(id, &mut self.revs.keys().map(|k| &k[..])))
     }
     fn r(&self, h: &H) -> String {
-        cat!("r:", prefix(h, &mut self.revs.values().map(|k| &k[..])))
+        cat!("r:", prefix(h, &mut self.revs.0.iter().map(|e| &e.1[..])))
     }
     fn c(&self, h: &H) -> String {
         cat!("c:", prefix(h, &mut self.chain.iter().map(|k| &k.0[..])))
@@ -143,27 +143,27 @@ fn blocks(o: &Obj) -> Vec<Block> {
             out.push((lo, key.clone(), Block { lo, hi: hi.max(lo), role: s.get("role").and_then(|r| r.s()).unwrap_or("paragraph").into(), level: s.get("level").and_then(|l| l.i()).unwrap_or(1), marker: s.get("marker").cloned() }));
         }
     }
-    out.sort_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
+    crate::small::sort_by(&mut out, |a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
     out.into_iter().map(|x| x.2).collect()
 }
 /// The plain text of blocks i..j of a text (8.3): markers, and an empty line between blocks that are not both items.
 fn plain_blocks(chars: &[char], bs: &[Block], i: usize, j: usize) -> String {
     let mut s = String::new();
-    let mut counts: BTreeMap<i64, i64> = BTreeMap::new();
+    let mut counts: Map<i64, i64> = Map::new();
     for k in 0..j.min(bs.len()) {
         let b = &bs[k];
         if b.role == "item" {
-            counts.retain(|l, _| *l <= b.level);
-            *counts.entry(b.level).or_insert(0) += 1;
+            counts.0.retain(|(l, _)| *l <= b.level);
+            *counts.entry(b.level, 0) += 1;
         } else {
-            counts.clear();
+            counts.0.clear();
         }
         if k < i { continue; }
         if k > i { s.push('\n'); if !(b.role == "item" && bs[k - 1].role == "item") { s.push('\n'); } }
         if b.role == "item" {
             for _ in 1..b.level { s.push_str("  "); }
             match b.marker.as_ref().and_then(|m| m.s()) {
-                Some("number") => put!(s; counts[&b.level], ". "),
+                Some("number") => put!(s; counts.get(&b.level).cloned().unwrap_or(0), ". "),
                 Some("bullet") | None => s.push_str("• "),
                 Some(lit) => { s.push_str(lit); s.push(' '); }
             }
@@ -206,7 +206,7 @@ fn object(cx: &mut Cx, id: &Id) -> Option<()> {
         if let V::M(m) = &x.p {
             for (k, v) in m {
                 if k == "work" { continue; } // what a change did is history, not a reference
-                let mut found = alloc::collections::BTreeSet::new();
+                let mut found = Set::new();
                 refs(v, &mut found);
                 if found.contains(id) { let line = cat!("referrer id=", cx.o(&other), " key=", k); cx.lines.push(line); }
             }
@@ -214,7 +214,7 @@ fn object(cx: &mut Cx, id: &Id) -> Option<()> {
     }
     Some(())
 }
-fn refs(v: &V, out: &mut alloc::collections::BTreeSet<Id>) {
+fn refs(v: &V, out: &mut Set<Id>) {
     match v {
         V::Tag(REF, x) => { if let Some(i) = x.id() { out.insert(i); } }
         V::Tag(ANCHOR, a) => { if let Some(i) = a.get("o").and_then(|o| o.id()) { out.insert(i); } }
@@ -281,7 +281,7 @@ fn history(cx: &mut Cx, id: &Id) -> Option<()> {
         let Some(p) = cx.change(&cid) else { continue };
         let ops = p.get("work").and_then(|w| w.get("ops")).map(|o| o.l()).unwrap_or(&[]);
         let mut touched: Vec<Id> = ops.iter().filter_map(|o| o.get("obj").and_then(|i| i.id())).collect();
-        touched.sort();
+        crate::small::sort(&mut touched);
         touched.dedup();
         if !touched.contains(id) { continue; }
         let og = p.get("origin");
@@ -372,7 +372,7 @@ fn expand_universe(cx: &mut Cx) -> Option<()> {
         if i == [0; 16] || first.contains(&i) { continue; }
         if let Some(o) = cx.obj(&i) { rest.push((o.ty.clone(), label_of(&o), i)); }
     }
-    rest.sort();
+    crate::small::sort(&mut rest);
     for i in first.iter().chain(rest.iter().map(|r| &r.2)) {
         if let Some(o) = cx.obj(i) { let line = object_part(cx, &o); cx.lines.push(line); }
     }
@@ -381,19 +381,19 @@ fn expand_universe(cx: &mut Cx) -> Option<()> {
 fn overview(cx: &mut Cx) -> Option<()> {
     let u = cx.obj(&[0; 16])?;
     let head = cx.chain.first()?.clone();
-    let mut types: BTreeMap<String, usize> = BTreeMap::new();
+    let mut types: Map<String, usize> = Map::new();
     let (mut times, mut actors): (Vec<i64>, Vec<String>) = (Vec::new(), Vec::new());
     let ids: Vec<Id> = cx.revs.keys().cloned().collect();
     for i in &ids {
         let Some(o) = cx.obj(i) else { continue };
-        *types.entry(o.ty.clone()).or_insert(0) += 1;
+        *types.entry(o.ty.clone(), 0) += 1;
         if o.ty == "ufo.change" {
             times.push(cx.time(i));
             if let Some(a) = o.p.get("actor").and_then(|a| a.get("who")).map(|w| cx.jv(w.get("name").unwrap_or(w))) { if !actors.contains(&a) { actors.push(a); } }
         }
     }
-    actors.sort();
-    let line = cat!("universe lineage=", hex(u.p.get("lineage")?.b()?), " commit=", cx.c(&head.0), " height=", head.1.get("height")?.i()?, " objects=", ids.len(), " types=[", types.iter().map(|(k, n)| cat!(k, ":", n)).collect::<Vec<_>>().join(","), "] changes=", times.len(), " first=", times.iter().min().unwrap_or(&0), " last=", times.iter().max().unwrap_or(&0), " actors=[", actors.join(","), "]");
+    crate::small::sort(&mut actors);
+    let line = cat!("universe lineage=", hex(u.p.get("lineage")?.b()?), " commit=", cx.c(&head.0), " height=", head.1.get("height")?.i()?, " objects=", ids.len(), " types=[", types.0.iter().map(|(k, n)| cat!(k, ":", n)).collect::<Vec<_>>().join(","), "] changes=", times.len(), " first=", times.iter().min().unwrap_or(&0), " last=", times.iter().max().unwrap_or(&0), " actors=[", actors.join(","), "]");
     cx.lines.push(line);
     for s in cx.pk.frames().1.iter().filter_map(|s| decode(s)) {
         let mut line = cat!("seal commit=", s.get("commit").and_then(|c| c.hash()).map(|c| cx.c(&c)).unwrap_or_default(), " key=", s.get("key").and_then(|k| k.b()).map(hex).unwrap_or_default(), " status=unchecked");
@@ -417,7 +417,7 @@ fn overview(cx: &mut Cx) -> Option<()> {
 
 pub fn project(pk: &Pack, q: &V) -> Option<V> {
     let commit: H = q.get("commit").and_then(|c| c.s()).and_then(|s| crate::query::chain(pk).iter().map(|c| c.0).find(|h| hex(h) == s)).unwrap_or(pk.head);
-    let mut cx = Cx { pk, commit, revs: objects(pk, &commit).into_iter().collect(), chain: chain(pk), lines: Vec::new() };
+    let mut cx = Cx { pk, commit, revs: rev_map(pk, &commit), chain: chain(pk), lines: Vec::new() };
     let name = q.get("name")?.s()?;
     let id: Option<Id> = q.get("o").and_then(|o| o.s()).and_then(|s| cx.revs.keys().find(|k| hex(&k[..]) == s).cloned());
     let (lo, hi) = (q.get("lo").and_then(|x| x.i()).map(|x| x as u64), q.get("hi").and_then(|x| x.i()).map(|x| x as u64));

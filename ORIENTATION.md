@@ -1217,3 +1217,13 @@ running test comes with the change.
    through `derive` and `refresh`, replacing the stand-in.
 3. *The light cone inside the kernel*, run on a pack, replacing the
    object model written for the first spike.
+
+**Measured after the changes** (`spike/SIZE-NOTES.md`): 150.5 KiB
+size-optimised, 70.1 KiB compressed, for 3 907 lines of the kernel's own.
+The small sort saved 5.3 KiB compressed, sorted lists 14.9, removing the
+inflater 4.8. Queries and projections halved. 16.7 compressed bytes a
+line; the firm limit holds about 7 400 lines; the budget is set at 7 000
+(SPEC-PLAYER §11.1), which projects to about 120 KiB. Three clean builds
+with the stable compiler give identical bytes, and the nightly flags that
+were rejected would now save under half a kibibyte. The projection is
+under the limit, so the envelope spike continues.

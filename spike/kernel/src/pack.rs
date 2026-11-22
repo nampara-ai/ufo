@@ -1,27 +1,9 @@
 // The pack (SPEC 2): frames, the head, recovery, the index; records by hash; blobs; objects.
 use crate::value::*;
-use alloc::collections::BTreeMap;
+use crate::small::Map;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-#[cfg(not(feature = "cut-inflate"))]
-fn inflate(d: &[u8], n: usize) -> Option<Vec<u8>> {
-    miniz_oxide::inflate::decompress_to_vec_with_limit(d, n).ok()
-}
-#[cfg(feature = "cut-inflate")]
-fn inflate(d: &[u8], n: usize) -> Option<Vec<u8>> {
-    #[link(wasm_import_module = "ufo:host/1")]
-    extern "C" {
-        fn host_inflate(d: *const u8, n: usize, out: *mut u8, cap: usize) -> usize;
-    }
-    let mut out = alloc::vec![0u8; n];
-    let got = unsafe { host_inflate(d.as_ptr(), d.len(), out.as_mut_ptr(), n) };
-    if got > n {
-        return None;
-    }
-    out.truncate(got);
-    Some(out)
-}
 pub type H = [u8; 32];
 pub type Id = [u8; 16];
 const SIG: [u8; 8] = [0x89, b'U', b'F', b'O', 0x0d, 0x0a, 0x1a, 0x0a];
@@ -30,8 +12,18 @@ pub struct Pack {
     d: Vec<u8>,
     pub head: H,
     index: usize,             // offset of the newest index frame, or 0
-    after: BTreeMap<H, usize>, // records in frames no index covers
+    after: Map<H, usize>, // records in frames no index covers
     pub unread_tail: usize,
+    /// Every compressed chunk or node frame, in the order of the pack: what the host is to inflate.
+    pub pending: Vec<Pending>,
+}
+/// A compressed payload (codec 1, raw DEFLATE), and what it inflates to once the host has said.
+pub struct Pending {
+    off: usize,       // of its frame
+    pub from: usize,  // of the compressed bytes
+    pub to: usize,
+    pub len: usize,   // the decoded length the frame declares
+    pub got: Option<Vec<u8>>,
 }
 struct Frame {
     kind: u8,
@@ -86,12 +78,8 @@ impl Pack {
         let bytes = match f.codec {
             0 => p.to_vec(),
             1 => {
-                let (n, q) = leb(p, 0)?;
-                let out = inflate(&p[q..], n)?;
-                if out.len() != n {
-                    return None;
-                }
-                out
+                let i = crate::small::search(self.pending.len(), &mut |i| self.pending[i].off.cmp(&off)).ok()?;
+                self.pending[i].got.clone()?
             }
             _ => return None,
         };
@@ -127,11 +115,30 @@ impl Pack {
         }
         Some((commit, le(&p[40..48])))
     }
-    pub fn open(d: Vec<u8>) -> Option<Pack> {
+    /// The first half of opening: the frames are walked and every compressed payload listed. Nothing
+    /// is read from a record yet, since the commit a head names may itself be compressed.
+    pub fn scan(d: Vec<u8>) -> Option<Pack> {
         if d.len() < 8 || d[..8] != SIG {
             return None;
         }
-        let mut pk = Pack { d, head: [0; 32], index: 0, after: BTreeMap::new(), unread_tail: 0 };
+        let mut pk = Pack { d, head: [0; 32], index: 0, after: Map::new(), unread_tail: 0, pending: Vec::new() };
+        let mut off = 8;
+        while let Some(f) = pk.frame(off) {
+            if (f.kind == 1 || f.kind == 2) && f.codec == 1 {
+                if let Some((len, q)) = leb(&pk.d[f.start..f.next], 0) {
+                    pk.pending.push(Pending { off, from: f.start + q, to: f.next, len, got: None });
+                }
+            }
+            off = f.next;
+        }
+        Some(pk)
+    }
+    pub fn compressed(&self, i: usize) -> Option<(&[u8], usize)> {
+        let p = self.pending.get(i)?;
+        Some((&self.d[p.from..p.to], p.len))
+    }
+    /// The second half, once the host has inflated what it could: the head, and the records no index covers.
+    pub fn open(mut pk: Pack) -> Option<Pack> {
         let n = pk.d.len();
         let mut found = if n >= 83 { pk.valid_head(n - 75, 0).map(|h| (h, n)) } else { None };
         if found.is_none() {
@@ -167,7 +174,7 @@ impl Pack {
             let Some(f) = pk.frame(off) else { break };
             if f.kind == 1 || f.kind == 2 {
                 if let Some(h) = pk.hash_at(off) {
-                    pk.after.entry(h).or_insert(off);
+                    pk.after.entry(h, off);
                 }
             }
             off = f.next;

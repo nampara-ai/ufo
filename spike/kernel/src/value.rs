@@ -279,7 +279,7 @@ pub fn encode_into(v: &V, o: &mut Vec<u8>) {
         }
         V::M(m) => {
             let mut ix: Vec<usize> = (0..m.len()).collect();
-            ix.sort_by(|&a, &b| (m[a].0.len(), m[a].0.as_bytes()).cmp(&(m[b].0.len(), m[b].0.as_bytes())));
+            crate::small::sort_by(&mut ix, |&a, &b| (m[a].0.len(), m[a].0.as_bytes()).cmp(&(m[b].0.len(), m[b].0.as_bytes())));
             put_head(o, 5, m.len() as u64);
             for i in ix {
                 put_head(o, 3, m[i].0.len() as u64);
