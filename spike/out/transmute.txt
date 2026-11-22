@@ -1,0 +1,20 @@
+1. derived  : 'Revenue grew in every region. Largest figure: north, 41.'
+    source o:a9cb7f9b chars=[54,98] r:adf230cf state=current
+    source o:ff3a5f07 r:bc38e1bc state=current
+    how=transmute by=model model='stand-in-1' asked='A. Author' parameters={'max_words': 12} prompt='Write a one-line brief of this passage and the chart.' change=o:e439bf95
+2. as made  : brief current, summary of the brief current
+3. after an edit to the report outside the pinned passage (same length): brief current, summary of the brief current
+4. after restyling a span inside the pinned passage, characters untouched: brief stale, summary of the brief stale  <- caught only because spans are in the digest
+5. after a figure changes in the data the chart refers to: brief stale, summary of the brief stale (the pin is to the chart; the digest followed its ref)
+    source o:a9cb7f9b chars=[54,98] r:d96fb668 state=current
+    source o:ff3a5f07 r:bc38e1bc state=stale
+    how=transmute by=model model='stand-in-1' asked='A. Author' parameters={'max_words': 12} prompt='Write a one-line brief of this passage and the chart.' change=o:66884112
+6. refresh  : regenerated in change o:f5b85892; revisions of the object now: 3
+   now      : 'Revenue grew in every region. Largest figure: south, 58.'
+   state    : brief current, summary of the brief stale (the summary pins the brief's earlier revision)
+7. in a copy that withholds the prompt, after another change:
+    source o:a9cb7f9b chars=[54,98] r:d96fb668 state=current
+    source o:ff3a5f07 r:bc38e1bc state=stale
+    how=transmute by=model model='stand-in-1' asked='A. Author' parameters={'max_words': 12} prompt=withheld change=o:f5b85892
+   refresh  : refused: the prompt is withheld in this copy; the recipe names its hash but cannot be repeated here
+8. objects followed for the chart's digest: 1

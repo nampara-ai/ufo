@@ -378,3 +378,124 @@ SPEC §5.7):
 testing, formulas, presentation state, right-to-left text, raster, samples,
 surface and hit items. Break opportunities are spaces only. Nothing here is
 evidence about those.
+
+## 3. The light cone: two layers
+
+**What was built.** A body of research as an object model (`cone/corpus.py`:
+one corpus universe with a report, three nested study universes, 62
+objects, 199 000 characters of content) and four projections over it
+(`cone/cone.py`): `overview`, `expand`, `text`, `why`. It runs on a Python
+object model, not on a pack and not in the kernel.
+
+**The structural layer** is computed from the objects alone, with no model
+and nothing stored: for a universe, counts by type, the span of its
+history and its actors; for a group, one line per child with type, label,
+the number of characters beneath it, when it last changed and by whom; for
+a Portal, what it presents, followed across universes; for a text, its
+headings as an outline, each a region with its size, or its blocks with
+their first sixty characters where there are no headings; for a table, its
+columns and its rows in ranges. **The model layer** adds, to the same
+lines, a stored one-line summary where one exists. (The 59 summaries in
+this corpus were written by the spike's script from the facts it planted,
+not by a model in the loop.)
+
+**The test.** Fresh model instances answer three questions using only the
+four projections, one layer or both. The tool logs every call. One run per
+cell; suggestive only.
+
+| Question | Layer | Model | Calls | Content read | Share of the universe | Correct |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1. What evidence does the report cite for replacing the valve? | structure | S | 9 | 2 110 | 1.1% | yes |
+| | structure | H | 10 | 1 926 | 1.0% | yes |
+| | both | S | 11 | 2 110 | 1.1% | yes |
+| | both | H | 8 | 3 520 | 1.8% | yes |
+| 2. Which interviewee described the pump tripping, and what caused it? | structure | S | 14 | 36 805 | 18.5% | yes |
+| | structure | H | 10 | 36 805 | 18.5% | yes |
+| | both | S | 4 | 4 683 | 2.4% | yes |
+| | both | H | 5 | 4 861 | 2.4% | yes |
+| 3. Which row has the highest nitrate reading? | structure | S, H | 1 | 1 327 | 0.7% | yes |
+| | both | S, H | 1 | 1 327 | 0.7% | yes |
+
+Whole sessions: structure alone 82 869 (S) and 82 226 (H) tokens, 50 and
+64 s; both layers 69 748 and 72 852 tokens, 36 and 48 s.
+
+**What it shows.**
+
+1. With the structural layer alone, every question was answered correctly,
+   and two of three at about 1% of the universe. Where the work has
+   structure — headings, tables, and above all *recorded evidence* — no
+   model is needed to navigate it. Question 1 was answered by `why` on the
+   conclusion, which returned the cited passages directly: the Chronicle
+   did the navigating.
+2. Where structure says nothing — eight interviews titled "Interview 1" to
+   "Interview 8" with no headings — the structural layer still confined
+   the search to the right study and the right group, and then the reader
+   had to read all of it: 18.5% of the universe. One line of summary per
+   interview cut that to 2.4%, about a seventh of the reading.
+3. So the two layers divide the work as proposed: the structural layer is
+   always there, always current, and bounds every search to a subtree; the
+   model layer is worth writing exactly where the structural layer's lines
+   do not discriminate between siblings. That gives a rule for *when* a
+   summary is worth having, which the specification lacked.
+4. Subjects asked for two things: an anchor finer than a paragraph for a
+   sentence they quote, and search. Both exist in the specification
+   (regions are arbitrary; `search` is a projection); neither was offered
+   here, to test navigation without them.
+
+**Not shown.** The cost claim at scale: 62 objects is small. Summaries
+written by a model. Staleness of summaries during navigation. The
+structural layer computed by the kernel.
+
+## 4. Transmutation: the recipe, staleness, regeneration
+
+**What was built** (`trans/trans.py`, transcript in `out/transmute.txt`): a
+`derive` that computes pins from the sources actually supplied, by the
+digest rule of SPEC §4.4 with real encoded values; a `recipe` projection;
+a `refresh` that repeats the recipe. The "model" is a deterministic
+stand-in function. The miniature addresses characters by position, so its
+edits keep lengths; the format's element boundaries need no such care.
+
+What ran:
+
+1. A brief is derived from a passage of a report and a chart, by a
+   stand-in model, with a prompt and parameters. Its `recipe` lists each
+   source with the revision pinned and its state, the model, who asked,
+   the parameters, the prompt and the change that made it.
+2. An edit to the report outside the pinned passage: the brief stays
+   current.
+3. Restyling a span inside the passage without touching a character: the
+   brief goes stale.
+4. A figure changes in the data the chart refers to: the brief goes stale
+   through the chart's ref, and so does a summary made from the brief.
+5. `refresh`: one step; a new revision with new pins; the earlier
+   revisions remain. The summary made from the earlier brief is still
+   stale, correctly: it pins the revision it was made from.
+6. In a copy that withholds the prompt, `recipe` shows everything else and
+   says the prompt is withheld; `refresh` is refused with that reason.
+
+**What the specification lacked, and what was changed.**
+
+1. *The digest of a region of text did not cover its spans.* Bold a word
+   in a pinned passage, or change the child an embed presents, and nothing
+   went stale. Fixed in §4.4: a region's digest covers whatever else in
+   the object is anchored within it.
+2. *The recipe was split and partly unreachable.* Sources and `how` were on
+   the object; model, prompt and parameters were in the origin of the
+   change that wrote it — but once a person edits a transmuted object, its
+   `by` names the person's change, and with history withheld the deriving
+   change cannot be found. Fixed: `from` names the deriving change, and
+   `parameters` lives in one place, the origin.
+3. *"Regenerate" had no defined inputs.* Fixed: `refresh` is `derive` with
+   the same sources resolved now, the same `how` and the same origin
+   fields, replacing the object; and `recipe` is a projection.
+4. *An unpinned anchor in a Portal's `of` was not followed* by a digest, so
+   a pin to a Portal onto a passage did not go stale when the passage
+   changed. Fixed in §4.4.
+5. *Honest limit, kept:* the prompt is working history. A published copy
+   that withholds it carries a recipe that says how the face was made but
+   cannot be repeated there. The person may include prompts.
+
+The transmutation itself still happens outside the format: the format
+supplies the inputs, binds the outputs to them, and knows when they have
+parted. That is what "first-class" can mean for a file format, and the
+specification should say so in those words.
