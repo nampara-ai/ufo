@@ -15,7 +15,7 @@ pages: open, universal, and independent of any application.
 ## Storage (SPEC §1–§3)
 
 1. **Record.** An immutable byte string named by its SHA-256 hash: a *chunk*
-   of raw bytes (≤ 1 MiB) or a *node*, one value in deterministic CBOR.
+   of raw bytes (at most 64 KiB) or a *node*, one value in deterministic CBOR.
 2. **Value.** Null, boolean, integer, float, text, bytes, list, map, and
    four references: *ref* (an object's identity), *anchor*, *formula* and
    *indirect* (a value kept outside its node). Records name one another by

@@ -20,9 +20,12 @@ Any universe, however large, can be navigated from overview to exact bytes
 at a cost that scales with the question. Universes nest and link without
 limit. Transmutation by AI is an operation of the format itself.
 
-Text is implemented first. Nothing else is deferred in design. The
-simplifications described below are simplifications of mechanism; none
-gives up any of this.
+Text is implemented first, and is the only medium for which composition is
+yet an algorithm that has run. Every other medium has its vocabulary, its
+place in the anchor model and a worked example on paper; the specification
+says section by section which of its rules are not yet algorithms, and
+that list is work owed, not scope given up. The simplifications described
+below are simplifications of mechanism; none gives up any of the above.
 
 ## The problem
 
@@ -187,7 +190,7 @@ The first drafts did this differently, as the project's founding
 intentions described it: the module's bytes were the only stored thing, and
 a "printer" applied a vocabulary of twelve operations to them, each
 replacing a whole function. That design was tried, with models, before it
-was replaced; the next section but one has the numbers. Whether either
+was replaced; "What the measurement spike showed", below, has the numbers. Whether either
 design scales from a game of a few hundred instructions to a large program
 is still an open question.
 
@@ -197,8 +200,9 @@ The project uses established standards wherever one truly fits: SHA-256,
 deterministic CBOR, DEFLATE, Ed25519, WebAssembly and its text format,
 HTML, base64, MP4 and PNG containers, QR codes, the glTF object model for
 3D scenes, the Model Context Protocol, flicks for time. Where none fits,
-the smallest thing that closes the gap was designed, and is specified in
-full. Each is recorded here so it can be challenged.
+the smallest thing that closes the gap was designed. How far each is
+specified is said in the specification itself (§0.2). Each is recorded here
+so it can be challenged.
 
 | Invention | Existing options, and what each misses | SPEC |
 | --- | --- | --- |
@@ -206,7 +210,7 @@ full. Each is recorded here so it can be challenged.
 | **Veiled indirects** | Salting content defeats deduplication; leaving hashes bare lets short content be guessed. A commitment on the reference, opened by a small record that can itself be withheld, gives both. | §1.4 |
 | **The pack** | *SQLite*: no canonical bytes to hash or sign; its engine in every file. *Git packfiles*: delta compression and a separate index file make a weekend reader impossible; not built for one growing file. *ZIP*: no content addressing; central directory rewritten on every change. *CAR (IPLD)*: content-addressed, but no commit trailer, crash recovery or index. | §2, §3 |
 | **Permanent element identities in every sequence** | *Position-based edit logs* (and this project's own first drafts) needed four interlocking mechanisms to keep attribution and structure attached to an edited sequence: runs, self-carried regions, an insertion bias and history replay. *Automerge* and *Peritext* show the better decomposition: give every element a permanent identity and attach everything to identities. Those systems are replication libraries with their own storage and no notion of attribution, evidence or a hashed, sealed history; the idea is taken, the format is not. Here an element's identity is the change that inserted it and a number, so identity is attribution, and removed elements stay as markers so anchors can always be placed. | §1.7, §4.3 |
-| **Work kept apart from attribution** | *Git shallow clones* drop history wholesale, with its authorship. *Redaction* breaks hashes. A change keeps who and what in the object and the operations in one salted blob beside it, so a copy can withhold what earlier drafts said and still verify authorship. | §1.7, §9.3 |
+| **Work kept apart from attribution** | *Git shallow clones* drop history wholesale, with its authorship. *Redaction* breaks hashes. A change keeps who and what in the object and the operations in one value beside it, behind a veil, so a copy can withhold what earlier drafts said and still verify authorship. | §1.7, §9.3 |
 | **Three kinds of axis, each resolved without history** | *W3C Web Annotation selectors* re-find text by quoting it, which is matching. *Media Fragments* address time and space but say nothing about edits. *Operational transformation* replays history. Here a sequence region names elements, a continuous region is mapped through a frame the object holds, and a keyed region names keys: all three resolve against the current state alone and never guess. | §4 |
 | **Pins and one staleness test** | Build systems track staleness of files, not regions; document formats do not track it at all. A pin's digest follows references, so a pin to a container notices a change in anything it shows. | §4.4, §8.3 |
 | **The change as an object, with origin, evidence and decision apart** | *Version control* records who committed, not who or what wrote each span, on what evidence, with what human decision. *C2PA* attests to whole assets after the fact, not to spans as they are written. *Track changes* is per application and lost on export. | §1.7, §8.5 |

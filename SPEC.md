@@ -1292,8 +1292,8 @@ answers who or what placed it, from what prompt, on what evidence.
 *The light cone covers it.* Its outline lists its tables and nodes as any
 data object's does, and summaries may pin regions of it — a table, a set
 of nodes, a volume (§11.7). The
-plain-text face of a scene lists its nodes by label in the order of the
-scene's hierarchy (§7.3).
+plain-text face of a scene is that of any data object (§7.3): the kernel
+knows nothing of a scene's hierarchy.
 
 *What appears inside the scene is format data too.* A surface names the
 object it presents in `of`. Its children — a Portal onto a spreadsheet, a
@@ -1596,7 +1596,7 @@ Base functions, available to every component with no grant:
 | Function | Purpose |
 | --- | --- |
 | `draw(list)` | submit the component's display list for the current frame, in its own surface's coordinates |
-| `input(buffer) → count` | read the input events delivered since the last call: pointer, key, text, focus, resize; each with a clock time |
+| `input(buffer) → count` | read the input events delivered since the last call (§6.2), each with a clock time |
 | `time() → flicks` | the component's clock time (**T1**) |
 | `random(buffer)` | fill with random bytes; from a recorded seed during replay |
 | `send(port, message)` / `receive(port, buffer) → length` | exchange messages on a port the component was given |
@@ -2785,6 +2785,11 @@ carried (§11.3).
   for it.
 - **[M2]** A Compute-let is inert until a reader chooses to run it. Opening
   a universe runs nothing (**C12**).
+- **[M3]** A carried presenter is a Compute-let attached to a surface, and
+  nothing more. It is placed where it is wanted, by the author or by the
+  tool that imported the content; a raster or samples primitive that needs
+  a format decoded names that surface as its source. Nothing is dispatched
+  by type (**H5**).
 - **[M9] No private content.** Whatever a Compute-let presents that is part
   of the work — a scene, a level, a document, the placement of things within
   them — lives in objects, which it reads through the `objects` capability
@@ -2792,11 +2797,6 @@ carried (§11.3).
   state of the machine. A reader, an agent or another presenter MUST be able
   to find, anchor, attribute and summarize that content without running
   the Compute-let.
-- **[M3]** A carried presenter is a Compute-let attached to a surface, and
-  nothing more. It is placed where it is wanted, by the author or by the
-  tool that imported the content; a raster or samples primitive that needs
-  a format decoded names that surface as its source. Nothing is dispatched
-  by type (**H5**).
 
 ### 11.2 Execution
 
@@ -2816,7 +2816,7 @@ from `ufo:host/1`.
   2. *Regions.* The *entry region* of a function is every instruction of its
      body that is not inside a `loop`. The region of a `loop` is every
      instruction inside it that is not inside a nested `loop`. Every
-     instruction of the stored body counts one, including `block`, `loop`,
+     instruction of the body counts one, including `block`, `loop`,
      `if`, `else` and `end`. The `loop` instruction itself belongs to the
      region that contains it; the `end` that closes a loop belongs to the
      loop's region; the final `end` of a body belongs to the entry region.
@@ -3497,7 +3497,7 @@ live modification by an agent, text linked to the code, and shared play.*
 | `game-portal` | `ufo.portal` | `of` `game-surface`; `place` `block`; 960 × 540 |
 | `game-surface` | `ufo.surface` | Compute-let `game`; `of` the current level; children: `terminal-portal` |
 | `game` | `ufo.computelet` | module, tests, snapshot, poster; requests below |
-| `engine` | `ufo.module` | the game's items |
+| `engine` | `ufo.module` | the game's functions |
 | `level-1` … | `ufo.data` | each level as a scene in the glTF model (§5.5): nodes for rooms, props and spawn points, with `x`, `y`, `z` axes for the level's space and `t` for its scripted time |
 | `manual` | `ufo.text` | the game's instructions, also readable on a terminal inside the game |
 | `terminal-portal` | `ufo.portal` | child of `game-surface`; `of` `manual`; `place.at` an anchor to node `terminal-screen` of `level-1` |
@@ -4203,7 +4203,7 @@ decision. The file ends with a chain of two indexes and four heads.
 | `resolve_continuous` | six regions resolved through a frame: shift, integer rounding of both signs, clipping, detachment, floats |
 | `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§7.3) |
 | `printer` | the described module of `module.ufx` — a function with operands folded, a function with a loop, a call, a global and named locals, three exports and a memory — as encoded values, and the 119 bytes the printer makes of it |
-| `instrumentation` | three stored modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
+| `instrumentation` | three modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
 
 Three values, for a first check without opening the files:
 

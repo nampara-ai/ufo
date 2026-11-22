@@ -54,7 +54,7 @@ example of SPEC §14 still works.
 
 - Report only what you ran and observed. Where a check could not be run,
   say so and say why.
-- Every requirement in the specification must be testable and carry a rule
+- Every new requirement in the specification must be testable and carry a rule
   label.
 - Define a term once and use it the same way everywhere.
 

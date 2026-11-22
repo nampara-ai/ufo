@@ -1,8 +1,16 @@
 # Spike findings (working record)
 
-Written as the spike runs, so that an interruption loses nothing. The
-specification changes that result are made in SPEC.md; this file is the
-evidence and is deleted with the spike's code once the report is accepted.
+Written as the spike ran. The specification changes that resulted are in
+SPEC.md; this file is the evidence, and is kept. The spike's code is
+deleted.
+
+Statements below that the specification has since overtaken, by decision
+of the owner: the printer's budget of 192 KiB (it is now a function of the
+kernel); a Portal's plain text being its label (nested text is now
+included, marked); `break` as a host operation (the kernel now breaks
+lines, and the host measures); the kernel limits of 10 000 lines and
+256 KiB (now 128 KiB compressed, firm, and 6 000 lines); the per-item
+hashes of the first printer design.
 
 ## 1. The printer: at what level do models write code?
 

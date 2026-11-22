@@ -33,7 +33,7 @@ unification of sequences and stored values (version 0.5); nothing
 independent has read the current storage form. And the spike's kernel,
 which did read it, was written by the same author as the vectors.
 
-## The non-negotiables
+## The ten commitments the owner set as not negotiable
 
 | # | Element | Realized in | Exercised by | Status |
 | --- | --- | --- | --- | --- |
