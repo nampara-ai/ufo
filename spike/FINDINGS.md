@@ -64,10 +64,66 @@ phase (`check`, `call`) and are proposed for the agent interface.
 
 ### 1.2 Maintenance phase
 
-In progress. Each built program had one comparison in `step` inverted,
-through the printer, by "an earlier maintainer" with the note "tidy the
-collision check in step". The regression tests (`tests1.json`) do not
-notice it. A fresh instance of the same model, with no memory of building
-and no change files — only `items`, `unit`, `history`, `change`, `call`,
-`check`, `test` — is given a bug report (Part A) and three features
+Each built program had one comparison in `step` inverted, through the
+printer, by "an earlier maintainer", with the note "tidy the collision
+check in step". The regression tests (`tests1.json`) do not notice it. A
+**fresh instance** of the same model — no memory of building, no change
+files, only the commands `items`, `unit`, `history`, `change`, `call`,
+`check`, `test` — was given a bug report (Part A) and three features
 (Part B: wrap mode, bonus food, a new return value; `TASK2.md`).
+
+(The owner asked that each agent maintain *its* program. A fresh instance
+on the same program is the stricter test of the claim — maintenance from
+the ledger and projections alone, with no memory of the source — so that is
+what was run. The builder continuing in its own context would have had
+strictly more to go on.)
+
+Hidden tests after maintenance: 4 walks under the new rules, including wrap
+mode and bonus food (38 to 1 804 steps); 10 scripted scenarios for the
+planted bug (head follows tail, head hits body, with and without wrap) on
+seeds the subject never saw; and a check that functions needing no change
+kept their hashes.
+
+Run 1 of each cell:
+
+| Model | Level | Tokens | Tool calls | Wall time | Submissions | Refused | Bytes of change submitted | Visible | Hidden walks | Hidden bug scenarios | Unchanged functions keeping hash |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S | raw | 71 165 | 5 | 42 s | 2 | 0 | 6 341 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| S | folded | 76 976 | 12 | 73 s | 4 | 2 (see note) | 15 001 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| S | expr | 71 138 | 5 | 36 s | 2 | 0 | 4 896 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| H | raw | 104 623 | 20 | 118 s | 3 | 0 | 10 223 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| H | folded | 92 050 | 24 | 116 s | 6 | 0 | 11 805 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| H | expr | 81 576 | 14 | 75 s | 3 | 0 | 7 184 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+
+Note on S/folded: its two refusals were a harness fault, not the model's.
+Two subjects wrote a file of the same name outside their own directories
+and one submitted the other's. Later runs were told to keep files in their
+own directory. Dry runs (`check`) are not counted as submissions.
+
+**What run 1 shows, with one run per cell (suggestive only).**
+
+1. Every cell fixed the planted bug and added the features, passed every
+   hidden test, and left untouched functions with their hashes. No level
+   failed, for either model.
+2. Every subject found the bug the same way: `history` showed a recent
+   change to `step` by someone else, `change` showed exactly what that
+   change recorded, `unit` showed the present body. The ledger did the
+   work. Nobody needed to trace execution. That is the ledger doing what
+   the design says it is for, on a toy.
+3. The levels differed in cost, not in outcome. For the small model, the
+   typed form took about 20% fewer tokens and a third less wall time than
+   flat instructions; for the mid-tier model there was no difference. The
+   typed form needed the fewest bytes of change to express the same
+   maintenance (4.9 and 7.2 KiB against 6.3 and 10.2 for flat
+   instructions). It produced the largest modules (about 20% larger; the
+   spike's compiler is naive).
+4. **The task did not separate the levels.** It is too easy: a ceiling
+   effect. A program of 300 to 400 instructions with a one-token bug
+   announced by an honest ledger entry is within reach of a small model at
+   any level. Whether flat instructions remain maintainable at ten or a
+   hundred times the size is not shown here.
+5. **What every subject asked for, unprompted and unanimously:** a way to
+   change part of a function without resending all of it, and a view of
+   the difference between two versions of a function. A one-token fix cost
+   a whole 300-byte body in the ledger and in the model's output at every
+   level.
