@@ -1,0 +1,53 @@
+{
+ "status": "provisional: produced by the specification author's throwaway kernel; not yet reproduced by an independent implementation",
+ "what": "three pins made at the first commit of history.ufx, with the salt of the digests group, and their digests at each later commit. A pin is stale where the digest differs from the one it was made with (section 4.4)",
+ "salts": {
+  "text_regions": "31bfce4dc04386823e3406306e916b4a",
+  "face": "bdaaa1159a7f9d94246fcd5a3e5d810e"
+ },
+ "digests_by_commit": [
+  {
+   "commit": "804ec174f46f773d36c1fe7318c999ff21c338b735cb4e5068224725b9cce8bf",
+   "height": 0,
+   "text_region_before_c1_0_to_after_c1_6": "610c8b3dbef994f931d2c7e1200e973eb8b7bd1ea806c6b28c642737ebf185b0",
+   "text_region_before_c1_7_to_after_c1_14": "ca3c6e468c3c47773287a4217ff4e0e8fe71cfed2c06be5481062d57c93f7dad",
+   "face_whole": "c9b946387633373a4cd88102d4d28887d289ca4cd9afcba2db659ac1f6dada60"
+  },
+  {
+   "commit": "b381835e7f449509e8f44c95e07ebbd618a79442bd8b07e8ee15afaec90b9837",
+   "height": 1,
+   "text_region_before_c1_0_to_after_c1_6": "610c8b3dbef994f931d2c7e1200e973eb8b7bd1ea806c6b28c642737ebf185b0",
+   "text_region_before_c1_7_to_after_c1_14": "detached",
+   "face_whole": "d7fc5f9cf9cd046f902cccbf8d1f73f16f1824c92975b21afc2ab7593ddb41b6"
+  },
+  {
+   "commit": "821d84843a250c08a1f2b36670e715fd8c1ac1c2f0bcc5ad787277f7b7a76d72",
+   "height": 2,
+   "text_region_before_c1_0_to_after_c1_6": "610c8b3dbef994f931d2c7e1200e973eb8b7bd1ea806c6b28c642737ebf185b0",
+   "text_region_before_c1_7_to_after_c1_14": "detached",
+   "face_whole": "e70867f124ff1e075a21263b2127811576471f249de46df9ee97afd82b29d679"
+  }
+ ],
+ "state_by_commit": {
+  "text_region_before_c1_0_to_after_c1_6": [
+   "made here",
+   "current",
+   "current"
+  ],
+  "text_region_before_c1_7_to_after_c1_14": [
+   "made here",
+   "detached",
+   "detached"
+  ],
+  "face_whole": [
+   "made here",
+   "stale",
+   "stale"
+  ]
+ },
+ "notes": [
+  "\"Hello, \" is never edited, and its one span still touches it: current throughout",
+  "the word \"universe\" is replaced at the second commit: every element the region covered is removed, so it is detached",
+  "the face's medium is set at the second commit and the text it refers to changes at the second and third: stale at both"
+ ]
+}

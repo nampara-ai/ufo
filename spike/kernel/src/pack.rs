@@ -334,3 +334,24 @@ pub fn boundary(els: &[El], b: &V) -> Option<usize> {
     }
     None
 }
+
+// ---- every frame, for queries that must account for the whole pack ----
+impl Pack {
+    /// (kind, hash) of every chunk and node frame, and the payload of every seal frame, up to the last head.
+    pub fn frames(&self) -> (Vec<(u8, H, usize)>, Vec<Vec<u8>>) {
+        let (mut recs, mut seals, mut off) = (Vec::new(), Vec::new(), 8);
+        let end = self.d.len() - self.unread_tail;
+        while off < end {
+            let Some(f) = self.frame(off) else { break };
+            if f.kind == 1 || f.kind == 2 {
+                if let Some(h) = self.hash_at(off) {
+                    recs.push((f.kind, h, f.next - off));
+                }
+            } else if f.kind == 3 {
+                seals.push(self.d[f.start..f.next].to_vec());
+            }
+            off = f.next;
+        }
+        (recs, seals)
+    }
+}

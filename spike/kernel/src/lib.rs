@@ -5,6 +5,7 @@ extern crate alloc;
 mod layout;
 mod pack;
 mod print;
+mod project;
 mod query;
 mod value;
 use alloc::string::String;

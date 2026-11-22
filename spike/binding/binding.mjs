@@ -21,7 +21,7 @@ export function decode(b) {
   return val();
 }
 export function encode(v) {
-  const out = []; const head = (m, n) => { if (n < 24) out.push(m << 5 | n); else if (n < 256) out.push(m << 5 | 24, n); else if (n < 65536) out.push(m << 5 | 25, n >> 8, n & 255); else out.push(m << 5 | 26, n >>> 24, (n >> 16) & 255, (n >> 8) & 255, n & 255); };
+  const out = []; const head = (m, n) => { if (n < 24) out.push(m << 5 | n); else if (n < 256) out.push(m << 5 | 24, n); else if (n < 65536) out.push(m << 5 | 25, n >> 8, n & 255); else if (n < 2 ** 32) out.push(m << 5 | 26, n >>> 24, (n >> 16) & 255, (n >> 8) & 255, n & 255); else { const hi = Math.floor(n / 2 ** 32), lo = n >>> 0; out.push(m << 5 | 27, hi >>> 24, (hi >> 16) & 255, (hi >> 8) & 255, hi & 255, lo >>> 24, (lo >> 16) & 255, (lo >> 8) & 255, lo & 255); } };
   const put = v => {
     if (v === null) out.push(0xf6); else if (v === true || v === false) out.push(0xf4 + v);
     else if (Number.isInteger(v) && !Object.is(v, -0) && !put.float) v >= 0 ? head(0, v) : head(1, -1 - v);
