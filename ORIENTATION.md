@@ -491,3 +491,12 @@ Measured: lines of Rust per part against the per-part budget of SPEC
 §12.2, compiled and compressed size, and the binding's lines. About two
 days. It needs the owner's go-ahead, because it is implementation.
 
+## 12. Naming, decided
+
+The owner decided on 2026-11-22: the format and concept remain UFO; the
+file-name ending is `.ufx` ("UFO Exchange"); the media type is
+`application/vnd.ufx`; the mark is a flying saucer, used only visually.
+NAMING.md records the decision, the candidates and the dated checks. A
+draft media type registration is in `registration/` and has not been
+submitted. Section 10's note that naming was undecided is superseded.
+

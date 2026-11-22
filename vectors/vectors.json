@@ -166,6 +166,12 @@
    "len": 1074790400,
    "node_hex": "a4616b64626c6f62636c656e1a40100000666368756e6b7382d9d8a458200ca53ac007911ec4959042df63291b5cdf57a68fd85e8c371b2c35c03943099ed9d8a45820acb314e8884c60b7d9cdbba91239e915de3930e2c509d45da699e6fe0d9005a36673686132353658200e5784b2441347f7c1cbfe2ee03dd421ff87c3086fdf0ce280cf26cbcf114462",
    "blob_hash": "6e7e6fbcc08470a3305b3d10353c2d99f8ed88159fc5f6421816b8d951d5bff7"
+  },
+  {
+   "name": "2^40+2^20 zero bytes: spans of 1024^2 chunks, the second being a one-chunk blob",
+   "len": 1099512676352,
+   "node_hex": "a4616b64626c6f62636c656e1b0000010000100000666368756e6b7382d9d8a4582076487210f84205b7752676e773b873d993ee3993421310dc18647b0d276ceeb6d9d8a45820acb314e8884c60b7d9cdbba91239e915de3930e2c509d45da699e6fe0d9005a3667368613235365820d4a42443a211e2f80e92fad6c68966dd0506224bbd6f122afdd34d794f219f08",
+   "blob_hash": "8c0dbd63a965a0ff4c3dbbe926fabb2508beb8ab83554b4169635e05f13e92f5"
   }
  ],
  "object_maps": [
@@ -191,7 +197,7 @@
   }
  ],
  "minimal_pack": {
-  "file": "minimal.ufo",
+  "file": "minimal.ufx",
   "length": 3459,
   "sha256_of_file": "f3a1852cd431ab050a0e4aaf46b0b72b7af62ea0701ae6ca9428b83d8bdd3eca",
   "root_hash": "690728ddb7ecace04db7549572909e8c70911fb2eedd0d66794e786baae7a3f2",
@@ -321,7 +327,7 @@
   "state_after_removing_last_byte": "no valid head: no commit was ever completed; malformed (section 2.3, step 3)"
  },
  "history_pack": {
-  "file": "history.ufo",
+  "file": "history.ufx",
   "length": 35723,
   "sha256_of_file": "438db26e51bc465c5aac1daa274835d1ea22a5768054b2e55994e3605209ff4e",
   "commits": [

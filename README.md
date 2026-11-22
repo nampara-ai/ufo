@@ -1,4 +1,4 @@
-# UFO — the Universal File Object
+# 🛸 UFO — the Universal File Object
 
 An open file format for work that has to cross boundaries: one file that
 holds a universe of described meaning, carries the small player that
@@ -14,7 +14,9 @@ every part of it came from.
 | [RATIONALE.md](RATIONALE.md) | Why the format is shaped as it is |
 | [vectors/](vectors/) | Byte-level test vectors (normative) |
 | [tools/](tools/) | Non-normative tooling |
-| [NAMING.md](NAMING.md) | Candidates for the file-name ending and media type; not yet decided |
+| [NAMING.md](NAMING.md) | The decision on the file-name ending (`.ufx`) and media type, with the candidates compared and the dated checks |
+| [registration/](registration/) | Draft media type registration; not submitted |
+| [brand/](brand/) | Design brief for the default icon |
 | [ORIENTATION.md](ORIENTATION.md) | Working notes: open problems and the record of design decisions |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How changes are judged |
 

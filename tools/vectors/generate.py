@@ -9,7 +9,7 @@ on it, and it must not grow into one: the kernel, when it exists, must
 reproduce every vector on its own, without reference to this file.
 
 Run from the repository root: python3 tools/vectors/generate.py [--slow]
-It rewrites vectors/vectors.json, vectors/minimal.ufo and vectors/history.ufo.
+It rewrites vectors/vectors.json, vectors/minimal.ufx and vectors/history.ufx.
 --slow also computes the blob vector that hashes one tebibyte (minutes).
 """
 import hashlib, json, os, struct, sys, zlib
@@ -121,9 +121,15 @@ if "--slow" in sys.argv:
     for _ in range(1 << 20): h.update(z)
     _zsha[1 << 40] = h.copy().digest(); h.update(z); _zsha[(1 << 40) + MIB] = h.digest()
     sizes.append(("2^40+2^20 zero bytes: spans of 1024^2 chunks, the second being a one-chunk blob", (1 << 40) + MIB))
+_prior = []
+if "--slow" not in sys.argv:        # keep the slow vector already computed, so a normal run does not drop it
+    try: _prior = [b for b in json.load(open(os.path.join(OUT, "vectors.json")))["blobs"] if b.get("len", 0) >= 1 << 40]
+    except (OSError, ValueError, KeyError): pass
 for name, n in sizes:
     node = zeros_blob(n)
     V["blobs"].append({"name": name, "len": n, "node_hex": node.hex() if len(node) < 400 else None, "blob_hash": rhash(NODE, node).hex()})
+
+V["blobs"] += _prior
 
 # ---- 4. object maps ---------------------------------------------------------------
 def object_map(entries, depth=0, out=None):
@@ -250,17 +256,17 @@ def genesis(pk):
     pk.index(); hd = pk.head(hK)
     return state, dict(root=hK, map=hM, change=hC, universe=hU, text=hT, face=hF, head=hd)
 
-# minimal.ufo: one commit
+# minimal.ufx: one commit
 pk = Pack(); _, g = genesis(pk)
-open(os.path.join(OUT, "minimal.ufo"), "wb").write(pk.b)
-V["minimal_pack"] = {"file": "minimal.ufo", "length": len(pk.b), "sha256_of_file": sha(bytes(pk.b)).hex(),
+open(os.path.join(OUT, "minimal.ufx"), "wb").write(pk.b)
+V["minimal_pack"] = {"file": "minimal.ufx", "length": len(pk.b), "sha256_of_file": sha(bytes(pk.b)).hex(),
     "root_hash": g["root"].hex(), "object_map_root": g["map"].hex(),
     "revisions": {"universe": g["universe"].hex(), "text": g["text"].hex(), "face": g["face"].hex(), "change": g["change"].hex()},
     "identities": {"universe": U.hex(), "text": T.hex(), "face": F.hex(), "change": C1.hex()},
     "records": pk.log, "index_offset": pk.index_at, "head_hex": g["head"].hex(), "hex": bytes(pk.b).hex(),
     "state_after_removing_last_byte": "no valid head: no commit was ever completed; malformed (section 2.3, step 3)"}
 
-# history.ufo: three commits, exercising what minimal.ufo does not
+# history.ufx: three commits, exercising what minimal.ufx does not
 pk = Pack(); state, g = genesis(pk); len1 = len(pk.b)
 pk.raw(0x7f, b"a frame of unknown kind: skipped and preserved")
 # commit 2: a model replaces a word; a property is replaced; an asset, a clock and 40 small objects appear
@@ -311,8 +317,8 @@ cp = {"ops": ops, "revs": {T.hex(): [hT2, hT3], K.hex(): [hK2o, hK3o], A.hex(): 
       "decisions": [{"about": ref(C2), "verdict": "accept", "who": who}]}
 state3, hC3, hM3, hK3 = commit(pk, st, C3, cp, hK2, 2, 3003)
 pk.index(); pk.head(hK3)
-open(os.path.join(OUT, "history.ufo"), "wb").write(pk.b)
-V["history_pack"] = {"file": "history.ufo", "length": len(pk.b), "sha256_of_file": sha(bytes(pk.b)).hex(),
+open(os.path.join(OUT, "history.ufx"), "wb").write(pk.b)
+V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file": sha(bytes(pk.b)).hex(),
     "commits": [
         {"height": 0, "root_hash": g["root"].hex(), "object_map_root": g["map"].hex(), "objects": 4, "pack_length_at_head": len1,
          "text": "Hello, universe.", "span_p1": [0, 16], "runs": [[16, C1.hex(), 0]]},
@@ -403,5 +409,5 @@ V["instrumentation"] = [
      "behaviour": "spin(3) consumes 2 + 3*6 = 20; with ufo:fuel = 19 it traps out of fuel on entering the third iteration"}]
 
 json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)
-print("minimal.ufo", V["minimal_pack"]["length"], V["minimal_pack"]["root_hash"][:16],
-      "| history.ufo", V["history_pack"]["length"], hK3.hex()[:16], "| objects at commit 2:", len(state2))
+print("minimal.ufx", V["minimal_pack"]["length"], V["minimal_pack"]["root_hash"][:16],
+      "| history.ufx", V["history_pack"]["length"], hK3.hex()[:16], "| objects at commit 2:", len(state2))

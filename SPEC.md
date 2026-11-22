@@ -2111,12 +2111,12 @@ that last set it. For an item of a module, see §11.5.
 
 ### 9.1 The working form
 
-The **working form** is a pack in a file by itself. The format's name is
-UFO. Its file-name ending and media type are not yet chosen: the obvious
-`.ufo` is already used by the Unified Font Object format.
-[NAMING.md](NAMING.md) sets out candidates and the evidence for each. Until
-one is chosen this document writes the ending as `.ufo` and the type as
-`application/vnd.ufo`, as placeholders.
+The **working form** is a pack in a file by itself. The format is UFO; its
+file-name ending is `.ufx`, read as "UFO Exchange", and its media type is
+`application/vnd.ufx` (registration drafted, not yet submitted). A file is
+a UFO file or a UFX file; both are correct. The ending and the media type
+identify the pack wherever it is stored; the name UFO remains in the
+format's own identifiers — the signature, type names, `ufo:` names.
 Native readers and agents work on this form. A person's own working form
 is whole (§2.5); one saved from a published copy lacks what its sender
 withheld, and says so.
@@ -2126,7 +2126,7 @@ withheld, and says so.
 The **travel form** is an **envelope**: a file that is valid in a common
 format, shows an outer face to software that knows nothing of UFO, and
 carries a pack and the player. The default envelope is a web page. Its file
-name ends `.ufo.html`.
+name ends `.ufx.html`.
 
 The web envelope is a conforming HTML document, encoded in UTF-8, valid
 against the HTML Standard as it stood on the date of this specification
@@ -2300,8 +2300,8 @@ its format defines as ignorable.
 
 | Envelope | Outer face | Pack carried in | File name ends |
 | --- | --- | --- | --- |
-| Video | a carried video face: H.264 with AAC in MP4 (§6.5) | a top-level `uuid` box (ISO/IEC 14496-12) whose 16-byte type is the first 16 bytes of the SHA-256 of the ASCII text `ufo-pack-1`, placed after `moov` and `mdat` | `.ufo.mp4` |
-| Image | a carried still face: PNG | one or more consecutive private ancillary chunks of type `ufOb`, placed after `IDAT` and before `IEND`, whose data concatenated is the pack | `.ufo.png` |
+| Video | a carried video face: H.264 with AAC in MP4 (§6.5) | a top-level `uuid` box (ISO/IEC 14496-12) whose 16-byte type is the first 16 bytes of the SHA-256 of the ASCII text `ufo-pack-1`, placed after `moov` and `mdat` | `.ufx.mp4` |
+| Image | a carried still face: PNG | one or more consecutive private ancillary chunks of type `ufOb`, placed after `IDAT` and before `IEND`, whose data concatenated is the pack | `.ufx.png` |
 
 - **[E17]** Each envelope MUST be valid under its own standard and play or
   display correctly in software that ignores the pack. The outer face is a
@@ -2342,8 +2342,52 @@ the same kernel (**K1**).
 | Rung | Host | Adds |
 | --- | --- | --- |
 | 1 | any modern browser, opening a web envelope | nothing to install |
-| 2 | the reader installed as a web app | offline use, opening `.ufo` and `.ufo.html` files, in-place saving where the platform allows |
+| 2 | the reader installed as a web app | offline use, opening `.ufx` and `.ufx.html` files, in-place saving where the platform allows |
 | 3 | native readers and the command-line reader | file association, the working form on disk, permission prompts, seal verification, the agent interface |
+
+**File-type declarations.** A native reader registers the format with its
+platform by declaration only. These are the declarations; they contain no
+logic, and a reader MUST NOT register anything broader.
+
+*macOS and iOS.* An exported uniform type identifier and a document type:
+
+| Key | Value |
+| --- | --- |
+| `UTTypeIdentifier` | `io.github.nampara-ai.ufx` (provisional: it becomes the project's own reverse-DNS name when the project has a domain) |
+| `UTTypeDescription` | UFO file |
+| `UTTypeConformsTo` | `public.data`, `public.composite-content` |
+| `UTTypeTagSpecification` | `public.filename-extension`: `ufx`; `public.mime-type`: `application/vnd.ufx` |
+| `CFBundleDocumentTypes` | one entry: `LSItemContentTypes` the identifier above; `CFBundleTypeRole` `Editor`; `LSHandlerRank` `Owner`; the document icon of the brand brief |
+
+*Windows.* Per-user registration by the installer, with the person's
+consent (**U10**):
+
+| Key | Value |
+| --- | --- |
+| `.ufx` | default `UFO.File.1`; `Content Type` `application/vnd.ufx`; `PerceivedType` `document` |
+| `UFO.File.1` | default `UFO file`; `DefaultIcon` the document icon; `shell\open\command` the reader with `"%1"` |
+
+*Linux and other freedesktop systems.* A shared-MIME-info entry and a
+desktop entry naming it:
+
+```
+<mime-type type="application/vnd.ufx">
+  <comment>UFO file</comment>
+  <acronym>UFO</acronym>
+  <expanded-acronym>Universal File Object</expanded-acronym>
+  <glob pattern="*.ufx"/>
+  <magic priority="80">
+    <match type="string" offset="0" value="\x89UFO\r\n\x1a\n"/>
+  </magic>
+</mime-type>
+```
+
+The travel forms are files of their envelope's own type — `text/html`,
+`video/mp4`, `image/png` — and are opened by default in whatever opens
+those. A reader MAY additionally offer itself for `*.ufx.html`, `*.ufx.mp4`
+and `*.ufx.png` where a platform can match a double ending (freedesktop
+globs can; Windows and Apple platforms match the last ending only), and
+MUST NOT take over `.html`, `.mp4` or `.png` in general.
 
 ---
 
@@ -3772,11 +3816,11 @@ vector on its own.
 
 | File | Contents |
 | --- | --- |
-| `vectors/minimal.ufo` | a whole pack of 3459 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
-| `vectors/history.ufo` | a pack of 35723 bytes holding three commits, built to exercise what the first does not (below) |
+| `vectors/minimal.ufx` | a whole pack of 3459 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
+| `vectors/history.ufx` | a pack of 35723 bytes holding three commits, built to exercise what the first does not (below) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
 
-`history.ufo` extends the first pack. Its second commit, by a model,
+`history.ufx` extends the first pack. Its second commit, by a model,
 replaces a word in the text (a `splice` that deletes), replaces a property
 (a `set` with `old`), adds an asset whose blob has one chunk, a clock, and
 forty small objects, so that the object map gains an interior node; one
@@ -3794,7 +3838,7 @@ heads.
 | `record_hashes` | the hash of a chunk and of a node |
 | `blobs` | blob nodes and hashes for 0 bytes, 3 bytes, 2²⁰ and 2²⁰ + 1 zero bytes, 1 025 MiB of zero bytes (two spans), and 2⁴⁰ + 2²⁰ zero bytes (spans of 1024² chunks, the last a one-chunk blob) |
 | `object_maps` | root hashes of maps with 1, 32, 33 and 9 000 entries: a leaf, the largest leaf, the smallest interior node, and three levels |
-| `minimal_pack` | every record of `minimal.ufo` with its offset and hash; the index; the head; the root hash |
+| `minimal_pack` | every record of `minimal.ufx` with its offset and hash; the index; the head; the root hash |
 | `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its span and its runs; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; six anchors carried across the commits, on sequence and continuous axes |
 | `carry_sequence` | 15 cases of §4.3's table, including points, deletion of a whole region, and both values of `bias` |
 | `printer` | two printer operations on an empty module, the module bytes they produce, and the hash of each item with the exact bytes hashed |
@@ -3805,8 +3849,8 @@ Three values, for a first check without opening the files:
 | | |
 | --- | --- |
 | Hash of the chunk `abc` | `1e18834c426d00e57788444cb3ccd62c771b420c095bb0c4e040a8c122c4570d` |
-| Root hash of `minimal.ufo` | `690728ddb7ecace04db7549572909e8c70911fb2eedd0d66794e786baae7a3f2` |
-| Root hash of `history.ufo` | `319a3a3c160c0ff775e491d053acffb51d7469bcdc941b0f4cfa5b7333f43308` |
+| Root hash of `minimal.ufx` | `690728ddb7ecace04db7549572909e8c70911fb2eedd0d66794e786baae7a3f2` |
+| Root hash of `history.ufx` | `319a3a3c160c0ff775e491d053acffb51d7469bcdc941b0f4cfa5b7333f43308` |
 
 How far these have been checked: the WebAssembly vectors were validated and
 run in one engine (Node.js) and behave as stated. The other vectors have

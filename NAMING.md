@@ -1,22 +1,44 @@
 # Naming: candidates for the file-name ending and media type
 
-**Status: a proposal for decision. Nothing here is chosen. The choice is the
-project owner's.**
+**Status: decided by the project owner on 2026-11-22.**
 
-The format is called UFO, the Universal File Object, and that name stays.
-What is undecided is the file-name ending and the media type. The obvious
-ending, `.ufo`, is in active use by the Unified Font Object format and
-several others, so the specification uses it only as a placeholder.
+- The format and the concept are **UFO**, the Universal File Object.
+- The file-name ending is **`.ufx`**, read as "UFO Exchange". A file is a
+  "UFO file" or a "UFX file"; both are correct.
+- The media type is **`application/vnd.ufx`** (draft registration in
+  `registration/`; not submitted).
+- The travel forms are `<name>.ufx.html`, `<name>.ufx.mp4`, `<name>.ufx.png`.
+- The brand mark and default file icon is the flying saucer. It is a visual
+  mark only and never appears in the ending, the media type or any
+  identifier of the format.
 
-The specification's travel forms take the chosen ending before the
-envelope's own: `<name>.<ending>.html`, `.mp4`, `.png`.
+**Why.** `.ufo` collides with the actively used Unified Font Object format
+and several others. The only prior use found for `.ufx` is the long-defunct
+Ultimate 3D game engine's material files, listed in a single catalogue.
+Other alternatives considered — `.uf0`, `.ayy` and an emoji ending — were
+rejected because they cause ambiguity, undermine a serious standard, or
+break in real tooling.
+
+**Confirmation for `.ufx`, 2026-11-22 04:06 UTC.** Fetched directly:
+`https://www.iana.org/assignments/media-types/` `application.csv`,
+`text.csv`, `image.csv`, `video.csv`, `audio.csv`, `model.csv`, `font.csv`,
+`message.csv`, `multipart.csv` and `haptics.csv` (all HTTP 200), and
+`media-types.xml` (registry "Last Updated 2026-11-18"): no registered type
+in any tree contains `ufx`. The nearest name is `application/vnd.ufdl`.
+`https://www.iana.org/assignments/provisional-standard-media-types/provisional-standard-media-types.xml`:
+no match. `https://data.iana.org/TLD/tlds-alpha-by-domain.txt` (version
+2026112100): `UFX` is not a top-level domain. The catalogue and MIME
+database results for `.ufx` are in the live checks below.
+
+The rest of this document is kept for the record: the candidates as they
+were compared before the decision, and the dated checks.
 
 This document has two parts: the candidates, and the collision checks made
 against live primary sources on 2026-11-22.
 
-## Candidates
+## Candidates, as compared before the decision
 
-Ranked by an earlier survey; the ranking is advice, not a decision. One correction from the live checks below: `.ufx` has an entry in only one of the three catalogues.
+Ranked by an earlier survey, which put `.ufx` fifth; the owner chose it. One correction from the live checks below: `.ufx` has an entry in only one of the three catalogues.
 
 The media types below are in the vendor tree. The standards tree needs an IETF or recognised standards-body specification, which I do not think is justified yet. IANA convention prefers a producer-qualified name such as `application/vnd.<project>.<ext>`; the bare forms below are the shortest that are free in the mirror. The travel form is still served as `text/html`, and the envelopes as `video/mp4` and `image/png`.
 
@@ -138,11 +160,12 @@ All fetches were made with `curl -sL` and a generic User-Agent on **2026-11-22, 
 - **New:** Unified Font Object has no registered media type (IANA has no match; the Wikipedia `mime` field is empty), so `application/vnd.ufo` is unregistered even though the extension is occupied.
 - **New near-neighbours:** `application/vnd.ufdl` (.ufd, .ufdl), `application/vnd.uoml+xml` (.uoml) and the shared-mime-info glob `*.unif` are close to the candidates but not identical.
 
-## Still to do before a choice is final
+## Still to do
 
 - Apple Uniform Type Identifier declarations and Windows file associations
-  for the chosen ending, which no source above states.
-- A trademark search (USPTO, EUIPO) for the chosen name, `unifo` in
-  particular.
+  for `.ufx`, which no source above states.
+- A trademark search (USPTO, EUIPO) for "UFX" in software classes. An
+  earlier note, from memory and unchecked, is that UFX is also the name of
+  an audio-interface product line.
 - IANA's provisional registrations, PRONOM, and the `file` magic database.
-- Registration of the media type in the vendor tree once chosen.
+- Submitting the media type registration.

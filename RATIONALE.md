@@ -202,6 +202,36 @@ full. Each is recorded here so it can be challenged.
 | **The mark** | Metadata, boxes and chunks are stripped by re-encoding platforms. Only pixels survive, and QR is the standard way to put a short reference in pixels; what is new is treating it as a content address for a linked universe. | §9.4 |
 | **Summaries as pinned derivations in a tree** | *Retrieval by similarity* returns fragments without telling you what you did not see. *Stored summaries* go stale silently. | §11.7 |
 
+## The name, the ending and the mark
+
+The format and the concept are UFO, the Universal File Object. The
+file-name ending is `.ufx`, read as "UFO Exchange", and the media type is
+`application/vnd.ufx`. A file is a UFO file or a UFX file.
+
+The obvious ending, `.ufo`, was not available. It is in active use by the
+Unified Font Object format, with more than a dozen current font tools, and
+live checks of the extension catalogues on 2026-11-22 found further
+claimants: Ulead PhotoImpact objects, Ellisys Visual USB captures, SATURN
+traffic-model files, Total Annihilation unit data and, in one catalogue,
+Udemy video files. A new universal format cannot begin by colliding with
+one in daily use.
+
+For `.ufx`, the only prior use found is the material files of the Ultimate
+3D game engine, long out of development, listed in one of three catalogues
+and last updated there in 2019. No media type in the IANA registry contains
+`ufx`, and it is not a top-level domain. The checks and their dates are in
+NAMING.md.
+
+Other candidates were considered and set aside. `.ufob`, `.uobj`, `.unifo`
+and `.ufobj` were free of collisions but longer or clumsier, and `.ufx`
+keeps three letters and the sound of the name. `.uf0`, `.ayy` and an emoji
+ending were rejected because they cause ambiguity, undermine a serious
+standard, or break in real tooling.
+
+The brand mark and default file icon is a flying saucer. It is a visual
+mark only — in icons, documentation and branding — and never appears in the
+ending, the media type or any identifier of the format.
+
 ## Where the design departs from first intentions
 
 Three choices differ from what the project first set out to do. They are
@@ -241,7 +271,5 @@ recorded so they can be reversed for good reason.
 - The contract for capabilities is complete, and accelerated graphics is
   sketched on the WebGPU model, but the exact operations of most
   capabilities are still to be written.
-- The file-name ending is not chosen: `.ufo` is already a font format's.
-  Candidates and evidence are in NAMING.md.
 - The test vectors were written by one script. Until an independent
   implementation reproduces them they prove consistency, not correctness.
