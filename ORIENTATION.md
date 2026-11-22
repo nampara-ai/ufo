@@ -1,0 +1,352 @@
+# Orientation
+
+This is my account of the UFO project after reading the canonical brief,
+Supplement A (*One File, Many Faces*) and Supplement B (*The Player Inside
+the File*) in full, and studying the parts of the two reference repositories
+the brief points to. It says what I understand the project to be, where the
+documents disagree with each other or with the facts, and what I did about
+each disagreement in the draft specification ([SPEC.md](SPEC.md)).
+
+Nothing described here has been built or run. The specification is a draft
+for review.
+
+## 1. What UFO is
+
+A UFO is one file that holds a body of work as a *description of what the
+work is* — words and their structure, data and its relationships, shapes,
+timing, sound, behavior — together with the complete record of how that
+description came to be, and a small program that can present it.
+
+Three properties make it different from the formats we have.
+
+- **It stands alone.** The file carries its own player. Opened in any
+  browser, with nothing installed, it presents itself and can be inspected
+  and edited.
+- **It has many faces and one truth.** The same description presents as a
+  document, plain text, a table, an image, a video or a running program.
+  None of those is a copy that can drift.
+- **It remembers.** Every change is recorded with who or what made it, from
+  what, on what evidence, and what a person decided about it. That record
+  cannot be separated from the content, because recording it is the only
+  way the content can change.
+
+Programs are content too. A Compute-let is WebAssembly carried as an object,
+run in a sandbox with no authority except what the person grants, and
+maintained through a printer that records the cause of every function it
+writes.
+
+## 2. Why it matters now
+
+Language models can turn any form of information into any other. What they
+cannot do is see across the walls between applications, each of which keeps
+its own format, history and permissions. People have become couriers
+between their own tools, and context is lost at every crossing.
+
+Agents now have a standard way to call tools. They have no standard for the
+material they work on. A format that carries content, context, history,
+permissions and behavior across every boundary fills that gap, and it
+should be open.
+
+It is possible now because of things that did not exist together before:
+a universal reader on every device (the browser); a universal safe
+execution substrate (WebAssembly); proven building blocks (content
+addressing, signatures, capability security); AI that makes writing
+converters cheap; and an urgent need to know where content came from.
+
+## 3. How one unchanging description presents as many faces
+
+By giving up the idea that a file is an encoding of one medium. The file is
+the score; each medium is a performance.
+
+- A face is **sampled** when the player computes it from the description on
+  demand. Nothing is stored and nothing changes.
+- A face is **carried** when a finished rendition, such as a PDF or an
+  encoded video, is kept beside the description with a record of exactly
+  what it was made from.
+- A face is **transmuted** when AI writes new description — a deck from a
+  report — which is added with its sources pinned.
+
+Carried and transmuted faces add to the file. They never alter what they
+were made from, and each can tell, by comparing hashes, when its sources
+have moved on.
+
+## 4. Why the player can be tiny
+
+A universal media player is enormous because it must decode thousands of
+foreign encodings. A UFO's native content is not an encoding. It is a
+description built from eleven primitives, and presenting a description
+needs one small interpreter, not a library of decoders.
+
+The encodings that do exist are handled at the edge. Common images, audio,
+video and fonts are decoded by the host, which already has the best
+decoders in the world. Foreign documents are converted once, on the way in.
+The core stays the same size however many formats the world invents.
+
+In the specification this became sharper than I expected. Several things
+the brief treats as separate mechanisms turned out to be one:
+
+| The brief describes | The specification has |
+| --- | --- |
+| objects, properties and edges | objects and properties; an edge is a property that holds a reference |
+| a Chronicle, and a ledger sharing its foundations | one Chronicle; the ledger is the part written by the printer |
+| a history log beside the data | the commit chain itself; each change is an object |
+| renditions, transmutations, summaries, each with staleness rules | one derivation record and one staleness test |
+| anchor survival rules per profile | three kinds of axis, one rule each, in the core |
+| nested universes and linked universes | one reference; the difference is whether the records are at hand |
+| timeline, scene, grid and canvas profiles | compositions of the eleven primitives; no profiles |
+
+## 5. The hardest open problems
+
+In rough order of how much they worry me.
+
+1. **Layout and text inside the budget.** The kernel must do flow layout,
+   line breaking with host measurement, grids and composition in about ten
+   thousand lines. Text is where minimal systems go to die. The budget is a
+   bet, stated before measurement.
+2. **The onboard editing interface.** The brief requires that a UFO be
+   editable through its own tools in a bare browser. Supplement B's
+   four-part player has no place for an editor's interface, and putting one
+   in the binding would break the rule that the binding knows no domain.
+   My proposed answer is that the tools' interface is itself a universe of
+   primitives, carried by content hash like any component. That is
+   attractive and unproven, and the specification does not yet define it.
+3. **Machine code without source, at scale.** The printer and ledger replace
+   source code with canonical bytes and a record of causes. For a
+   calculator this is clearly workable. For a game with thousands of
+   functions written as WebAssembly instructions by a model, nobody knows
+   yet. The phase plan's calculator will not answer the question; the game
+   in worked example two would.
+4. **Exact reproducibility.** Canonical exports need a software rasterizer
+   and a text-shaping engine carried as components. Those are large, and
+   they are a second way of drawing text beside the host's. I believe this
+   is a legitimate border component and not plywood, because it serves a
+   different guarantee, but it deserves challenge.
+5. **Moves.** A cut and paste is a deletion and an insertion. Origin
+   survives, because the insertion records where it was copied from.
+   Anchors into the moved text do not: they detach. Carrying anchors across
+   moves by following the copy record looks possible and is not specified.
+6. **Privacy of history.** The record that makes a UFO trustworthy is also
+   every prompt and every discarded draft. Sending the whole history by
+   default is right for collaborators and wrong for publication. The
+   specification requires the reader to say so and offer a truncated copy
+   (E11). The right default deserves a decision from the project's owner.
+7. **Who holds linked content.** A reference by hash can never be silently
+   redirected, and it can also simply never be found. The format can verify
+   content from anywhere; it cannot make anyone keep it.
+8. **Consent that means something.** Capability prompts are only as good as
+   people's attention. Narrow scopes and plain language help. This is a
+   design problem for readers more than for the format.
+9. **Merging.** Character identity in the text profile was designed so that
+   concurrent editing can be added without changing stored content. I have
+   not shown that it can.
+10. **The container.** See tension 1 below.
+
+## 6. Tensions, ambiguities and contradictions
+
+For each: what the documents say, what I found, what the draft does.
+
+### 6.1 The storage engine against the size of the player
+
+*The brief* names a transactional single-file database, SQLite in
+particular, as the leading candidate for the working form, and lists "the
+storage engine compiled to WebAssembly" among the travel form's contents.
+*Supplement B* requires a player small enough to read in a day and measured
+in kilobytes, and names four parts, none of which is a database engine.
+
+These cannot both be met. A database engine in every file is, by Supplement
+B's own definition, a buffalo: every one-paragraph note would carry
+hundreds of kilobytes of query engine it never uses (I have not measured a
+build; the figure is from published sizes of SQLite's WebAssembly
+distribution).
+
+**Resolution in the draft:** the working form is an append-only pack of
+content-addressed records, specified in two pages (SPEC §2). The brief
+delegates this choice to the specification and asks for reasons; they are
+in SPEC §2.7. Beyond size, the decisive ones are that a universe's state
+becomes a single hash that a signature can cover, and that both forms of
+the file hold identical bytes.
+
+**What it costs:** SQLite's decades of hardening, its universal inspection
+tools and its archival standing. This is the decision I most want reviewed.
+It is isolated: only SPEC §2 would change if it is reversed.
+
+### 6.2 An envelope that is both a web page and an archive
+
+*The brief* says the travel form may also be a valid archive, because
+"browsers read from the front and archive tools find their index at the
+end, so a single file can satisfy both honestly."
+
+This is not correct for HTML. Bytes after the end of the page are still
+part of the HTML document. An archive's binary structures there contain
+null bytes and byte sequences that are not valid UTF-8, which are parse
+errors. Such a file displays correctly only because browsers recover from
+errors, and both the brief and Supplement A forbid depending on that.
+
+**Resolution:** the web envelope is strictly valid HTML and nothing else
+(SPEC §9.2, E3). The archive view is dropped. If an archive view is wanted,
+it should be a separate envelope whose outer format is the archive.
+
+### 6.3 Envelopes through platforms that re-encode
+
+*Supplement A* says a UFO posted as a video to a chat application can be
+opened as the full universe "from that same file" by anyone with a reader.
+
+Most messaging and social platforms re-encode video and images and discard
+anything they do not recognise. The universe will often not survive the
+trip. **Resolution:** the envelopes are specified as valid, with this limit
+stated plainly (SPEC §9.4). The claim should be softened in the supplement.
+
+### 6.4 Two meanings of "presenter"
+
+*The brief* (Part Ten): a presenter draws "an object of a given type".
+*Supplement B*: a presenter turns *primitives* into output, and there are
+few because there are few primitives.
+
+Under the brief's meaning there would be a document presenter, a table
+presenter, a chart presenter — a plugin swamp. **Resolution:** Supplement
+B's meaning wins. The kernel composes every native object into a display
+list of primitives; four base presenters output them. The brief's
+type-specific presenter survives in exactly one place: a Compute-let
+attached to a surface, for content that is not native description (SPEC
+§6.1, M3).
+
+### 6.5 "Authoritative source text and its syntax" against "no parser in the kernel"
+
+*The brief's* text profile stores authoritative source text and its syntax.
+The obsolete experiment made that Markdown, with Portals spelled as fenced
+blocks of JSON inside it. *Supplement B* forbids format-specific paths in
+the kernel, and Markdown is a foreign syntax.
+
+**Resolution:** a text is characters plus spans that mark structure and
+style. A writer that wants to keep Markdown authoritative stores the exact
+source as the characters, declares the syntax, and writes the spans its own
+parser derives, including spans over the markup characters that say "do not
+present these". Every reader then shows the document properly without
+knowing Markdown. The kernel never parses (SPEC §8.1, X3).
+
+### 6.6 Revision numbers
+
+*The brief* gives every object "a revision number" and ties anchors to
+"revision". Two copies of a file edited separately will each produce a
+revision 5 that differ. **Resolution:** the number is kept as a counter;
+every reference to a specific revision uses the hash of that revision (SPEC
+§1.5).
+
+### 6.7 Three kinds of representation, twice
+
+*The brief* has renditions, transmutations and projections, and says a
+transmutation is "a rendition or new objects". *Supplement A* has sampled,
+carried and transmuted faces. The two triples overlap without matching.
+
+**Resolution:** Supplement A's classification is used for faces. A sampled
+face is a projection. A carried face is a rendition. A transmutation is
+always new described objects; an AI-produced video file is a rendition
+whose origin happens to be a model. One derivation record serves all (SPEC
+§7.1, §8.3).
+
+### 6.8 Later profiles that are not needed
+
+*The brief* plans profiles for timelines, scenes, grids and canvases.
+*Supplement B* says these are compositions of primitives. The worked
+examples confirm Supplement B: all four are represented with no such
+profile (SPEC §5.5, §14). I have removed them from the plan rather than
+left them as future work.
+
+### 6.9 Where the printer lives
+
+*The brief* says the printer is "present once inside the Compute-let".
+*Supplement B* says components are identified by content, carried only
+where used and never stored twice. **Resolution:** a Compute-let names its
+printer by hash; the universe carries one copy however many Compute-lets
+it holds (SPEC §11.4).
+
+### 6.10 "No source tree" and what an agent actually writes
+
+*The brief* says models do not type bytes; they issue structured operations
+containing instruction sequences. It does not say how an instruction
+sequence is spelled. **Resolution:** in the standard WebAssembly text
+format, for instructions only, in both directions. It is never stored. I
+note the obvious objection: this is source code in everything but name, at
+the lowest level. That is consistent with the brief, and it is part of open
+problem 3.
+
+### 6.11 Grants and live modification
+
+*The brief* wants software that changes continuously while running, and
+permissions that a file can never grant itself. If a grant is tied to exact
+code, every change re-prompts; if it is tied to identity, a hostile file
+with the same identity inherits it. **Resolution:** a grant is tied to the
+exact root hash and carries forward only through a promotion performed in
+the person's own reader with their approval, and only if nothing new is
+requested (SPEC U7).
+
+### 6.12 "Reopens identically everywhere"
+
+*The brief* asks to report whether a saved UFO reopens identically
+everywhere. Live presentation uses each host's text shaping, so lines may
+break in different places on different devices. What is identical
+everywhere is the content and its root hash, and canonical exports.
+**Resolution:** two determinism tiers, stated honestly (SPEC §7.4).
+
+### 6.13 A PDF in a Portal
+
+*The brief's* composition demonstration shows "a PDF in its own Portal".
+Browsers can display a PDF but offer pages no dependable way to decode one,
+especially on phones, and a PDF renderer inside the player is exactly the
+buffalo. **Resolution:** under decode-at-the-border a PDF is an asset
+outside the baseline. It is preserved exactly and carries page renditions
+made once at import, or is transmuted to native description (SPEC §6.4,
+B4). The demonstration should be read that way.
+
+### 6.14 Sealing in a bare browser
+
+*The brief* says keys never live in a file or a reader, and also that a
+UFO received on a clean device can be modified, saved and sent on. Both
+hold, but the change made on that device will usually be unsealed: a page
+opened from disk has no safe place for a signing key. The specification
+records such authorship as a claim (SPEC U1). Readers on rungs 2 and 3 can
+use platform key storage.
+
+### 6.15 What the reference material shows
+
+**Cursive.** Its principles are the ones the brief adopts, and its
+source-edit ledger and shadow pipeline are close to the specification's
+`splice` with `base` and `old`. Three things differ and are worth knowing:
+
+- Its Chronicle is an ordered log without a hash chain, and it is
+  occasionally compacted. The format's Chronicle is chained by
+  construction.
+- It sometimes establishes attribution after the fact, by aligning text,
+  and records how precise the result was. The format's law is stricter:
+  origin is recorded when content is introduced or it is unknown. The
+  mapping keeps Cursive's estimates as its own fields and reports the
+  portable origin as unknown (SPEC §13.3). That is lossless for Cursive and
+  honest for everyone else, but it means some text Cursive shows as
+  AI-written will appear to other readers as of unknown origin.
+- It keeps two provenance stores, the Chronicle and an element-level
+  journal. A UFO has one history.
+
+**The obsolete experiment.** Carried forward: objects and typed values in
+one address space; content-addressed chunks; unknown preservation; nested
+universes with path-based cycle guards; stored renditions that record their
+source; Portal rules (parents size children, occurrences never shared, one
+drop one owner, no stale binding); a text digest that must match before
+anything is shown. Left behind: the database container; Portals as JSON
+inside Markdown, which needed three hand-kept codecs agreeing on number
+spelling; private per-application tables; three different spellings of a
+hash; and, above all, its presentation layer, which bundled or shelled out
+to a PDF renderer, an office suite, a media transcoder and a 3D engine.
+That layer is the clearest example I have seen of what Supplement B
+forbids.
+
+## 7. Questions for review
+
+1. Is the pack acceptable in place of SQLite (6.1)?
+2. Is dropping the archive view of the web envelope acceptable (6.2)?
+3. Should history travel by default, with a warning and an offer to
+   truncate, or should publication truncate by default (problem 6)?
+4. Should the three founding documents be added to this public repository?
+   The specification cites them throughout, and I have not published them
+   without being asked.
+5. Is `unknown` the right portable origin for content whose attribution an
+   application has only estimated (6.15)?
