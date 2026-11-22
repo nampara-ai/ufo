@@ -3,8 +3,17 @@
 **Version 0.2 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
 
 This document specifies the UFO format: a single file that holds a universe of
-described meaning, carries the small player that presents it, records where
-every part of it came from, and can be extended by people and AI without loss.
+described meaning, carries the small player and tools that present and edit
+it, records where every byte of it came from, and can be extended by people
+and AI without loss.
+
+The aim is an open, universal primitive of computing, in the way the PDF
+became one: owned by no application and outliving all of them. One universe
+can present as anything a computer can present — document, plain text,
+image, video, audio, data, diagram, three-dimensional scene, application,
+game — and universes nest and link into bodies of work of any size. Text is
+implemented first. Every other medium is designed here, now, on the same
+foundations.
 
 It is written to be built from, and to stand alone: it depends on no other
 document. It contains no code. Where it chooses a technology it gives the
@@ -34,7 +43,7 @@ means the platform a reader runs on: a browser, an operating system.
 | §1–§4 core, pack, anchors | Complete enough to implement; names and tag numbers provisional |
 | §5–§7 vocabulary, player, host interface, faces | Complete in structure; layout and drawing semantics need a conformance corpus before freeze |
 | §8–§11 profiles | Text, asset, derivation, Portal, Chronicle: complete. Compute-let, printer, ledger, summaries: complete in structure, operation tables provisional |
-| §9.4 video and image envelopes | Outline |
+| §9.4 video and image envelopes | Complete in structure; the `ufo:` scheme and file-name endings provisional |
 | §12 budgets | Numbers are targets set before measurement; the first implementation confirms or revises each with reasons |
 | Timelines, scenes, grids, canvases, conversations | Compositions of the primitives, not profiles; see §5.5 |
 
@@ -815,7 +824,7 @@ time as a region maps space.
 | **Group** | `ufo.group` | an ordered composition of children under a layout rule | `children` (keyed), `order` (sequence) |
 | **Clock** | `ufo.clock` | a time mapping and interval (§4.5), holding children | `t`; `children` (keyed) |
 | **Portal** | `ufo.portal` | a reference to another object, presented through its own description (§8.4) | those of its parent |
-| **Surface** | `ufo.surface` | a region whose content a Compute-let produces live (§11.1) | `x`, `y`, `t`, plus any the Compute-let declares |
+| **Surface** | `ufo.surface` | a region whose content a Compute-let produces live (§11.1); it may hold children that the Compute-let places within what it draws (§5.6) | `x`, `y`, `t`, plus any the Compute-let declares; `children` (keyed) |
 | **Data** | `ufo.data` | typed values and tables | `rows`, `cols` (keyed); `order` (sequence) |
 | **Formula** | a value | a pure expression computing a value from data, time, input and other values (§5.3) | — |
 
@@ -942,9 +951,69 @@ regions, no 3D operation, no 3D display-list item and no scene profile.
 Anchors to parts of a scene are anchors to rows of its data object, on a
 keyed axis; anchors to places in the rendered view use axes the Compute-let
 declares in its manifest (§11.1). Without `gpu`, the surface shows its
-poster (**H2**). Which conventions a scene's rows follow is a matter between
-the data and the presenter that reads it, both of which travel in the
-universe; a second presenter may read the same rows or others.
+poster (**H2**).
+
+So that any presenter, and any agent, can read any scene, a scene's data
+follows the object model of glTF 2.0 (ISO/IEC 12113): its tables are
+`scenes`, `nodes`, `meshes`, `materials`, `textures`, `cameras`, `lights`
+and `animations`, each row holding the properties glTF defines for that
+object, with keys in place of glTF's array indices and geometry and images
+in assets. This is a convention for data, as a column of dates is; the
+kernel does not know it. A glTF file converts to such a data object at the
+border without loss, and exports from one (**B3**).
+
+A scene is not a dead end for composition. A wall that shows a spreadsheet,
+or a doorway into another scene, is a child of the surface — a Portal —
+which the reader presents into a raster for the scene's Compute-let to
+place on the wall, routing input back through it (§5.6). The spreadsheet on
+the wall is live, anchored and attributed like any other.
+
+**What the removed profiles compose from.** Each medium once planned as a
+profile is fully expressible now:
+
+| Medium | Composes from | Shown in |
+| --- | --- | --- |
+| Timeline (video, audio) | clocks holding rasters, samples, text, paths and Portals for intervals | §14.1 |
+| Grid (tables) | a data object; a `grid` group under `each`; formulas in cells; `propose` handlers for editing | §14.1, §14.4 |
+| Canvas (free layout) | a region with `absolute` children | §14.4 charts |
+| Scene (3D) | a data object in the glTF model; a surface with a carried presenter; children by `present` | §14.4 |
+| Conversation | a text with spans for speaker and time; origin per turn in the Chronicle | §13.2 |
+
+If any medium is found that these cannot express, the remedy is to restore
+or add a profile, under the deletion test, not to narrow what a universe
+may be.
+
+### 5.6 Interfaces that edit, and surfaces that hold children
+
+Two small additions let description do work that would otherwise need a
+program, and let programs take part in composition.
+
+**Handlers that propose changes.** An `on` handler (Appendix A) may carry
+`propose`: a list of operations (§1.7) in which any field may be a formula.
+When the event occurs, the kernel evaluates the formulas — against data,
+presentation state and the event — and submits the result as a change, with
+origin `{basis: witnessed, by: person}` naming the person using the reader.
+It is verified and committed, or refused, like any change (**L4**). A
+checkbox, a form, an editable cell and a button that adds a row are
+therefore description, with no Compute-let.
+
+**Editable text.** A text primitive, or a region of one, marked `editable`
+accepts text entry. The host supplies the editing surface it already has —
+caret, selection, input methods, accessibility — through the `text`
+capability and reports each committed edit as an input event `edit` giving
+the range replaced and the text that replaced it. The kernel checks the
+range against the current revision and turns it into a `splice`. The host
+knows it is editing a run of text and nothing more (**K2**).
+
+**Children of a surface.** A surface MAY have `children`, a keyed map of
+objects — normally Portals. The kernel does not place them; the surface's
+Compute-let does, using the `present` capability: it asks for a child to be
+presented at a size it chooses, receives a raster it can draw or use as a
+texture, and passes back any input that falls on the child, translated into
+the child's coordinates. Parents still size children (**V1**), the child is
+composed by the kernel exactly as it would be anywhere, and the limits on
+nesting apply (**O7**). This is how a Portal appears on a wall of a 3D
+scene, on a screen inside a game, or in a custom interface.
 
 ---
 
@@ -1045,6 +1114,7 @@ functions is a capability:
 | `codec.<name>` | decode or encode a named storage codec | the kernel only |
 | `verify` | check an Ed25519 signature | the kernel only |
 | `objects` | read, or propose changes to, objects within a stated anchor | nobody |
+| `present` | have the reader present a child of the component's surface (§5.6) into a raster the component can draw with, and pass input on to it | any Compute-let whose surface has children |
 | `gpu` | accelerated graphics on the component's surface | nobody |
 | `audio` | a low-latency stream of generated samples | nobody |
 | `input.raw` | high-frequency pointer, gamepad and device input | nobody |
@@ -1125,6 +1195,33 @@ particular depends on the host's licensing position.
 
 - **[B4]** An asset outside the baseline MUST be imported under treatment 2
   or 3 of §6.4, so that every conforming reader can show something for it.
+
+### 6.6 Onboard tools
+
+A UFO is inspected and edited with tools it carries. The **onboard tools**
+are two things.
+
+1. *Functions of the kernel*: the projections of §7.5 and the actions of
+   §11.8. Because they are in the kernel, every reader on every rung has
+   them, and so does every web envelope.
+2. *An interface to those functions*, which is itself a universe: text,
+   groups, regions and paths, with handlers that set presentation state and
+   propose changes (§5.6), and Portals onto the universe being worked on.
+   It is identified by its commit hash, carried in the pack as a nested
+   universe (§1.8), and named by the binding as the frame within which the
+   primary face is presented. A reader that holds the same tools universe
+   uses its own copy (**K3**); a reader MAY substitute a newer one.
+
+- **[K5]** A web envelope MUST carry a tools universe sufficient to: choose
+  among faces; show for anything on screen its origin, evidence and
+  decisions; edit text and data; add an asset; accept, reject or revise a
+  contribution; verify the universe and its seals; show what will travel;
+  and save or send the result.
+- **[K6]** The tools interface contains no logic of its own. Everything it
+  does is a formula, a presentation-state change, or a proposed change. It
+  adds no code to the binding and none to the kernel.
+
+The tools universe counts toward the envelope weight of §12.2.
 
 ---
 
@@ -1258,7 +1355,7 @@ attribution.
 
 | Property | Value |
 | --- | --- |
-| `chars` | the content: one text value |
+| `chars` | the content: one text value, or a list of text values whose concatenation is the content |
 | `digest` | SHA-256 of the UTF-8 encoding of `chars` |
 | `runs` | list of `[count, change, offset]` covering the content exactly, in order |
 | `spans` | map from span key to span |
@@ -1271,8 +1368,10 @@ position is a count of scalar values from the start.
 never split a character. Offsets in UTF-8 bytes or UTF-16 code units convert
 to and from them deterministically.
 
-A long work is several texts in a `flow` group — chapters, sections — not
-one very large text. Writers SHOULD keep a single text under 1 MiB.
+A text may be of any length. A writer MAY store `chars` as a list of pieces,
+each out of line (§1.4), so that an edit rewrites only the piece it touches.
+Where pieces divide carries no meaning: positions, runs, spans, the digest
+and the conservation check (**L3**) are all defined on the concatenation.
 
 **Runs** record, for every character, the change that introduced it and its
 offset within the characters that change inserted into this object. That
@@ -1359,6 +1458,12 @@ wrote the object (§8.5); it is not repeated here.
   a reader showing it MUST be able to lead the person to each source region.
 - **[D3]** Regenerating a derivation is a change that writes new revisions
   with new pins. The earlier revisions remain in history.
+- **[D4] Transmutation is an operation of the format.** A model's
+  contribution enters through `derive` (§11.8): the kernel, not the model
+  or the application, computes the pins from the sources actually supplied
+  and binds them to the new objects and to the change's origin in one
+  commit. Every reader can therefore show, for any transmuted content, what
+  it was made from, by what, at whose request, and whether it is current.
 
 ### 8.4 Portals
 
@@ -1516,6 +1621,16 @@ whose `claim` covers the run and the current decision. For any other
 property, it returns the same for the change named by `by` in the revision
 that last set it. For a unit of machine code, see §11.5.
 
+- **[R8] Every byte has a known origin.** For every byte of content in a
+  universe, `why` MUST return a change and its origin: for a character, by
+  its run; for any other property value, by the revision that set it; for a
+  byte of a blob, by the change that first referred to the blob; for a unit
+  of machine code, by the module's `units`; for a derived byte of a module,
+  "computed by the printer" from named units (**N4**). The bytes of records
+  themselves — encodings, hashes, maps — are computed by the kernel from
+  that content by the rules of §1 and have no other origin. An origin may be
+  `unknown`; it is never absent.
+
 ---
 
 ## 9. Forms of the file
@@ -1607,11 +1722,19 @@ a web page and nothing else.
 | Layer | What it is | Travels |
 | --- | --- | --- |
 | **Content** | the current revision of every **live** object — one reachable from the universe object by refs, links and anchors, without passing through a change — and the blobs those revisions name | always |
-| **Attribution** | for every change that touched a live object, or records evidence or a decision about one: its actor, time, origin, evidence, decisions and the shapes of its operations (§1.7); the objects its evidence names as support; every commit node; every seal | by default |
-| **Working history** | everything else: the content of operations (what was removed, inserted or set, and each change's note); earlier revisions; earlier object maps; prompts and conversations; objects that are no longer live, and changes that touched only those; earlier Compute-let snapshots | only if the person opts in |
+| **Attribution** | for every change that touched a live object, or records evidence or a decision about one: its actor, time, origin, evidence, decisions and the shapes of its operations (§1.7); the objects its evidence names as support; every commit node; every seal | always |
+| **Working history** | everything else: the content of operations (what was removed, inserted or set, and each change's note); earlier revisions; earlier object maps; prompts and conversations; objects that are no longer live, and changes that touched only those; earlier Compute-let snapshots | depends on the membrane crossed |
 
-- **[E9]** By default a travel form holds content and attribution and
-  withholds working history. Its `note` frame says so (§2.5).
+The trail of work is the context for whoever continues it, so who is
+receiving decides the default.
+
+- **[E9] Two defaults.** *Sharing* is sending to people who work on the
+  universe: collaborators. A shared copy is whole by default — content,
+  attribution and working history. *Publishing* is sending to readers
+  outside the work. A published copy holds content and attribution and
+  withholds working history by default, and its `note` frame says so
+  (§2.5). The person states which they are doing, can change what is
+  included either way, and sees the result before it leaves (**E12**).
 - **[E10] Stubs.** Withholding removes records and nothing else. Every hash
   that names a withheld record stays where it was: in `prev`, in commits, in
   operations, in `origin.prompt`. The recipient's reader can therefore
@@ -1648,26 +1771,49 @@ earlier draft said: operation content and earlier revisions are named only
 by hashes of salted records (§1.4, §1.5). The hash of a withheld blob does
 reveal, to someone who already holds the same file, that it was once here.
 
-### 9.4 Other envelopes (outline)
+### 9.4 Video and image envelopes
 
-An envelope shows one outer face and carries the pack as data its format
-defines as ignorable.
+A universe can also travel inside a video or an image, so that software
+that knows nothing of UFO — a player, a gallery, a chat application — shows
+a face of it. An envelope shows one outer face and carries the pack as data
+its format defines as ignorable.
 
-| Envelope | Outer face | Pack carried in |
-| --- | --- | --- |
-| Video (MP4) | a carried video face | a top-level `uuid` box (ISO/IEC 14496-12 user extension) |
-| Image (PNG) | a carried still face | a private ancillary chunk, `ufOb` |
+| Envelope | Outer face | Pack carried in | File name ends |
+| --- | --- | --- | --- |
+| Video | a carried video face: H.264 with AAC in MP4 (§6.5) | a top-level `uuid` box (ISO/IEC 14496-12) whose 16-byte type is the first 16 bytes of the SHA-256 of the ASCII text `ufo-pack-1`, placed after `moov` and `mdat` | `.ufo.mp4` |
+| Image | a carried still face: PNG | one or more consecutive private ancillary chunks of type `ufOb`, placed after `IDAT` and before `IEND`, whose data concatenated is the pack | `.ufo.png` |
 
-Both are valid under their own standards. Neither carries a player; a UFO
-reader is needed to open the universe inside.
+- **[E17]** Each envelope MUST be valid under its own standard and play or
+  display correctly in software that ignores the pack. The outer face is a
+  rendition (§8.3) of a face of the universe inside, with pins, so a reader
+  can tell whether it is current.
+- **[E18]** A reader opening such a file finds the pack by walking the
+  container's boxes or chunks, a rule of a few lines that lives in the
+  binding as "locate the pack" (**K2**), and then proceeds as for a working
+  form. These envelopes carry no player.
+- **[E19] The mark.** The outer face SHOULD carry a **mark**: a QR code
+  (ISO/IEC 18004) encoding `ufo:` followed by the commit hash in lowercase
+  hexadecimal and, optionally, `?at=` and a location hint. In a video it is
+  shown for at least the first and last two seconds; in an image it sits in
+  a corner. A reader that is shown a file bearing a mark but no pack treats
+  the mark as a reference to a linked universe (§1.8): it obtains the
+  records from the hint or anywhere else and verifies them against the hash.
+  The person MAY turn the mark off.
 
-- **[E17] Best-effort carriers.** These envelopes deliver the universe only
-  through channels that preserve the file's bytes. Any platform that
-  re-encodes video or images — as most messaging and social platforms do —
-  strips the universe, and what arrives is an ordinary video or image. A
-  reader creating such an envelope MUST say this to the person, and MUST NOT
-  describe it as a dependable way to send a universe. The web envelope is
-  the dependable one.
+*The limit, plainly.* Platforms that re-encode video or images — most
+messaging and social platforms — discard the box or chunk. What arrives is
+then an ordinary video or image, and the universe is not in it.
+
+*The path past it.* The mark is made of pixels, so it survives re-encoding.
+It turns a stripped envelope from a dead copy into a verifiable pointer:
+anyone with a reader can still reach the exact universe the face was made
+from, provided its records are kept somewhere reachable. Where bytes are
+preserved, the universe arrives whole and the mark is not needed.
+
+- **[E20]** A reader creating a video or image envelope MUST tell the person
+  that re-encoding platforms strip the universe, and whether the mark is
+  present and where it points. The web envelope remains the form to use
+  when the universe itself must arrive.
 
 ### 9.5 The reader ladder
 
@@ -1743,15 +1889,15 @@ the file.
 
 ### 10.4 Membranes
 
-A membrane is any boundary between universes. It is not a mechanism of its
-own: there are four crossings, and each is governed by rules stated
-elsewhere in this document, gathered here.
+A **membrane** is any boundary between universes. Universes nest and link
+without limit (§1.8), and every such boundary is a membrane with explicit
+rules about what crosses it. There are four crossings.
 
 | Crossing | What crosses | Rule |
 | --- | --- | --- |
 | **Nesting** | a universe's records sit inside another's pack | verified on its own terms; immutable; read-only; no authority from the parent (**C10**, **O8**) |
 | **Reference** | an anchor names a commit elsewhere | names exact content; cannot be redirected; verified wherever found (**C9**) |
-| **Transfer** | a file moves between people | carries its content, attribution, seals and requests, and its working history only by choice (§9.3); carries no grants; the recipient's reader decides everything (**U5**, **U7**) |
+| **Transfer** | a file moves between people | carries its content, attribution, seals and requests; carries its working history to collaborators by default and to outside readers only by choice (§9.3); carries no grants; the recipient's reader decides everything (**U5**, **U7**) |
 | **Capability** | a component reaches beyond its sandbox | only by a requested, granted, scoped, revocable capability (**H1**) |
 
 Copying content from one universe into another crosses a reference
@@ -1781,9 +1927,25 @@ and `ufo.summary/1`.
 
 ### 11.1 The Compute-let
 
-A **Compute-let** (`ufo.computelet`) is a program carried as an object. A
-universe whose primary face presents a Compute-let is a Compute-let that
-stands alone as a file.
+A **Compute-let** (`ufo.computelet`) is a complete single-purpose machine
+carried as an object. It is four things that computing has kept apart:
+
+- an *application*: it does something for a person, on a surface;
+- an *operating system*: it carries the services it needs — its own state
+  and history, its scheduling through `frame`, its messaging through ports,
+  its presentation through `draw` — and borrows none from a host it cannot
+  trust;
+- a *machine*: sealed memory and a clock of its own, which can be
+  snapshotted, resumed, copied and moved exactly (§11.2). Opening it starts
+  the machine; saving checkpoints it; copying forks it; sending moves it;
+- an *environment*: its manifest declares everything it may see or touch.
+
+A Compute-let runs live wherever it is presented: alone, as the primary
+face of a universe; inside a document, a video or a scene, through a Portal;
+or inside another Compute-let's surface (§5.6). It may contain other
+Compute-lets. There is no source tree: its machine code is maintained
+through the printer, and the ledger is the record of why it is as it is
+(§11.4, §11.5).
 
 Its properties are its **manifest**:
 
@@ -2024,6 +2186,8 @@ Protocol:
 | `print(operations)` | submit printer operations for a Compute-let; begins promotion |
 | `test(computelet)` | run its tests against the current state and report |
 | `import(bytes)` | add an asset |
+| `derive(sources, how, objects)` | write objects derived from the stated sources — a transmutation, a rendition, a summary — in one change, with pins to exactly those sources made by the kernel, and the origin stated. A derivation can enter a universe no other way |
+| `refresh(object)` | list the stale pins of a derived object and, on `derive`, replace it with a regenerated one (**D3**) |
 | `export(face, parameters)` | sample and encode a face |
 
 - **[I1]** An agent sees a universe only through the kernel, and so sees
@@ -2058,7 +2222,8 @@ revised once, with reasons, before anything is frozen.
 | Frame kinds | 6 | 6 | |
 | Formula operators | 64 | 50 | a spreadsheet's essentials; anything larger is a Compute-let |
 | Base host functions | 12 | 10, plus 2 exports | small enough to implement identically on every host |
-| Concepts in the glossary | 40 | 37 | what a newcomer must learn; each is justified in §16, and a new concept must displace one |
+| Capabilities | 20 | 16 | each is something only a host can provide (**H4**) |
+| Concepts in the glossary | 40 | 38 | what a newcomer must learn; each is justified in §16, and a new concept must displace one |
 
 ### 12.2 Size of the player
 
@@ -2069,7 +2234,8 @@ revised once, with reasons, before anything is frozen.
 | Kernel, DEFLATE-compressed | 96 KiB | what an envelope actually carries |
 | Binding source, per host | 600 lines | readable in minutes |
 | Web binding, as shipped | 16 KiB | |
-| Web envelope holding one paragraph | 160 KiB | compressed kernel in base64 (128 KiB), binding, static face, pack |
+| Tools universe (§6.6), as carried | 24 KiB | description only; no code |
+| Web envelope holding one paragraph | 192 KiB | compressed kernel in base64 (128 KiB), binding, tools universe, static face, pack |
 | Pack code in the kernel; value codec; an independent read-only reader | 800; 400; 500 lines | §3.3 |
 | Printer, compiled | 192 KiB | carried only with Compute-lets |
 | Implementations of any piece of format, layout or media logic | exactly 1 | **K1** |
@@ -2381,7 +2547,7 @@ nine faces and sent two ways.*
 | Fixed document | carried | the page images of `approved.pdf`, shown with a stale mark if any pin has moved; the PDF itself is exported byte for byte |
 | Slide deck | transmuted | `deck`: a `held` clock over regions, with Portals to `chart-a` and `chart-b`; `from` pins `report` and `figures`; origin `model` |
 | Narrated video | transmuted, then sampled | `narration`: a text and synthesized samples, `from` pinning `report`; `video`: a clock ordering the deck's regions against the narration; exported by sampling |
-| 3D view | transmuted, then sampled | `scene`: a `ufo.data` object whose rows describe bars, labels, lights and a camera for `figures`, with `from` pinning `figures`; `scene-surface`: a `ufo.surface` whose Compute-let, `scene-presenter`, requests `gpu` and `objects` read on `scene` |
+| 3D view | transmuted, then sampled | `scene`: a `ufo.data` object in the glTF model (§5.5) whose rows describe bars, labels, lights and a camera for `figures`, with `from` pinning `figures`; `scene-surface`: a `ufo.surface` whose Compute-let, `scene-presenter`, requests `gpu` and `objects` read on `scene` |
 | Application | sampled | `projector` presented alone, full size |
 
 **The 3D view uses no hidden profile.** `scene` is a data object like
@@ -2410,7 +2576,8 @@ the content; the attribution, naming the author, the model that produced the
 deck and narration, and forty-odd changes; not the prompts or the earlier
 drafts of the report, unless the author includes them. To a video-only
 channel: an MP4 envelope whose outer face is the exported narrated video,
-on the understanding that the channel may strip the universe (**E17**).
+bearing its mark, on the understanding that the channel may strip the pack
+and leave the mark as the way back to the universe (**E19**, **E20**).
 
 ### 14.5 What the examples required of the core
 
@@ -2444,7 +2611,7 @@ tested.
 
 ## 16. Glossary
 
-The format has 37 concepts. A concept is listed only if it cannot be
+The format has 38 concepts. A concept is listed only if it cannot be
 expressed as a composition of the others; the third column says why not.
 
 | Concept | Meaning | Why it cannot be removed | § |
@@ -2470,6 +2637,7 @@ expressed as a composition of the others; the third column says why not.
 | Hash | the SHA-256 digest that names a record | identity of everything stored | 1.1 |
 | Host interface | the complete set of functions a sandboxed component may import | the frozen boundary of the sandbox | 6.3 |
 | Kernel | the one program that reads, verifies and composes a universe | the single implementation everything else relies on | 6.1 |
+| Membrane | a boundary between universes, with rules for what crosses | what makes unlimited nesting and linking safe; decides what travels | 10.4 |
 | Object | an identity with a type and properties | the unit of content | 1.5 |
 | Operation | one edit stated against a named baseline | what conservation and anchor carrying are computed from | 1.7 |
 | Origin | who or what contributed content: witnessed, inferred or unknown | one of three facts that must never merge | 8.5 |
@@ -2487,9 +2655,10 @@ expressed as a composition of the others; the third column says why not.
 | Summary | a derivation that condenses a pinned scope | navigation at low resolution | 11.7 |
 | Universe | the set of objects reachable from one commit | the whole | 1.6 |
 
-**Names for compositions.** These words are used in this document for
-convenience. Each is fully defined by the concepts above and adds nothing
-to learn.
+**Names for compositions.** Each of these is fully part of the format and
+loses nothing by appearing here: it is listed separately because it is
+built from the concepts above and so adds nothing further to learn. The
+second column says what it is built from.
 
 | Word | Is |
 | --- | --- |
@@ -2502,7 +2671,6 @@ to learn.
 | Edge | a property holding a ref |
 | Ledger | the changes whose operations are the printer's |
 | Light cone | the summary tree |
-| Membrane | the rules on four kinds of crossing between universes |
 | Rendition | an asset with a derivation |
 | Root | an entry in the universe object's `roots` |
 | Snapshot | a blob of Compute-let state |
@@ -2520,15 +2688,15 @@ alpha, as four floats from 0 to 1. Any property may be a formula.
 
 **Common to all:** `label`, `role`, `lang`, `opacity`, `visible`, `on` (map
 from an input event name — `press`, `enter`, `leave`, `key`, `change` — to
-`{set: state name, to: formula}` or `{deliver: true}` for surfaces), `from`
-(§8.3).
+`{set: state name, to: formula}`, `{propose: operations}` (§5.6), or
+`{deliver: true}` for surfaces), `from` (§8.3).
 
 **In a parent:** `place`, `x`, `y`, `w`, `h`, `row`, `col`, `span`,
 `align`, `grow`, `margin`.
 
 | Primitive | Properties |
 | --- | --- |
-| Text | §8.1, and default style: `font` (list of family names or a ref to a font asset), `size`, `weight`, `slant`, `color`, `direction`, `line`, `align`, `decoration`. Spans override these |
+| Text | §8.1; `editable` (§5.6); and default style: `font` (list of family names or a ref to a font asset), `size`, `weight`, `slant`, `color`, `direction`, `line`, `align`, `decoration`. Spans override these |
 | Path | `d`: list of segments `[M x y]`, `[L x y]`, `[C x1 y1 x2 y2 x y]`, `[Q x1 y1 x y]`, `[Z]`; `fill` and `stroke`: a color or a gradient `{kind, stops, from, to}`; `width`, `join`, `cap`, `dash`, `rule` |
 | Raster | `source`: ref to an asset or surface; `time` (for video sources); `crop`; `fit`; `smooth` |
 | Samples | `source`: ref to an asset or surface; `gain`; `pan`; `time` |
@@ -2536,7 +2704,7 @@ from an input event name — `press`, `enter`, `leave`, `key`, `change` — to
 | Group | `children`; `layout`: `flow`, `grid` or `absolute`; `direction`; `gap`; `rows`, `cols` (for `grid`); `each`, `as` |
 | Clock | `children`; `start`, `end`, `rate`, `offset`, `mode`; `drive` (formula, for `held`) |
 | Portal | §8.4 |
-| Surface | `computelet`: ref; `w`, `h`; `ports` |
+| Surface | `computelet`: ref; `w`, `h`; `ports`; `children` |
 | Data | `cols`: map from column key to `{label, type, order}`; `rows`: map from row key to map from column key to value; `order`: list of row keys |
 
 ## Appendix B. Projection line formats

@@ -4,6 +4,26 @@ Why the UFO format exists and why it is shaped the way it is. The
 [specification](SPEC.md) says what; this says why. It is written for anyone
 deciding whether the design deserves their attention.
 
+## The ambition
+
+The aim is an open, universal primitive of computing, of the kind the PDF
+became: a format owned by no one, readable by anything, that outlives every
+application that writes it.
+
+One universe can present as anything a computer can present — a document,
+plain text, an image, a video, audio, data, a diagram, a 3D scene, an
+application, a game. It stands alone: it carries its own player and tools
+and opens with nothing installed but a browser. Its programs are complete
+single-purpose machines that run live inside other universes. Their machine
+code is maintained without a source tree. Every byte has a known origin.
+Any universe, however large, can be navigated from overview to exact bytes
+at a cost that scales with the question. Universes nest and link without
+limit. Transmutation by AI is an operation of the format itself.
+
+Text is implemented first. Nothing else is deferred in design. The
+simplifications described below are simplifications of mechanism; none
+gives up any of this.
+
 ## The problem
 
 A single piece of real work is scattered across a word processor, a
@@ -151,6 +171,32 @@ the model that wrote it, what it replaced and the tests that justify it.
 Readable listings are generated on demand. Whether this scales from a
 calculator to a large program is an open question the project intends to
 answer by building.
+
+## What was invented, and why existing things did not fit
+
+The project uses established standards wherever one truly fits: SHA-256,
+deterministic CBOR, DEFLATE, Ed25519, WebAssembly and its text format,
+HTML, base64, MP4 and PNG containers, QR codes, the glTF object model for
+3D scenes, the Model Context Protocol, flicks for time. Where none fits,
+the smallest thing that closes the gap was designed, and is specified in
+full. Each is recorded here so it can be challenged.
+
+| Invention | Existing options, and what each misses | SPEC |
+| --- | --- | --- |
+| **The pack** | *SQLite*: no canonical bytes to hash or sign; its engine in every file. *Git packfiles*: delta compression and a separate index file make a weekend reader impossible; not built for one growing file. *ZIP*: no content addressing; central directory rewritten on every change. *CAR (IPLD)*: content-addressed, but no commit trailer, crash recovery or index. | §2, §3 |
+| **Operations split into shape and salted content** | *Git shallow clones* drop history wholesale, with its authorship. *Redaction* breaks hashes. Nothing kept an edit history verifiable, and anchors resolvable, while withholding what the edits said. | §1.7, §9.3 |
+| **Three kinds of axis with one survival rule each** | *W3C Web Annotation selectors* re-find text by quoting it, which is matching. *Media Fragments* address time and space but say nothing about edits. *Operational transformation and CRDT positions* cover sequences only. Nothing covered text, time, space and tables with one model that never guesses. | §4 |
+| **Pins and one staleness test** | Build systems track staleness of files, not regions; document formats do not track it at all. | §4.4, §8.3 |
+| **The change as an object, with origin, evidence and decision apart** | *Version control* records who committed, not who or what wrote each span, on what evidence, with what human decision. *C2PA* attests to whole assets after the fact, not to spans as they are written. *Track changes* is per application and lost on export. | §1.7, §8.5 |
+| **Origin with a basis: witnessed, inferred, unknown** | Attribution systems either assert authorship or stay silent. None distinguishes what was recorded at the moment from what was worked out later. | §8.5 |
+| **Eleven primitives and a display list** | *HTML and CSS* are a full description language, but far too large to interpret in a small kernel, and their meaning is whatever a browser version does. *SVG* has no flow layout, data or time model worth the name. *PDF* is depiction. *Scene and timeline formats* each cover one medium. | §5, §6.2 |
+| **Formulas stored as structure** | *Spreadsheet formula text* needs a parser and differs between products. *Vega expressions* are JavaScript text. Structure needs no parser and has one meaning. | §5.3 |
+| **Handlers that propose changes** | Interactive documents either embed a scripting language, with its security history, or cannot edit their own data. A declarative handler that yields a verified, attributed change needs neither. | §5.6 |
+| **The host interface** | *WASI* assumes files, sockets and clocks, which is the authority a document must not have, and has no drawing or input. The *component model* is not yet uniformly available in browsers. Ten functions and named capabilities can be stated in either later. | §6.3 |
+| **The printer and ledger** | *Source maps and debug information* point bytes back at source text; here there is no source text. *Reproducible builds* prove a binary came from a source, not why each function exists. | §11.3–§11.6 |
+| **The web envelope's read-back** | A page opened from disk cannot fetch its own file; *single-file web apps* store data as script or JSON text, not as range-readable, hash-verified records. | §9.2 |
+| **The mark** | Metadata, boxes and chunks are stripped by re-encoding platforms. Only pixels survive, and QR is the standard way to put a short reference in pixels; what is new is treating it as a content address for a linked universe. | §9.4 |
+| **Summaries as pinned derivations in a tree** | *Retrieval by similarity* returns fragments without telling you what you did not see. *Stored summaries* go stale silently. | §11.7 |
 
 ## Honest limits
 
