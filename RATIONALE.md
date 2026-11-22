@@ -216,8 +216,11 @@ recorded so they can be reversed for good reason.
   intention was that the printer insert it and the reader check that it is
   there. Checking needs the same rule in two places, or trust in a printer
   the file supplied.
-- **Regions are two-dimensional.** Three dimensions belong to a surface and
-  its carried presenter, which can also place live Portals inside a scene.
+- **Regions are two-dimensional; space is not.** Three-dimensional space is
+  first-class in the anchor model: a scene is a data object with `x`, `y`,
+  `z` and `t` axes, and what sits in it — parts, Portals, flat content on a
+  wall — is format data with attribution and summaries. Only the drawing is
+  done by a carried program, which may hold no content of its own.
 
 ## Honest limits
 
@@ -231,12 +234,14 @@ recorded so they can be reversed for good reason.
 - Converting a foreign document to description can lose nuance. The
   original bytes are always kept, and the conversion is recorded.
 - Every size and speed figure in the specification is a target set before
-  anything was built, and an independent reviewer doubts the kernel's.
+  anything was built. Budgets change on measurement only.
 - A web page that carries its own reader cannot vouch for itself. What it
   says about seals and origins is the file's own account until an installed
   reader checks it.
-- The interface between a program and its host is ten functions, but the
-  operations behind most named capabilities — accelerated graphics above
-  all — are not yet written.
-- The file-name ending `.ufo` is already used by a font format and will
-  have to change or be shared.
+- The contract for capabilities is complete, and accelerated graphics is
+  sketched on the WebGPU model, but the exact operations of most
+  capabilities are still to be written.
+- The file-name ending is not chosen: `.ufo` is already a font format's.
+  Candidates and evidence are in NAMING.md.
+- The test vectors were written by one generator and read back by one
+  independent reader. No second writer exists yet.

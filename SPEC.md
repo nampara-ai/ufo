@@ -1,6 +1,6 @@
 # The Universal File Object (UFO) Specification
 
-**Version 0.3 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
+**Version 0.4 — draft for review. Nothing here is frozen. Nothing here has been implemented.**
 
 This document specifies the UFO format: a single file that holds a universe of
 described meaning, carries the small player and tools that present and edit
@@ -46,8 +46,8 @@ means the platform a reader runs on: a browser, an operating system.
 
 | Sections | Status in this draft |
 | --- | --- |
-| §1–§4 core, pack, anchors | Complete in design. Not yet sufficient to implement without the schema of Appendix C being checked against test vectors, which the conformance suite will supply; names and tag numbers provisional |
-| §5–§7 vocabulary, player, host interface, faces | Complete in structure. Layout and drawing semantics need a conformance corpus before freeze. The operations of each capability behind `call` (§6.3) are described only for `text` and, in outline, `present`; the rest, `gpu` above all, are open work and will be counted in §12 when written |
+| §1–§4 core, pack, anchors | Complete, with a schema (Appendix C) and byte-level test vectors (Appendix F, `vectors/`). The vectors were produced by one generator and checked by one independent reader written from these sections alone; names and tag numbers provisional |
+| §5–§7 vocabulary, player, host interface, faces | Complete in structure. The drawing contract (§6.2) and the capability contract (§6.3) are complete; layout semantics need a conformance corpus before freeze. Operation sets: complete for `text`, `objects` and `present`; sketched for `gpu` (Appendix E); to be written for the rest |
 | §8–§11 profiles | Text, asset, derivation, Portal, Chronicle: complete. Compute-let, printer, ledger, summaries: complete in structure, operation tables provisional |
 | §9.4 video and image envelopes | Complete in structure; the `ufo:` scheme and file-name endings provisional |
 | §12 budgets | Numbers are targets set before measurement; the first implementation confirms or revises each with reasons |
@@ -348,7 +348,9 @@ The core operations are:
 
 `key` MAY be a list, naming a path through nested maps. `bias` is `before`
 or `after` and says which neighbor inserted items belong with (§4.3); it
-defaults to `after`.
+defaults to `after`. `old` is omitted when nothing was there: a `set` of a
+property that did not exist, a `splice` that deletes nothing. `ins` and
+`val` are omitted likewise when nothing is put.
 
 **Order.** Operations apply in the order listed. Each is expressed against
 the state left by the operations before it in the same change: a position in
@@ -804,6 +806,15 @@ A region over several axes is their product: a rectangle of a frame for a
 span of time is a region on `t`, `x` and `y`. A region MAY have zero extent:
 `[s, s]` is a point — a caret, an instant.
 
+A coordinate space may have any number of axes of each kind. Space in three
+dimensions is three continuous axes, `x`, `y` and `z`, and is as much a part
+of the anchor model as a line of text: a volume is a region on all three, a
+moment in an animated scene adds `t`, and a part of the scene is a key.
+Every object declares the axes it offers. The primitives' axes are fixed by
+§5.1; a data object declares its own, in `axes` (Appendix A), which is how a
+described space of any dimension — a scene, a map, a volume of
+measurements — becomes addressable.
+
 Time on a continuous axis is an integer count of **flicks**: units of
 1/705 600 000 of a second. Every common frame rate and audio sample rate
 divides one second into a whole number of flicks, so time arithmetic is exact
@@ -1105,32 +1116,54 @@ profile of their own: each is a documented composition. Conversations are
 text objects whose spans carry speaker and time, with the Chronicle
 recording origin as for any text.
 
-**Three dimensions, explicitly.** A 3D scene uses nothing beyond what this
-document already defines. Its description is an ordinary `ufo.data` object:
-rows for nodes, meshes, materials, lights and cameras, with geometry in
-assets. It is presented by an ordinary `ufo.surface` whose Compute-let reads
-that data through the `objects` capability and draws through the `gpu`
-capability. The format has no 3D object type, no third spatial axis on
-regions, no 3D operation, no 3D display-list item and no scene profile.
-Anchors to parts of a scene are anchors to rows of its data object, on a
-keyed axis; anchors to places in the rendered view use axes the Compute-let
-declares in its manifest (§11.1). Without `gpu`, the surface shows its
-poster (**H2**).
+**Three dimensions, explicitly.** A 3D scene is drawn by a program, and
+everything about it that is content is format data, readable by the kernel
+and by any agent without running that program.
 
-So that any presenter, and any agent, can read any scene, a scene's data
-follows the object model of glTF 2.0 (ISO/IEC 12113): its tables are
-`scenes`, `nodes`, `meshes`, `materials`, `textures`, `cameras`, `lights`
-and `animations`, each row holding the properties glTF defines for that
-object, with keys in place of glTF's array indices and geometry and images
-in assets. This is a convention for data, as a column of dates is; the
-kernel does not know it. A glTF file converts to such a data object at the
-border without loss, and exports from one (**B3**).
+*The scene is a data object.* It follows the object model of glTF 2.0
+(ISO/IEC 12113): its tables are `scenes`, `nodes`, `meshes`, `materials`,
+`textures`, `cameras`, `lights` and `animations`, each row holding the
+properties glTF defines for that object, with keys in place of glTF's array
+indices and geometry and images in assets. It declares four continuous
+axes, `x`, `y`, `z` and `t`, with the scene's bounds and duration as their
+extents, beside its keyed axes. A glTF file converts to such an object at
+the border without loss, and exports from one (**B3**). The kernel does not
+interpret these tables; it stores, anchors, attributes and summarizes them
+as it does any data.
 
-A scene is not a dead end for composition. A wall that shows a spreadsheet,
-or a doorway into another scene, is a child of the surface — a Portal —
-which the reader presents into a raster for the scene's Compute-let to
-place on the wall, routing input back through it (§5.6). The spreadsheet on
-the wall is live, anchored and attributed like any other.
+*Anchors reach into it three ways.* To a part: a key on `nodes`, `meshes`
+or any other table. To a place: a region on `x`, `y`, `z`. To a time: a
+region on `t`. A comment on a doorway, evidence for the dimensions of a
+beam, a summary of the east wing and a decision about a material are all
+ordinary anchors to the scene object, and survive edits by the ordinary
+rules: keys persist, and rescaling the scene is a `remap`.
+
+*Attribution is ordinary.* Each row was set by a change, so `why` on a node
+answers who or what placed it, from what prompt, on what evidence.
+
+*The light cone covers it.* Summaries pin regions of the scene — a table,
+a set of nodes, a volume — and form a tree like any other (§11.7). The
+plain-text face of a scene lists its nodes by label in the order of the
+scene's hierarchy (§7.3).
+
+*What appears inside the scene is format data too.* A surface names the
+object it presents in `of`. Its children — a Portal onto a spreadsheet, a
+region holding a page of text — are objects, each with `place.at`: an
+anchor into the scene naming the node on which the child sits. That node's
+row gives its position, orientation and the size of the rectangle, in
+scene units. So "the spreadsheet is on the north wall" is a fact in the
+universe, with an origin, which an agent can read and change; the program
+only draws it (§5.6).
+
+*The program holds no content.* The scene's presenter is a carried
+Compute-let drawing through the `gpu` capability. Its memory holds the
+state of a machine — a camera being moved, a cache of buffers — never
+anything that is part of the work (**M9**). Without `gpu` the surface shows
+its poster (**H2**), and everything above remains readable.
+
+The format therefore has no 3D object type, no 3D operation, no 3D
+display-list item and no scene profile, and three dimensions are not
+opaque to it.
 
 **What the removed profiles compose from.** Each medium once planned as a
 profile is fully expressible now:
@@ -1140,7 +1173,7 @@ profile is fully expressible now:
 | Timeline (video, audio) | clocks holding rasters, samples, text, paths and Portals for intervals | §14.1 |
 | Grid (tables) | a data object; a `grid` group under `each`; formulas in cells; `propose` handlers for editing | §14.1, §14.4 |
 | Canvas (free layout) | a region with `absolute` children | §14.4 charts |
-| Scene (3D) | a data object in the glTF model; a surface with a carried presenter; children by `present` | §14.4 |
+| Scene (3D) | a data object in the glTF model with `x`, `y`, `z`, `t` axes; a surface that names it in `of`, with a carried presenter; children placed by anchors into the scene | §14.2, §14.4 |
 | Conversation | a text with spans for speaker and time; origin per turn in the Chronicle | §13.2 |
 
 If any medium is found that these cannot express, the remedy is to restore
@@ -1170,11 +1203,13 @@ range against the current revision and turns it into a `splice`. The host
 knows it is editing a run of text and nothing more (**K2**).
 
 **Children of a surface.** A surface MAY have `children`, a keyed map of
-objects — normally Portals. The kernel does not place them; the surface's
-Compute-let does, using the `present` capability: it asks for a child to be
-presented at a size it chooses, receives a raster it can draw or use as a
-texture, and passes back any input that falls on the child, translated into
-the child's coordinates. Parents still size children (**V1**), the child is
+objects: Portals, or regions, groups and texts directly. Where each child
+sits is stated in the child's `place.at`, an anchor into the object the
+surface presents (its `of`), so that the arrangement is data. The kernel
+does not draw the placement; the surface's Compute-let does, using the
+`present` capability: it asks for a child to be presented at a size in
+pixels, receives a raster it can draw or use as a texture, and passes back
+any input that falls on the child, translated into the child's coordinates. Parents still size children (**V1**), the child is
 composed by the kernel exactly as it would be anywhere, and the limits on
 nesting apply (**O7**). This is how a Portal appears on a wall of a 3D
 scene, on a screen inside a game, or in a custom interface.
@@ -1237,31 +1272,83 @@ by two carried components, a rasterizer and a text shaper (§7.4).
 The kernel is itself a sandboxed component: it has no authority over the
 host except through the host interface.
 
-### 6.2 Composition and the display list
+### 6.2 The drawing contract
 
 To present, the kernel **composes**: given a face (§7), an available size,
 the root clock's time and the presentation state, it produces a **display
-list**. The display list is the only thing presenters and bindings consume.
-Its items are:
+list**. Executing display lists is the whole of what a host draws and
+plays, and this section is the whole of what a binding knows about
+presentation. It is part of the frozen host interface (§6.3): once
+published, items are never removed or changed.
 
-| Item | Content |
+A display list is an encoded value (§1.2): a list of items, each a list
+whose first element names its kind. The schema is in Appendix C.
+
+| Item | Fields |
 | --- | --- |
-| `push` / `pop` | enter and leave a coordinate space: transform, clip, opacity |
-| `text` | one line of characters, already broken (§6.3 `text`), with a style and the position of its baseline |
-| `path` | geometry, fill, stroke |
-| `raster` | a source — a blob, a surface's output, or pixels in the emitting component's memory — with a source rectangle, a destination rectangle and, for video, a time and the rate at which that time is advancing |
-| `samples` | a source — a blob, or samples in the emitting component's memory — with a start time on the root clock, a rate and a gain |
-| `surface` | a rectangle handed to a running Compute-let |
-| `hit` | a rectangle or path that, when it receives input, sets presentation state or delivers input to a surface |
+| `push` | `m`: six floats, a transform; `clip`: a rectangle or a path; `alpha`: 0 to 1. All optional |
+| `pop` | none; ends the innermost `push` |
+| `text` | `s`: the characters of one line; `x`, `y`: where its baseline starts; `font`: a list of family names and font assets, in order of preference; `size`; `weight` (100 to 900); `slant` (boolean); `color`; `dir`: `ltr` or `rtl`; `adv`: the advance the host reported for this line |
+| `path` | `d`: segments `M`, `L`, `Q`, `C`, `Z` with their coordinates; `fill`, `stroke`: a color or gradient; `width`; `join`: `miter`, `round`, `bevel`; `cap`: `butt`, `round`, `square`; `dash`; `rule`: `nonzero` or `evenodd` |
+| `raster` | `source`: a blob in a baseline format, a surface's identifier, or `{mem, w, h}` naming RGBA pixels in the emitting component's memory; `from`, `to`: source and destination rectangles; `smooth`; and for video `t`, a time in flicks, and `rate`, two integers |
+| `samples` | `source`: a blob in a baseline format, or `{mem, n, hz, channels}` naming samples in the emitting component's memory; `at`: when on the root clock the source's `t` is to sound; `t`; `rate`; `gain`; `pan` |
+| `surface` | `id`, `to`: a rectangle handed to a running Compute-let, which fills it with its own display list |
+| `hit` | `id`, `shape`: a rectangle or path; `events`: which input events it takes |
 
-Each item carries the anchor of the description it came from, so that
-anything on screen can be traced to its object, and from there to its
-origin (§7.5 `why`). Each MAY carry a label and role, from which the binding
-builds the host's accessibility tree.
+Every item MAY also carry `src`, the anchor of the description it came
+from, and `label` and `role`, from which the binding builds the host's
+accessibility tree. A binding does not interpret `src`; it hands it back
+with input, so that anything on screen can be traced to its object and from
+there to its origin (§7.5 `why`).
 
-The rate on a timed item tells the host that time is running and how fast,
-so that it can play video and audio smoothly between compositions; it is the
-only thing a host needs to know about playback.
+- **[W1] Space.** The origin is the top left of the surface, `x` to the
+  right, `y` downward, in CSS reference pixels. A transform `[a b c d e f]`
+  maps `(x, y)` to `(a·x + c·y + e, b·x + d·y + f)`. Each `push` composes
+  its transform with, and intersects its clip with, those in force; `pop`
+  restores them.
+- **[W2] Order.** Items are painted in list order, each over what came
+  before, by source-over compositing in sRGB with premultiplied alpha.
+- **[W3] Paths.** A host fills and strokes exactly the stated geometry.
+  Strokes are centered on the path; the miter limit is 4. After
+  anti-aliasing, coverage MUST match the exact geometry to within half a
+  device pixel at every edge.
+- **[W4] Text.** A host draws the characters of `s` on one line starting at
+  the baseline point, in the first font of the list it has, falling back
+  through the list and then to its own default. It MUST NOT break, wrap,
+  justify or truncate the line: the kernel has already broken it, using the
+  host's own measurements (§6.3 `text`), and `adv` MUST equal the advance
+  the host then draws.
+- **[W5] Rasters.** A host decodes the source, maps the `from` rectangle to
+  the `to` rectangle, with bilinear filtering if `smooth` and nearest
+  neighbor if not. For video it shows the frame at `t`; if `rate` is not
+  zero it goes on advancing at that rate until the next display list
+  arrives, which is the only thing a host knows about playback.
+- **[W6] Samples.** A host sounds the source so that its position `t` is
+  heard at root-clock time `at`, advancing at `rate`, scaled by `gain`.
+- **[W7] Input.** A host reports input as events (below), each with the `id`
+  of the innermost `hit` item under it, coordinates local to that item, and
+  the root clock's time.
+- **[W8] Nothing else.** A host executes these eight kinds and no others,
+  and adds nothing of its own to a surface. An item of a kind it does not
+  know is skipped and logged.
+
+**Input events**, also encoded values: `pointer` (`down`, `up`, `move`,
+`enter`, `leave`; position; buttons; pointer identifier), `key` (`down`,
+`up`; the key's name as the UI Events specification gives it; modifiers),
+`text` (characters committed by the host's input method), `edit` (for an
+editable region: the range replaced and its replacement, §5.6), `scroll`,
+`focus`, `resize`.
+
+**Conformance of a binding** is tested against this section alone: a corpus
+of display lists with reference results. Path and raster items are compared
+to reference images, requiring every channel of at least 99.5% of pixels to
+be within 8 of 255. Text items are tested for position and advance, not for
+glyph shapes, which belong to the host's fonts. Input is tested by
+synthetic events against `hit` items.
+
+Exports that must be identical everywhere do not use the host for drawing
+at all: the same display list is executed by the carried rasterizer and
+shaper (§7.4).
 
 Composition is a projection (§7.1): the display list is never stored.
 
@@ -1301,53 +1388,111 @@ the surface's `ports` property connects it to. A message is one encoded
 value of at most 64 KiB.
 
 A **capability** is a named, granted authority. Everything beyond the base
-functions is a capability:
+functions is a capability.
 
-| Capability | Gives | Held by default by |
-| --- | --- | --- |
-| `store` | read and append pack bytes; the host's exclusive lock | the kernel only |
-| `text` | `break`: given characters, a style and a width, the lines they break into, each with its range, width, height and baseline. `locate`: the character position nearest a point in a line. `edit`: mount the host's editing surface on an editable region (§5.6) | the kernel only |
-| `media` | decode a baseline asset (§6.5) to pixels or samples at a time | the kernel only |
-| `inflate` | decode and encode DEFLATE (§2.1) | the kernel only |
-| `verify` | check an Ed25519 signature | the kernel only |
-| `objects` | read, or propose changes to, objects within a stated anchor | nobody |
-| `present` | have the reader present a child of the component's surface (§5.6) into a raster the component can draw with, and pass input on to it | any Compute-let whose surface has children |
-| `gpu` | accelerated graphics on the component's surface | nobody |
-| `audio` | a low-latency stream of generated samples | nobody |
-| `input.raw` | high-frequency pointer, gamepad and device input | nobody |
-| `time.precise` | sub-frame timing | nobody |
-| `net` | requests to stated origins | nobody |
-| `camera`, `microphone` | device capture | nobody |
-| `files` | a file the person picks, or a place the person picks to save | nobody |
-| `encode` | encode pixels or samples to a baseline format (§6.5), or pages to PDF, where the host can (§7.4) | the kernel, on export |
+**The contract.** It is the same for every capability, and it is complete:
+adding a capability adds a row to the table below and a set of operations,
+and changes nothing here.
+
+*Request.* A Compute-let's manifest (§11.1) lists its requests. Each is
+`{capability, scope, required, why, without}`: the capability's name; a
+scope in that capability's own terms; whether the program cannot run
+without it; a sentence for the person saying why it is wanted; and a
+sentence saying what the person loses if it is refused.
+
+*Offer.* When a program is about to start, the reader works out, for each
+request, one of four states:
+
+| State | Meaning |
+| --- | --- |
+| *granted* | the host has it and the person has allowed it, for this scope or a wider one |
+| *undecided* | the host has it and the person has not yet been asked |
+| *denied* | the person refused, or revoked |
+| *absent* | the host does not have it |
+
+*Asking.* For each *undecided* request the reader asks the person, showing
+the program's identity, who sealed it if anyone, the capability in plain
+words, the exact scope, and the program's `why` and `without` as the
+program's own words. The person answers yes, no, or yes with a narrower
+scope, for this session or until revoked. A reader MUST NOT ask on merely
+opening a universe: it asks when the person acts to run the program.
+
+*Start.* If every required request is *granted*, the program starts. If
+any is *denied* or *absent*, it does not: its poster is shown at its
+authored size with a plain statement of what is missing and, if denied, the
+means to grant it (**H2**). Optional requests never prevent a start.
+
+*Use.* `capability(name)` returns a handle or the state. Every `call` on a
+handle is checked against the granted scope; a call outside it fails and
+is logged. A program MAY call `capability` again later: the answer can
+change while it runs.
+
+*Revocation.* The person can revoke any grant at any time. The handle
+becomes invalid at once, calls on it fail with *revoked*, and the program
+receives a message on the handle's port. A program that held a required
+capability is stopped at the end of its current call and its poster shown.
+
+*Narrowing.* A component that presents another may ask the kernel for a
+handle with a smaller scope and pass that to the child. It can never pass
+a wider one (**H3**).
+
+| Capability | Scope | Gives | If absent or denied | Held by default by |
+| --- | --- | --- | --- | --- |
+| `store` | one pack | read and append its bytes; the exclusive lock | no reader | the kernel only |
+| `text` | — | `break`, `locate`, `edit` (below) | no reader | the kernel only |
+| `media` | — | decode a baseline asset (§6.5) to pixels or samples at a time | the asset's poster or label | the kernel only |
+| `inflate` | — | decode and encode DEFLATE (§2.1) | compressed records are unavailable | the kernel only |
+| `verify` | — | check an Ed25519 signature | seals are shown as unchecked | the kernel only |
+| `encode` | — | encode pixels or samples to a baseline format, or pages to PDF | that export is not offered | the kernel, on export |
+| `objects` | an anchor, and `read` or `propose` | read objects within the anchor; submit changes to them, which are verified like any change | the program runs on what it carries | nobody |
+| `present` | the surface's own children | present a child into a raster; route input to it | children are not shown | a Compute-let whose surface has children |
+| `gpu` | the surface | accelerated graphics (Appendix E) | poster, or the program's own fallback through `draw` | nobody |
+| `audio` | the surface | a low-latency stream of generated samples | silence | nobody |
+| `input.raw` | the surface | unbuffered pointer, gamepad and device input | ordinary `input` events | nobody |
+| `time.precise` | — | timing finer than a frame | frame times | nobody |
+| `net` | a list of origins | requests to those origins | the program runs offline | nobody |
+| `camera`, `microphone` | the device | capture while the surface is visible | none | nobody |
+| `files` | one file or folder the person picks | read it, or save to it | the reader's own save | nobody |
+
+`text` has three operations. `break`: given characters, a font list, a
+size, a weight, a slant, a direction and a width, the lines they break
+into, each with its character range, advance, ascent and descent. `locate`:
+given one such line and a horizontal offset, the nearest character
+position. `edit`: mount or unmount the host's editing surface on a
+rectangle with given text (§5.6). The operations of `objects` are the
+projections and actions of §7.5 and §11.8, confined to the scope. Those of
+`present` are `raster` (child key, width, height → a raster source) and
+`deliver` (child key, input event). The operations of `gpu` are sketched in
+Appendix E. Those of the remaining capabilities are few and are written
+with the first implementation; the contract above does not wait for them.
 
 - **[H1]** A component obtains a capability only if its manifest requests it
   (§11.1), the person has granted it (§10.3), and the host offers it.
-- **[H2] Degradation.** `capability` returns one of *granted*, *denied* or
-  *absent*. A manifest marks each request `required` or `optional`. If a
-  required capability is denied or absent, the reader MUST NOT start the
-  component and MUST show, in its place and at its authored size, its carried
-  face if it has one (§7.1), or an inspectable placeholder, with a plain
-  statement of what is missing. If an optional capability is denied or
-  absent, the component runs without it.
+- **[H2] Degradation.** Every capability has a defined result when absent or
+  denied, given in the table. A program whose required request is not
+  granted is replaced, in place and at its authored size, by its poster and
+  a plain statement; one whose optional request is not granted runs
+  without it. Nothing is ever left blank or broken.
 - **[H3]** A component holding a capability MAY pass a narrower one to a
   component it presents, never a broader one. The kernel is the first holder
   and narrows everything it passes on.
 - **[H4]** New capabilities are added to this specification by name, under
-  the deletion test (**V3**). Adding one never changes the base functions. A
-  capability is something only a host can provide; anything that can be
-  computed inside the sandbox is a Compute-let, not a capability.
+  the deletion test (**V3**). Adding one never changes the base functions or
+  the contract. A capability is something only a host can provide; anything
+  that can be computed inside the sandbox is a Compute-let, not a
+  capability.
 - **[H5]** There is no other extension mechanism. Readers have no plugins,
   no registered handlers and no per-type code paths.
+- **[H6]** A reader MUST show the person, at any time, every grant in force,
+  and what each program has done with it during the session.
 
 The interface is specified as plain WebAssembly imports under the module
 name `ufo:host/1`, with arguments passed as offsets and lengths in the
 component's memory and structured arguments encoded as values (§1.2).
 
-The ten base functions are the whole of the frozen surface, but they are
-not the whole of what must be specified: each capability's operations are
-part of this specification too, are counted in §12, and are not yet all
-written (§0.2).
+The frozen surface is the ten base functions, the two exports, the drawing
+contract of §6.2 and the capability contract above. The operations of each
+capability are part of this specification too and are counted in §12.
 
 ### 6.4 Decode at the border, encode at the border
 
@@ -1496,7 +1641,9 @@ The **plain-text face** of an object is its text in reading order, without
 layout or style: for a text, its characters, with each Portal replaced by its
 label; for a group, region or clock, the plain-text faces of its children in
 order (for a clock, in order of start time); for a data object, its rows as
-tab-separated lines; for anything else, its label.
+tab-separated lines, table by table; for a surface, the plain-text face of
+what it presents followed by those of its children; for anything else, its
+label.
 
 - **[S4]** Every reader MUST be able to produce the plain-text face of any
   object. It is what a text editor, a search index, a screen reader and a
@@ -1702,7 +1849,7 @@ its own identity, distinct from what it presents.
 | --- | --- |
 | `of` | what is presented: a ref (the object, as it now is); an anchor (a region of it, carried to the current revision, so that it follows edits); a pin (exactly the revision pinned, which never changes beneath the Portal); or an anchor into another universe (§1.8) |
 | `face` | preferred face of the target: a ref to a face object or a `medium` hint; absent lets the reader choose |
-| `place` | how it sits in the parent: `inline`, `block`, `float-start`, `float-end` (in a flow); by `x`, `y`, order (in an `absolute` group); by cell (in a `grid`) |
+| `place` | how it sits in the parent: `inline`, `block`, `float-start`, `float-end` (in a flow); by `x`, `y`, order (in an `absolute` group); by cell (in a `grid`); by `at`, an anchor into the space its parent surface presents (§5.6) |
 | `w`, `h` | authored size |
 | `align`, `fit`, `crop` | alignment in the available space; `contain`, `cover`, `fill` or `none`; fractions cut from each edge |
 | `label` | accessible name; also what the plain-text face shows |
@@ -1892,10 +2039,12 @@ that last set it. For an item of a module, see §11.5.
 
 ### 9.1 The working form
 
-The **working form** is a pack in a file by itself. Its file name ends
-`.ufo` and its media type is `application/vnd.ufo`. Both are provisional
-and unregistered, and the file-name ending is already used by the Unified
-Font Object format, so it must be reconsidered before anything ships.
+The **working form** is a pack in a file by itself. The format's name is
+UFO. Its file-name ending and media type are not yet chosen: the obvious
+`.ufo` is already used by the Unified Font Object format.
+[NAMING.md](NAMING.md) sets out candidates and the evidence for each. Until
+one is chosen this document writes the ending as `.ufo` and the type as
+`application/vnd.ufo`, as placeholders.
 Native readers and agents work on this form. A person's own working form
 is whole (§2.5); one saved from a published copy lacks what its sender
 withheld, and says so.
@@ -2320,6 +2469,13 @@ under the same sandbox and the same metering.
   for it.
 - **[M2]** A Compute-let is inert until a reader chooses to run it. Opening
   a universe runs nothing (**C12**).
+- **[M9] No private content.** Whatever a Compute-let presents that is part
+  of the work — a scene, a level, a document, the placement of things within
+  them — lives in objects, which it reads through the `objects` capability
+  and names in its surface's `of` and `children`. Its snapshot holds the
+  state of the machine. A reader, an agent or another presenter MUST be able
+  to find, anchor, attribute and summarize that content without running
+  the Compute-let.
 - **[M3]** A carried presenter is a Compute-let attached to a surface, and
   nothing more. It is placed where it is wanted, by the author or by the
   tool that imported the content; a raster or samples primitive that needs
@@ -2333,21 +2489,55 @@ determinism: no threads, no shared memory, one memory, and imports only
 from `ufo:host/1`.
 
 - **[M4] Fuel.** Stored modules contain no metering. Before running any
-  module, the kernel instruments it by a fixed rule: it adds one mutable
-  64-bit global, which no stored code can refer to because it did not exist
-  when the module was validated, and at the start of every function body
-  and every loop iteration it subtracts from that global the number of
-  instructions in the straight-line sequence that follows, trapping if the
-  result is negative. Bulk memory instructions also subtract one sixteenth
-  of the byte count they are about to move. A base host function costs 100;
-  a capability call costs 1000 plus one sixteenth of the bytes passed. The
-  reader sets the global before each call it makes into the module. Because
-  the reader inserts the metering itself, there is nothing for a file to
-  omit and nothing for the reader to trust.
+  module the kernel **instruments** it by the rule below, which is normative
+  and the same in every reader; test vectors are in Appendix F.
+
+  1. *Counter.* Append one global of type mutable `i64`, initial value 0,
+     after all the module's globals, and export it as `ufo:fuel`. No stored
+     code can refer to it: it did not exist when the module was validated,
+     and a stored module MUST NOT export or import any name beginning
+     `ufo:` (**N1**).
+  2. *Regions.* The *entry region* of a function is every instruction of its
+     body that is not inside a `loop`. The region of a `loop` is every
+     instruction inside it that is not inside a nested `loop`. Every
+     instruction of the stored body counts one, including `block`, `loop`,
+     `if`, `else` and `end`. The `loop` instruction itself belongs to the
+     region that contains it; the `end` that closes a loop belongs to the
+     loop's region; the final `end` of a body belongs to the entry region.
+  3. *Charge.* At the very start of each function body, and immediately
+     after each `loop` instruction, insert a charge for the size *n* of that
+     region:
+     `global.get F` `i64.const n` `i64.sub` `global.set F` `global.get F`
+     `i64.const 0` `i64.lt_s` `if` `unreachable` `end`,
+     where *F* is the counter. A region is charged in full on entry, whether
+     or not every branch in it is taken.
+  4. *Bulk.* Immediately before each `memory.copy`, `memory.fill` and
+     `memory.init`, charge one for every 16 bytes of its length operand,
+     rounded up, computed at run time from that operand.
+  5. *Calls out.* The reader subtracts 100 from the counter for each base
+     host function called, and 1 000 plus one for every 16 bytes passed for
+     each `call`.
+  6. *Floats.* Immediately after each instruction that can produce a NaN
+     whose bits are not fixed by WebAssembly — the `f32` and `f64` forms of
+     `add`, `sub`, `mul`, `div`, `sqrt`, `min`, `max`, `ceil`, `floor`,
+     `trunc` and `nearest`, and `f32.demote_f64` and `f64.promote_f32` —
+     insert a sequence that replaces any NaN with the canonical quiet NaN
+     of its type (`0x7fc00000`, `0x7ff8000000000000`): `local.tee T`
+     `local.get T` `f.ne` `if (result f)` `f.const nan` `else`
+     `local.get T` `end`, where *T* is one local of that type appended to
+     the function's locals for the purpose. Inserted instructions are never
+     counted in a region.
+
+  The reader sets the counter before each call it makes into the module. A
+  trap from an exhausted counter is reported as *out of fuel* and is
+  distinguishable from every other trap. Because the reader inserts the
+  metering itself, there is nothing for a file to omit and nothing for the
+  reader to trust, and because the rule is fixed, the same module with the
+  same fuel traps at the same instruction everywhere.
 - **[M5] Determinism.** Given the same module, state, fuel, clock times,
   inputs, messages, capability replies and random seed, a Compute-let MUST
-  behave identically on every reader. The kernel's instrumentation also
-  canonicalizes NaN values wherever their bits could be observed.
+  behave identically on every reader, including the point at which it runs
+  out of fuel.
 - **[M6] State.** A Compute-let's state is its memory, globals and tables,
   its clock time, its position in the random stream and the input and
   messages not yet delivered to it. A **snapshot** is the exact content of
@@ -2387,13 +2577,24 @@ however its content changes. `by` is the change that last set its content;
 `name` is for projections; `index` is its position in its index space.
 Every byte of a module that carries meaning belongs to exactly one item.
 All other bytes — section framing, sizes, the order of sections — are
-**derived**: computed by the printer's fixed rules.
+**derived**: computed by the printer's fixed rules, which are these. Sections
+appear in the order type, import, function, table, memory, global, export,
+element, code, data, each only if not empty; there are no custom sections
+and no start section. The type section lists each distinct function type
+once, in order of first use by item `index`. Items of each kind appear in
+order of `index`, which is dense from zero. Exports appear in ascending
+order of name, by bytes. Every length and index is an unsigned LEB128 in
+shortest form.
 
-A **unit** is an item of kind `func`. Its `hash` is taken over its
-signature, its local declarations and its instructions, in WebAssembly
-binary encoding, with every index operand — of a function, global, type,
-table or data segment — replaced by the key of the item it refers to, or
-for a type by the type's encoding. A unit's hash therefore depends on what
+A **unit** is an item of kind `func`. Its `hash` is the SHA-256 of these
+bytes in order: the function's type as WebAssembly encodes a function type
+(`0x60`, parameters, results); its local declarations as the code section
+encodes them; and its instructions as the code section encodes them, ending
+with the final `end`, except that every index operand is replaced — of a
+function, global, table, data or element segment, by the 16-byte key of the
+item it refers to; of a type, by that type's encoding. Indices of locals
+and labels are left as they are. The hash of any other item is the SHA-256
+of its content as its section encodes it, with indices replaced likewise. A unit's hash therefore depends on what
 it does and on which items it uses, and not on where anything sits in the
 module: adding, removing or reordering other functions does not change it.
 Two modules that hold items with the same keys and the same content have
@@ -2403,9 +2604,10 @@ A module offers one keyed axis, `items`. An anchor to a function survives
 `func.replace`, because the key does.
 
 - **[N1]** A reader MUST check, before running a module, that `wasm` is a
-  valid module within the restrictions of §11.2 and that the hash of every
-  item computed from `wasm` equals the hash recorded for it. A module that
-  fails is inconsistent.
+  valid module within the restrictions of §11.2, that it uses no name
+  beginning `ufo:` other than its imports from `ufo:host/1`, and that the
+  hash of every item computed from `wasm` equals the hash recorded for it. A
+  module that fails is inconsistent.
 
 There is no source tree. The module's readable forms are projections.
 
@@ -2424,7 +2626,7 @@ by key or by name.
 
 | Operation | Effect |
 | --- | --- |
-| `func.add` | add a function with a signature and instructions; assigns a key |
+| `func.add` | add a function with a signature and instructions, under a key the operation supplies |
 | `func.replace` | replace the instructions of the function with a given key, expecting a given current hash |
 | `func.remove` | remove a function that nothing refers to |
 | `export.set` / `export.remove` | export an item under a name; remove an export |
@@ -2435,8 +2637,11 @@ by key or by name.
 | `table.set` | set the functions of the indirect call table |
 | `module.import` | create a module from bytes compiled elsewhere, assigning keys to its items |
 
-In the terms of §4.3, each operation is a `set` on the keyed `items` axis:
-`add` creates a key, `replace` and `set` keep it, `remove` deletes it.
+Every operation that creates an item supplies its key, so that replaying
+the operations reproduces the module exactly. The fields of each operation
+are in Appendix C. In the terms of §4.3, each operation is a `set` on the
+keyed `items` axis: `add` creates a key, `replace` and `set` keep it,
+`remove` deletes it.
 
 For a list of operations forming one change, the printer:
 
@@ -2620,7 +2825,7 @@ revised once, with reasons, before anything is frozen.
 | Formula operators | 64 | 51 | a spreadsheet's essentials; anything larger is a Compute-let |
 | Base host functions | 12 | 10, plus 2 exports | small enough to implement identically on every host |
 | Capabilities | 20 | 16 | each is something only a host can provide (**H4**) |
-| Operations across all capabilities | to be set | not yet counted | most are unwritten (§0.2); the count is part of the interface's true size |
+| Operations across all capabilities | 64 | 32 written or sketched: `text` 3, `present` 2, `gpu` 27 (Appendix E); `objects` reuses the projections and actions | the rest are unwritten; the count is part of the interface's true size |
 | Printer operations | 16 | 12 | |
 | Concepts | 40 | 38 | what a newcomer must learn; each is justified in §16, and a new concept must displace one |
 | All defined terms, including names for compositions and structural terms | 130 | 125 | the full total of §16's three tables |
@@ -2628,16 +2833,17 @@ revised once, with reasons, before anything is frozen.
 ### 12.2 Size of the player
 
 Lines are non-blank, non-comment lines of the implementation language, Rust.
+These limits change only on measurement.
 
 | Measure | Limit | Reason |
 | --- | --- | --- |
-| Kernel source, excluding tests | 12 000 lines | one engineer reading about 1 200 lines an hour finishes in a long working day |
-| Kernel, compiled WebAssembly | 320 KiB | an eighth of a typical phone photograph |
-| Kernel, DEFLATE-compressed | 120 KiB | what an envelope actually carries |
-| Binding source, per host | 1 200 lines | it executes display lists, delivers input, builds the accessibility tree and offers capabilities; readable in an hour |
-| Web binding, as shipped | 24 KiB | |
+| Kernel source, excluding tests | 10 000 lines | one engineer reading about 1 200 lines an hour finishes in a working day |
+| Kernel, compiled WebAssembly | 256 KiB | a tenth of a typical phone photograph |
+| Kernel, DEFLATE-compressed | 96 KiB | what an envelope actually carries |
+| Binding source, per host | 600 lines | readable in minutes; this now includes executing the drawing contract (§6.2) |
+| Web binding, as shipped | 16 KiB | |
 | Tools universe (§6.6), as carried | 24 KiB | description only; no code |
-| Web envelope holding one paragraph | 256 KiB | compressed kernel in base64 (160 KiB), binding, tools universe, static face, pack |
+| Web envelope holding one paragraph | 192 KiB | compressed kernel in base64 (128 KiB), binding, tools universe, static face, pack |
 | Web envelope for each worked example of §14 | reported | no limit yet; measured and published with the first implementation |
 | Printer, compiled | 192 KiB | carried only with working history of Compute-lets |
 | Implementations of any piece of format, layout or media logic in the project's readers | exactly 1 | **K1** |
@@ -2648,19 +2854,13 @@ happens:
 
 | Part of the kernel | Lines |
 | --- | --- |
-| Hashing, values, pack, recovery, index, compaction | 1 500 |
-| Objects, object map, blobs, changes, conservation, runs | 1 500 |
-| Anchors, carrying, pins, digests, derivations, travel layers | 1 200 |
-| Formulas, including arithmetic that must be identical everywhere | 1 500 |
-| Layout, composition, clocks, hit testing, presentation state, pagination | 3 000 |
-| Projections, search, difference, actions, undo | 1 800 |
-| Module checking, instrumentation, promotion | 1 500 |
-
-An independent reviewer judged the earlier figures of 10 000 lines and 600
-lines for the binding not credible for this list of duties. The figures
-above were raised in response, before any code exists, and remain a bet.
-If the first implementation cannot meet them, the remedy is to find what
-can leave the kernel, not to raise them again.
+| Hashing, values, pack, recovery, index, compaction | 1 300 |
+| Objects, object map, blobs, changes, conservation, runs | 1 300 |
+| Anchors, carrying, pins, digests, derivations, travel layers | 1 000 |
+| Formulas, including arithmetic that must be identical everywhere | 1 200 |
+| Layout, composition, clocks, hit testing, presentation state, pagination | 2 500 |
+| Projections, search, difference, actions, undo | 1 500 |
+| Module checking, instrumentation, promotion | 1 200 |
 
 ### 12.3 Behavior
 
@@ -2851,10 +3051,12 @@ live modification by an agent, text linked to the code, and shared play.*
 | --- | --- | --- |
 | `design` | `ufo.text` | the document; an `embed` span halfway down names `game-portal` |
 | `game-portal` | `ufo.portal` | `of` `game-surface`; `place` `block`; 960 × 540 |
-| `game-surface` | `ufo.surface` | Compute-let `game` |
+| `game-surface` | `ufo.surface` | Compute-let `game`; `of` the current level; children: `terminal-portal` |
 | `game` | `ufo.computelet` | module, tests, snapshot, poster; requests below |
 | `engine` | `ufo.module` | the game's items |
-| `level-1` … | `ufo.data` | tiles, entities and parameters of each level |
+| `level-1` … | `ufo.data` | each level as a scene in the glTF model (§5.5): nodes for rooms, props and spawn points, with `x`, `y`, `z` axes for the level's space and `t` for its scripted time |
+| `manual` | `ufo.text` | the game's instructions, also readable on a terminal inside the game |
+| `terminal-portal` | `ufo.portal` | child of `game-surface`; `of` `manual`; `place.at` an anchor to node `terminal-screen` of `level-1` |
 | `test-1` … | `ufo.test` | calls with expected returns, and recorded replays with expected state |
 
 **Requests.** `gpu` (required), `audio` (optional), `input.raw` (optional),
@@ -2864,8 +3066,28 @@ the Portal shows the poster and says why. Without `audio` the game is
 silent.
 
 **What the host interface provides.** The ten base functions; the four
-capabilities above; `frame(time)` at the display's rate with fuel set per
-call. Nothing else.
+capabilities above and `present`; `frame(time)` at the display's rate with
+fuel set per call. Nothing else.
+
+**The game's world is format data.** The three conditions of §5.5 hold:
+
+- *Space is addressable.* A design note in `design` links to "the ledge
+  above the second door" by an anchor to `level-1` with a region on `x`,
+  `y`, `z`, and to a spawn point by its key on `nodes`. A cut-scene is
+  cited by a region on `t`. These carry through edits to the level like any
+  anchors; rescaling the level is a `remap`.
+- *What sits in the world is data, with attribution and summaries.* The
+  terminal showing the manual is `terminal-portal`, an object whose
+  `place.at` names the node it sits on. Every node of every level was set
+  by a change, so `why` on a prop says who or what placed it. Each level
+  has a summary whose sources pin its node table, under one summary for the
+  game; an agent can learn what is in level 3 without starting the game.
+- *Flat content in the world is data.* The manual on the terminal is the
+  same text object the document's appendix presents. The game asks for it
+  with `present` and draws the raster on the screen's node.
+
+The game's memory holds positions of moving things, scores and timers: the
+state of a machine in play, snapshotted with it (**M6**, **M9**).
 
 **Levels are objects.** A person edits `level-2` with the onboard tools as
 they would any table: a change with `set` operations. The game reads levels
@@ -2981,7 +3203,19 @@ nine faces and sent two ways.*
 | 3D view | transmuted, then sampled | `scene`: a `ufo.data` object in the glTF model (§5.5) whose rows describe bars, labels, lights and a camera for `figures`, with `from` pinning `figures`; `scene-surface`: a `ufo.surface` whose Compute-let, `scene-presenter`, requests `gpu` and `objects` read on `scene` and `figures`. Bar heights are read from `figures` as it now is, so the view is live; the arrangement and styling in `scene` are what was transmuted |
 | Application | sampled | `projector` presented alone, full size |
 
-**The 3D view uses no hidden profile.** `scene` is a data object like
+**The 3D view meets the three conditions of §5.5.** *Addressable:* `scene`
+declares `x`, `y`, `z` and `t`; the report's sentence "the third quarter
+towers over the rest" links to the bar by its key on `nodes`, and a
+reviewer's comment is anchored to a region of space above it. *Readable
+without the program:* each bar's node was written by the transmuting
+change, so `why` on it names the model and the prompt, and the scene has a
+summary pinned to its node table, under the report's. *Flat content placed
+in it is data:* a caption panel beside the bars is a Portal child of
+`scene-surface` whose `of` is an anchor to the sentence in `report` and
+whose `place.at` names the node `caption-panel`; edit the sentence and the
+panel in the scene shows the new words.
+
+**It uses no hidden profile.** `scene` is a data object like
 `figures`. `scene-presenter` is a Compute-let like `projector`, carried in
 this universe and in no universe without a scene (**K4**). The kernel
 composes a `surface` item and hands it the rectangle; it does not know the
@@ -3137,8 +3371,9 @@ from an input event name — `press`, `enter`, `leave`, `key`, `change` — to
 `{set: state name, to: formula}`, `{propose: operations}` (§5.6), or
 `{deliver: true}` for surfaces), `from` (§8.3).
 
-**In a parent:** `place`, `x`, `y`, `w`, `h`, `row`, `col`, `span`,
-`align`, `grow`, `margin`.
+**In a parent:** `place` (including `at`, an anchor, for a child of a
+surface), `x`, `y`, `w`, `h`, `row`, `col`, `span`, `align`, `grow`,
+`margin`.
 
 | Primitive | Properties |
 | --- | --- |
@@ -3150,8 +3385,8 @@ from an input event name — `press`, `enter`, `leave`, `key`, `change` — to
 | Group | *`children`*; `layout`: `flow`, `grid` or `absolute`; `direction`; `gap`; `rows`, `cols` (for `grid`); `each`, `as` |
 | Clock | *`children`*; `start`, `end`, `rate`, `offset`, `repeat`, `mode`; `drive` (formula, for `held`) |
 | Portal | §8.4 |
-| Surface | *`computelet`*: ref; `w`, `h`; *`ports`*: map from port name to the surface it connects to; *`children`* |
-| Data | *`cols`*: map from column key to `{label, type, order}`; *`rows`*: map from row key to map from column key to value, each row out of line when large; a cell may hold a formula; `sort`: list of row keys giving the default order |
+| Surface | *`computelet`*: ref; *`of`*: ref to the object it presents, if it presents one; `w`, `h`; *`ports`*: map from port name to the surface it connects to; *`children`* |
+| Data | *`cols`*: map from column key to `{label, type, order}`; *`rows`*: map from row key to map from column key to value, each row out of line when large; a cell may hold a formula; `sort`: list of row keys giving the default order; *`axes`*: map from axis name to `{kind, low, high, unit}` for continuous axes the object offers beyond its keyed ones, and *`tables`*: for an object holding several tables, map from table name to `{cols, rows}` |
 
 **Default presentation of text roles.** A block span is laid out as a block
 in the flow. Unless the span says otherwise:
@@ -3171,43 +3406,103 @@ A table within a text is a `grid` group at an `embed` span. Page headers
 and footers are groups given to the paged sampling (§7.4) as parameters;
 formulas in them read `state("page")` and `state("pages")`.
 
-## Appendix B. Projection line formats
+## Appendix B. Projections
 
-A projection for agents is UTF-8 text. The first line states the projection,
-the commit and the universe. Each following line is one record: a kind, then
-fields separated by single spaces, text fields last and quoted as JSON
-strings. Identities and hashes are shown as the shortest prefix, of at least
-eight hexadecimal digits, that is unique in the universe.
+What a model reads is part of the format. This appendix fixes it exactly.
 
-```
-why 3f9a12c4 @ commit 77e0b1d2 lineage 5c1e90aa
-region  o=3f9a12c4 chars=[1042,1187] rev=a81f3320
-run     chars=[1042,1120] change=d2c417e9 basis=witnessed by=model model="…" asked="…" prompt=withheld
-run     chars=[1120,1187] change=0b77a3f1 basis=inferred by=person who="…" method=text-alignment confidence=exact-text
-evidence claim=[1042,1120] kind=cites support=o:4410cc2e rows=[q3] cols=[revenue] state=current
-decision about=d2c417e9 verdict=accept who="…" change=5e02d9b7
-```
+**Form.** A projection is UTF-8 text, lines ended by U+000A. The first line
+is the header: the projection's name, its arguments as written by the
+caller, `@`, and `commit=` with the commit it was computed from. Every
+other line is one record: a *kind*, one space, then *fields* separated by
+one space, each `name=value`, always in the order given below. A field
+shown in brackets is omitted when it has no value. The last line is `end`
+followed by `lines=` and the count of record lines, so that truncation is
+detectable.
 
-`basis` appears on every line that states an origin (**R2**).
+**Values.**
 
-| Projection | Line kinds, in order |
+| Value | Written as |
 | --- | --- |
-| `overview` | `universe` (lineage, commit, height); `seal`*; `feature`*; `face`* (label, medium, kind, state); `lacks`*; `summary` (page text) |
-| `object` | `object` (id, type, rev, by); `prop`* (key, value or its size); `referrer`* |
-| `text` | `text` (anchor, then the characters) |
-| `search` | `hit`* (anchor, type, a few words of context) |
-| `history` | `change`* (id, time, actor, basis, by, ops and sizes) |
-| `why` | `region`; `run`* or `value`; `copied`*; `finding`*; `evidence`*; `decision`* |
-| `diff` | `op`* (shape; content if present, `withheld` if not) |
-| `expand` | `summary`* (size, stale or current, pins, text) or `content`* (anchor) |
-| `verify` | `ok` or `issue`* (class of §1.9, record, rule) |
-| `items` | `item`* (key, kind, name, signature, size, origin, tests) |
+| identity | `o:` and the shortest prefix of its lowercase hexadecimal, of at least 8 digits, that is unique among identities in the universe |
+| hash | the same rule among hashes of its kind, with `r:` for a revision, `c:` for a commit, `b:` for a blob, `k:` for a module item's key |
+| region | `axis=[low,high]` for sequence and continuous axes, `axis=[key,key]` for keyed ones; several axes are several fields |
+| anchor | `o:…` then, if any, its regions, then `r:…`; written without spaces inside brackets |
+| integer, float | decimal; floats with the fewest digits that round-trip |
+| time | milliseconds as an integer; clock times in flicks with the suffix `f` |
+| text | a JSON string (RFC 8259) |
+| list | values separated by commas, in brackets |
+| state | one of `current`, `stale`, `detached`, `unresolved`, `withheld`, `absent` |
+| basis | one of `witnessed`, `inferred`, `unknown` |
 
-A starred kind may appear any number of times. The exact fields of each
-line are fixed with the first implementation, under two rules: a
-projection is a function of the commit and its arguments alone, and every
-field shown can be passed back, as written, as an argument to another
-projection.
+A value too long to show — text over 200 characters where the projection
+is not asked for the text itself — is written as its first 200 characters
+followed by `…` inside the string, with a `len=` field after it.
+
+Two rules bind every projection. It is a function of the commit and its
+arguments alone. And every identity, hash and anchor it shows can be
+passed back, exactly as written, as an argument to another projection.
+
+**Records.**
+
+| Projection | Arguments | Records, in order (`*` any number, `?` at most one) |
+| --- | --- | --- |
+| `overview` | — | `universe`; `seal`*; `feature`*; `component`*; `face`*; `lacks`?; `summary`? |
+| `object` | identity | `object`; `prop`*; `run`*; `referrer`* |
+| `text` | anchor | `text` |
+| `search` | query | `hit`* |
+| `history` | anchor | `change`* newest first |
+| `why` | anchor | `region`; then for each part of it: `run` or `value`; `copied`*; `finding`*; `evidence`*; `decision`? |
+| `diff` | two commits or revisions | `op`* |
+| `expand` | identity of a summary | `summary`; then `part`* or `content`* |
+| `verify` | commit | `check`*; `issue`* |
+| `sample` | face, parameters | as text: `text`; as a display list: `item`* |
+| `items` | identity of a module | `item`* |
+| `unit` | item key | `unit`; `code` |
+| `calls` | identity of a module | `call`* |
+| `unit-history` | item key | `change`* newest first |
+
+| Record | Fields |
+| --- | --- |
+| `universe` | `lineage` `commit` `height` `objects` (count) `changes` (count) |
+| `seal` | `commit` `key` `state` (`valid`, `invalid`, `unchecked`) [`name`] [`time`] |
+| `feature` | `name` `v` `required` `supported` |
+| `component` | `role` `hash` `state` |
+| `face` | `id` `kind` (`sampled`, `carried`, `transmuted`) `state` `medium` `label` |
+| `lacks` | `history` (boolean) `blobs` (count) |
+| `summary` | `id` `size` (`line`, `paragraph`, `page`) `state` `sources` (list of anchors) `text` |
+| `part` | `id` `state` `line` (text of its one-line size) |
+| `content` | an anchor, then `type` |
+| `object` | `id` `type` `rev` (number) `r` (revision hash) `by` |
+| `prop` | `key` then `value`, or `len` and `kind` when large |
+| `run` | the region, then `change` `basis` [`by`] [`who`] [`model`] [`tool`] [`asked`] [`prompt`] [`method`] [`confidence`] `sealed` (boolean) |
+| `value` | `key` then the same fields as `run` from `change` on |
+| `copied` | `from` (anchor) `basis` |
+| `finding` | `change` `basis` and the origin fields, as in `run` |
+| `evidence` | `claim` (region) `kind` `support` (anchor) `state` [`note`] |
+| `decision` | `about` `verdict` `who` `change` `time` [`note`] |
+| `referrer` | `id` `key` |
+| `text` | the anchor, `chars` (count), then `s` |
+| `hit` | the anchor, `type`, `s` (up to 80 characters around the match) |
+| `change` | `id` `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of identities) [`note`] |
+| `op` | `op` `obj` [`key`] [`at`] [`del`] [`add`] [`bias`] [`axis`] [`scale`] [`shift`] then `old` and `new`, each a value or `withheld` |
+| `check` | `rule` (a label of this document) `scope` `result` (`pass`, `fail`, `skipped`) [`reason`] |
+| `issue` | `class` (of §1.9) `record` `rule` `s` |
+| `item` | for `sample`: the display-list item as fields. For `items`: `key` `kind` `index` `name` `hash` `size` `by` `basis` `tests` (count) [`signature`] |
+| `unit` | `key` `name` `signature` `hash` `by` |
+| `code` | `s`: the instructions in WebAssembly text format, one per line, other items shown by name |
+| `call` | `from` `to` (item keys) `count` |
+
+An example:
+
+```
+why o:3f9a12c4 chars=[1042,1187] @ commit=c:77e0b1d2
+region o:3f9a12c4 chars=[1042,1187] r:a81f3320
+run chars=[1042,1120] change=o:d2c417e9 basis=witnessed by=model model="example-model-1" asked="A. Author" prompt=withheld sealed=true
+evidence claim=chars=[1042,1120] kind=cites support=o:4410cc2e rows=[q3] cols=[revenue] r:09be77a1 state=current
+decision about=o:d2c417e9 verdict=accept who="A. Author" change=o:5e02d9b7 time=1767225600000
+run chars=[1120,1187] change=o:0b77a3f1 basis=inferred by=person who="A. Author" method="text-alignment" confidence="exact-text" sealed=false
+end lines=5
+```
 
 ## Appendix C. Schema of the core records
 
@@ -3256,11 +3551,75 @@ principal = { ? key: bytes .size 32, ? name: tstr }
 ```
 
 `change-p` is the `p` of an object of type `ufo.change`; in `revs`, an
-object's identity is written as 32 hexadecimal digits. `origin`,
-`evidence`, `decision` and `finding` have the fields of §8.5. Byte-level
-test vectors — a minimal pack, the hashes of its records, object maps of
-33 and 9 000 entries, a blob of 1 025 chunks — are part of the conformance
-suite and do not exist yet; until they do, this schema is unverified.
+object's identity is written as 32 hexadecimal digits.
+
+The Chronicle's records (§8.5):
+
+```
+origin   = { basis: "witnessed" / "inferred" / "unknown",
+             ? by: "person" / "model" / "tool", ? who: principal,
+             ? model: tstr, ? prompt: ref, ? context: [ * anchor ],
+             ? tool: { name: tstr, version: tstr }, ? asked: principal,
+             ? copied: anchor, ? first: id, ? method: { name: tstr, * tstr => value },
+             ? confidence: float / tstr, ? parameters: { * tstr => value } }
+evidence = { claim: anchor, support: anchor, kind: tstr, ? note: tstr }
+decision = { about: anchor / ref, verdict: tstr, who: principal, ? note: tstr }
+finding  = { about: anchor, origin: origin }
+```
+
+The drawing contract (§6.2):
+
+```
+display-list = [ * item ]
+item  = [ "push", { ? m: [ 6*6 float ], ? clip: rect / path-d, ? alpha: float, * meta } ]
+      / [ "pop" ]
+      / [ "text", { s: tstr, x: float, y: float, font: [ + (tstr / link) ], size: float,
+                    weight: uint, ? slant: bool, color: color, ? dir: "ltr" / "rtl",
+                    adv: float, * meta } ]
+      / [ "path", { d: path-d, ? fill: paint, ? stroke: paint, ? width: float,
+                    ? join: tstr, ? cap: tstr, ? dash: [ * float ], ? rule: tstr, * meta } ]
+      / [ "raster", { source: link / uint / { mem: uint, w: uint, h: uint },
+                      from: rect, to: rect, ? smooth: bool, ? t: int, ? rate: [ int, int ], * meta } ]
+      / [ "samples", { source: link / { mem: uint, n: uint, hz: uint, channels: uint },
+                       at: int, ? t: int, ? rate: [ int, int ], ? gain: float, ? pan: float, * meta } ]
+      / [ "surface", { id: uint, to: rect, * meta } ]
+      / [ "hit", { id: uint, shape: rect / path-d, events: [ * tstr ], * meta } ]
+meta   = ( ? src: anchor, ? label: tstr, ? role: tstr )
+rect   = [ 4*4 float ]                      ; x, y, width, height
+color  = [ 4*4 float ]                      ; red, green, blue, alpha, 0 to 1, sRGB
+paint  = color / { kind: "linear" / "radial", stops: [ + [ float, color ] ],
+                   from: [ 2*3 float ], to: [ 2*3 float ] }
+path-d = [ * ( [ "M", float, float ] / [ "L", float, float ] / [ "Q", 4*4 float ]
+             / [ "C", 6*6 float ] / [ "Z" ] ) ]
+event  = [ "pointer", { phase: tstr, x: float, y: float, buttons: uint, pointer: uint, hit: uint, time: int } ]
+       / [ "key", { phase: "down" / "up", key: tstr, mods: uint, hit: uint, time: int } ]
+       / [ "text", { s: tstr, hit: uint, time: int } ]
+       / [ "edit", { at: uint, del: uint, s: tstr, hit: uint, time: int } ]
+       / [ "scroll", { dx: float, dy: float, hit: uint, time: int } ]
+       / [ "focus", { on: bool, hit: uint, time: int } ]
+       / [ "resize", { w: float, h: float, time: int } ]
+```
+
+The capability contract and the printer (§6.3, §11.4):
+
+```
+request = { capability: tstr, ? scope: value, required: bool, why: tstr, without: tstr }
+print-op = { op: "func.add", key: id, ? name: tstr, params: [ * valtype ], results: [ * valtype ],
+             locals: [ * valtype ], body: tstr }          ; body in WebAssembly text format
+         / { op: "func.replace", key: id, expect: hash, locals: [ * valtype ], body: tstr }
+         / { op: "func.remove", key: id, expect: hash }
+         / { op: "export.set", key: id, name: tstr, item: id } / { op: "export.remove", key: id }
+         / { op: "import.add", key: id, name: tstr, params: [ * valtype ], results: [ * valtype ] }
+         / { op: "global.add", key: id, type: valtype, mutable: bool, init: value }
+         / { op: "global.set", key: id, init: value }
+         / { op: "memory.set", key: id, initial: uint, maximum: uint }
+         / { op: "data.set", key: id, at: uint, bytes: link }
+         / { op: "table.set", key: id, items: [ * id ] }
+         / { op: "module.import", wasm: link, keys: [ * id ] }
+valtype = "i32" / "i64" / "f32" / "f64"
+```
+
+Byte-level test vectors for this schema are in Appendix F.
 
 ## Appendix D. Checklist for any change to this design
 
@@ -3286,3 +3645,77 @@ stop and redesign.
 A simplification must also pass the opposite test: it may remove mechanism,
 never reach. Whoever removes a concept shows what it now composes from and
 that every worked example of §14 still works.
+
+## Appendix E. Accelerated graphics, sketched
+
+The `gpu` capability follows the model of WebGPU (W3C), which every
+current platform's graphics interface can serve, and uses its shading
+language, WGSL. The contract of §6.3 is complete without this appendix;
+the operations below are a sketch to be made exact with the first
+implementation that needs them. Each is one `call` on the capability's
+handle; resources are named by small integers the program chooses.
+
+| Group | Operations |
+| --- | --- |
+| Limits | `limits` (what the host offers: texture size, sample counts, formats) |
+| Buffers | `buffer.create`, `buffer.write`, `buffer.destroy` |
+| Textures | `texture.create`, `texture.write`, `texture.from` (a raster source from §6.2, including one returned by `present`), `texture.destroy`, `sampler.create` |
+| Shaders | `shader.create` (WGSL source; the reply reports errors) |
+| Pipelines | `pipeline.render`, `pipeline.compute`, `bindgroup.create`, `pipeline.destroy` |
+| Passes | `pass.begin` (targets: the surface or a texture), `pass.pipeline`, `pass.bind`, `pass.vertex`, `pass.index`, `pass.viewport`, `pass.scissor`, `pass.draw`, `pass.draw-indexed`, `pass.dispatch`, `pass.end` |
+| Frame | `submit` (everything queued is drawn to the surface for this frame) |
+| Readback | `read` (a texture's pixels; used for export and for tests) |
+
+Rules that are already fixed:
+
+- The surface is the only thing a program can draw to on screen. It cannot
+  read what lies outside it.
+- Every operation is charged fuel in proportion to the bytes it passes
+  (**M4**), and the reader bounds the memory a program's resources may
+  hold.
+- Results on screen are not required to be bit-identical between hosts.
+  Where they must be — a canonical export (§7.4), or a test with
+  `expect.draws` — the reader uses a software implementation of the same
+  operations, carried as a component, and `read`.
+- Shader source travels as data in the Compute-let and is given to the
+  host to compile. This is the one place a Compute-let hands a host code
+  that is not WebAssembly; the host's own validation of WGSL is the
+  boundary, as it is for web pages.
+
+## Appendix F. Test vectors
+
+The directory `vectors/` beside this document holds byte-level vectors and
+the script that generated them. They are normative: where this text and a
+vector disagree, one of them has a defect, to be reported.
+
+| File | Contents |
+| --- | --- |
+| `vectors/minimal.ufo` | a whole pack of 3451 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
+| `vectors/vectors.json` | every vector below, as hexadecimal |
+| `vectors/generate.py` | the generator: conformance tooling, not a reader |
+
+| Group | What is fixed |
+| --- | --- |
+| `values` | the encoding of 18 values: integers at the width boundaries, floats at three widths, map key order, the four tags |
+| `record_hashes` | the hash of a chunk and of a node |
+| `blobs` | blob nodes and hashes for 0 bytes, 3 bytes, 2²⁰ and 2²⁰ + 1 zero bytes, and 1 025 MiB of zero bytes, which needs two levels |
+| `object_maps` | root hashes of maps with 1, 32, 33 and 9 000 entries: a leaf, the largest leaf, the smallest interior node, and three levels |
+| `minimal_pack` | every record of `minimal.ufo` with its offset and hash; the index; the head; the root hash |
+| `carry_sequence` | 15 cases of §4.3's table, including points, deletion of a whole region, and both values of `bias` |
+| `printer` | two printer operations on an empty module, the module bytes they produce, and the hash of each item with the exact bytes hashed |
+| `instrumentation` | three stored modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
+
+Three values, for a first check without opening the files:
+
+| | |
+| --- | --- |
+| Hash of the chunk `abc` | `1e18834c426d00e57788444cb3ccd62c771b420c095bb0c4e040a8c122c4570d` |
+| Root hash of `minimal.ufo` | `71c1f9490e6d842e308d0e6afd957bcbb1f4877a93928232625c51e10feb79f0` |
+| SHA-256 of the file `minimal.ufo` | `33d731e67c6f28b3319167a8bf4b910a6d57fae2e8980837a6dc911ae2f192ca` |
+
+How far these have been checked: the WebAssembly vectors were validated and
+run in one engine and behave as stated. The pack vectors were read back by
+a reader written independently from §1–§3 and Appendix C. No second
+*writer* exists, so an error shared by this text and the generator would
+not have been caught.
+

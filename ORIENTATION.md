@@ -404,8 +404,8 @@ forbids.
 
 Two things happened after version 0.2: the owner's addendum — simplify the
 mechanism, never the ambition; invent where nothing fits — and an
-independent cold review of 75 findings, ten critical. The review and a
-finding-by-finding response are in [reviews/](reviews/).
+independent cold review of 75 findings, ten critical. The review and the
+finding-by-finding response are kept in the project's private notes.
 
 **From the addendum.** Reach restored or extended: texts of any length;
 Portals inside 3D scenes and games, through children of a surface; scene
@@ -448,4 +448,46 @@ existing font format.
 about 32 000, because the review showed it was not yet complete enough to
 build from. CORE.md is the two-page form. Concepts went from 47 to 38; the
 full count of defined terms, which version 0.1 did not report, is 125.
+
+## 10. What changed in version 0.4
+
+- **Budgets restored** to 10 000 lines and 256 KiB for the kernel, and 600
+  lines for a binding. They change on measurement only.
+- **Test vectors exist** (SPEC Appendix F, `vectors/`): encodings, hashes,
+  blob and object-map shapes, a whole minimal pack, anchor carrying,
+  printer output and fuel instrumentation. A small generator script wrote
+  them. This is conformance tooling, not a reader, but it is the first
+  code in the repository and is flagged as such.
+- **Projections are specified field by field** (Appendix B).
+- **The capability contract is complete** (§6.3): request, offer, asking,
+  start, use, revocation, narrowing, and a defined result for every
+  capability when absent or denied. Accelerated graphics is sketched on
+  the WebGPU model (Appendix E).
+- **The drawing contract is frozen and exact** (§6.2), with a schema and a
+  conformance method for bindings.
+- **Fuel metering is a normative rule** (M4) with vectors that were run in a
+  WebAssembly engine.
+- **Three dimensions are format data** (§5.5): a scene declares `x`, `y`,
+  `z` and `t`; anchors address nodes, places and times; Portals and flat
+  content in a scene are objects placed by anchors; a rule (M9) forbids a
+  program from being the only holder of content. Both the game and the 3D
+  example show the three conditions.
+- **Naming** is a proposal with evidence (NAMING.md); nothing is chosen.
+
+## 11. A proposed measurement spike
+
+The kernel and binding budgets are bets. I do not know that they are
+wrong, and I do not know that they are right. A throwaway spike, outside
+the specification and not to be kept, would settle the three parts that
+carry the most risk:
+
+1. values, records, pack reading with recovery, object map and blobs,
+   checked against the vectors;
+2. flow layout of one styled paragraph with the host breaking lines,
+   composed to a display list, plus a web binding that draws it;
+3. module checking and fuel instrumentation, checked against the vectors.
+
+Measured: lines of Rust per part against the per-part budget of SPEC
+§12.2, compiled and compressed size, and the binding's lines. About two
+days. It needs the owner's go-ahead, because it is implementation.
 

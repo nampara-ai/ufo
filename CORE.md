@@ -34,7 +34,8 @@ pages: open, universal, and independent of any application.
    an interrupted write falls back to the last whole state. Indexes are
    derived. Strict limits, parsing that always terminates, mandatory
    fuzzing, compaction that preserves every hash; simple enough to
-   re-implement in a weekend. A reader reports content as malformed,
+   re-implement in a weekend, with byte-level test vectors to check
+   against. A reader reports content as malformed,
    inconsistent, unavailable or unrecognized, and opening a file runs
    nothing.
 
@@ -85,12 +86,16 @@ pages: open, universal, and independent of any application.
     state or propose changes, so forms and editable tables are description.
     Every medium is a composition: a video is clocks over rasters and
     samples; a chart is data, formulas and paths; a 3D scene is data in the
-    glTF model drawn by a carried presenter.
+    glTF model, with `x`, `y`, `z` and `t` axes that anchors address, drawn
+    by a carried presenter that holds no content of its own. A Portal on a
+    wall is an object placed by an anchor into the scene.
 15. **Player.** Four parts: the **kernel**, one WebAssembly program run
     unchanged in all the project's readers, which composes a face into a
     *display list*; the **presenters**, which are the host's own drawing and
     audio for the four basic items and carried programs for anything else;
-    a thin host **binding** that knows no medium; and the universe. No
+    a thin host **binding** that knows no medium; and the universe. The
+    display list's eight items and the input events are a frozen *drawing
+    contract*, exactly specified, against which a binding is tested. No
     plugins and no dispatch by type. The kernel holds no decoder: the host
     decodes a baseline of image, audio, video and font formats, and
     everything else is converted to description once, at the border,
@@ -105,7 +110,9 @@ pages: open, universal, and independent of any application.
 17. **Onboard tools.** Kernel functions — overview, search, history, why,
     diff, verify, expand, propose, derive, undo, export — and an interface
     to them that is itself a universe, carried by hash. Agents use the same
-    functions through the Model Context Protocol.
+    functions through the Model Context Protocol, and what they read back
+    is fixed field by field: one record per line, every identity reusable
+    as an argument.
 
 ## Behavior (SPEC §6.3, §10, §11)
 
@@ -114,10 +121,12 @@ pages: open, universal, and independent of any application.
     sandbox, metered by instructions the reader itself inserts, on a
     virtual clock, deterministic, snapshotted and resumed exactly. It runs
     live alone or inside any universe through a Portal. It has ten host
-    functions; everything else is a named **capability** its manifest
-    requests and only the person grants, narrowly and revocably, with a
-    defined fallback when absent. Grants are kept by the reader, never in a
-    file.
+    functions; everything else is a named **capability** under one
+    contract: the manifest requests it with a scope and a reason; the
+    person is asked when the program is run, never on opening; grants are
+    narrow, revocable at any moment and kept by the reader, never in a
+    file; and each capability has a defined result when absent or denied.
+    Accelerated graphics follows the WebGPU model.
 19. **Printer and ledger.** No source tree. The printer alone writes module
     bytes, from structured operations, deterministically. Every part of a
     module is an item with a lasting key, and traces to its prompt, model
@@ -153,7 +162,7 @@ pages: open, universal, and independent of any application.
 ## Limits it holds itself to (SPEC §12)
 
 Eleven primitives, three layouts, three axis kinds, five operations, ten
-host functions, 38 concepts; a kernel of at most 12 000 lines and 320 KiB;
+host functions, 38 concepts; a kernel of at most 10 000 lines and 256 KiB;
 one implementation of everything in the project's readers; additions only
 by showing that data, formulas or composition cannot do the job; and
 simplifications that remove mechanism, never reach.
