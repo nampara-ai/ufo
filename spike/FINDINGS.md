@@ -127,3 +127,73 @@ own directory. Dry runs (`check`) are not counted as submissions.
    the difference between two versions of a function. A one-token fix cost
    a whole 300-byte body in the ledger and in the model's output at every
    level.
+
+Run 2 of each cell (a second fresh instance on a fresh copy of the same
+bugged program, same printer):
+
+| Model | Level | Tokens | Tool calls | Wall time | Submissions | Refused | Bytes of change submitted | Visible | Hidden walks | Hidden bug scenarios | Unchanged functions keeping hash |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S | raw | 73 159 | 7 | 48 s | 2 | 0 | 6 353 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| S | folded | 73 867 | 7 | 49 s | 2 | 0 | 8 061 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| S | expr | 70 197 | 5 | 33 s | 2 | 0 | 4 812 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| H | raw | 88 137 | 12 | 100 s | 2 | 0 | 7 023 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| H | folded | 93 880 | 16 | 117 s | 2 | 0 | 8 569 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| H | expr | 82 680 | 16 | 81 s | 2 | 0 | 5 530 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+
+### 1.3 Baseline, closed
+
+Twelve maintenance runs, two per cell: 12 of 12 fixed the bug, added the
+features and passed every hidden test. Means of the two runs:
+
+| Model | Level | Tokens | Wall time | Bytes submitted, whole job | Bytes submitted for the one-token bug fix |
+| --- | --- | --- | --- | --- | --- |
+| S | raw | 72 162 | 45 s | 6 347 | 1 878 |
+| S | folded | 75 422 | 61 s | 8 061 (run 2; run 1 polluted) | 2 366 |
+| S | expr | 70 668 | 35 s | 4 854 | 1 367 |
+| H | raw | 96 380 | 109 s | 8 623 | 2 184 |
+| H | folded | 92 965 | 116 s | 10 187 | 2 618 (run 2) |
+| H | expr | 82 128 | 78 s | 6 357 | 1 527 |
+
+Two runs per cell is still a small sample; the ordering of the levels on
+cost (typed tree cheapest, for both models, in both runs) is consistent but
+not established. Tokens are dominated by a fixed overhead of the harness
+(roughly 60 000 per subject), so the differences in the work itself are
+larger in proportion than the totals suggest.
+
+The one finding that needs no statistics: **a one-token fix cost between
+1.4 and 2.6 KiB of resubmitted function body in every run**, because the
+only operation is to replace a whole function. All eighteen subjects who
+maintained or built said so unprompted, and asked for a patch operation and
+a diff between versions.
+
+### 1.4 A different design, to be tried against this baseline
+
+Declared before any run of it.
+
+**The design ("code is description").** Stop treating a module as bytes
+that operations are applied to. Treat it as description, like everything
+else in a universe: a function is an object, and its body is a *sequence*
+of statements — each statement one tree in WebAssembly's own instruction
+vocabulary, with names — so that every statement has a permanent identity,
+an origin and an address, exactly as every character of a text does. Code
+is then edited with the format's ordinary operations (a `splice` of
+statements), and the printer stops being an interpreter of its own
+operation vocabulary and becomes a pure function from description to
+bytes.
+
+**Measures, and what would count.** Same build task, same maintenance task
+with the same planted bug, same visible and hidden tests, same two models,
+two runs per cell for maintenance.
+
+1. Correctness must equal the baseline: every visible and hidden test, and
+   untouched functions unchanged.
+2. Bytes submitted for the bug fix: baseline 1.4 to 2.6 KiB. The design
+   claims an order of magnitude less.
+3. Bytes submitted for the whole maintenance job: baseline best (typed
+   tree) 4.9 KiB (S) and 6.4 KiB (H).
+4. Tokens and wall time: not worse than the baseline's best level for the
+   same model (S: 70.7k, 35 s; H: 82.1k, 78 s).
+5. Build: not worse than the baseline's range (S: 65–67k; H: 76–82k).
+
+If it fails 1, or is worse on both 3 and 4, it does not replace the
+baseline, whatever its elegance.
