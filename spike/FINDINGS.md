@@ -197,3 +197,66 @@ two runs per cell for maintenance.
 
 If it fails 1, or is worse on both 3 and 4, it does not replace the
 baseline, whatever its elegance.
+
+### 1.5 The second design, measured
+
+Run exactly as declared in 1.4. The tool is `printer/printer2.mjs`; its
+guide is `printer/PRINTER-stmt.md`. A body is a list of statements, each a
+tree in WebAssembly's instruction names (a bare integer is an `i32`
+constant, a bare name reads a local or global), with control flow as
+statements of its own closed by `["end"]`. `func.edit` replaces statements
+by number against a stated revision; several edits in one operation all
+refer to the numbering that was read. `unit` shows numbered statements,
+each marked with the change that wrote it; `change` shows a change as the
+statements it removed and added.
+
+Build (one run per model):
+
+| Model | Tokens | Tool calls | Wall time | Submissions | Refused | Bytes submitted | Visible | Hidden walks | Hidden scenarios | Module bytes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S | 65 425 | 2 | 31 s | 1 | 0 | 5 575 | 5/5 | 5/5 | 2/2 | 859 |
+| H | 83 198 | 12 | 87 s | 7 | 0 | 5 603 | 5/5 | 5/5 | 2/2 | 812 |
+
+Maintenance (two fresh instances per model, same planted bug — one
+statement replaced by "an earlier maintainer" — same tasks, same tests):
+
+| Model | Run | Tokens | Tool calls | Wall time | Submissions | Refused | Bytes submitted, whole job | Bytes for the bug fix | Visible | Hidden walks | Hidden bug scenarios | Unchanged functions keeping hash |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S | 1 | 69 883 | 5 | 29 s | 2 | 0 | 1 763 | 248 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| S | 2 | 70 056 | 5 | 30 s | 2 | 0 | 1 809 | 239 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| H | 1 | 78 402 | 13 | 74 s | 4 | 0 | 2 234 | 270 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+| H | 2 | 84 344 | 15 | 95 s | 3 | 0 | 2 480 | 334 | 5/5 | 4/4 | 10/10 | 5 of 5 |
+
+Against the declared measures (means of two runs; baseline in brackets is
+its best level for that model, the typed tree):
+
+| Measure | S | H | Verdict |
+| --- | --- | --- | --- |
+| 1. Correctness | all tests, all hashes | all tests, all hashes | equal to baseline |
+| 2. Bytes for the bug fix | 244 [1 367] | 302 [1 527] | 5.6 and 5.1 times less than the best baseline level; 7.7 and 7.2 times less than flat instructions. **The claim was "an order of magnitude"; it was not met.** About 150 of those bytes are the change's note and JSON framing |
+| 3. Bytes for the whole job | 1 786 [4 854] | 2 357 [6 357] | 2.7 times less |
+| 4. Tokens; wall time | 69 970 [70 668]; 30 s [35 s] | 81 373 [82 128]; 84 s [78 s] | not distinguishable from the baseline's best |
+| 5. Build tokens | 65 425 [65–67k] | 83 198 [76–82k] | S within the range; H 1.5% above its top, with seven small submissions where the baseline subjects made one to four |
+
+By the rule declared beforehand (must equal on 1; must not be worse on
+both 3 and 4) the second design replaces the baseline. What the numbers do
+and do not show:
+
+- It does not make models more *able*: the baseline already succeeded
+  every time on this task. It makes each change smaller, and makes the
+  record of a change a diff instead of a new copy.
+- The module sizes (812 to 981 bytes) are those of flat instructions, not
+  the 20% larger output of the typed-tree compiler: the description is
+  WebAssembly's own vocabulary, so nothing is lost in translation.
+- What subjects said changed. Baseline, all twelve: "I had to retype the
+  whole body for a one-token fix"; all asked for a patch and a diff.
+  Second design: "the statement view reads like source"; "the `cN` marks
+  pointed straight at the suspect line"; three of four asked for nothing
+  further. One small-model subject found statement numbers awkward because
+  they shift after each of its own edits, and asked to name a statement by
+  something that does not move. In the format that thing exists: every
+  statement is an element with a permanent identity. The spike addressed
+  statements by number for simplicity; the specification should show and
+  accept identities.
+- Still a toy: one program of a few hundred instructions, one planted bug,
+  two models both weaker than a frontier maintainer, two runs per cell.
