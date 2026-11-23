@@ -59,12 +59,25 @@ export async function start(wasmBytes, measure, inflate, clock = {}, components 
     host_time: () => clock.time ? clock.time() : Date.now(),
     host_random(out, n) { mem().set(clock.random ? clock.random(n) : crypto.getRandomValues(new Uint8Array(n)), out); } } };
   ex = (await WebAssembly.instantiate(wasmBytes, imports)).instance.exports;
-  // a component is used only if its bytes are those its hash names, where one is given ({ bytes, sha256 }), and it instantiates
-  // against this base; one that is absent, or fails either way, is simply not there, and the kernel is told so (PLAYER K7)
-  if (components) { let mask = 0; for (const [name, c] of Object.entries(components)) { if (!c) continue; const bytes = c.bytes || c;
-      try { if (c.sha256 && c.sha256 !== [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('')) continue;
-        await WebAssembly.instantiate(bytes, { 'ufo:base': ex }); mask |= COMPONENT_BITS[name]; } catch { } }
+  // Components (spike/SPLIT.md). Not divided (`components` null): the kernel is told it holds them all. Given directly
+  // ({ printer, agent }, each bytes or { bytes, sha256 }): each is used only if its bytes are those its hash names and it
+  // instantiates against this base. Listed ({ listed: true, kernel, store }): after a pack is opened, the kernel says which
+  // components the universe carries for the kernel of that hash; one whose hash the reader's own `store` holds is taken from
+  // there and the embedded copy is never asked for; any other is asked of the kernel, which reads and verifies it. One that
+  // is absent or fails either way is simply not there, and the kernel is told which stand beside it (PLAYER K7).
+  const hex = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
+  const beside = async bytes => { try { await WebAssembly.instantiate(bytes, { 'ufo:base': ex }); return true; } catch { return false; } };
+  const asked = [];   // the components whose embedded copy was read, by role: for tests
+  if (!components) ex.components(-1);
+  else if (!components.listed) { let mask = 0; for (const [name, c] of Object.entries(components)) { if (!c) continue; const bytes = c.bytes || c;
+      if (c.sha256 && c.sha256 !== await hex(bytes)) continue; if (await beside(bytes)) mask |= COMPONENT_BITS[name]; }
     ex.components(mask); }
+  const load = async () => { if (!components?.listed) return true; let mask = 0;
+    for (let i = 0; ; i++) { const q = { i, kernel: components.kernel }, c = call(ex.component, q); if (!c) break;
+      let bytes = components.store?.[c.sha256];
+      if (!bytes) { asked.push(c.role); const b = encode(q), at = ex.component_bytes(give(b), b.length); bytes = mem().slice(at, at + ex.out_len()); }
+      if (bytes.length && await hex(bytes) === c.sha256 && await beside(bytes)) mask |= c.bit; }
+    ex.components(mask); return true; };
   const call = (f, v) => { const q = encode(v); const p = f(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); };
   const pend = async () => {
     for (let i = 0, n = ex.pending(); i < n; i++) {
@@ -78,9 +91,10 @@ export async function start(wasmBytes, measure, inflate, clock = {}, components 
     // Two phases, because a browser inflates only asynchronously and a wasm import cannot wait: the kernel lists the
     // compressed payloads it holds, the host inflates them, and `ready` finishes opening. A payload that does not
     // inflate is not handed back, and its record is then unavailable.
-    open: async pack => ex.open(give(pack), pack.length) === 1 && pend(),
+    open: async pack => ex.open(give(pack), pack.length) === 1 && await pend() && load(),
+    asked,
     // the reader's own act: the tools presented with the working universe as their subject ({ parts, name, who })
-    start: async q => { const b = encode(q); return ex.start(give(b), b.length) === 1 && pend(); },
+    start: async q => { const b = encode(q); return ex.start(give(b), b.length) === 1 && await pend() && load(); },
     input: event => call(ex.input, event),          // one input event; gives the effects
     envelope: parts => call(ex.envelope, parts),    // the web envelope of its parts: { text } or { refused }
     print: id => { const p = ex.print(give(id)); return mem().slice(p, p + ex.out_len()); },

@@ -391,7 +391,7 @@ pub fn set(pk: &mut Pack, id: Id, path: &[&str], val: Option<V>, with: &[u8], wh
     op.extend(val.clone().map(|v| ("val", v)));
     set_in(&mut p1, path, val.clone()).ok_or("the path passes through a value that is not a map")?;
     set_in(&mut raw_p, path, val).ok_or("the path passes through a value that is not a map")?;
-    let recs = if with.is_empty() { Vec::new() } else { Pack::scan(with.to_vec()).and_then(Pack::open).ok_or("what is to be nested is not a pack")?.framed() };
+    let recs = if with.is_empty() { Vec::new() } else { Pack::scan(with.to_vec()).ok_or("what is to be carried in is not a pack")?.framed() };
     finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref(), raw_p, raw_seq: raw.get("seq").cloned() }), vec![map(op)], Vec::new(), Vec::new(), recs, who, time, random)
 }
 /// A decision about a contribution (5.4), recorded as a change of its own. `accept` records the decision and
@@ -571,7 +571,8 @@ fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sourc
     let was = pk.bytes().len();
     pk.commit(&recs, &commit).ok_or("the pack could not be extended: nothing was written")?;
     // and read back the ordinary way; if the state written is not the state meant, it is taken off again
-    let back = new.as_ref().map_or(true, |n| pk.object(&commit, &n.o.id).filter(|b| encode(&b.p) == encode(n.p1) && b.seq.as_ref().map(encode) == n.seq1.map(encode) && b.by == change).is_some());
+    // (read as it is stored: a value kept outside its node may be one this kernel carried in and cannot read, a compressed component)
+    let back = new.as_ref().map_or(true, |n| pk.object(&commit, &n.o.id).map_or(false, |b| b.by == change) && revised.and_then(|r| pk.node(&r.1)).map_or(false, |v| v.get("p").map(encode) == Some(encode(&n.raw_p)) && v.get("seq").map(encode) == n.raw_seq.as_ref().map(encode)));
     if !back || pk.object(&commit, &change).is_none() {
         pk.cut(was);
         return Err("what was written does not read back as the new state: taken off again");

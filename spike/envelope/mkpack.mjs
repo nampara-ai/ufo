@@ -69,6 +69,10 @@ export class Pack {
     return this.node({ k: 'blob', len: data.length, sha256: sha(data), level: 0, parts });
   }
   veiled(v) { return new Tag(55464, ['v', this.put(1, cat(this.salt(), this.blob(enc(v)))), true]); }   // 1.4: behind an opening
+  // The records as they are framed and one index of them, with no commit and no head: what the kernel carries into another pack
+  // frame by frame, taking each hash from this index and reading nothing (write.rs, `set` with a pack)
+  carried() { const ents = [...this.off].sort((a, b) => (a[0] < b[0] ? -1 : 1)), at = this.b.length, u64 = n => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(n)); return b; };
+    return cat(this.b, frame(4, cat(u64(ents.length), u64(0), u64(at), ...ents.flatMap(([h, o]) => [Buffer.from(h, 'hex'), u64(o)])))); }
   revision(id, type, by, p, seq) { const n = { k: 'obj', id, type, rev: 1, by, salt: this.salt(), p }; if (seq) n.seq = seq; return this.node(n); }
   // One commit, the first: `objects` is [[id, type, properties, seq]], `ops` the operations that make them (1.7).
   genesis(change, objects, ops, pub) {

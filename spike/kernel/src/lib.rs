@@ -153,14 +153,46 @@ static mut OUT: Vec<u8> = Vec::new();
 // stand beside the base is told by the host that instantiated them; whole, all are here.
 pub const PRINTER: u32 = 1;
 pub const AGENT: u32 = 2;
-static mut HELD: u32 = !0;
+static mut HELD: u32 = 0; // none until the host says: a call into a component that is not there is never made
 pub fn held(which: u32) -> bool {
     unsafe { HELD & which != 0 }
 }
-/// The host says which components it has instantiated beside the base: a set of bits.
+/// The host says which components it has instantiated beside the base: a set of bits. A kernel that was not
+/// divided is told that it holds them all.
 #[no_mangle]
 pub unsafe extern "C" fn components(mask: u32) {
     HELD = mask;
+}
+/// The roles of the components this kernel can be divided into, and the bit of each.
+const ROLES: [(&str, u32); 2] = [("ufo.printer", PRINTER), ("ufo.agent", AGENT)];
+/// The i-th component the universe carries for this kernel (1.6; spike/SPLIT.md): an entry of the universe
+/// object's `components` whose role this kernel knows and whose `for` is this kernel's hash. Its role, its bit,
+/// the SHA-256 of its bytes, which names it wherever it is held, and the blob that holds them.
+fn listed(pk: &Pack, kernel: &str, i: usize) -> Option<(&'static str, u32, H, H)> {
+    let raw = pk.node(&pk.object(&pk.head, &[0; 16])?.rev)?;
+    let V::M(carried) = raw.get("p")?.get("components")? else { return None };
+    carried.iter().filter_map(|(role, c)| {
+        let (name, bit) = *ROLES.iter().find(|r| r.0 == role)?;
+        let blob = c.get("module")?.tag(INDIRECT)?.l().get(1)?.hash()?;
+        let named = pk.node(&blob)?.get("sha256")?.hash()?;
+        if c.get("for").and_then(|f| f.b()).map(query::hex).as_deref() != Some(kernel) { return None; }
+        Some((name, bit, named, blob))
+    }).nth(i)
+}
+/// `{i, kernel}`: the i-th component listed for the kernel whose hash is `kernel`, in hexadecimal, as
+/// `{role, bit, sha256}`; null past the last. Nothing of the component is read to say this.
+#[no_mangle]
+pub unsafe extern "C" fn component(p: *mut u8, n: usize) -> *const u8 {
+    let q = taken(p, n);
+    given(PACK.as_ref().and_then(|pk| listed(pk, q.get("kernel")?.s()?, q.get("i")?.i()? as usize)).map(|c| map(vec![("role", t(c.0)), ("bit", V::Int(c.1 as i64)), ("sha256", t(&query::hex(&c.2)))])))
+}
+/// The bytes of that component, read from its blob: every record checked against its hash and the whole against
+/// the SHA-256 that names it (1.4). Empty where any of it is absent or does not verify.
+#[no_mangle]
+pub unsafe extern "C" fn component_bytes(p: *mut u8, n: usize) -> *const u8 {
+    let q = taken(p, n);
+    OUT = PACK.as_ref().and_then(|pk| listed(pk, q.get("kernel")?.s()?, q.get("i")?.i()? as usize).and_then(|c| pk.blob(&c.3))).unwrap_or_default();
+    OUT.as_ptr()
 }
 
 #[no_mangle]

@@ -282,7 +282,9 @@ impl Pack {
                         return Some(v.clone());
                     }
                 }
-                let bytes = self.blob(&h)?;
+                // what is here and cannot be read, or does not verify, stays an indirect too: the object that names it is
+                // still read, and whoever wants the value finds that it is not to be had (1.9)
+                let Some(bytes) = self.blob(&h) else { return Some(v.clone()) };
                 match l[0].s()? {
                     "b" => V::B(bytes),
                     "t" => V::T(String::from_utf8(bytes).ok()?),
@@ -447,16 +449,16 @@ impl Pack {
     /// here as kind 0): for carrying records into another pack without reading them. A record that is
     /// compressed is carried compressed; whoever reads it later checks it against its hash, as always.
     pub fn framed(&self) -> Vec<(u8, Vec<u8>)> {
-        let mut ents: Vec<(H, usize)> = self.after.0.clone();
-        let (mut at, mut hops) = (self.index, 0);
-        while at != 0 && hops < 64 {
-            let Some(f) = self.frame(at).filter(|f| f.kind == 4 && f.len >= 24) else { break };
-            let p = &self.d[f.start..f.next];
-            for i in 0..le(&p[..8]).min((p.len() - 24) / 40) {
-                ents.push((p[24 + 40 * i..56 + 40 * i].try_into().unwrap_or([0; 32]), le(&p[56 + 40 * i..64 + 40 * i])));
+        // every index frame the pack holds is read, wherever it lies: a pack given only to be carried need have no head
+        let (mut ents, mut off): (Vec<(H, usize)>, usize) = (self.after.0.clone(), 8);
+        while let Some(f) = self.frame(off) {
+            if f.kind == 4 && f.len >= 24 {
+                let p = &self.d[f.start..f.next];
+                for i in 0..le(&p[..8]).min((p.len() - 24) / 40) {
+                    ents.push((p[24 + 40 * i..56 + 40 * i].try_into().unwrap_or([0; 32]), le(&p[56 + 40 * i..64 + 40 * i])));
+                }
             }
-            at = le(&p[8..16]);
-            hops += 1;
+            off = f.next;
         }
         ents.iter().filter_map(|(h, off)| {
             let f = self.frame(*off).filter(|f| f.kind == 1 || f.kind == 2)?;

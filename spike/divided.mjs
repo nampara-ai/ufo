@@ -2,7 +2,7 @@
 // both, and the answers compared byte for byte; then the base with a component left out, which must still read,
 // compose, edit and publish exactly as the whole kernel does, and say nothing where the component would have answered.
 //   node spike/tools/divide.mjs && node spike/divided.mjs
-import fs from 'fs'; import zlib from 'zlib'; import crypto from 'crypto'; import { start } from './binding/binding.mjs'; import { tree, flat } from './envelope/nodes.mjs';
+import fs from 'fs'; import zlib from 'zlib'; import crypto from 'crypto'; import { start } from './binding/binding.mjs'; import { tree, flat } from './envelope/nodes.mjs'; import { withComponents, hashOf } from './envelope/parts.mjs';
 const root = new URL('../', import.meta.url), file = f => fs.readFileSync(new URL(f, root)), sha = b => crypto.createHash('sha256').update(b).digest('hex');
 const V = JSON.parse(file('vectors/vectors.json')), D = 'spike/out/divided/', whole = file(D + 'whole.wasm'), base = file(D + 'base.wasm'), printer = file(D + 'printer.wasm'), agent = file(D + 'agent.wasm');
 const measure = (piece, s) => ({ adv: [...s].length * piece.size * 0.5, asc: piece.size * 0.8, desc: piece.size * 0.2 }), clock = { time: () => 1767312000000, random: n => new Uint8Array(n).fill(7) };
@@ -39,4 +39,17 @@ console.log('a file that requires `ufo.code`, which the printer provides:');
   const damaged = Buffer.from(printer); damaged[damaged.length - 5] ^= 1;
   check('the printer with one bit changed: it does not verify against the hash that names it', await first({ agent, printer: { bytes: damaged, sha256: sha(printer) } }), SAFE);
   check('bytes that are not a module', await first({ agent, printer: { bytes: Buffer.from('not a module') } }), SAFE); }
+// components as a file lists them (SPEC 1.6; spike/SPLIT.md): the pack carries each as a blob under `components`, for the base of a
+// stated hash; the reader asks the kernel what is listed, takes from its own store what it holds by hash, and asks for the rest
+console.log('components listed in the pack, for this base:');
+{ const N = V.needs['the_same_requiring_ufo.code'], plain = file('vectors/' + N.file), kernelHash = hashOf(base), SAFE = 'its plain text, and what is missing';
+  const opened = async (pack, store) => { const k = await start(base, measure, b => zlib.inflateRawSync(b), clock, { listed: true, kernel: kernelHash, store }); if (!await k.open(new Uint8Array(pack))) throw new Error('does not open');
+    const n = flat(tree(k.sample({ as: 'list', w: 480 }).list))[0]; return { shows: n?.role === 'status' && /does not have: ufo\.code/.test(n.text) ? SAFE : 'the face', asked: k.asked.join(), text: k.project({ name: 'history' }) !== null }; };
+  const both = await withComponents(plain, ['printer', 'agent']);
+  check('both listed, the reader holding neither: both are read from the file, verified and used', await opened(both), { shows: 'the face', asked: 'ufo.agent,ufo.printer', text: true });
+  check('the reader holds the printer by its hash: the embedded copy is never read', await opened(both, { [hashOf(printer)]: printer }), { shows: 'the face', asked: 'ufo.agent', text: true });
+  check('the reader holds both: nothing of either is read from the file', await opened(both, { [hashOf(printer)]: printer, [hashOf(agent)]: agent }), { shows: 'the face', asked: '', text: true });
+  check('none listed: the base alone', await opened(plain), { shows: SAFE, asked: '', text: false });
+  check('the printer listed, one byte of it changed in the file: it does not verify, and the file still opens', await opened(await withComponents(plain, ['printer'], { damage: true })), { shows: SAFE, asked: 'ufo.printer', text: false });
+  check('the printer listed for another kernel: not this kernel\'s to use', await opened(await withComponents(plain, ['printer'], { other: true })), { shows: SAFE, asked: '', text: false }); }
 console.log(bad ? `${bad} DIFFER` : `all ${ok} agree`); process.exit(bad ? 1 : 0);
