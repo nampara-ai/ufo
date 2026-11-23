@@ -191,6 +191,14 @@
   "provisional/envelope.json": {
    "status": "provisional",
    "note": "the envelope as a function of its parts: one fixed case, on which two implementations by the author agree"
+  },
+  "provisional/roles.json": {
+   "status": "provisional",
+   "note": "the author's kernel only"
+  },
+  "quirks/quirks.json": {
+   "status": "provisional",
+   "note": "run in three engines by the author's test; no independent implementation has been put through it"
   }
  },
  "note": "Both readers are instances of the model that wrote the specification. Two of them agreeing does not make a vector confirmed: that needs an implementation from a different model family, or a person."

@@ -110,12 +110,38 @@ whose first element names its kind. The schema is in Appendix C.
 | `surface` | `id`, `to`: a rectangle handed to a running Compute-let, which fills it with its own display list |
 | `hit` | `id`, `shape`: a rectangle or path; `events`: which input events it takes |
 
+**Accessible nodes.** What is drawn must also be readable by someone who
+cannot see it. A `push` that carries `role` opens a node, and its `pop`
+closes it: nodes nest as pushes nest, and the order of the list is the
+order of reading. A node carries `id`; a later group with the same `id`
+goes on with the same node, as a paragraph does over a page break. It
+carries whichever apply of `level`, `label`, `lang`, `press` (it can be
+pressed), `pressed` and `current` (true or false, for something that is
+on or is the one chosen), `ordered` and `value` (a numbered list and an
+item's number). A node's text is the `s` of the text items directly in
+it, in list order, each followed by its `then` if it has one: what is
+read after it and not drawn, such as the break that ended a line. Within
+a line, text items are listed in the order of the text, not the order
+they are placed in.
+
+`role` is one of `document`, `heading`, `paragraph`, `list`, `item`,
+`quote`, `code`, `link`, `button`, `toolbar`, `status`, `image`, `table`,
+`row`, `cell`, `input` and `region`. Roles come from the description: a
+block's role, an object's `role`, a span's. `pressed` and `current` are
+properties a description states, by formula where they depend on
+presentation state; the kernel reports their values and knows nothing of
+what they mean.
+
+- **[W9] Every reader exposes the nodes.** A binding MUST give the nodes
+  to the host's accessibility interface, with their roles, levels, labels,
+  states and text, in order; MUST make every node that can be pressed
+  reachable and operable from the keyboard, sending the kernel the same
+  press a pointer would; and MUST report which node holds the focus, so
+  that the kernel can draw where it is. A face that only a sighted person
+  with a pointer can read or operate is not presented.
+
 Every item MAY also carry `src`, the anchor of the description it came
-from, and `label` and `role`, from which the binding builds the host's
-accessibility tree. `role` is one of `heading`, `paragraph`, `list`,
-`item`, `link`, `button`, `image`, `table`, `row`, `cell`, `input` and
-`region`, which every host's accessibility interface has, with `level` for
-a heading or an item; any other role reaches the host as a plain label. A binding does not interpret `src`; it hands it back
+from. A binding does not interpret `src`; it hands it back
 with input, so that anything on screen can be traced to its object and from
 there to its origin (§10.1 `why`).
 
@@ -319,6 +345,23 @@ written.
   capability.
 - **[H5]** There is no other extension mechanism. Readers have no plugins,
   no registered handlers and no per-type code paths.
+- **[H7] Is it available, never who are you.** A binding MAY test whether
+  a capability is there, and MUST then give that capability's stated
+  result where it is not. It MUST NOT identify the engine it runs in, its
+  vendor or its version, by any means, and MUST NOT take one path on one
+  engine and another on another. One file passes everywhere because it
+  was built against all of them.
+- **[H8] Text entry is reported by position.** While a place to type is
+  mounted, a binding reports each change as where it was, how much was
+  removed and what was inserted, counted in Unicode scalar values of the
+  text as the host holds it, and only where the selection before and
+  after accounts for the change exactly; otherwise it reports the whole
+  text. When entry ends it reports the whole text. The kernel builds
+  operations from the positions: a position decides where a change lies,
+  and comparison of what was there with what is there decides what it is
+  (**L1**), so that characters typed over themselves, or typed and taken
+  out again, change nothing. Where reports and the whole text disagree,
+  the whole text governs.
 - **[H6]** A reader MUST show the person, at any time, every grant in force,
   and what each program has done with it during the session.
 

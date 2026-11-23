@@ -66,7 +66,7 @@ ten parts, each a text:
 | --- | --- |
 | `title` | the title shown for the file |
 | `date` | the day of export, `YYYY-MM-DD`, in UTC |
-| `static` | the **static face**: the plain-text face (§8.3) of the primary face, up to a size the exporter chooses |
+| `static-html` | the **static face**: the text of the primary face as headings, paragraphs, lists, quotations and code, written by the kernel from the same nodes a reader exposes (§9.2), with nothing measured, up to a size the exporter chooses. A skeleton may instead take `static`, the plain-text face (§8.3) |
 | `style`, `script` | the page's style, and the binding: the only script |
 | `kernel`, `kernel-hash` | the kernel, compressed with DEFLATE and written in standard base64; and the SHA-256 of the uncompressed kernel, in hexadecimal |
 | `tools` | the tools universe (§9.6), a pack, in standard base64 |
@@ -80,7 +80,7 @@ start; what is put in is never searched for gaps. A gap is written
 | Gap | Replaced by |
 | --- | --- |
 | `{{title}}`, `{{date}}`, `{{static}}` | the part, with `&`, `<`, `>` and `"` written `&amp;`, `&lt;`, `&gt;` and `&quot;` |
-| `{{style}}`, `{{script}}`, `{{kernel}}`, `{{kernel-hash}}`, `{{tools}}`, `{{pack}}`, `{{skeleton}}` | the part, unchanged |
+| `{{style}}`, `{{script}}`, `{{kernel}}`, `{{kernel-hash}}`, `{{tools}}`, `{{pack}}`, `{{skeleton}}`, `{{static-html}}` | the part, unchanged |
 | `{{csp:script}}`, `{{csp:style}}` | `sha256-` and the standard base64 of the SHA-256 of the part's UTF-8 bytes |
 | `{{<}}` | the character `<` |
 
@@ -92,8 +92,9 @@ A skeleton places these, in this order: the doctype; a comment, the
 **plain-text head**, saying in plain words that this is a UFO file, when
 it was exported and how to open it; the character encoding; the title; a
 content security policy that permits only this page's own script and
-style, by the two hashes, and WebAssembly compilation, and forbids all
-network access; the static face, with a plain explanation of what the
+style, by the two hashes, WebAssembly compilation, and images from
+`data:` addresses, and forbids all network access; the page's icon, named
+as an empty `data:` address; the static face, with a plain explanation of what the
 file is and what to do where only this text is seen; then each of
 `skeleton`, `pack`, `tools` and `kernel` as the text of a `script`
 element of a type that is not executed; and the binding. The envelope
@@ -101,8 +102,9 @@ therefore carries its own skeleton, as a part, and a page obtains every
 part as the exact text of an element it carries. To save, it gives the
 kernel those parts with a new `pack`, `static` and `date`, and the kernel
 computes the next envelope. Nothing depends on how a browser writes a
-page back, and nothing travels twice. The kernel knows the four character
-escapes and the three sequences it refuses, and no other HTML.
+page back, and nothing travels twice. Of HTML the kernel knows the four
+character escapes, the three sequences it refuses, and the eleven
+elements of the static face.
 
 Finding a pack inside a file is the one thing the kernel knows about three
 foreign containers: a pair of delimiters in HTML text, a box in ISO media, a
@@ -126,6 +128,30 @@ box or chunk of §13.4 — so a binding never parses an envelope (**K2**).
   parser flaw or undefined behavior. A web envelope is a web page and
   nothing else: bytes after the end of a page are part of the page, so it
   cannot also be an archive.
+- **[E21] Silent.** Through opening, every face, an edit, saving, and
+  reopening what was saved, a web envelope MUST cause no violation of its
+  own policy, write nothing to the console, and make no request but the
+  one that fetched it. This holds on every engine, from a file and from a
+  web address.
+- **[E22] Its own icon.** A web envelope names its icon itself, as an
+  empty `data:` address, and its policy allows images from `data:` and
+  from nowhere else. An engine left to look for an icon asks the network
+  for one.
+- **[E23] The look is the hashed style and nothing else.** Every byte the
+  policy constrains is a part whose hash the envelope function writes:
+  one style, one script. A binding MUST NOT write a style by any means —
+  an attribute, a property, a rule, an element. It changes what is seen
+  only through attributes whose effect the hashed style states. The
+  policy and the page are then consistent by construction, in the file as
+  made and in every file it saves.
+- **[E24] Saved as bytes.** A binding hands a file to the person as bytes
+  of no declared kind, through a download link that is never part of the
+  page, and MUST NOT open, show or go to what it saves.
+- **[E25] Built against every engine.** Each difference found between
+  engines is kept in `vectors/quirks/`: the smallest page that shows it,
+  what each engine does, and the rule that makes it impossible. The corpus
+  is part of the conformance suite, and a reader passes every entry on
+  every engine it runs in. The rules above came from it.
 - **[E4] Self-sufficient.** A web envelope requires nothing but a browser:
   no network, no installation, no account. A browser, here, is one that
   offers WebAssembly with 64-bit integers passed to and from script, script

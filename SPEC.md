@@ -1972,6 +1972,8 @@ throwaway kernel on the packs above:
 | `provisional/layers.json` | for four packs, the layer of every record: content, attribution, working history (§13.3) |
 | `provisional/edits.json` | for the two edited packs: who is attributed with each stretch around the edit, and where the blocks lie |
 | `provisional/envelope.json` | the web envelope as a function of its parts (§13.2): one fixed case with its exact result, and six cases that are refused |
+| `provisional/roles.json` | the accessible nodes of `compose.ufx` and of a tools line, as a display list carries them: what a host must expose (§9.2) |
+| `quirks/` | the corpus of differences between browser engines: one small page for each, with the naive construction beside it, and `quirks.json` saying what each engine does and the rule that prevents it (§13.2 **E21** to **E25**) |
 | `provisional/projections.json` | twelve projections of the packs, as text: `overview`, `object`, `text`, `history`, `why`, and outlines by `expand` (§10.1, §10.2, Appendix B) |
 
 `spike/QUERY-NOTES.md` and `spike/COMPOSITION-NOTES.md` list each place
@@ -1987,6 +1989,7 @@ where the text did not decide what the kernel should do, and what it did.
 | `vectors/pins.ufx` | a pack of 7886 bytes holding one commit: a text with an empty block and an inline span, an asset, a clock with a scale, and an object holding an anchor of every kind (§4.2 to §4.4, §5.2) |
 | `vectors/published-timeline.ufx`, `vectors/published-nested.ufx` | `timeline.ufx` and `nested.ufx` as they are published (§2.5): 3778 and 2557 bytes |
 | `vectors/edit-one-word.ufx`, `vectors/edit-paragraph-start.ufx` | `compose.ufx` after edits made through a kernel's gate: one word changed; text typed at the very start of a paragraph (§1.7 **L1**, §5.1) |
+| `vectors/edit-positioned.ufx` | `compose.ufx` after text was typed in front of a word it shares letters with, reported by position (§9.3 **H8**) |
 | `vectors/module.ufx` | a pack of 3714 bytes holding a described module of two functions (§12.3) |
 | `vectors/compose.ufx` | a pack holding one text with every block role, a document face and a face of pages (§7.7, §8.3) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |
