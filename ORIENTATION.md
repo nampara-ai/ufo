@@ -1399,3 +1399,40 @@ compressor.
 The base is 102.8 KiB compressed, 80% of the limit. A component that
 shares the base's code costs what it adds (the printer 5.0 KB); one that
 carries its own copies costs six times that (31.7 KB).
+
+## 28. The division made; the safeguard; decisions; named values (2026-11-23)
+
+The owner approved the division after linking, with three conditions, and
+set the order of the base's remaining work.
+
+*The division.* Made with Binaryen's `wasm-split`, release 132, the
+optimiser's own version, from its published archive. Reproducible: two
+clean divisions give the same bytes. The boundary costs about 2 KB in
+all. The divided kernel answers as the whole one does, and the base
+alone reads, composes, edits and publishes identically
+(`spike/SPLIT.md` section 7).
+
+*The safeguard* (**K7**). The rule is that every file opens with what it
+carries, not that the base opens every face. A file that requires what a
+reader lacks, or whose component is absent, does not verify or is not a
+module, opens to one line naming what is missing and then its plain
+text. Vectors: `needs.ufx`, `needs-code.ufx`.
+
+*What cannot be classified* (**E12**). "What will leave" now says, in
+words, how much of the file this reader cannot read and whether the copy
+will carry it.
+
+*Decisions* (**R9**). Through the tools a change is accepted, which
+records the decision and alters nothing, or rejected, which also undoes
+it, whole or not at all. What a rejection puts back gets new elements,
+so the kernel records who first wrote it (`origin.sources`), and `why`
+still gives it to that author. Vector: `decided.ufx`.
+
+*Found on the way.* Chromium reports a lost focus from inside the
+removal of the element that held it, and the host then ran one input
+event inside another. The rule is one event at a time (**H10**), and the
+difference is entry 06 of the quirks corpus.
+
+*Named values.* `let` in formulas (§7.3). The tools universe asks what
+will leave once where it asked about sixteen times, and no longer keeps
+a value in the presentation state only to use it twice.
