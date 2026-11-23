@@ -435,3 +435,35 @@ LineBreakTest.txt: 16672 of 16672 pass
 BidiCharacterTest.txt: 91707 of 91707 pass
 BidiTest.txt: 770241 of 770241 pass
 ```
+
+## The simplification pass (2026-11-23)
+
+| | After cargo | After `wasm-opt -Oz` | Raw DEFLATE | Lines of its own |
+| --- | ---: | ---: | ---: | ---: |
+| Before (tools as description, nested; what will leave) | 293 938 | 252 931 | 117 859 | 6 191 |
+| Records as values, one speller; `overview` into `expand` | 291 696 | 250 681 | 117 149 | |
+| The scale and the pane removed; one block finder and one plain-text face | 288 943 | 248 575 | 116 026 | 6 150 |
+
+The `cut-` features no longer measure the parts: the tools reach the
+projections, the write path and the composer through `input`, so cutting
+an entry point's own export removes almost nothing (projections cut
+alone: 46 bytes). The parts are measured by symbol instead
+(`names.mjs`, function bodies before `wasm-opt`, 271 452 bytes in all):
+
+| Part | Bytes | Share |
+| --- | ---: | ---: |
+| `layout.rs` (composition, the plain-text face, the static face) | 55 240 | 20% |
+| `project.rs` (projections) | 33 547 | 12% |
+| `query.rs` (anchors, timelines, digests, layers) | 31 529 | 12% |
+| the library's generics (collections, sorting, strings) | 31 111 | 11% |
+| `tool.rs` and the `input` entry (formulas, handlers, hits, text entry) | 37 920 | 14% |
+| `write.rs` and the `propose` entry | 30 776 | 11% |
+| `pack.rs`, `value.rs` | 17 721 | 7% |
+| the printer and its entry | 9 372 | 3% |
+| the allocator | 5 659 | 2% |
+| everything else | 18 577 | 7% |
+
+A trial that put the five questions of the vector harness behind a build
+feature showed that nothing else in the kernel yet calls the timeline,
+the continuous extent or the digest: they are reached only by the
+harness. They are parts of the format and stay counted.

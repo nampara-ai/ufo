@@ -183,12 +183,27 @@
     "note": "the author's kernel only"
    },
    "provisional/edits.json": {
-    "status": "provisional",
-    "note": "packs written by the author's kernel; an independent reader replayed each change with conservation ok, which checks the operations and not the attribution stated here"
+    "status": "reproduced",
+    "by": [
+     "the second independent reader of 2026-11-22, in a third round on 2026-11-23: it worked out the attribution and the block positions from the revised core alone, then compared"
+    ],
+    "note": "the entries for edit-one-word.ufx and edit-paragraph-start.ufx. Positions are half-open. Any entry added later is provisional until it is checked the same way"
    },
    "provisional/envelope.json": {
     "status": "provisional",
-    "note": "the envelope as a function of its parts: one fixed case, on which two implementations by the author agree"
+    "note": "the envelope as a function of its parts: one fixed case, on which two implementations by the author agree, and seven refused"
+   },
+   "provisional/roles.json": {
+    "status": "provisional",
+    "note": "the author's kernel only"
+   },
+   "quirks/quirks.json": {
+    "status": "provisional",
+    "note": "six entries, run in three engines by the author's test; no independent implementation has been put through it"
+   },
+   "provisional/leaving.json": {
+    "status": "provisional",
+    "note": "the author's kernel only. The published pack it names was read by the second independent reader, unmodified: working history 0, every missing record classed as withheld, nothing malformed"
    }
   },
   "note": "Both readers are instances of the model that wrote the specification. Two of them agreeing does not make a vector confirmed: that needs an implementation from a different model family, or a person."
@@ -748,8 +763,8 @@
  },
  "history_pack": {
   "file": "history.ufx",
-  "length": 27722,
-  "sha256_of_file": "18b6fddbba483cee9b33476706677ee61516a75e98b51787b0b108a9495379fe",
+  "length": 27649,
+  "sha256_of_file": "defe1a4dbebbbb2c30b62cc1a1cb19957043ae17a247b534c982e15bf955c157",
   "commits": [
    {
     "height": 0,
@@ -810,10 +825,10 @@
    },
    {
     "height": 2,
-    "root_hash": "821d84843a250c08a1f2b36670e715fd8c1ac1c2f0bcc5ad787277f7b7a76d72",
-    "object_map_root": "7e145cefafdd8a54097e33304aa811bea2bac5f9fb20c55f4fabfe8b1d31295b",
+    "root_hash": "dc47050bc643c94005a4653cca968819a6644cc4f9c337a4d447337e9d3e1806",
+    "object_map_root": "539c05a69e232312856f5f7b8861fc4461379276077bbbabd1411cd7b9a1564a",
     "objects": 47,
-    "pack_length_at_first_head": 27722,
+    "pack_length_at_first_head": 27649,
     "text": "Hello, world.!",
     "span_p1_resolves_to": [
      0,
@@ -854,7 +869,7 @@
      ]
     ],
     "text_revision": "02b143b2518280592db89b7e60982af677203013eb7564a826bf698c36b7023f",
-    "change_revision": "14fa2c3d0cc7de952e038d6d95f175c1a1d91698a8c40370a8e0dedfbd083cca",
+    "change_revision": "55f3f01aa0602c19da2d2d6d9a16250d45ca46434a9e70d3b81dbfd4fcad1cc1",
     "note": "the asset is dropped: absent from this map, present in the previous one"
    }
   ],
@@ -870,7 +885,7 @@
     "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
    ]
   },
-  "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end] and scale scales.t",
+  "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end]",
   "blob": {
    "hash": "1257b88ef3b53d2a8db011d6a31771895ca9cbd3ae5e58e777c3a0d96b53d784",
    "len": 5000,
@@ -892,9 +907,9 @@
   "unknown_frame": "kind 0x7f at offset 2599",
   "recovery": [
    {
-    "truncate_to": 27721,
+    "truncate_to": 27648,
     "state": "b381835e7f449509e8f44c95e07ebbd618a79442bd8b07e8ee15afaec90b9837",
-    "bytes_after_head": 4057,
+    "bytes_after_head": 3984,
     "writer": "no valid head in the tail: truncate"
    },
    {
@@ -1061,8 +1076,8 @@
      }
     },
     "result": [
-     705600000,
-     2116800000
+     2116800000,
+     3528000000
     ]
    },
    {
@@ -1071,14 +1086,14 @@
      "a": {
       "t": [
        "c",
-       0,
-       2116800000
+       4233600000,
+       8467200000
       ]
      }
     },
     "result": [
-     0,
-     705600000
+     4233600000,
+     5644800000
     ],
     "note": "clipped to the extent"
    },
@@ -1088,8 +1103,8 @@
      "a": {
       "t": [
        "c",
-       0,
-       705600000
+       6350400000,
+       8467200000
       ]
      }
     },
@@ -1257,89 +1272,64 @@
     10,
     20
    ],
-   "scale": [
-    1,
-    1,
-    -5
-   ],
    "extent": [
     0,
     100
    ],
    "result": [
-    5,
-    15
+    10,
+    20
    ]
   },
   {
    "region": [
     10,
-    21
-   ],
-   "scale": [
-    1,
-    2,
-    0
+    20
    ],
    "extent": [
     0,
-    100
+    15
    ],
    "result": [
-    5,
-    10
+    10,
+    15
    ],
-   "note": "integers: 21/2 rounds toward negative infinity"
+   "note": "clipped"
   },
   {
    "region": [
     -7,
     9
    ],
-   "scale": [
-    1,
-    2,
-    0
-   ],
    "extent": [
     -100,
-    100
+    5
    ],
    "result": [
-    -4,
-    4
+    -7,
+    5
    ],
-   "note": "-7/2 is -4"
+   "note": "clipped at the other end"
   },
   {
    "region": [
-    10,
-    20
-   ],
-   "scale": [
-    3,
-    1,
-    0
+    15,
+    30
    ],
    "extent": [
     0,
-    40
+    15
    ],
    "result": [
-    30,
-    40
+    15,
+    15
    ],
-   "note": "clipped"
+   "note": "it only touches an end of the extent: that point"
   },
   {
    "region": [
-    10,
-    20
-   ],
-   "scale": [
-    1,
-    1,
-    50
+    60,
+    70
    ],
    "extent": [
     0,
@@ -1352,20 +1342,15 @@
     1.5,
     2.5
    ],
-   "scale": [
-    3,
-    2,
-    1
-   ],
    "extent": [
     0.0,
-    10.0
+    2.0
    ],
    "result": [
-    3.25,
-    4.75
+    1.5,
+    2.0
    ],
-   "note": "floats: x times a, divided by b, plus c"
+   "note": "floats"
   }
  ],
  "value_kept_outside": {
@@ -1613,7 +1598,7 @@
  "published": {
   "file": "published.ufx",
   "length": 9437,
-  "root_hash": "821d84843a250c08a1f2b36670e715fd8c1ac1c2f0bcc5ad787277f7b7a76d72",
+  "root_hash": "dc47050bc643c94005a4653cca968819a6644cc4f9c337a4d447337e9d3e1806",
   "made_from": "history.ufx",
   "what": "history.ufx as it is published: the content and attribution layers, the seal, and an absent frame saying that working history is withheld. Working history is every other record of history.ufx",
   "content": [
@@ -1625,10 +1610,11 @@
    "113d08afe6f83f63a15d2aa34cbad82f96ce8410364f4d5c10f1a4a8bbfc9bbe",
    "1af6bf9ac456148aa064d995c9b27c6200c30e3db3c0ac5ed5bbb7e5f432b4c6",
    "20950d44e4eb4f178f480e006487ccdb04d616be9f822e1dd122a5da2221c370",
+   "2a18f2b8ee6f778274b182ae9271220d0be974ebe8401af4eadf466ec12e46b9",
    "2fc3351a3eae4b2b6c4f980506c3782b4b7216534390f7b83ae9bc74ad7b3c4e",
    "33a8644985da103b0b0d158d341c61a7617270ae364c1f09bf1d962beff52039",
-   "340d60f5e9817d3e4590788c4d9c58cdccde19b72aea28ad5a9d07410875eeba",
    "48383920e2f530d57c47efdad3e46f11fae5b87be1c8bf066178b97401eedb42",
+   "539c05a69e232312856f5f7b8861fc4461379276077bbbabd1411cd7b9a1564a",
    "5a3ac09e6ae5b614aa1486ba6ffe2a119b2022209661ab4382d26632088b1a22",
    "5deb12910a1afe079147eb320da8792334da5cf680f025d5be6c4461535c166c",
    "5e7400168931700e9accba62000949fcc8f2d01c54e0ffe4d89b6361a439a84a",
@@ -1637,7 +1623,6 @@
    "666f2a452f9bd71c87eb65860fecd0c0b4785e27fa5ba09f3d5bc4b8c868e5fe",
    "7369fa1e48066022c687d60a3baff4befca825365b409328753ad78fab10e191",
    "792fdc4e169353c9d0f92de282f7b5015d98a808d437717cd6b455209b58f5de",
-   "7e145cefafdd8a54097e33304aa811bea2bac5f9fb20c55f4fabfe8b1d31295b",
    "861b6ffc793c46220666eee3a43626ec33d86aebc78c415a1138eaaa55d7f7ff",
    "872ca4d3edfe53df831d1176690c1d7b77f5cbb58e37cf53081398de9f56da59",
    "896c1def0cb18c5c72d37baa1e8b7ba5ca4c2665e918a545b8063723e5755911",
@@ -1646,6 +1631,7 @@
    "9446a753ca32b81c4cefe9eaae1875470b8c50deb24d34799f0b7894112a745b",
    "9a9b53eb0b81a134af53481a51d8bddc157d68d04579bd6e7192f4ce0b8e4b77",
    "a11c67caf7f9af8b24ae1f61a35429c8c0577c997bba3a8edbbd554ab73fa0cb",
+   "a2312ce8075de6a9d102d47a8e0c525587ce75a148f70b7f63ec11b86d544e22",
    "a5c6cf801498c830f89f3bfa3308a3ab4a02b9b9be751fa7ff86b8df79c7e4e9",
    "a8493c9a2e7f08c96d357d911067b3f7c01ce143a8eb0ad3cc6c173bd79811f9",
    "ab3dc4d303d6808513b2b29632421770da1740296a3468d69203f2cfbe0dea22",
@@ -1658,7 +1644,6 @@
    "d0a1b840cecfae0967dce6def0aaf908832405386569f5e6fb4156c4c959e83c",
    "d3b1c8e9519bf33f990adcace7f779ec3e1defa879ffee73f7516a7bc769aa87",
    "da165fe1502a0b9ad2894b2eee6f624fb3689c54c654784f15517450c4370199",
-   "daf9f37f5a23db86c6e6e21d1cc52fd19e88cf8f49ed7f07c51f1a62200e3823",
    "df29bcffecd20ee4f8c68684f6cc92f3cb2e6b5a369a9f2a2e212efec10683bd",
    "e29b6a6152cf7a1bf5467cb1ca807253af1b23a84b16f8da8eac409d3438cd67",
    "eb7ae772e0489d029041084d9643426f3761012f724303929e414373723eb3b2",
@@ -1669,18 +1654,18 @@
    "fc52db864a2b0238ba4edf159f27caa4fbdb66d04d339c2258f30460228c849c"
   ],
   "attribution": [
-   "14fa2c3d0cc7de952e038d6d95f175c1a1d91698a8c40370a8e0dedfbd083cca",
    "45630c7e7ba371ec27e79d0cb07e12a0290e56e9cd2d0dc49ebaebb37f6ad418",
+   "55f3f01aa0602c19da2d2d6d9a16250d45ca46434a9e70d3b81dbfd4fcad1cc1",
    "682b91dc71ec077aa21d103b637008a6469a5c359d652ffb178794382b42619d",
    "804ec174f46f773d36c1fe7318c999ff21c338b735cb4e5068224725b9cce8bf",
-   "821d84843a250c08a1f2b36670e715fd8c1ac1c2f0bcc5ad787277f7b7a76d72",
-   "b381835e7f449509e8f44c95e07ebbd618a79442bd8b07e8ee15afaec90b9837"
+   "b381835e7f449509e8f44c95e07ebbd618a79442bd8b07e8ee15afaec90b9837",
+   "dc47050bc643c94005a4653cca968819a6644cc4f9c337a4d447337e9d3e1806"
   ],
   "working_history_records": 67,
   "content_is": "the nodes of the current object map, and the current revisions of the universe object, the face and the text. The clock and the forty items are not reachable from the universe object, so they are not live",
   "attribution_is": "the three commit nodes and the three change objects. Each change's work, and the opening of its veil, are working history",
   "a_reader_of_published.ufx": {
-   "state": "821d84843a250c08a1f2b36670e715fd8c1ac1c2f0bcc5ad787277f7b7a76d72",
+   "state": "dc47050bc643c94005a4653cca968819a6644cc4f9c337a4d447337e9d3e1806",
    "plain_text_face": "Hello, world.!\n",
    "span_p1_resolves_to": [
     0,
@@ -2125,12 +2110,12 @@
  },
  "pins": {
   "file": "pins.ufx",
-  "length": 7886,
-  "root_hash": "40bff902f0d5478fdb2fad4e117ff20924cd144dffc6b3d64f243f803f1989a1",
+  "length": 7813,
+  "root_hash": "97fee807af838e4dad90954afd949339eff64f65ec4359ad4be1cff766494cb5",
   "marks_object": "99999999999999999999999999999999",
   "flicks_per_second": 705600000,
-  "what": "one commit holding a text with an empty block and an inline span, three small objects that refer to one another, an asset of sixteen bytes, a clock from second 2 to second 8 whose scale shifts t by minus one second, and an object whose `marks` holds an anchor of every kind",
-  "extents": "the asset's bytes: [0, 16]. The clock's t: [start, end] = [2 s, 8 s], in present coordinates, after the scale. The object named by `unknown` is of a type this document does not define, so its axis w has no known extent",
+  "what": "one commit holding a text with an empty block and an inline span, three small objects that refer to one another, an asset of sixteen bytes, a clock from second 2 to second 8, and an object whose `marks` holds an anchor of every kind",
+  "extents": "the asset's bytes: [0, 16]. The clock's t: [start, end] = [2 s, 8 s]. The object named by `unknown` is of a type this document does not define, so its axis w has no known extent",
   "anchors_resolve_to": {
    "bytes_mid": [
     3,
@@ -2146,12 +2131,12 @@
     16
    ],
    "t_in": [
-    2116800000,
-    3528000000
+    2822400000,
+    4233600000
    ],
    "t_clip": [
     1411200000,
-    2116800000
+    2822400000
    ],
    "t_touch": [
     5644800000,
@@ -2274,7 +2259,7 @@
     "case": "a continuous region",
     "why": "the covered value is the object's properties whole; both children are followed, whatever their intervals",
     "salt": "572cd9cff2f9dcbdb16cb9aa34524b88",
-    "covered_value_hex": "a16174a463656e641b000000015074d0006573746172741a541d3400667363616c6573a161748301013a2a0e99ff686368696c6472656ea26161d9d8a550979797979797979797979797979797976162d9d8a55098989898989898989898989898989898",
+    "covered_value_hex": "a16174a363656e641b000000015074d0006573746172741a541d3400686368696c6472656ea26161d9d8a550979797979797979797979797979797976162d9d8a55098989898989898989898989898989898",
     "followed": [
      {
       "id": "97979797979797979797979797979797",
@@ -2285,7 +2270,7 @@
       "revision": "7d9fbdeb80e70562363a296ab51b335e4acfb970bcac8989c2931974ed674ac7"
      }
     ],
-    "digest": "dc25629a166e2796f2d629d0eba5cc14d0c2965c89569a72ec08d76b449c3ce1"
+    "digest": "80e2de17805a92cb41fce6caec63860aba08860144af5dfdef0b6b79f695380f"
    },
    {
     "o": "95959595959595959595959595959595",

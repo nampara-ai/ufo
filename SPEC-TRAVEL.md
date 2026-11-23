@@ -20,7 +20,7 @@ carries a label such as **[C3]** is a requirement in full; a term in
 | Document | Sections | Holds |
 | --- | --- | --- |
 | [SPEC.md](SPEC.md), the core | §0–§6, Appendices C, D, F | storage, memory and addressing: records, objects, changes, the pack, anchors, text, derivation, the Chronicle; limits, the glossary, the test vectors |
-| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the eleven primitives, formulas, composition, Portals, faces |
+| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the ten primitives, formulas, composition, Portals, faces |
 | [SPEC-PLAYER.md](SPEC-PLAYER.md) | §9–§11, Appendix B | the kernel, the drawing contract, the host interface, onboard tools, the light cone, the agent interface, the player's budgets |
 | [SPEC-EXECUTION.md](SPEC-EXECUTION.md) | §12, Appendix E | Compute-lets, code as description, the printer, the ledger, tests |
 | [SPEC-TRAVEL.md](SPEC-TRAVEL.md) | §13–§14 | envelopes, what leaves a reader, the reader ladder, trust |
@@ -99,7 +99,7 @@ file is and what to do where only this text is seen; then each of
 element of a type that is not executed; and the binding. The envelope
 therefore carries its own skeleton, as a part, and a page obtains every
 part as the exact text of an element it carries. To save, it gives the
-kernel those parts with a new `pack`, `static` and `date`, and the kernel
+kernel those parts with a new `pack`, static face and `date`, and the kernel
 computes the next envelope. Nothing depends on how a browser writes a
 page back, and nothing travels twice. Of HTML the kernel knows the four
 character escapes, the three sequences it refuses, and the eleven
@@ -532,7 +532,7 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 | Seal | concept | a signature over a root hash | 14.2 |
 | Sharing, publishing | concept | sending to collaborators, with working history; sending to outside readers, without it unless chosen | 13.3 |
 | Skeleton | part | the fixed text of a web envelope, with gaps; the envelope carries it as one of its parts | 13.2 |
-| Static face | concept | the text a web envelope shows where no script runs | 13.2 |
+| Static face | part | the part of a web envelope that shows the text where no script runs | 13.2 |
 | Travel form | concept | a pack in an envelope | 13.2 |
 | Working form | concept | a pack alone | 13.1 |
 

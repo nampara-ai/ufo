@@ -15,7 +15,7 @@ those of the specification: §0–§6 in [SPEC.md](SPEC.md), §7–§8 in
 
 ## 15. Worked examples
 
-Each example is represented using only the core, the eleven primitives and
+Each example is represented using only the core, the ten primitives and
 the profiles of §5 and §12. Object names in `code` are labels for this
 text; real object identities are 16 bytes.
 
@@ -73,8 +73,8 @@ on `t` covering the chapter, and a pin to the matching region of `transcript`.
 `top` pins `video` whole. Because a digest follows refs (§4.4), a
 chapter summary goes stale when any caption or the footage within it
 changes, and so does `top`. Trimming the video's start by ten seconds is
-a `set` of the clock's scale on `t`; every chapter pin resolves through the
-scale and stays attached.
+a `set` of the clock's `start`: no time within it moves, and every
+chapter pin stays attached (**A4**).
 
 **Export.** A standard video file is `video` sampled over 0 to 20 min at a
 picture rate; `info-surface` is run tick by tick from its snapshot (**M5**),
@@ -115,7 +115,8 @@ fuel set per call. Nothing else.
   above the second door" by an anchor to `level-1` with a region on `x`,
   `y`, `z`, and to a spawn point by its key on `nodes`. A cut-scene is
   cited by a region on `t`. These hold through edits to the level like any
-  anchors; rescaling the level sets its scales.
+  anchors; the level is resized where it is placed, and its own
+  coordinates stay as they were.
 - *What sits in the world is data, with attribution and summaries.* The
   terminal showing the manual is `terminal-portal`, an object whose
   `place.at` names the node it sits on. Every node of every level was set
@@ -197,7 +198,7 @@ outlines are a row of dates.
 
 | Step | Call | Reads |
 | --- | --- | --- |
-| 1 | `overview` | what the corpus is, and one line for each study and for the report, with their summaries |
+| 1 | `expand` of the whole | what the corpus is, and one line for each study and for the report, with their summaries |
 | 2 | `expand` on the report | one line per section of the report; the conclusions section is evident |
 | 3 | `expand` on that section | one line per conclusion, each with its anchor; *C* is one |
 | 4 | `why` on the pin for *C* | its origin (who or what wrote it, with what basis), its evidence (pins into two studies), its decisions |
@@ -231,7 +232,7 @@ nine faces and sent two ways.*
 | --- | --- | --- |
 | `report` | `ufo.text` | about two thousand words; embed spans for two charts, the photograph and the projector |
 | `figures` | `ufo.data` | quarterly figures |
-| `chart-a`, `chart-b` | `ufo.pane` | axes, bars and labels as paths and text under `each` over `figures` |
+| `chart-a`, `chart-b` | `ufo.group` | axes, bars and labels as paths and text under `each` over `figures` |
 | `photo` | `ufo.asset` | the photograph's original JPEG bytes; presented by a raster |
 | `projector` | `ufo.computelet` | the assumptions tool; requests `objects` read on `figures` |
 | `approved.pdf` | `ufo.asset` | `from` `{sources: [pin report, pin figures, …], how: render}`; with it, page images in a baseline format, since a reader does not decode PDF (§9.4) |
@@ -245,7 +246,7 @@ nine faces and sent two ways.*
 | Spreadsheet | sampled | `figures` presented as a grid; export as a table file |
 | Image | sampled | any object at one moment, one viewport (§8.4) |
 | Fixed document | carried | the page images of `approved.pdf`, shown with a stale mark if any pin has moved; the PDF itself is exported byte for byte |
-| Slide deck | transmuted | `deck`: a `held` clock over panes, with Portals to `chart-a` and `chart-b`; `from` pins `report` and `figures`; origin `model` |
+| Slide deck | transmuted | `deck`: a `held` clock over groups, with Portals to `chart-a` and `chart-b`; `from` pins `report` and `figures`; origin `model` |
 | Narrated video | transmuted, then sampled | `narration`: a text (transmuted) and its synthesized voice (an audio asset: carried, with a model as origin), each with `from` pinning what it was made from; `video`: a clock ordering the deck's regions against the narration; exported by sampling |
 | 3D view | transmuted, then sampled | `scene`: a `ufo.data` object in the glTF model (§7.5) whose rows describe bars, labels, lights and a camera for `figures`, with `from` pinning `figures`; `scene-surface`: a `ufo.surface` whose Compute-let, `scene-presenter`, requests `gpu` and `objects` read on `scene` and `figures`. Bar heights are read from `figures` as it now is, so the view is live; the arrangement and styling in `scene` are what was transmuted |
 | Application | sampled | `projector` presented alone, full size |

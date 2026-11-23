@@ -20,7 +20,7 @@ carries a label such as **[C3]** is a requirement in full; a term in
 | Document | Sections | Holds |
 | --- | --- | --- |
 | [SPEC.md](SPEC.md), the core | §0–§6, Appendices C, D, F | storage, memory and addressing: records, objects, changes, the pack, anchors, text, derivation, the Chronicle; limits, the glossary, the test vectors |
-| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the eleven primitives, formulas, composition, Portals, faces |
+| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the ten primitives, formulas, composition, Portals, faces |
 | [SPEC-PLAYER.md](SPEC-PLAYER.md) | §9–§11, Appendix B | the kernel, the drawing contract, the host interface, onboard tools, the light cone, the agent interface, the player's budgets |
 | [SPEC-EXECUTION.md](SPEC-EXECUTION.md) | §12, Appendix E | Compute-lets, code as description, the printer, the ledger, tests |
 | [SPEC-TRAVEL.md](SPEC-TRAVEL.md) | §13–§14 | envelopes, what leaves a reader, the reader ladder, trust |
@@ -86,8 +86,8 @@ A Compute-let has one module. Larger programs are composed, not linked: a
 Compute-let presents others as children of its surface (§7.6) and exchanges
 messages with them over ports.
 
-Every program a universe carries is a Compute-let, including a renderer
-(§8.4) and any carried presenter, whether its module is described or
+Every program a universe carries is a Compute-let, including any
+carried presenter, whether its module is described or
 carried (§12.3).
 
 - **[M1]** A Compute-let sees only the base host functions and the
@@ -352,7 +352,7 @@ axis `funcs`.
   is renamed, when other functions come and go, or when it is copied to
   another universe together with the functions it calls; and two functions
   with the same statements, calling the same functions, have the same one
-  in any file. `items` and `unit` show it and `search` finds by it. Equal
+  in any file. `unit` shows it and `search` finds by it. Equal
   bodies kept outside their nodes are stored once (§1.4). A copied function
   keeps its unit hash and is recorded with `copied`, as any copy is (§5.4);
   its history is found by following that.
@@ -518,9 +518,8 @@ Rules that are already fixed:
   (**M4**), and the reader bounds the memory a program's resources may
   hold.
 - Results on screen are not required to be bit-identical between hosts.
-  Where they must be — a canonical export (§8.4), or a test with
-  `expect.draws` — the reader uses a software implementation of the same
-  operations, which is part of the renderer (§8.4), and `read`.
+  Where they must be — a test with `expect.draws` — the reader uses a
+  software implementation of the same operations, and `read`.
 - Shader source travels as data in the Compute-let and is given to the
   host to compile. This is the one place a Compute-let hands a host code
   that is not WebAssembly; the host's own validation of WGSL is the

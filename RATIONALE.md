@@ -71,7 +71,7 @@ reader grows without limit, and every file would pay for all of it.
 
 The design avoids this in two moves.
 
-First, native content is description built from eleven primitives, so
+First, native content is description built from ten primitives, so
 presenting it needs one small interpreter, not a library of decoders.
 Second, the encodings that do exist are handled at the edge: common images,
 audio, video and fonts by the host platform, which already decodes them
@@ -219,7 +219,7 @@ so it can be challenged.
 | **Pins and one staleness test** | Build systems track staleness of files, not regions; document formats do not track it at all. A pin's digest follows references, so a pin to a container notices a change in anything it shows. | §4.4, §5.3 |
 | **The change as an object, with origin, evidence and decision apart** | *Version control* records who committed, not who or what wrote each span, on what evidence, with what human decision. *C2PA* attests to whole assets after the fact, not to spans as they are written. *Track changes* is per application and lost on export. | §1.7, §5.4 |
 | **Origin with a basis: witnessed, inferred, unknown** | Attribution systems either assert authorship or stay silent. None distinguishes what was recorded at the moment from what was worked out later. | §5.4 |
-| **Eleven primitives and a display list** | *HTML and CSS* are a full description language, but far too large to interpret in a small kernel, and their meaning is whatever a browser version does. *SVG* has no flow layout, data or time model worth the name. *PDF* is depiction. *Scene and timeline formats* each cover one medium. | §7, §9.2 |
+| **Ten primitives and a display list** | *HTML and CSS* are a full description language, but far too large to interpret in a small kernel, and their meaning is whatever a browser version does. *SVG* has no flow layout, data or time model worth the name. *PDF* is depiction. *Scene and timeline formats* each cover one medium. | §7, §9.2 |
 | **Formulas stored as structure** | *Spreadsheet formula text* needs a parser and differs between products. *Vega expressions* are JavaScript text. Structure needs no parser and has one meaning. | §7.3 |
 | **Handlers that propose changes** | Interactive documents either embed a scripting language, with its security history, or cannot edit their own data. A declarative handler that yields a verified, attributed change needs neither. | §7.6 |
 | **The host interface** | *WASI* assumes files, sockets and clocks, which is the authority a document must not have, and has no drawing or input. The *component model* is not yet uniformly available in browsers. Ten functions and named capabilities can be stated in either later. | §9.3 |
@@ -270,8 +270,9 @@ the same places.
 *Sequences.* Removed: runs as a mechanism, self-anchors, the insertion
 bias, per-change lists of revisions, the `remap` operation, the split of an
 operation into shape and content, and every rule for carrying an anchor
-through history. Added: element identities, boundaries, and a scale on
-continuous axes. An anchor is now resolved from the current revision alone.
+through history. Added: element identities and boundaries (a scale on continuous axes,
+added with them, was removed again once edited time became a sequence).
+An anchor is now resolved from the current revision alone.
 
 It costs three things. Removed elements are kept as tombstones for good, so a
 heavily edited sequence carries a record of its deletions (compact — three
@@ -435,8 +436,9 @@ argued here; the rest are listed with where each is argued.
   there is one (§12.4).
 - **Tests are declarative objects the reader runs**, not a test runner
   carried as a program (§12.6).
-- **A canonical export is reproducible given a named renderer**, not by a
-  rendering profile written into the format (§8.4).
+- **A reproducible export is to be made by a named renderer**, not by a
+  rendering profile written into the format; it is a later profile, and
+  its place is kept (§8.4).
 - **Fonts shape and measure on the host; the kernel breaks the lines.**
   The first intention had the format own layout entirely. The kernel
   decides every break by the Unicode algorithms and asks the host only
@@ -446,8 +448,8 @@ argued here; the rest are listed with where each is argued.
 
 - Envelopes other than the web page survive only where bytes are preserved.
 - Live presentation measures text with each host's fonts, so line breaks
-  can differ between devices; identical output is promised only for canonical
-  exports.
+  can differ between devices; identical output waits for the profile of reproducible
+  exports (§8.4).
 - A reference by hash can never be redirected, and can also fail to be
   found. The format verifies content from anywhere; it cannot make anyone
   keep it.

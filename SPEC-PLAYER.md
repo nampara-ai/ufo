@@ -20,7 +20,7 @@ carries a label such as **[C3]** is a requirement in full; a term in
 | Document | Sections | Holds |
 | --- | --- | --- |
 | [SPEC.md](SPEC.md), the core | §0–§6, Appendices C, D, F | storage, memory and addressing: records, objects, changes, the pack, anchors, text, derivation, the Chronicle; limits, the glossary, the test vectors |
-| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the eleven primitives, formulas, composition, Portals, faces |
+| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the ten primitives, formulas, composition, Portals, faces |
 | [SPEC-PLAYER.md](SPEC-PLAYER.md) | §9–§11, Appendix B | the kernel, the drawing contract, the host interface, onboard tools, the light cone, the agent interface, the player's budgets |
 | [SPEC-EXECUTION.md](SPEC-EXECUTION.md) | §12, Appendix E | Compute-lets, code as description, the printer, the ledger, tests |
 | [SPEC-TRAVEL.md](SPEC-TRAVEL.md) | §13–§14 | envelopes, what leaves a reader, the reader ladder, trust |
@@ -80,7 +80,7 @@ only forwarded each item to a host call would be an empty layer.
   holds a component with the same hash uses its own.
 - **[K4] Pay for what you use.** A universe carries only the components its
   content requires. A universe with no 3D scene carries no scene presenter,
-  and no ordinary universe carries a renderer for canonical exports (§8.4). The universe object's
+  and no ordinary universe carries a renderer (§8.4). The universe object's
   `components` names those it does carry (§1.6), so that copying and
   compaction keep them.
 
@@ -193,9 +193,6 @@ be within 8 of 255. Text items are tested for position and advance, not for
 glyph shapes, which belong to the host's fonts. Input is tested by
 synthetic events against `hit` items.
 
-A canonical export does not use the host for drawing at all: the same
-display list is executed by a renderer named by hash (§8.4).
-
 Composition is a projection (§8.1): the display list is never stored.
 
 ### 9.3 The host interface
@@ -286,7 +283,6 @@ capability is stopped at the end of its current call and its poster shown.
 | `inflate` | — | decode and encode DEFLATE (§2.1) | compressed records are unavailable | the kernel only |
 | `verify` | — | check an Ed25519 signature | seals are shown as unchecked | the kernel only |
 | `engine` | — | run a module in the host's WebAssembly engine | no Compute-let runs; posters are shown | the kernel only |
-| `blobs` | a set of hashes | read those blobs | — | a renderer (§8.4) |
 | `encode` | — | encode pixels or samples to a baseline format, or pages to PDF | that export is not offered | the kernel, on export |
 | `objects` | an anchor, and `read` or `propose` | read objects within the anchor; submit changes to them, which are verified like any change | the program runs on what it carries | nobody |
 | `present` | the surface's own children | present a child into a raster; route input to it | children are not shown | a Compute-let whose surface has children |
@@ -304,7 +300,6 @@ the advance of the piece's text up to each offset, as the host would draw
 it, and the piece's ascent and descent. That is all a host contributes to
 layout: where lines break and how they are ordered is the kernel's (§7.7).
 `measure` answers at once, never *pending*, as do `inflate` and `verify`.
-For a canonical export the renderer answers it in the host's place (§8.4).
 `locate`: given a fragment as it was drawn and a horizontal offset within
 it, the nearest character position. `edit`: mount or unmount the host's editing surface on a
 rectangle with given text (§7.6). The operations of `objects` are the
@@ -409,8 +404,7 @@ Exactly one of three treatments applies, in this order of preference.
 
 - **[B2]** Import never discards or alters the original bytes.
 - **[B3]** Export encodes at the border the same way: through the host's
-  `encode` capability, or, for a canonical export, through the renderer
-  (§8.4).
+  `encode` capability.
 
 ### 9.5 Baseline asset formats
 
@@ -440,7 +434,7 @@ are two things.
    §10.3. Because they are in the kernel, every reader on every rung has
    them, and so does every web envelope.
 2. *An interface to those functions*, which is itself a universe, the
-   **tools universe**: text, groups, panes and paths. It reads the
+   **tools universe**: text, groups and paths. It reads the
    universe being worked on with `ask` (§7.3), changes it through handlers
    that `act` (§7.6), and shows it through a Portal whose `of` is
    `arg("subject")`. The reader presents the tools universe and, by its
@@ -488,21 +482,17 @@ and the agent interface's (§10.3).
 
 | Projection | Returns |
 | --- | --- |
-| `overview` | the universe's lineage, root hash, seals, faces and features, and its outline (§10.2) |
 | `object(ref)` | an object's type, properties, revision and the objects that refer to it |
 | `text(anchor)` | the plain-text face of a region |
-| `search(query)` | objects and regions matching by type, property, text, hash, origin, actor or time |
-| `history(anchor)` | the changes that produced the content of a region, newest first |
-| `why(anchor)` | for a region: its origin, the evidence recorded for it and the decisions made about it (§5.4) |
+| `search(query)` | objects and regions matching by type, property, text, hash, origin, actor or time; functions by what they call |
+| `history(anchor)` | the changes that produced the content of a region — of a text, an object, a function — newest first |
+| `why(anchor)` | for a region: its origin, the evidence recorded for it and the decisions made about it (§5.4); and for a derived object its recipe: its sources with the state of each, how it was made, by what and at whose request (§5.3) |
 | `diff(a, b)` | the operations separating two commits or two revisions |
-| `expand(anchor)` | the outline of an object or region: its parts, each with its size, when and by whom it last changed, and its summary where one exists (§10.2) |
-| `recipe(ref)` | for a derived object: its sources with the state of each, how it was made, by what and at whose request (§5.3) |
+| `expand(anchor)` | the outline of an object or region: its parts, each with its size, when and by whom it last changed, and its summary where one exists (§10.2). With no anchor, of the universe: first its lineage, root hash, seals, features, components and faces |
 | `verify(commit)` | the result of the conservation check and every profile check, by validation class |
 | `leaving(parameters)` | exactly what a send, share or export with those parameters would carry (**E12**) |
 | `sample(face, parameters)` | a face: as text, as a display list, or as an encoded export |
-| `items(ref)` | a module's functions, globals and exports, with name, signature, size, origin and tests (§12.5) |
-| `unit(ref)` | a function: its signature, and its statements one to a line, each with its element identity and the change that wrote it |
-| `calls(ref)`, `unit-history(ref)` | which functions call which; the changes that touched a function, newest first |
+| `unit(ref)` | a function: its signature, its tests, and its statements one to a line, each with its element identity and the change that wrote it (§12.5) |
 
 Projections for agents are dense, regular text designed for a language
 model: one record per line, fields in a fixed order, hashes abbreviated to a
@@ -527,7 +517,7 @@ needs no model.
 | Outline of | Its parts |
 | --- | --- |
 | a universe | its roots and faces; the universes it nests or links to; its other objects, grouped by type |
-| a group, pane, clock or surface | its children, in order |
+| a group, clock or surface | its children, in order |
 | a Portal | what it presents, followed into the universe it is in |
 | a text, or a region of one | its sections: of the heading levels within it, the shallowest that has two or more headings, each section running to the next heading of that level or above. Where there are no headings, its blocks |
 | a data object | its tables and columns, and its rows in ranges |
@@ -537,7 +527,8 @@ needs no model.
 
 Each part is shown with its anchor; its type and its label, heading, name
 or — for a block of text — its first 60 characters; its **size**, the
-length of the plain-text face beneath it (§8.3), or for bytes their number;
+length of the plain-text face beneath it (§8.3) without its last line
+end, or for bytes their number;
 when it last changed, by which actor and with what basis; and, if it is
 derived, whether it is stale. A universe is shown with its count of objects
 by type, the times of its first and last changes, and its actors.
@@ -732,10 +723,9 @@ Earlier limits were set from smaller kernels: 6 000 lines from one of
 | Static face visible, web envelope, any device | first paint | it is plain HTML ahead of everything else |
 | Time to first interaction, one-paragraph envelope, mid-range phone | 500 ms | opening should feel like opening a photograph |
 | Time to first interaction, Quarterly Review (§15.4), mid-range phone | 1 000 ms | |
-| Tool calls for an agent to find and explain the origin of a unit of machine code, entering at `overview` | 3 + the depth of the outline | `overview`, one `expand` per level, `why`, `text` |
+| Tool calls for an agent to find and explain the origin of a unit of machine code, entering at `expand` of the universe | 3 + the depth of the outline | one `expand` per level, `why`, `text` |
 | Share of the universe an agent expands to do so | reported | must fall as the universe grows |
 | Reopened universe has the same root hash on every reader tested | always | |
-| Canonical export bytes identical on every reader tested, for one renderer | always | **S5** |
 
 The conformance suite tests the one kernel against every labeled rule in
 this document, and includes: malformed and hostile packs; the fuzzing of
@@ -784,9 +774,13 @@ What a model reads is part of the format. This appendix fixes it exactly.
 **Form.** A projection is UTF-8 text, lines ended by U+000A. The first line
 is the header: the projection's name, its arguments as written by the
 caller, `@`, and `commit=` with the commit it was computed from. Every
-other line is one record: a *kind*, one space, then *fields* separated by
-one space, each `name=value`, always in the order given below. A field
-shown in brackets is omitted when it has no value. The last line is `end`
+other line is one record: a *kind*, then *fields*, each after one space
+and each `name=value`, always in the order given below. Nothing in a
+record is without a name, and no value holds a space outside a text's
+quotes. A field shown in brackets is omitted when it has no value. A
+record is a value — a map from `is`, its kind, and from each field's
+name — and the text is its one spelling: `ask` (§7.3) gives a formula the
+same records, an identity, hash, anchor or word being a text there. The last line is `end`
 followed by `lines=` and the count of record lines, so that truncation is
 detectable.
 
@@ -798,11 +792,12 @@ detectable.
 | hash | the same rule among hashes of its kind, with `r:` for a revision, `c:` for a commit, `b:` for a blob |
 | element | the object identity of the change that inserted it, a dot, and its number: `o:d2c417e9.12` |
 | region | `axis=[low,high]` for sequence and continuous axes, `axis=[key,key]` for keyed ones; several axes are several fields |
-| anchor | `o:…` then, if any, its regions, then `r:…`; written without spaces inside brackets |
+| anchor | `o:…` then, if any, its regions, then `r:…`, with `/` between them: `o:3f9a12c4/chars=[1042,1187]/r:a81f3320` |
 | integer, float | decimal; floats with the fewest digits that round-trip |
 | time | milliseconds as an integer; clock times in flicks with the suffix `f` |
 | text | a JSON string (RFC 8259) |
 | list | values separated by commas, in brackets |
+| map | as an agent writes one (below), with no space |
 | status | one of `current`, `stale`, `detached`, `unresolved`, `withheld`, `absent` |
 | basis | one of `witnessed`, `inferred`, `unknown` |
 
@@ -818,33 +813,28 @@ passed back, exactly as written, as an argument to another projection.
 
 | Projection | Arguments | Records, in order (`*` any number, `?` at most one) |
 | --- | --- | --- |
-| `overview` | — | `universe`; `seal`*; `feature`*; `component`*; `face`*; `lacks`?; `part`* |
 | `object` | object identity | `object`; `prop`*; `run`*; `referrer`* |
 | `text` | anchor | `text` |
 | `search` | query | `hit`* |
 | `history` | anchor | `change`* newest first |
-| `why` | anchor | `region`; then for each part of it: `run` or `value`; `copied`*; `finding`*; `evidence`*; `decision`? |
+| `why` | anchor | `region`; then for each part of it: `run` or `value`; `copied`*; `finding`*; `evidence`*; `decision`?; and of a derived object `source`*; `made` |
 | `diff` | two commits or revisions | `op`* |
-| `expand` | anchor | `part`* |
-| `recipe` | object identity | `source`*; `made` |
+| `expand` | anchor, or none | `part`*; before them, with no anchor: `universe`; `seal`*; `feature`*; `component`*; `face`*; `lacks`? |
 | `verify` | commit | `check`*; `issue`* |
 | `leaving` | the parameters of an export | `layer`*; `seal`*; `lacks`? |
 | `sample` | face, parameters | as text: `text`; as a display list: `item`* |
-| `items` | object identity of a module | `item`* |
 | `unit` | object identity of a function | `unit`; `stmt`* |
-| `calls` | object identity of a module | `call`* |
-| `unit-history` | object identity of a function | `change`* newest first |
 
 | Record | Fields |
 | --- | --- |
-| `universe` | `lineage` `commit` `height` `objects` (count) `types` (count of objects of each type) `changes` (count) `first` `last` (times) `actors` (list) |
+| `universe` | `lineage` `commit` `height` `objects` (count) `types` (a map from each type to the count of its objects) `changes` (count) `first` `last` (times) `actors` (list) |
 | `seal` | `commit` `key` `status` (`valid`, `invalid`, `unchecked`) [`name`] [`time`] |
 | `feature` | `name` `v` `required` `supported` |
 | `component` | `role` `hash` `status` |
 | `face` | `id` `kind` (`sampled`, `carried`, `transmuted`) `status` `medium` `label` |
 | `lacks` | `history` (boolean) `blobs` (count) |
-| `part` | an anchor, then `type` `label` (its label, heading or name, or the first 60 characters of a block) `size` `changed` (time) `by` `basis` [`parts` (count)] [`derived` (status)] [`summary` (the text of its line) `summary-status`] |
-| `source` | an anchor, then `r` `status` |
+| `part` | `at` (an anchor) `type` `label` (its label, heading or name, or the first 60 characters of a block) `size` `changed` (time) `by` `basis` [`parts` (count)] [`derived` (status)] [`summary` (the text of its line) `summary-status`] |
+| `source` | `at` (an anchor) `status` |
 | `made` | `how` `change` `basis` [`by`] [`model`] [`tool`] [`asked`] [`prompt` (its text, or `withheld`)] [`parameters`] |
 | `object` | `id` `type` `rev` (number) `r` (revision hash) `by` |
 | `prop` | `key` then `value`, or `len` and `kind` when large |
@@ -855,17 +845,17 @@ passed back, exactly as written, as an argument to another projection.
 | `evidence` | `claim` (region) `kind` `support` (anchor) `status` [`note`] |
 | `decision` | `about` `verdict` `who` `change` `time` [`note`] |
 | `referrer` | `id` `key` |
-| `text` | the anchor, `chars` (count), then `s` |
-| `hit` | the anchor, `type`, `s` (up to 80 characters around the match) |
+| `text` | `at` (an anchor) `chars` (count) `s` |
+| `region` | `at` (an anchor) |
+| `hit` | `at` (an anchor) `type` `s` (up to 80 characters around the match) |
 | `change` | `id` `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of object identities) [`note`] |
 | `op` | `op` `obj` [`key`] [`after`] [`del`] then `old` and `new`, each a value; where the change's `work` is withheld, one record `op withheld` |
 | `check` | `rule` (a label of this document) `scope` `result` (`pass`, `fail`, `skipped`) [`reason`] |
 | `layer` | `name` (`content`, `attribution`, `history`) `included` (boolean) `objects` (count) `bytes` `actors` (list) `models` (list) `changes` (count) `first` `last` (times) |
 | `issue` | `class` (of §1.9) `record` `rule` `s` |
-| `item` | for `sample`: the display-list item as fields. For `items`: `id` `kind` `name` `size` `by` `basis` `tests` (count) [`signature`] |
-| `unit` | `id` `name` `signature` `r` `statements` (count) |
+| `item` | the display-list item as fields |
+| `unit` | `id` `name` `signature` `r` `statements` (count) `tests` (count) |
 | `stmt` | `e` (the statement's element identity) `change` `depth` (of the blocks enclosing it) `s` (the statement, in the JSON spelling of its value, with functions shown by name) |
-| `call` | `from` `to` (object identities) `count` |
 
 **Queries.** `search` takes a map with any of: `text`; `type`; `hash` (of a
 record, a blob or a unit); `basis`; `by`; `actor`; `model`; `after` and
@@ -888,10 +878,10 @@ whose object has one; a `name` given back is ignored.
 An example:
 
 ```
-why o:3f9a12c4 chars=[1042,1187] @ commit=c:77e0b1d2
-region o:3f9a12c4 chars=[1042,1187] r:a81f3320
+why o:3f9a12c4/chars=[1042,1187] @ commit=c:77e0b1d2
+region at=o:3f9a12c4/chars=[1042,1187]/r:a81f3320
 run chars=[1042,1120] change=o:d2c417e9 basis=witnessed by=model model="example-model-1" asked="A. Author" prompt=withheld sealed=true
-evidence claim=chars=[1042,1120] kind=cites support=o:4410cc2e rows=[q3] cols=[revenue] r:09be77a1 status=current
+evidence claim=chars=[1042,1120] kind=cites support=o:4410cc2e/rows=[q3]/cols=[revenue]/r:09be77a1 status=current
 decision about=o:d2c417e9 verdict=accept who="A. Author" change=o:5e02d9b7 time=1767225600000
 run chars=[1120,1187] change=o:0b77a3f1 basis=inferred by=person who="A. Author" method="text-alignment" confidence="exact-text" sealed=false
 end lines=5

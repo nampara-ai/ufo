@@ -344,17 +344,16 @@ pk.index(); pk.head(hK2); len2 = len(pk.b)
 key = ed_keys(SK)[2]; signed = {"commit": hK2, "key": key, "time": 1767229260000, "name": "Test Author"}
 sig = ed_sign(SK, b"ufo-seal-1" + sha(enc(signed)))
 pk.raw(3, enc(dict(signed, signature=sig))); pk.head(hK2); len2s = len(pk.b)
-# commit 3: a person appends "!", inserts and removes "?", trims the clock by setting its scale, drops the asset, accepts commit 2
+# commit 3: a person appends "!", inserts and removes "?", shortens the clock, drops the asset, accepts commit 2
 t2 = "Hello, world.!"
 ops = [{"op": "splice", "obj": T, "key": "chars", "after": [C1, 15], "ins": "!"},
        {"op": "splice", "obj": T, "key": "chars", "after": [C3, 0], "ins": "?"},
        {"op": "splice", "obj": T, "key": "chars", "del": [[C3, 1, 1]], "old": "?"},
        {"op": "set", "obj": K, "key": "end", "old": 10 * FL, "val": 8 * FL},
-       {"op": "set", "obj": K, "key": ["scales", "t"], "val": [1, 1, -2 * FL]},
        {"op": "drop", "obj": A}]
 seq3 = seq2 + [[C3, 0, 1], [C3, 1, 1, False]]
 hT3 = revision(pk, T, "ufo.text", 3, C3, 3001, {"chars": t2, "spans": {"p1": SPAN}}, prev=hT2, seq={"chars": seq3})
-hK3o = revision(pk, K, "ufo.clock", 2, C3, 3002, {"start": 0, "end": 8 * FL, "scales": {"t": [1, 1, -2 * FL]}}, prev=hK2o)
+hK3o = revision(pk, K, "ufo.clock", 2, C3, 3002, {"start": 0, "end": 8 * FL}, prev=hK2o)
 st = dict(state2); st.update({T: hT3, K: hK3o}); del st[A]
 pub = {"actor": actor, "time": 1767232800000, "origin": {"basis": "witnessed", "by": "person", "who": who},
        "decisions": [{"about": ref(C2), "verdict": "accept", "who": who}]}
@@ -375,7 +374,7 @@ V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file
          "note": "the asset is dropped: absent from this map, present in the previous one"}],
     "identities": {"universe": U.hex(), "text": T.hex(), "face": F.hex(), "asset": A.hex(), "clock": K.hex(),
                    "changes": [C1.hex(), C2.hex(), C3.hex()]},
-    "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end] and scale scales.t",
+    "where_to_find": "the text is property chars of the text object; its span is spans.p1.at; the blob is property bytes of the asset; the clock's axis t has extent [start, end]",
     "blob": {"hash": hBlob.hex(), "len": len(data), "sha256": sha(data).hex(), "chunks": len(chunks_of(data)),
              "note": "the asset's bytes property is an indirect of kind b to this blob; the same blob is named from the operation that set it, inside the change's work"},
     "seal": {"commit": hK2.hex(), "key": key.hex(), "time": 1767229260000, "name": "Test Author", "signature": sig.hex(),
@@ -395,9 +394,9 @@ V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file
         {"anchor": {"o": T.hex(), "a": {"chars": ["s", "start", B(C1, 15, 1)]}}, "result": [0, 13], "note": "ends after the full stop: what was typed after it is outside"},
         {"anchor": {"o": T.hex(), "a": {"chars": ["s", "start", "end"]}}, "result": [0, 14]},
         {"anchor": {"o": T.hex(), "a": {"chars": ["s", B(C1, 10, 1), B(C1, 10, 1)]}}, "result": [12, 12], "note": "a point at a removed element: still attached"},
-        {"anchor": {"o": K.hex(), "a": {"t": ["c", 3 * FL, 5 * FL]}}, "result": [1 * FL, 3 * FL]},
-        {"anchor": {"o": K.hex(), "a": {"t": ["c", 0, 3 * FL]}}, "result": [0, 1 * FL], "note": "clipped to the extent"},
-        {"anchor": {"o": K.hex(), "a": {"t": ["c", 0, 1 * FL]}}, "result": "detached", "note": "wholly outside the extent"},
+        {"anchor": {"o": K.hex(), "a": {"t": ["c", 3 * FL, 5 * FL]}}, "result": [3 * FL, 5 * FL]},
+        {"anchor": {"o": K.hex(), "a": {"t": ["c", 6 * FL, 12 * FL]}}, "result": [6 * FL, 8 * FL], "note": "clipped to the extent"},
+        {"anchor": {"o": K.hex(), "a": {"t": ["c", 9 * FL, 12 * FL]}}, "result": "detached", "note": "wholly outside the extent"},
         {"anchor": {"o": A.hex()}, "result": "detached", "note": "the object was dropped"}]}
 
 # ---- 7. resolving regions (section 4.3) ------------------------------------------------
@@ -422,12 +421,12 @@ cases = [("start", "end"), ([X, 0, 0], [X, 2, 1]), ([X, 2, 1], [X, 3, 0]), ([Y, 
 def bj(b): return b if isinstance(b, str) else [b[0].hex(), b[1], b[2]]
 V["resolve_sequence"] = {"seq": seqj(demo), "cases": [{"from": bj(a), "to": bj(b), "result": resolve(demo, a, b)} for a, b in cases]}
 V["resolve_continuous"] = [
-    {"region": [10, 20], "scale": [1, 1, -5], "extent": [0, 100], "result": [5, 15]},
-    {"region": [10, 21], "scale": [1, 2, 0], "extent": [0, 100], "result": [5, 10], "note": "integers: 21/2 rounds toward negative infinity"},
-    {"region": [-7, 9], "scale": [1, 2, 0], "extent": [-100, 100], "result": [-4, 4], "note": "-7/2 is -4"},
-    {"region": [10, 20], "scale": [3, 1, 0], "extent": [0, 40], "result": [30, 40], "note": "clipped"},
-    {"region": [10, 20], "scale": [1, 1, 50], "extent": [0, 40], "result": "detached"},
-    {"region": [1.5, 2.5], "scale": [3, 2, 1], "extent": [0.0, 10.0], "result": [3.25, 4.75], "note": "floats: x times a, divided by b, plus c"}]
+    {"region": [10, 20], "extent": [0, 100], "result": [10, 20]},
+    {"region": [10, 20], "extent": [0, 15], "result": [10, 15], "note": "clipped"},
+    {"region": [-7, 9], "extent": [-100, 5], "result": [-7, 5], "note": "clipped at the other end"},
+    {"region": [15, 30], "extent": [0, 15], "result": [15, 15], "note": "it only touches an end of the extent: that point"},
+    {"region": [60, 70], "extent": [0, 40], "result": "detached"},
+    {"region": [1.5, 2.5], "extent": [0.0, 2.0], "result": [1.5, 2.0], "note": "floats"}]
 _b = enc({"n": 1}); _bn = blob_node(len(_b), sha(_b), 0, [(len(_b), rhash(CHUNK, _b))]); _bh = rhash(NODE, _bn); _open = salt(7) + _bh
 V["value_kept_outside"] = {"value": {"map": [["n", 1]]}, "blob_bytes_hex": _b.hex(), "blob_node_hex": _bn.hex(), "blob_hash": _bh.hex(),
     "indirect_hex": enc(Tag(55464, ["v", _bh])).hex(), "veiled": {"salt_hex": salt(7).hex(), "opening_chunk_hex": _open.hex(),
@@ -786,11 +785,11 @@ def pins_pack():
     tp = {"chars": chars, "spans": spans}
     xp = {"label": "x", "of": anchor({"o": PY})}; yp = {"label": "y", "back": ref(PT)}; zp = {"label": "z", "n": 1, "snapshot": b"\x01\x02"}
     ap = {"bytes": pk.outside("b", data), "media": "text/plain"}
-    kp = {"start": 2 * S, "end": 8 * S, "scales": {"t": [1, 1, -1 * S]}, "children": {"a": ref(K1), "b": ref(K2)}}
+    kp = {"start": 2 * S, "end": 8 * S, "children": {"a": ref(K1), "b": ref(K2)}}
     k1p = {"start": 0, "end": 3 * S}; k2p = {"start": 4 * S, "end": 9 * S}
     c = lambda o, ax, lo, hi: anchor({"o": o, "a": {ax: ["c", lo, hi]}})
     marks = {"bytes_mid": c(PA, "bytes", 3, 7), "bytes_clip": c(PA, "bytes", 10, 999), "bytes_out": c(PA, "bytes", 900, 950), "bytes_end": c(PA, "bytes", 16, 20),
-             "t_in": c(PK, "t", 4 * S, 6 * S), "t_clip": c(PK, "t", 0, 4 * S), "t_touch": c(PK, "t", 9 * S, 12 * S), "t_out": c(PK, "t", 10 * S, 12 * S),
+             "t_in": c(PK, "t", 4 * S, 6 * S), "t_clip": c(PK, "t", 0, 4 * S), "t_touch": c(PK, "t", 8 * S, 12 * S), "t_out": c(PK, "t", 10 * S, 12 * S),
              "unknown": c(PZ, "w", 1.5, 2.5), "keys": anchor({"o": PT, "a": {"spans": ["k", "b0", "nope", "i0"]}}), "kids": anchor({"o": PK, "a": {"children": ["k", "b", "zz"]}}),
              "point": reg(e(6), e(6)), "whole": anchor({"o": PX})}
     mp = {"marks": marks}; roots = {"primary": ref(PT), "marks": ref(PM), "clock": ref(PK), "asset": ref(PA), "z": ref(PZ)}
@@ -806,7 +805,7 @@ def pins_pack():
     pk.index(); pk.head(k)
     hx = lambda i: i.hex()
     resolves = {"bytes_mid": [3, 7], "bytes_clip": [10, 16], "bytes_out": "detached", "bytes_end": [16, 16],
-                "t_in": [3 * S, 5 * S], "t_clip": [2 * S, 3 * S], "t_touch": [8 * S, 8 * S], "t_out": "detached",
+                "t_in": [4 * S, 6 * S], "t_clip": [2 * S, 4 * S], "t_touch": [8 * S, 8 * S], "t_out": "detached",
                 "unknown": {"unclipped": [1.5, 2.5]}, "keys": ["b0", "i0"], "kids": ["b"], "point": [6, 6], "whole": "the whole object"}
     def dg(name, why, sl, covered, followed, **pin):
         return dict(pin, case=name, why=why, salt=salt(sl).hex(), covered_value_hex=enc(covered).hex(),
@@ -822,8 +821,8 @@ def pins_pack():
         dg("a continuous region", "the covered value is the object's properties whole; both children are followed, whatever their intervals", 7106, {"t": kp}, [K1, K2], o=hx(PK), axis="t", low=4 * S, high=6 * S),
         dg("an asset's bytes", "continuous: the covered value is the asset's properties, with the bytes themselves", 7107, {"bytes": {"bytes": data, "media": "text/plain"}}, [], o=hx(PA), axis="bytes", low=3, high=7)]
     return pk, k, st, {"file": "pins.ufx", "length": len(pk.b), "root_hash": k.hex(), "marks_object": PM.hex(), "flicks_per_second": S,
-        "what": "one commit holding a text with an empty block and an inline span, three small objects that refer to one another, an asset of sixteen bytes, a clock from second 2 to second 8 whose scale shifts t by minus one second, and an object whose `marks` holds an anchor of every kind",
-        "extents": "the asset's bytes: [0, 16]. The clock's t: [start, end] = [2 s, 8 s], in present coordinates, after the scale. The object named by `unknown` is of a type this document does not define, so its axis w has no known extent",
+        "what": "one commit holding a text with an empty block and an inline span, three small objects that refer to one another, an asset of sixteen bytes, a clock from second 2 to second 8, and an object whose `marks` holds an anchor of every kind",
+        "extents": "the asset's bytes: [0, 16]. The clock's t: [start, end] = [2 s, 8 s]. The object named by `unknown` is of a type this document does not define, so its axis w has no known extent",
         "anchors_resolve_to": resolves, "digests": cases}
 ppk, pk_root, pst, pv = pins_pack()
 open(os.path.join(OUT, "pins.ufx"), "wb").write(ppk.b); V["pins"] = pv

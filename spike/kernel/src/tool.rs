@@ -133,11 +133,10 @@ pub fn eval(v: &V, env: &Env) -> Option<V> {
             let pk = env.subject.filter(|_| args[1..].iter().any(is_subject))?;
             let name = args.first()?.s()?;
             q.push((String::from("name"), t(name)));
-            let text = crate::project::project(pk, &V::M(q))?;
             if name == "leaving" {
-                env.left.set(Some(text.s()?.starts_with("leaving history=true")));
+                env.left.set(Some(q.iter().all(|e| e.0 != "history" || e.1 != V::Bool(false))));
             }
-            V::L(records(text.s()?))
+            crate::project::records(pk, &V::M(q))?
         }
         _ => return None,
     })
@@ -209,75 +208,6 @@ fn civil(days: u64) -> (i64, i64, i64) {
     let mp = (5 * doy + 2) / 153;
     let (d, m) = (doy - (153 * mp + 2) / 5 + 1, if mp < 10 { mp + 3 } else { mp - 9 });
     (yoe + era * 400 + (m <= 2) as i64, m, d)
-}
-/// The records of a projection's text (Appendix B), as `ask` gives them: of each line between the
-/// header and `end`, a map: the record's kind under `is`; each field `name=value` under its name;
-/// what stands with no name (the parts of an anchor) as a list of texts under `at`. A value is read
-/// as it is spelled: `true`, `false`, `null`, a whole number, a text in quotes, a list in brackets;
-/// anything else (an identity, a hash, a status) is the text of its spelling.
-fn records(text: &str) -> Vec<V> {
-    fn cut(s: &str, at: u8) -> Vec<&str> {
-        let (mut out, mut from, mut depth, mut quoted, mut escaped) = (Vec::new(), 0, 0i32, false, false);
-        for (i, c) in s.bytes().enumerate() {
-            match c {
-                _ if escaped => escaped = false,
-                b'\\' if quoted => escaped = true,
-                b'"' => quoted = !quoted,
-                _ if quoted => {}
-                b'[' | b'{' => depth += 1,
-                b']' | b'}' => depth -= 1,
-                _ if c == at && depth == 0 => {
-                    out.push(&s[from..i]);
-                    from = i + 1;
-                }
-                _ => {}
-            }
-        }
-        out.push(&s[from..]);
-        out
-    }
-    fn value(s: &str) -> V {
-        if let Some(q) = s.strip_prefix('"').and_then(|q| q.strip_suffix('"')) {
-            let (mut out, mut cs) = (String::new(), q.chars());
-            while let Some(c) = cs.next() {
-                out.push(match (c, if c == '\\' { cs.next() } else { None }) {
-                    (_, Some('n')) => '\n',
-                    (_, Some('r')) => '\r',
-                    (_, Some('t')) => '\t',
-                    (_, Some('u')) => char::from_u32((0..4).fold(0, |n, _| n * 16 + cs.next().and_then(|d| d.to_digit(16)).unwrap_or(0))).unwrap_or('\u{fffd}'),
-                    (_, Some(e)) => e,
-                    _ => c,
-                });
-            }
-            return V::T(out);
-        }
-        if let Some(l) = s.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
-            return V::L(if l.is_empty() { Vec::new() } else { cut(l, b',').into_iter().map(value).collect() });
-        }
-        let digits = s.strip_prefix('-').unwrap_or(s);
-        match s {
-            "true" | "false" => V::Bool(s == "true"),
-            "null" => V::Null,
-            _ if !digits.is_empty() && digits.len() < 16 && digits.bytes().all(|c| c.is_ascii_digit()) => V::Int(digits.bytes().fold(0i64, |n, c| n * 10 + (c - b'0') as i64) * if digits.len() < s.len() { -1 } else { 1 }),
-            _ => t(s),
-        }
-    }
-    let lines: Vec<&str> = text.lines().collect();
-    lines.iter().skip(1).take(lines.len().saturating_sub(2)).map(|l| {
-        let (mut m, mut at) = (Vec::new(), Vec::new());
-        for (i, tok) in cut(l, b' ').into_iter().enumerate() {
-            let named = tok.bytes().position(|c| c == b'=').filter(|k| *k > 0 && tok[..*k].bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-'));
-            match named {
-                _ if i == 0 => m.push((String::from("is"), t(tok))),
-                Some(k) => m.push((String::from(&tok[..k]), value(&tok[k + 1..]))),
-                None => at.push(t(tok)),
-            }
-        }
-        if !at.is_empty() {
-            m.push((String::from("at"), V::L(at)));
-        }
-        V::M(m)
-    }).collect()
 }
 /// Properties with every formula among them replaced by its value (an error value by null), but
 /// for handlers (`on`), whose formulas are evaluated when their event occurs.

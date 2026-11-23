@@ -216,14 +216,10 @@ fn timeline(pk: &Pack, q: &V) -> Option<V> {
 }
 
 // ---- 4.2, 4.3: continuous and keyed regions ----
-/// A continuous region in present coordinates, clipped to the extent where the extent is known.
+/// A continuous region, clipped to the extent where the extent is known.
 /// Returns (the interval or None if detached, whether it was clipped against a known extent).
 fn extent(pk: &Pack, _commit: &H, o: &Obj, ax: &str, reg: &V) -> (Option<(f64, f64)>, bool) {
     let (Some(lo), Some(hi)) = (reg.l().get(1).and_then(|x| x.f()), reg.l().get(2).and_then(|x| x.f())) else { return (None, true) };
-    let ints = matches!(reg.l().get(1), Some(V::Int(_)));
-    let sc = o.p.get("scales").and_then(|s| s.get(ax)).map(|s| s.l().iter().filter_map(|x| x.f()).collect::<Vec<f64>>()).unwrap_or(vec![1.0, 1.0, 0.0]);
-    let map = |x: f64| { let y = x * sc[0] / sc[1]; (if ints { libm_floor(y) } else { y }) + sc[2] };
-    let (lo, hi) = (map(lo), map(hi));
     let e = match (o.ty.as_str(), ax) {
         ("ufo.clock", "t") => match (o.p.get("start").and_then(|x| x.f()), o.p.get("end").and_then(|x| x.f())) { (Some(a), Some(b)) => Some((a, b)), _ => None },
         ("ufo.asset", "bytes") => o.p.get("bytes").and_then(|b| b.b()).map(|b| (0.0, b.len() as f64)),
@@ -235,10 +231,6 @@ fn extent(pk: &Pack, _commit: &H, o: &Obj, ax: &str, reg: &V) -> (Option<(f64, f
         Some((a, b)) if hi < a || lo > b => (None, true),
         Some((a, b)) => (Some((lo.max(a), hi.min(b))), true),
     }
-}
-fn libm_floor(x: f64) -> f64 {
-    let t = x as i64 as f64;
-    if t > x { t - 1.0 } else { t }
 }
 /// Every anchor in an object's `marks`, resolved against the commit.
 fn resolve_marks(pk: &Pack, q: &V) -> Option<V> {

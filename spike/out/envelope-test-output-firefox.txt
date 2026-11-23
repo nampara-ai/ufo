@@ -12,9 +12,9 @@
   [passed] host: the style part holds no rule that fetches, and the skeleton no style attribute, no handler attribute and no element that loads — every byte the policy governs is a part whose hash the envelope function writes: one style, one script; style-src is that one hash, with no unsafe-inline and no unsafe-hashes; the one link is an icon that is an empty data: address, which img-src data: allows
 
 == desktop firefox, file://
-  [passed] opened: the file runs its own kernel under its policy — state f6885f57e4ad23de; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: the file runs its own kernel under its policy — state 92027a1f85e587f5; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
   [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
-  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 225235 characters, exported 2026-01-02
+  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 222783 characters, exported 2026-01-02
   [passed] faces: the document face is drawn, and the tools show it is on
   [passed] faces: the pages face is drawn — 4 pages
   [passed] faces: the plain-text face is drawn
@@ -28,32 +28,32 @@
   [passed] edit: with editing off, a press on the document does nothing
   [passed] edit: one word changed through the tools by selecting it and typing, as Ada Tester — the name was given through the field of the tools; the kernel and the host asked nothing
       run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
-      run chars=[471,476] change=o:715b1245 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[471,476] change=o:3313b623 basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
       work: [["ledger","books"]]
-  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:715b1245 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:3313b623 basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[656,661] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
-      run chars=[661,667] change=o:ef732d47 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[661,667] change=o:1dcafaa5 basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[667,673] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
       work: [["","Note: "],["set","spans.b11.at"],["set","spans.b12.at"]]
-  [passed] paragraph start: "Note: " typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph — b12 = [661,768], b11 = [537,661]; run chars=[661,667] change=o:ef732d47 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] paragraph start: "Note: " typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph — b12 = [661,768], b11 = [537,661]; run chars=[661,667] change=o:1dcafaa5 basis=witnessed by=person who="Ada Tester" sealed=false
   [passed] typed: a run of Backspace is one removal — [[" by accident",""]]
   [passed] typed: a word copied and pasted elsewhere is one insertion, where it was pasted — [["","region"]]
   [passed] typed: typed and deleted again, then the same letters typed over themselves: no change is made, and none is claimed — nothing written; Cancel writes nothing either
   [passed] typed: a change the widget reports with no position (its text set, as a filled-in or dictated text is) falls back on the difference — [["trusted","known"]]
   [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
   [passed] edit: nothing turns editing on but the tools, and the tools turn it off
-  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17120,"attribution":3113,"history":39622,"changes":7,"included":39622}
-  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited.ufx.html, 263700 bytes; content 17120, attribution 3113, history 39622 bytes
-  [passed] published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too — compose-published-2.ufx.html: 203984 bytes against 263700; pack 21837 against 66624; 22 content and 15 attribution records, 0 of history, 1 absent frame
-  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 263700 characters, exported 2026-11-23
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17116,"attribution":3113,"history":39618,"changes":7,"included":39618}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited.ufx.html, 261248 bytes; content 17116, attribution 3113, history 39618 bytes
+  [passed] published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too — compose-published-2.ufx.html: 201536 bytes against 261248; pack 21833 against 66616; 22 content and 15 attribution records, 0 of history, 1 absent frame
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 261248 characters, exported 2026-11-23
   [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
   [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state 95d67613f1ea4a51
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state c55352b07840cc96
   -- the saved file, edited and saved again
-  [passed] opened: the saved file runs its own kernel under its policy — state 95d67613f1ea4a51; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: the saved file runs its own kernel under its policy — state c55352b07840cc96; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
   [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
-  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 263700 characters, exported 2026-11-23
+  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 261248 characters, exported 2026-11-23
   [passed] faces: the document face is drawn, and the tools show it is on
   [passed] faces: the pages face is drawn — 5 pages
   [passed] faces: the plain-text face is drawn
@@ -63,19 +63,19 @@
   [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[549,554] and chars=[659,664] by Ben Second
   [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
   [passed] edit: nothing turns editing on but the tools, and the tools turn it off
-  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17303,"attribution":3546,"history":44298,"changes":8,"included":44298}
-  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2.ufx.html, 272016 bytes; content 17303, attribution 3546, history 44298 bytes
-  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 272016 characters, exported 2026-11-23
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17299,"attribution":3546,"history":44294,"changes":8,"included":44294}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2.ufx.html, 269560 bytes; content 17299, attribution 3546, history 44294 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 269560 characters, exported 2026-11-23
   [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
   [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state ee7c0d3452bf8297
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state b8849c077cbda0a7
   -- the copy published for readers, reopened, edited and saved again
-  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[475,480] change=o:715b1245 basis=witnessed by=person who="Ada Tester" sealed=false
-      change id=o:4c04626e time=1795420868416 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
-      change id=o:94f30911 time=1795420867659 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[475,480] change=o:3313b623 basis=witnessed by=person who="Ada Tester" sealed=false
+      change id=o:eabbc802 time=1795446239581 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+      change id=o:499c3729 time=1795446238646 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
       change id=withheld time=withheld actor=withheld basis=unknown ops=withheld touched=withheld
   [passed] published: `history` lists every change with its work said to be withheld (E11), and the panel says no working history is held — 7 changes, each "ops=withheld touched=withheld"; 1 of them (changes that left nothing in the text as it stands) withheld whole, and said to be
-  [passed] published: it is edited again, a new change on top of withheld history, and saved again each way — compose-published-2-published.ufx.html (204819 bytes) and compose-published-2-edited-2.ufx.html (211303 bytes), both at 19a71c7244bf53d5
+  [passed] published: it is edited again, a new change on top of withheld history, and saved again each way — compose-published-2-published.ufx.html (202371 bytes) and compose-published-2-edited-2.ufx.html (208855 bytes), both at 8ae31b8da635321c
   [passed] published: the copy published a second time reopens at the state it was saved at, and shows the new edit
   -- by the keyboard alone, from the file as first made
   [passed] keyboard: Tab reaches each tool in order, each shown by a ring; Enter on Edit turns editing on and says so — Document, Pages, Text, Edit; Enter and Space press
@@ -85,10 +85,10 @@
   [passed] edit: F6, a file whose own content carries handlers and asks for a subject: nothing in it acts — pressed SAVE-ME and SWITCH-ME: no file, no change of face, no change; the Portal shows its label; to the keyboard they are not there
   [passed] no tools: a file whose pack carries no tools universe opens, says so in plain words, and shows the document to read; nothing in it can be pressed — "This file carries no tools, and this reader has none of its own. The document is shown to be read; it cannot be changed or saved from here."
 
-== firefox, http origin http://127.0.0.1:34249
-  [passed] opened: the file runs its own kernel under its policy — state 95d67613f1ea4a51; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+== firefox, http origin http://127.0.0.1:41043
+  [passed] opened: the file runs its own kernel under its policy — state c55352b07840cc96; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
   [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 1 seen by interception, 1 by the server, 0 fetched by the page, 0 violations, 0 console messages
-  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 263700 characters, exported 2026-11-23
+  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 261248 characters, exported 2026-11-23
   [passed] faces: the document face is drawn, and the tools show it is on
   [passed] faces: the pages face is drawn — 5 pages
   [passed] faces: the plain-text face is drawn
@@ -102,32 +102,32 @@
   [passed] edit: with editing off, a press on the document does nothing
   [passed] edit: one word changed through the tools by selecting it and typing, as Ada Tester — the name was given through the field of the tools; the kernel and the host asked nothing
       run chars=[772,793] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
-      run chars=[793,797] change=o:80bbbe47 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[793,797] change=o:1487c028 basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[797,879] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
       work: [["detail","sums"]]
-  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[793,797] change=o:80bbbe47 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[793,797] change=o:1487c028 basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[874,879] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
-      run chars=[879,885] change=o:ef66afa6 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[879,885] change=o:0d17e008 basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[885,891] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
       work: [["","Also: "],["set","spans.b13.at"],["set","spans.b14.at"]]
-  [passed] paragraph start: "Also: " typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph — b14 = [879,982], b13 = [772,879]; run chars=[879,885] change=o:ef66afa6 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] paragraph start: "Also: " typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph — b14 = [879,982], b13 = [772,879]; run chars=[879,885] change=o:0d17e008 basis=witnessed by=person who="Ada Tester" sealed=false
   [passed] typed: a run of Backspace is one removal — [[" and the earlier value is kept",""]]
   [passed] typed: a word copied and pasted elsewhere is one insertion, where it was pasted — [["","year"]]
   [passed] typed: typed and deleted again, then the same letters typed over themselves: no change is made, and none is claimed — nothing written; Cancel writes nothing either
   [passed] typed: a change the widget reports with no position (its text set, as a filled-in or dictated text is) falls back on the difference — [["ma","blow"],["aged",""]]
   [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
   [passed] edit: nothing turns editing on but the tools, and the tools turn it off
-  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17638,"attribution":4996,"history":64076,"changes":11,"included":64076}
-  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2.ufx.html, 307852 bytes; content 17638, attribution 4996, history 64076 bytes
-  [passed] published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too — compose-edited-published-2.ufx.html: 207644 bytes against 307852; pack 24598 against 99754; 22 content and 24 attribution records, 0 of history, 1 absent frame
-  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 307852 characters, exported 2026-11-23
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17634,"attribution":4996,"history":64072,"changes":11,"included":64072}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2.ufx.html, 305396 bytes; content 17634, attribution 4996, history 64072 bytes
+  [passed] published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too — compose-edited-published-2.ufx.html: 205192 bytes against 305396; pack 24594 against 99746; 22 content and 24 attribution records, 0 of history, 1 absent frame
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 305396 characters, exported 2026-11-23
   [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 1 seen by interception, 1 by the server, 0 fetched by the page, 0 violations, 0 console messages
   [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state ad2e6b0f598a7289
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state 9b95d6f596c4354e
   -- the saved file, edited and saved again
-  [passed] opened: the saved file runs its own kernel under its policy — state ad2e6b0f598a7289; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: the saved file runs its own kernel under its policy — state 9b95d6f596c4354e; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
   [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 1 seen by interception, 1 by the server, 0 fetched by the page, 0 violations, 0 console messages
-  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 307852 characters, exported 2026-11-23
+  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 305396 characters, exported 2026-11-23
   [passed] faces: the document face is drawn, and the tools show it is on
   [passed] faces: the pages face is drawn — 5 pages
   [passed] faces: the plain-text face is drawn
@@ -137,35 +137,35 @@
   [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[970,974] and chars=[1049,1053] by Ben Second
   [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
   [passed] edit: nothing turns editing on but the tools, and the tools turn it off
-  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17817,"attribution":5429,"history":69269,"changes":12,"included":69269}
-  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2-edited.ufx.html, 316845 bytes; content 17817, attribution 5429, history 69269 bytes
-  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 316845 characters, exported 2026-11-23
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17813,"attribution":5429,"history":69265,"changes":12,"included":69265}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2-edited.ufx.html, 314389 bytes; content 17813, attribution 5429, history 69265 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 314389 characters, exported 2026-11-23
   [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 1 seen by interception, 1 by the server, 0 fetched by the page, 0 violations, 0 console messages
   [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state a46f378b2ae564a4
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state 671878bd3e1ea198
   -- the copy published for readers, reopened, edited and saved again
-  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[851,857] change=o:ef66afa6 basis=witnessed by=person who="Ada Tester" sealed=false
-      change id=o:4b833841 time=1795420887709 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
-      change id=o:e9a4d71b time=1795420886892 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[851,857] change=o:0d17e008 basis=witnessed by=person who="Ada Tester" sealed=false
+      change id=o:4e647c0e time=1795446261586 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+      change id=o:b5488d53 time=1795446260570 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
       change id=withheld time=withheld actor=withheld basis=unknown ops=withheld touched=withheld
   [passed] published: `history` lists every change with its work said to be withheld (E11), and the panel says no working history is held — 12 changes, each "ops=withheld touched=withheld"; 2 of them (changes that left nothing in the text as it stands) withheld whole, and said to be
-  [passed] published: it is edited again, a new change on top of withheld history, and saved again each way — compose-edited-published-2-published.ufx.html (208469 bytes) and compose-edited-published-2-edited-2.ufx.html (215645 bytes), both at ba47eae05849bfdb
+  [passed] published: it is edited again, a new change on top of withheld history, and saved again each way — compose-edited-published-2-published.ufx.html (206021 bytes) and compose-edited-published-2-edited-2.ufx.html (213197 bytes), both at 1e25ebf8d0cb7c01
   [passed] published: the copy published a second time reopens at the state it was saved at, and shows the new edit
   -- by the keyboard alone, from the file as first made
   [passed] keyboard: Tab reaches each tool in order, each shown by a ring; Enter on Edit turns editing on and says so — Document, Pages, Text, Edit; Enter and Space press
   [passed] keyboard: Tab to the field for the name, Enter, type, Tab to Done, Enter: the name is set, with no dialog, and the focus is back on the field — 2 Tabs from Edit (Save, then the field)
   [passed] keyboard: Tab to a paragraph, Enter opens the labelled edit box, typing, Tab to Done, Enter: changed, and the focus is back on the paragraph — 14 more Tabs to the paragraph (the page scrolled to 0); the work: [["","Keyed in. "]]
   [passed] keyboard: back to Save with Shift+Tab, Enter opens what will leave; Tab to the choice and Enter, Tab to "Save this copy", Enter: a file comes down, and the status says so — 15 Shift+Tabs; compose-edited-2.ufx.html; no request, violation, console message or dialog in the whole run
-  [passed] sent on: the saved file opens, is edited, saved and reopened from http://127.0.0.1:34249
+  [passed] sent on: the saved file opens, is edited, saved and reopened from http://127.0.0.1:41043
 
 == scripts off (firefox, javaScriptEnabled: false)
   [passed] static face: the original shows what the file is and what to do, and the document as elements: the same headings, paragraphs and lists — 2 headings, 7 paragraphs, 2 lists; fits Firefox, 360 by 740 at 3, touch
   [passed] static face: the saved file shows what the file is and what to do, and the document as elements: the same headings, paragraphs and lists — 2 headings, 7 paragraphs, 2 lists; fits Firefox, 360 by 740 at 3, touch
 
 == Firefox, 412 by 839 at 2.625, touch, file://, taps
-  [passed] opened: the file runs its own kernel under its policy — state f6885f57e4ad23de; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: the file runs its own kernel under its policy — state 92027a1f85e587f5; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
   [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
-  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 225235 characters, exported 2026-01-02
+  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 222783 characters, exported 2026-01-02
   [passed] faces: the document face is drawn, and the tools show it is on
   [passed] faces: the pages face is drawn — 4 pages
   [passed] faces: the plain-text face is drawn
@@ -179,32 +179,32 @@
   [passed] edit: with editing off, a press on the document does nothing
   [passed] edit: one word changed through the tools by selecting it and typing, as Ada Tester — the name was given through the field of the tools; the kernel and the host asked nothing
       run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
-      run chars=[471,476] change=o:d9419a79 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[471,476] change=o:8286f561 basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
       work: [["ledger","books"]]
-  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:d9419a79 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:8286f561 basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[656,661] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
-      run chars=[661,667] change=o:8284da5a basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[661,667] change=o:4f35f2d5 basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[667,673] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
       work: [["","Note: "],["set","spans.b11.at"],["set","spans.b12.at"]]
-  [passed] paragraph start: "Note: " typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph — b12 = [661,768], b11 = [537,661]; run chars=[661,667] change=o:8284da5a basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] paragraph start: "Note: " typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph — b12 = [661,768], b11 = [537,661]; run chars=[661,667] change=o:4f35f2d5 basis=witnessed by=person who="Ada Tester" sealed=false
   [passed] typed: a run of Backspace is one removal — [[" by accident",""]]
   [passed] typed: a word copied and pasted elsewhere is one insertion, where it was pasted — [["","region"]]
   [passed] typed: typed and deleted again, then the same letters typed over themselves: no change is made, and none is claimed — nothing written; Cancel writes nothing either
   [passed] typed: a change the widget reports with no position (its text set, as a filled-in or dictated text is) falls back on the difference — [["trusted","known"]]
   [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
   [passed] edit: nothing turns editing on but the tools, and the tools turn it off
-  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17120,"attribution":3113,"history":39622,"changes":7,"included":39622}
-  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited.ufx.html, 263700 bytes; content 17120, attribution 3113, history 39622 bytes
-  [passed] published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too — compose-published-2.ufx.html: 203984 bytes against 263700; pack 21837 against 66624; 22 content and 15 attribution records, 0 of history, 1 absent frame
-  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 263700 characters, exported 2026-11-23
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17116,"attribution":3113,"history":39618,"changes":7,"included":39618}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited.ufx.html, 261248 bytes; content 17116, attribution 3113, history 39618 bytes
+  [passed] published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too — compose-published-2.ufx.html: 201536 bytes against 261248; pack 21833 against 66616; 22 content and 15 attribution records, 0 of history, 1 absent frame
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 261248 characters, exported 2026-11-23
   [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
   [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state 9b4d7a7c31083176
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state 9ffa397d47d6e9ca
   -- the saved file, edited and saved again
-  [passed] opened: the saved file runs its own kernel under its policy — state 9b4d7a7c31083176; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: the saved file runs its own kernel under its policy — state 9ffa397d47d6e9ca; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
   [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
-  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 263700 characters, exported 2026-11-23
+  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 261248 characters, exported 2026-11-23
   [passed] faces: the document face is drawn, and the tools show it is on
   [passed] faces: the pages face is drawn — 5 pages
   [passed] faces: the plain-text face is drawn
@@ -214,19 +214,19 @@
   [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[549,554] and chars=[659,664] by Ben Second
   [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
   [passed] edit: nothing turns editing on but the tools, and the tools turn it off
-  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17303,"attribution":3546,"history":44298,"changes":8,"included":44298}
-  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2.ufx.html, 272016 bytes; content 17303, attribution 3546, history 44298 bytes
-  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 272016 characters, exported 2026-11-23
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17299,"attribution":3546,"history":44294,"changes":8,"included":44294}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2.ufx.html, 269560 bytes; content 17299, attribution 3546, history 44294 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 269560 characters, exported 2026-11-23
   [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
   [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state a7948c9ed98ca134
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state a18f175cc5b48006
   -- the copy published for readers, reopened, edited and saved again
-  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[475,480] change=o:d9419a79 basis=witnessed by=person who="Ada Tester" sealed=false
-      change id=o:b7595fba time=1795420907678 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
-      change id=o:8f8cd708 time=1795420906876 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[475,480] change=o:8286f561 basis=witnessed by=person who="Ada Tester" sealed=false
+      change id=o:0f191633 time=1795446285001 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+      change id=o:4b02c7a3 time=1795446284101 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
       change id=withheld time=withheld actor=withheld basis=unknown ops=withheld touched=withheld
   [passed] published: `history` lists every change with its work said to be withheld (E11), and the panel says no working history is held — 7 changes, each "ops=withheld touched=withheld"; 1 of them (changes that left nothing in the text as it stands) withheld whole, and said to be
-  [passed] published: it is edited again, a new change on top of withheld history, and saved again each way — compose-published-2-published.ufx.html (204819 bytes) and compose-published-2-edited-2.ufx.html (211303 bytes), both at a8c97b4e4a2c9259
+  [passed] published: it is edited again, a new change on top of withheld history, and saved again each way — compose-published-2-published.ufx.html (202371 bytes) and compose-published-2-edited-2.ufx.html (208855 bytes), both at 76a3d43fc99cf6d1
   [passed] published: the copy published a second time reopens at the state it was saved at, and shows the new edit
   -- by the keyboard alone, from the file as first made
   [passed] keyboard: Tab reaches each tool in order, each shown by a ring; Enter on Edit turns editing on and says so — Document, Pages, Text, Edit; Enter and Space press
@@ -235,9 +235,9 @@
   [passed] keyboard: back to Save with Shift+Tab, Enter opens what will leave; Tab to the choice and Enter, Tab to "Save this copy", Enter: a file comes down, and the status says so — 15 Shift+Tabs; compose-edited.ufx.html; no request, violation, console message or dialog in the whole run
 
 == Firefox, 360 by 740 at 3, touch, file://, taps
-  [passed] opened: the file runs its own kernel under its policy — state f6885f57e4ad23de; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: the file runs its own kernel under its policy — state 92027a1f85e587f5; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
   [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
-  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 225235 characters, exported 2026-01-02
+  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 222783 characters, exported 2026-01-02
   [passed] faces: the document face is drawn, and the tools show it is on
   [passed] faces: the pages face is drawn — 4 pages
   [passed] faces: the plain-text face is drawn
@@ -251,32 +251,32 @@
   [passed] edit: with editing off, a press on the document does nothing
   [passed] edit: one word changed through the tools by selecting it and typing, as Ada Tester — the name was given through the field of the tools; the kernel and the host asked nothing
       run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
-      run chars=[471,476] change=o:77257b3b basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[471,476] change=o:f57e2f7d basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
       work: [["ledger","books"]]
-  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:77257b3b basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:f57e2f7d basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[656,661] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
-      run chars=[661,667] change=o:a70acff0 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[661,667] change=o:bd04db4c basis=witnessed by=person who="Ada Tester" sealed=false
       run chars=[667,673] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
       work: [["","Note: "],["set","spans.b11.at"],["set","spans.b12.at"]]
-  [passed] paragraph start: "Note: " typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph — b12 = [661,768], b11 = [537,661]; run chars=[661,667] change=o:a70acff0 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] paragraph start: "Note: " typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph — b12 = [661,768], b11 = [537,661]; run chars=[661,667] change=o:bd04db4c basis=witnessed by=person who="Ada Tester" sealed=false
   [passed] typed: a run of Backspace is one removal — [[" by accident",""]]
   [passed] typed: a word copied and pasted elsewhere is one insertion, where it was pasted — [["","region"]]
   [passed] typed: typed and deleted again, then the same letters typed over themselves: no change is made, and none is claimed — nothing written; Cancel writes nothing either
   [passed] typed: a change the widget reports with no position (its text set, as a filled-in or dictated text is) falls back on the difference — [["trusted","known"]]
   [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
   [passed] edit: nothing turns editing on but the tools, and the tools turn it off
-  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17120,"attribution":3113,"history":39622,"changes":7,"included":39622}
-  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited.ufx.html, 263700 bytes; content 17120, attribution 3113, history 39622 bytes
-  [passed] published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too — compose-published-2.ufx.html: 203984 bytes against 263700; pack 21837 against 66624; 22 content and 15 attribution records, 0 of history, 1 absent frame
-  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 263700 characters, exported 2026-11-23
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17116,"attribution":3113,"history":39618,"changes":7,"included":39618}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited.ufx.html, 261248 bytes; content 17116, attribution 3113, history 39618 bytes
+  [passed] published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too — compose-published-2.ufx.html: 201536 bytes against 261248; pack 21833 against 66616; 22 content and 15 attribution records, 0 of history, 1 absent frame
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 261248 characters, exported 2026-11-23
   [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
   [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state ec07441b27440f41
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state b03e5797b08ccf84
   -- the saved file, edited and saved again
-  [passed] opened: the saved file runs its own kernel under its policy — state ec07441b27440f41; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: the saved file runs its own kernel under its policy — state b03e5797b08ccf84; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
   [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
-  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 263700 characters, exported 2026-11-23
+  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 261248 characters, exported 2026-11-23
   [passed] faces: the document face is drawn, and the tools show it is on
   [passed] faces: the pages face is drawn — 5 pages
   [passed] faces: the plain-text face is drawn
@@ -286,19 +286,19 @@
   [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[549,554] and chars=[659,664] by Ben Second
   [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
   [passed] edit: nothing turns editing on but the tools, and the tools turn it off
-  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17303,"attribution":3546,"history":44298,"changes":8,"included":44298}
-  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2.ufx.html, 272016 bytes; content 17303, attribution 3546, history 44298 bytes
-  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 272016 characters, exported 2026-11-23
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17299,"attribution":3546,"history":44294,"changes":8,"included":44294}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2.ufx.html, 269560 bytes; content 17299, attribution 3546, history 44294 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 269560 characters, exported 2026-11-23
   [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
   [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state 9a7dd6b93e80d490
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state 3f2a50ae01cb9f79
   -- the copy published for readers, reopened, edited and saved again
-  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[475,480] change=o:77257b3b basis=witnessed by=person who="Ada Tester" sealed=false
-      change id=o:f6a17765 time=1795420924249 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
-      change id=o:c31cffbe time=1795420923448 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[475,480] change=o:f57e2f7d basis=witnessed by=person who="Ada Tester" sealed=false
+      change id=o:8d105b67 time=1795446305171 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+      change id=o:9e2b6a91 time=1795446304154 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
       change id=withheld time=withheld actor=withheld basis=unknown ops=withheld touched=withheld
   [passed] published: `history` lists every change with its work said to be withheld (E11), and the panel says no working history is held — 7 changes, each "ops=withheld touched=withheld"; 1 of them (changes that left nothing in the text as it stands) withheld whole, and said to be
-  [passed] published: it is edited again, a new change on top of withheld history, and saved again each way — compose-published-2-published.ufx.html (204819 bytes) and compose-published-2-edited-2.ufx.html (211303 bytes), both at dee49e1d91ae6781
+  [passed] published: it is edited again, a new change on top of withheld history, and saved again each way — compose-published-2-published.ufx.html (202371 bytes) and compose-published-2-edited-2.ufx.html (208855 bytes), both at c2f60f9506db417d
   [passed] published: the copy published a second time reopens at the state it was saved at, and shows the new edit
   -- by the keyboard alone, from the file as first made
   [passed] keyboard: Tab reaches each tool in order, each shown by a ring; Enter on Edit turns editing on and says so — Document, Pages, Text, Edit; Enter and Space press
@@ -307,28 +307,28 @@
   [passed] keyboard: back to Save with Shift+Tab, Enter opens what will leave; Tab to the choice and Enter, Tab to "Save this copy", Enter: a file comes down, and the status says so — 15 Shift+Tabs; compose-edited.ufx.html; no request, violation, console message or dialog in the whole run
 
 == the independent reader (a copy of run.py, universe.py and ufo.py, not modified)
-      firefox-desktop-published-then-edited-published.ufx: state 19a71c7244bf53d5 by the final head; layers content 22, attribution 17, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld withheld; whole false; missing 18 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
-      firefox-desktop-published-then-edited-whole.ufx: state 19a71c7244bf53d5 by the final head; layers content 22, attribution 17, working history 5; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld unavailable; whole false; missing 16 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      firefox-desktop-published-then-edited-published.ufx: state 8ae31b8da635321c by the final head; layers content 22, attribution 17, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld withheld; whole false; missing 18 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      firefox-desktop-published-then-edited-whole.ufx: state 8ae31b8da635321c by the final head; layers content 22, attribution 17, working history 5; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld unavailable; whole false; missing 16 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
             of the changes whose work is present: height 7: unavailable (a value of the parent state is not in the pack)
-      firefox-desktop-published.ufx: state 95d67613f1ea4a51 by the final head; layers content 22, attribution 15, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld; whole false; missing 16 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
-      firefox-desktop-whole-1.ufx: state 95d67613f1ea4a51 by the final head; layers content 22, attribution 15, working history 37; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
-      firefox-desktop-whole-2.ufx: state ee7c0d3452bf8297 by the final head; layers content 22, attribution 17, working history 42; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
-      firefox-http-published.ufx: state ad2e6b0f598a7289 by the final head; layers content 22, attribution 24, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld withheld withheld withheld withheld withheld; whole false; missing 26 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
-      firefox-http-whole-1.ufx: state ad2e6b0f598a7289 by the final head; layers content 22, attribution 24, working history 63; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
-      firefox-phone-larger-whole-2.ufx: state a7948c9ed98ca134 by the final head; layers content 22, attribution 17, working history 42; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
-      firefox-phone-smaller-published.ufx: state ec07441b27440f41 by the final head; layers content 22, attribution 15, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld; whole false; missing 16 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
-      firefox-phone-smaller-whole-2.ufx: state 9a7dd6b93e80d490 by the final head; layers content 22, attribution 17, working history 42; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      firefox-desktop-published.ufx: state c55352b07840cc96 by the final head; layers content 22, attribution 15, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld; whole false; missing 16 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      firefox-desktop-whole-1.ufx: state c55352b07840cc96 by the final head; layers content 22, attribution 15, working history 37; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      firefox-desktop-whole-2.ufx: state b8849c077cbda0a7 by the final head; layers content 22, attribution 17, working history 42; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      firefox-http-published.ufx: state 9b95d6f596c4354e by the final head; layers content 22, attribution 24, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld withheld withheld withheld withheld withheld; whole false; missing 26 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      firefox-http-whole-1.ufx: state 9b95d6f596c4354e by the final head; layers content 22, attribution 24, working history 63; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      firefox-phone-larger-whole-2.ufx: state a18f175cc5b48006 by the final head; layers content 22, attribution 17, working history 42; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      firefox-phone-smaller-published.ufx: state b03e5797b08ccf84 by the final head; layers content 22, attribution 15, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld; whole false; missing 16 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      firefox-phone-smaller-whole-2.ufx: state 3f2a50ae01cb9f79 by the final head; layers content 22, attribution 17, working history 42; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
       node-all-edits.ufx: state 15c33299360801b9 by the final head; layers content 5, attribution 14, working history 33; conservation ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
       node-edit-positioned.ufx: state a4a5e8c2173b395f by the final head; layers content 5, attribution 4, working history 8; conservation ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
       node-many-edits.ufx: state 337aca21478f5b3d by the final head; layers content 8, attribution 22, working history 67; conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
-      node-nested-published-then-edited.ufx: state 4ea891445150209d by the final head; layers content 22, attribution 10, working history 5; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld unavailable; whole false; missing 8 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      node-nested-published-then-edited.ufx: state 428082e3ebafe5f7 by the final head; layers content 22, attribution 10, working history 5; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld unavailable; whole false; missing 8 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
             of the changes whose work is present: height 3: unavailable (a value of the parent state is not in the pack)
-      node-nested-published.ufx: state a6674c0d0e23e39f by the final head; layers content 22, attribution 8, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld; whole false; missing 8 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
-      node-nested-whole.ufx: state a6674c0d0e23e39f by the final head; layers content 22, attribution 8, working history 16; the tools universe nested, its 17 content records content here; conservation ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      node-nested-published.ufx: state 63dc49f5f5a78c4f by the final head; layers content 22, attribution 8, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld; whole false; missing 8 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      node-nested-whole.ufx: state 63dc49f5f5a78c4f by the final head; layers content 22, attribution 8, working history 16; the tools universe nested, its 17 content records content here; conservation ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
       node-one-word.ufx: state 07964126cb8f3b69 by the final head; layers content 5, attribution 4, working history 8; conservation ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
       node-paragraph-start.ufx: state 78e414e3082fbcc2 by the final head; layers content 5, attribution 10, working history 23; conservation ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
       node-two-words.ufx: state ff848e120ea7c93b by the final head; layers content 5, attribution 12, working history 28; conservation ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
-      tools.ufx: state f054568782a715e8 by the final head; layers content 17, attribution 2, working history 3; conservation ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      tools.ufx: state fe02912aa960cf61 by the final head; layers content 17, attribution 2, working history 3; conservation ok; whole true; missing 0; absent frames []; index problems 0; reported {}
       vector-edit-one-word-published.ufx: state 07964126cb8f3b69 by the final head; layers content 5, attribution 4, working history 0; conservation withheld withheld; whole false; missing 4 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
   [passed] reader: accepts every pack; sees the tools universe nested and its records as content; classes every record a published copy lacks as withheld — 21 packs
 

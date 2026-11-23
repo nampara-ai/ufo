@@ -102,8 +102,8 @@ const join = (...a) => f('concat', ...a), list = (...a) => f('list', ...a), get 
 export function tools() {
   const pk = new Pack('ufo-spike-tools-salt'), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90].map(id);
   const S = f('arg', 'subject'), editing = is(st('editing'), true), named = not(is(st('who'), null)), share = is(st('share'), true), saving = is(st('panel'), 'save'), lit = on => iff(on, 'underline', 'none');
-  // what the kernel's projections say of the subject: `overview`, the changes newest first, and what a copy would carry
-  const ov = nth(f('ask', 'overview', S), 0), last = nth(f('ask', 'history', S), 0), leaving = f('ask', 'leaving', S, { history: share }), [content, credit, history] = [0, 1, 2].map(i => nth(leaving, i));
+  // what the kernel's projections say of the subject: `expand` of the whole, the changes newest first, and what a copy would carry
+  const ov = nth(f('ask', 'expand', S), 0), last = nth(f('ask', 'history', S), 0), leaving = f('ask', 'leaving', S, { history: share }), [content, credit, history] = [0, 1, 2].map(i => nth(leaving, i));
   // The name of a saved file: the name of this one without its ending, then a mark for the kind of copy, then a number if a copy was
   // already saved from here; a name that has the mark already takes a number. (No operator of 7.3 finds a text in a text or reads a
   // number from one, so "-edited-2" cannot be counted on from: it becomes "-edited-2-edited".)

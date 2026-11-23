@@ -167,7 +167,7 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
     cx.chain.push((*uni, *id));
     let mut rows = match o.ty.as_str() {
         "ufo.text" => text_rows(cx, uni, &o, None, w).unwrap_or_else(|| label_row(cx, "(inconsistent text: not presented)", w)), // step 1
-        "ufo.group" | "ufo.pane" => {
+        "ufo.group" => {
             let gap = o.p.get("gap").and_then(|g| g.f()).unwrap_or(0.0);
             let mut rows = Vec::new();
             // 7.3, repetition: under `each` the child is a template, presented once for each item of the list the
@@ -315,16 +315,16 @@ fn src(cx: &Ctx, uni: &H, id: &Id, chars: Option<(&El, &El)>) -> V {
     V::Tag(ANCHOR, Box::new(map(m)))
 }
 
-struct Span<'a> {
-    a: usize,
-    b: usize,
+pub struct Span<'a> {
+    pub a: usize,
+    pub b: usize,
     block: bool,
-    role: &'a str,
+    pub role: &'a str,
     key: &'a str,
     v: &'a V,
 }
 /// Step 2: the spans that resolve, in key order.
-fn spans<'a>(o: &'a Obj, els: &[El]) -> Vec<Span<'a>> {
+pub fn spans<'a>(o: &'a Obj, els: &[El]) -> Vec<Span<'a>> {
     let mut out = Vec::new();
     if let Some(V::M(m)) = o.p.get("spans") {
         for (key, v) in m {
@@ -393,7 +393,7 @@ fn span_node(s: &Span, role: &str, id: i64, press: bool) -> V {
     node(role, id, m)
 }
 const HEADING: [f64; 6] = [2.0, 1.5, 1.25, 1.1, 1.0, 1.0];
-fn level(s: &Span) -> usize {
+pub fn level(s: &Span) -> usize {
     s.v.get("level").and_then(|l| l.i()).unwrap_or(1).max(1) as usize
 }
 /// A span's part in a style: the defaults of its role (Appendix A), then its own properties.
@@ -416,13 +416,13 @@ fn role_style(st: &mut Style, s: &Span, text: &Style) {
     restyle(st, s.v);
 }
 /// A block: the characters `a` to `b` whose innermost block span is `span`, or an empty span.
-struct Blk {
-    span: Option<usize>,
-    a: usize,
-    b: usize,
+pub struct Blk {
+    pub span: Option<usize>,
+    pub a: usize,
+    pub b: usize,
 }
 /// Step 3: the blocks of the characters `ra` to `rb`, in order.
-fn blocks(sp: &[Span], ra: usize, rb: usize) -> Vec<Blk> {
+pub fn blocks(sp: &[Span], ra: usize, rb: usize) -> Vec<Blk> {
     let inner = |i: usize| -> Option<usize> {
         let mut best: Option<usize> = None;
         for (k, s) in sp.iter().enumerate() {
@@ -990,8 +990,8 @@ pub fn plain(pk: &Pack, uni: &H, id: &Id, out: &mut String, depth: u32) {
         out.push('\n');
     };
     match o.ty.as_str() {
-        "ufo.text" => plain_text(pk, uni, &o, None, out, depth),
-        "ufo.group" | "ufo.pane" | "ufo.pane" | "ufo.clock" => children(out),
+        "ufo.text" => plain_text(pk, uni, &o, None, None, out, depth),
+        "ufo.group" | "ufo.clock" => children(out),
         "ufo.portal" => {
             let Some(of) = o.p.get("of").filter(|_| depth < 16) else { return label(out) };
             if let Some(cid) = of.tag(REF).and_then(|x| x.id()) {
@@ -1009,7 +1009,7 @@ pub fn plain(pk: &Pack, uni: &H, id: &Id, out: &mut String, depth: u32) {
                 }
                 out.push_str(")\n");
             } else if let (Some(region), Some(text)) = (a.get("a").and_then(|r| r.get("chars")), pk.object(&target, &cid)) {
-                plain_text(pk, &target, &text, Some(region), &mut s, depth + 1);
+                plain_text(pk, &target, &text, Some(region), None, &mut s, depth + 1);
             } else {
                 plain(pk, &target, &cid, &mut s, depth + 1);
             }
@@ -1029,7 +1029,8 @@ pub fn plain(pk: &Pack, uni: &H, id: &Id, out: &mut String, depth: u32) {
         _ => label(out),
     }
 }
-fn plain_text(pk: &Pack, uni: &H, o: &Obj, region: Option<&V>, out: &mut String, depth: u32) {
+/// The plain-text face of a text or of a region of it; with `at`, of blocks `at.0` up to `at.1` of the whole text only.
+pub fn plain_text(pk: &Pack, uni: &H, o: &Obj, region: Option<&V>, at: Option<(usize, usize)>, out: &mut String, depth: u32) {
     let (Some(chars), Some(els)) = (o.p.get("chars").and_then(|c| c.s()), o.seq.as_ref().and_then(|s| s.get("chars")).and_then(elements)) else { return };
     let chars: Vec<char> = chars.chars().collect();
     let sp = spans(o, &els);
@@ -1040,7 +1041,8 @@ fn plain_text(pk: &Pack, uni: &H, o: &Obj, region: Option<&V>, out: &mut String,
     };
     let bl = blocks(&sp, ra, rb.min(chars.len()));
     let mut was_item = None;
-    for (b, mark) in bl.iter().zip(markers(&sp, &bl)) {
+    let (first, end) = at.unwrap_or((0, bl.len()));
+    for (b, mark) in bl.iter().zip(markers(&sp, &bl)).take(end).skip(first) {
         if was_item.is_some() && was_item != Some(true) || was_item.is_some() && mark.is_none() {
             out.push('\n'); // an empty line between blocks, unless both are list items
         }

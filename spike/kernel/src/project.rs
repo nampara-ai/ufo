@@ -1,18 +1,52 @@
-// Throwaway spike kernel: projections (SPEC Appendix B), as text. Not the beginning of the implementation.
+// Throwaway spike kernel: projections (SPEC Appendix B). Not the beginning of the implementation.
+// A projection is a list of records, and a record is a value: a map whose first field, `is`, is its
+// kind, with its other fields after it in the order Appendix B gives. What an agent reads is that
+// list spelled as text by one function (`spell`), and what a formula is given by `ask` is the list
+// itself (`records`). Nothing is spelled and then read back.
 use crate::pack::*;
 use crate::query::*;
 use crate::value::*;
 use crate::small::{Map, Set};
 use crate::spell::*;
+use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec;
 use alloc::vec::Vec;
+
+/// Inside the kernel only, never in a record that is stored: a text that is written bare, as an
+/// identity, a hash, an anchor or a word of a fixed set is. Any other text is written in quotes.
+const WORD: u64 = u64::MAX;
+fn w(s: impl Into<String>) -> V {
+    V::Tag(WORD, Box::new(V::T(s.into())))
+}
+/// A record being made: its kind, then its fields in order.
+struct R(Vec<(String, V)>);
+impl R {
+    fn new(kind: &str) -> R {
+        R(vec![("is".into(), w(kind))])
+    }
+    fn f(mut self, name: &str, v: V) -> R {
+        self.0.push((name.into(), v));
+        self
+    }
+    fn opt(self, name: &str, v: Option<V>) -> R {
+        match v { Some(v) => self.f(name, v), None => self }
+    }
+    fn more(mut self, fields: Vec<(String, V)>) -> R {
+        self.0.extend(fields);
+        self
+    }
+}
+fn int(n: usize) -> V {
+    V::Int(n as i64)
+}
 
 struct Cx<'a> {
     pk: &'a Pack,
     commit: H,
     revs: Map<Id, H>,
     chain: Vec<(H, V)>,
-    lines: Vec<String>,
+    recs: Vec<V>,
 }
 fn json(s: &str) -> String {
     let mut o = String::from("\"");
@@ -65,6 +99,7 @@ impl<'a> Cx<'a> {
             V::M(m) => cat!("{", m.iter().map(|(k, x)| cat!(json(k), ":", self.jv(x))).collect::<Vec<_>>().join(","), "}"),
             V::Tag(REF, x) => cat!("{\"$ref\":\"", x.id().map(|i| self.o(&i)).unwrap_or_default(), "\"}"),
             V::Tag(ANCHOR, a) => cat!("{\"$anchor\":", json(&self.anchor(a)), "}"),
+            V::Tag(WORD, x) => x.s().unwrap_or("").into(),
             V::Tag(n, x) => cat!("{\"$tag", n, "\":", self.jv(x), "}"),
         }
     }
@@ -76,13 +111,33 @@ impl<'a> Cx<'a> {
         if let (Some(V::M(axes)), Some(o)) = (a.get("a"), &o) {
             for (ax, reg) in axes {
                 match o.seq.as_ref().and_then(|q| q.get(ax)).map(|q| runs(q)).and_then(|rs| region(&rs, reg)) {
-                    Some((lo, hi)) => put!(s; " ", ax, "=[", lo, ",", hi, "]"),
-                    None => put!(s; " ", ax, "=detached"),
+                    Some((lo, hi)) => put!(s; "/", ax, "=[", lo, ",", hi, "]"),
+                    None => put!(s; "/", ax, "=detached"),
                 }
             }
         }
-        if let Some(o) = &o { s.push(' '); s.push_str(&self.r(&o.rev)); }
+        if let Some(o) = &o { s.push('/'); s.push_str(&self.r(&o.rev)); }
         s
+    }
+    /// An anchor to an object at its revision, with a region of positions on one axis if one is given: one value, written with no space.
+    fn at(&self, o: &Obj, region: Option<(&str, u64, u64)>) -> V {
+        let mut s = self.o(&o.id);
+        if let Some((ax, lo, hi)) = region { put!(s; "/", ax, "=[", lo, ",", hi, "]"); }
+        put!(s; "/", self.r(&o.rev));
+        w(s)
+    }
+    fn push(&mut self, r: R) {
+        self.recs.push(V::M(r.0));
+    }
+    /// The name of whoever a change names under `who`, as a value.
+    fn name(v: &V) -> V {
+        v.get("name").unwrap_or(v).clone()
+    }
+    /// Names with none twice, in the order of their spelling.
+    fn names(&self, mut vs: Vec<V>) -> V {
+        crate::small::sort_by(&mut vs, |a, b| self.jv(a).cmp(&self.jv(b)));
+        vs.dedup();
+        V::L(vs)
     }
     fn change(&self, id: &Id) -> Option<V> {
         let o = self.obj(id)?;
@@ -94,19 +149,15 @@ impl<'a> Cx<'a> {
             .map(|(h, n)| (*h, n.get("height").and_then(|x| x.i()).unwrap_or(0)))
     }
     /// The origin fields of a change, as `run`, `finding` and `made` write them.
-    fn origin(&self, id: &Id) -> String {
-        let Some(p) = self.change(id) else { return cat!("change=", self.o(id), " basis=unknown") };
-        let og = p.get("origin");
+    fn origin(&self, id: &Id) -> Vec<(String, V)> {
+        let p = self.change(id);
+        let og = p.as_ref().and_then(|p| p.get("origin"));
         let f = |k: &str| og.and_then(|o| o.get(k));
-        let mut s = cat!("change=", self.o(id), " basis=", f("basis").and_then(|b| b.s()).unwrap_or("unknown"));
-        if let Some(b) = f("by").and_then(|b| b.s()) { put!(s; " by=", b); }
+        let mut r = R(Vec::new()).f("change", w(self.o(id))).f("basis", w(f("basis").and_then(|b| b.s()).unwrap_or("unknown"))).opt("by", f("by").and_then(|b| b.s()).map(w));
         for k in ["who", "model", "tool", "asked", "prompt", "method", "confidence"] {
-            if let Some(v) = f(k) {
-                let shown = v.get("name").unwrap_or(v);
-                put!(s; " ", k, "=", self.jv(shown));
-            }
+            r = r.opt(k, f(k).map(Self::name));
         }
-        s
+        r.0
     }
     fn time(&self, id: &Id) -> i64 {
         self.change(id).and_then(|p| p.get("time").and_then(|t| t.i())).unwrap_or(0)
@@ -130,70 +181,27 @@ impl<'a> Cx<'a> {
     }
 }
 
-// ---- a text's blocks, and its plain text (8.3) ----
-struct Block { lo: u64, hi: u64, role: String, level: i64, marker: Option<V> }
-fn blocks(o: &Obj) -> Vec<Block> {
-    let Some(rs) = o.seq.as_ref().and_then(|q| q.get("chars")).map(runs) else { return Vec::new() };
-    let mut out: Vec<(u64, String, Block)> = Vec::new();
-    if let Some(V::M(spans)) = o.p.get("spans") {
-        for (key, s) in spans {
-            if s.get("kind").and_then(|k| k.s()) != Some("block") { continue; }
-            let Some(reg) = s.get("at").and_then(|a| a.tag(ANCHOR)).and_then(|a| a.get("a")).and_then(|a| a.get("chars")) else { continue };
-            let (Some(lo), Some(hi)) = (reg.l().get(1).and_then(|b| bpos(&rs, b)), reg.l().get(2).and_then(|b| bpos(&rs, b))) else { continue };
-            out.push((lo, key.clone(), Block { lo, hi: hi.max(lo), role: s.get("role").and_then(|r| r.s()).unwrap_or("paragraph").into(), level: s.get("level").and_then(|l| l.i()).unwrap_or(1), marker: s.get("marker").cloned() }));
-        }
-    }
-    crate::small::sort_by(&mut out, |a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
-    out.into_iter().map(|x| x.2).collect()
-}
-/// The plain text of blocks i..j of a text (8.3): markers, and an empty line between blocks that are not both items.
-fn plain_blocks(chars: &[char], bs: &[Block], i: usize, j: usize) -> String {
-    let mut s = String::new();
-    let mut counts: Map<i64, i64> = Map::new();
-    for k in 0..j.min(bs.len()) {
-        let b = &bs[k];
-        if b.role == "item" {
-            counts.0.retain(|(l, _)| *l <= b.level);
-            *counts.entry(b.level, 0) += 1;
-        } else {
-            counts.0.clear();
-        }
-        if k < i { continue; }
-        if k > i { s.push('\n'); if !(b.role == "item" && bs[k - 1].role == "item") { s.push('\n'); } }
-        if b.role == "item" {
-            for _ in 1..b.level { s.push_str("  "); }
-            match b.marker.as_ref().and_then(|m| m.s()) {
-                Some("number") => put!(s; counts.get(&b.level).cloned().unwrap_or(0), ". "),
-                Some("bullet") | None => s.push_str("• "),
-                Some(lit) => { s.push_str(lit); s.push(' '); }
-            }
-        }
-        s.extend(&chars[b.lo as usize..(b.hi as usize).min(chars.len())]);
-    }
-    s
-}
-
 fn text(cx: &mut Cx, id: &Id) -> Option<()> {
     let o = cx.obj(id)?;
     let s = o.p.get("chars")?.s()?;
     let n = s.chars().count();
-    let line = cat!("text ", cx.o(id), " chars=[0,", n, "] ", cx.r(&o.rev), " chars=", n, " s=", json(s));
-    cx.lines.push(line);
+    let r = R::new("text").f("at", cx.at(&o, Some(("chars", 0, n as u64)))).f("chars", int(n)).f("s", t(s));
+    cx.push(r);
     Some(())
 }
 fn object(cx: &mut Cx, id: &Id) -> Option<()> {
     let o = cx.obj(id)?;
     let rev = cx.pk.node(&o.rev)?.get("rev")?.i()?;
-    let line = cat!("object id=", cx.o(id), " type=", o.ty, " rev=", rev, " r=", cx.r(&o.rev), " by=", cx.o(&o.by));
-    cx.lines.push(line);
+    let r = R::new("object").f("id", w(cx.o(id))).f("type", w(o.ty.as_str())).f("rev", V::Int(rev)).f("r", w(cx.r(&o.rev))).f("by", w(cx.o(&o.by)));
+    cx.push(r);
     if let V::M(m) = &o.p {
         for (k, v) in m {
-            let line = match v {
-                V::T(s) if s.chars().count() > 200 => cat!("prop key=", k, " len=", s.chars().count(), " kind=text"),
-                V::B(b) if b.len() > 200 => cat!("prop key=", k, " len=", b.len(), " kind=bytes"),
-                _ => cat!("prop key=", k, " value=", cx.jv(v)),
-            };
-            cx.lines.push(line);
+            let r = R::new("prop").f("key", w(k.as_str()));
+            cx.push(match v {
+                V::T(s) if s.chars().count() > 200 => r.f("len", int(s.chars().count())).f("kind", w("text")),
+                V::B(b) if b.len() > 200 => r.f("len", int(b.len())).f("kind", w("bytes")),
+                _ => r.f("value", v.clone()),
+            });
         }
     }
     if let Some(V::M(seqs)) = &o.seq {
@@ -208,7 +216,7 @@ fn object(cx: &mut Cx, id: &Id) -> Option<()> {
                 if k == "work" { continue; } // what a change did is history, not a reference
                 let mut found = Set::new();
                 refs(v, &mut found);
-                if found.contains(id) { let line = cat!("referrer id=", cx.o(&other), " key=", k); cx.lines.push(line); }
+                if found.contains(id) { let r = R::new("referrer").f("id", w(cx.o(&other))).f("key", w(k.as_str())); cx.push(r); }
             }
         }
     }
@@ -240,8 +248,8 @@ fn runs_of(cx: &mut Cx, axis: &str, rs: &[Run], lo: u64, hi: u64) {
     }
     out.extend(open);
     for (c, a, b) in out {
-        let line = cat!("run ", axis, "=[", a, ",", b, "] ", cx.origin(&c), " sealed=", cx.sealed(&c));
-        cx.lines.push(line);
+        let r = R::new("run").f(axis, V::L(vec![V::Int(a as i64), V::Int(b as i64)])).more(cx.origin(&c)).f("sealed", V::Bool(cx.sealed(&c)));
+        cx.push(r);
     }
 }
 fn why(cx: &mut Cx, id: &Id, lo: Option<u64>, hi: Option<u64>) -> Option<()> {
@@ -249,8 +257,8 @@ fn why(cx: &mut Cx, id: &Id, lo: Option<u64>, hi: Option<u64>) -> Option<()> {
     let rs = runs(o.seq.as_ref()?.get("chars")?);
     let n: u64 = rs.iter().filter(|r| r.live).map(|r| r.count).sum();
     let (lo, hi) = (lo.unwrap_or(0), hi.unwrap_or(n).min(n));
-    let line = cat!("region ", cx.o(id), " chars=[", lo, ",", hi, "] ", cx.r(&o.rev));
-    cx.lines.push(line);
+    let r = R::new("region").f("at", cx.at(&o, Some(("chars", lo, hi))));
+    cx.push(r);
     runs_of(cx, "chars", &rs, lo, hi);
     // decisions about the changes that wrote the region
     let ids: Vec<Id> = cx.revs.keys().cloned().collect();
@@ -259,9 +267,8 @@ fn why(cx: &mut Cx, id: &Id, lo: Option<u64>, hi: Option<u64>) -> Option<()> {
         for d in p.get("decisions").map(|d| d.l()).unwrap_or(&[]) {
             let Some(about) = d.get("about").and_then(|a| a.tag(REF)).and_then(|a| a.id()) else { continue };
             if !covered(&rs, lo, hi).contains(&about) { continue; }
-            let who = d.get("who").map(|w| cx.jv(w.get("name").unwrap_or(w))).unwrap_or_default();
-            let line = cat!("decision about=", cx.o(&about), " verdict=", d.get("verdict").and_then(|v| v.s()).unwrap_or(""), " who=", who, " change=", cx.o(&c), " time=", cx.time(&c));
-            cx.lines.push(line);
+            let r = R::new("decision").f("about", w(cx.o(&about))).f("verdict", w(d.get("verdict").and_then(|v| v.s()).unwrap_or(""))).f("who", d.get("who").map_or(V::Null, Cx::name)).f("change", w(cx.o(&c))).f("time", V::Int(cx.time(&c)));
+            cx.push(r);
         }
     }
     Some(())
@@ -282,7 +289,8 @@ fn history(cx: &mut Cx, id: Option<&Id>) -> Option<()> {
     let chain = cx.chain.clone();
     for (_, n) in &chain {
         let Some(cid) = n.get("change").and_then(|c| c.hash()).and_then(|c| cx.pk.node(&c)).and_then(|n| n.get("id").and_then(|i| i.id())) else {
-            cx.lines.push(String::from("change id=withheld time=withheld actor=withheld basis=unknown ops=withheld touched=withheld"));
+            let wh = || w("withheld");
+            cx.push(R::new("change").f("id", wh()).f("time", wh()).f("actor", wh()).f("basis", w("unknown")).f("ops", wh()).f("touched", wh()));
             continue;
         };
         let Some(p) = cx.change(&cid) else { continue };
@@ -293,15 +301,15 @@ fn history(cx: &mut Cx, id: Option<&Id>) -> Option<()> {
         touched.dedup();
         if held && id.map_or(false, |id| !touched.contains(id)) { continue; }
         let og = p.get("origin");
-        let mut line = cat!("change id=", cx.o(&cid), " time=", cx.time(&cid), " actor=", p.get("actor").and_then(|a| a.get("who")).map(|w| cx.jv(w.get("name").unwrap_or(w))).unwrap_or_else(|| "null".into()), " basis=", og.and_then(|o| o.get("basis")).and_then(|b| b.s()).unwrap_or("unknown"));
-        if let Some(b) = og.and_then(|o| o.get("by")).and_then(|b| b.s()) { put!(line; " by=", b); }
-        if held {
-            put!(line; " ops=", ops.len(), " touched=[", touched.iter().map(|i| cx.o(i)).collect::<Vec<_>>().join(","), "]");
+        let mut r = R::new("change").f("id", w(cx.o(&cid))).f("time", V::Int(cx.time(&cid))).f("actor", p.get("actor").and_then(|a| a.get("who")).map_or(V::Null, Cx::name))
+            .f("basis", w(og.and_then(|o| o.get("basis")).and_then(|b| b.s()).unwrap_or("unknown"))).opt("by", og.and_then(|o| o.get("by")).and_then(|b| b.s()).map(w));
+        r = if held {
+            r.f("ops", int(ops.len())).f("touched", V::L(touched.iter().map(|i| w(cx.o(i))).collect()))
         } else {
-            line.push_str(" ops=withheld touched=withheld");
-        }
-        if let Some(note) = p.get("work").and_then(|w| w.get("note")).and_then(|n| n.s()) { put!(line; " note=", json(note)); }
-        cx.lines.push(line);
+            r.f("ops", w("withheld")).f("touched", w("withheld"))
+        };
+        r = r.opt("note", p.get("work").and_then(|w| w.get("note")).and_then(|n| n.s()).map(t));
+        cx.push(r);
     }
     Some(())
 }
@@ -336,59 +344,62 @@ fn leaving(cx: &mut Cx, history: bool) -> Option<()> {
     }
     let credited: Vec<V> = attributing.iter().filter_map(|(u, i)| pk.object(u, i)).map(|o| o.p).collect();
     let said = |cx: &Cx, name: &str, included: bool, objects: usize, bytes: usize, changes: &[V]| {
-        let (mut actors, mut models, mut times): (Vec<String>, Vec<String>, Vec<i64>) = (Vec::new(), Vec::new(), Vec::new());
+        let (mut actors, mut models, mut times): (Vec<V>, Vec<V>, Vec<i64>) = (Vec::new(), Vec::new(), Vec::new());
         for p in changes {
             times.extend(p.get("time").and_then(|t| t.i()));
-            for (list, v) in [(&mut actors, p.get("actor").and_then(|a| a.get("who")).map(|w| w.get("name").unwrap_or(w))), (&mut models, p.get("origin").and_then(|o| o.get("model")))] {
-                if let Some(s) = v.map(|v| cx.jv(v)).filter(|s| !list.contains(s)) { list.push(s); }
-            }
+            actors.extend(p.get("actor").and_then(|a| a.get("who")).map(Cx::name));
+            models.extend(p.get("origin").and_then(|o| o.get("model")).cloned());
         }
-        crate::small::sort(&mut actors);
-        crate::small::sort(&mut models);
-        cat!("layer name=", name, " included=", included, " objects=", objects, " bytes=", bytes, " actors=[", actors.join(","), "] models=[", models.join(","), "] changes=", changes.len(), " first=", times.iter().min().unwrap_or(&0), " last=", times.iter().max().unwrap_or(&0))
+        R::new("layer").f("name", w(name)).f("included", V::Bool(included)).f("objects", int(objects)).f("bytes", int(bytes)).f("actors", cx.names(actors)).f("models", cx.names(models))
+            .f("changes", int(changes.len())).f("first", V::Int(*times.iter().min().unwrap_or(&0))).f("last", V::Int(*times.iter().max().unwrap_or(&0)))
     };
-    let lines = [said(cx, "content", true, live.len(), bytes(&|h| content.contains(h)), &[]), said(cx, "attribution", true, credited.len(), bytes(&|h| attribution.contains(h)), &credited), said(cx, "history", history, rest, bytes(&other), &worked)];
-    cx.lines.extend(lines);
+    let layers = [said(cx, "content", true, live.len(), bytes(&|h| content.contains(h)), &[]), said(cx, "attribution", true, credited.len(), bytes(&|h| attribution.contains(h)), &credited), said(cx, "history", history, rest, bytes(&other), &worked)];
+    for r in layers { cx.push(r); }
     seals(cx);
-    let line = cat!("lacks history=", !history || lacking, " blobs=0");
-    cx.lines.push(line);
+    cx.push(R::new("lacks").f("history", V::Bool(!history || lacking)).f("blobs", V::Int(0)));
     Some(())
 }
 fn seals(cx: &mut Cx) {
     for s in cx.pk.frames().1.iter().filter_map(|s| decode(s)) {
-        let mut line = cat!("seal commit=", s.get("commit").and_then(|c| c.hash()).map(|c| cx.c(&c)).unwrap_or_default(), " key=", s.get("key").and_then(|k| k.b()).map(hex).unwrap_or_default(), " status=unchecked");
-        if let Some(n) = s.get("name").and_then(|n| n.s()) { put!(line; " name=", json(n)); }
-        if let Some(t) = s.get("time").and_then(|t| t.i()) { put!(line; " time=", t); }
-        cx.lines.push(line);
+        let r = R::new("seal").f("commit", w(s.get("commit").and_then(|c| c.hash()).map(|c| cx.c(&c)).unwrap_or_default())).f("key", w(s.get("key").and_then(|k| k.b()).map(hex).unwrap_or_default())).f("status", w("unchecked"))
+            .opt("name", s.get("name").and_then(|n| n.s()).map(t)).opt("time", s.get("time").and_then(|t| t.i()).map(V::Int));
+        cx.push(r);
     }
 }
-fn part(cx: &Cx, anchor: String, ty: &str, label: &str, size: usize, changed: Option<Id>, parts: Option<usize>) -> String {
+fn part(cx: &Cx, anchor: V, ty: &str, label: &str, size: usize, changed: Option<Id>, parts: Option<usize>) -> R {
     let label: String = label.chars().take(60).collect();
-    let mut s = cat!("part ", anchor, " type=", ty, " label=", json(&label), " size=", size);
+    let mut r = R::new("part").f("at", anchor).f("type", w(ty)).f("label", V::T(label)).f("size", int(size));
     if let Some(c) = changed {
         let p = cx.change(&c);
         let og = p.as_ref().and_then(|p| p.get("origin"));
-        put!(s; " changed=", cx.time(&c), " by=", og.and_then(|o| o.get("by")).and_then(|b| b.s()).unwrap_or("unknown"), " basis=", og.and_then(|o| o.get("basis")).and_then(|b| b.s()).unwrap_or("unknown"));
+        let word = |k: &str| w(og.and_then(|o| o.get(k)).and_then(|b| b.s()).unwrap_or("unknown"));
+        r = r.f("changed", V::Int(cx.time(&c))).f("by", word("by")).f("basis", word("basis"));
     }
-    if let Some(n) = parts { put!(s; " parts=", n); }
-    s
+    r.opt("parts", parts.map(int))
 }
-/// 10.2: the outline of a text, or of blocks of it within positions lo..hi.
+/// The length of a plain-text face (8.3), without its last line end.
+fn size(s: &str) -> usize {
+    s.strip_suffix('\n').unwrap_or(s).chars().count()
+}
+/// 10.2: the outline of a text, or of blocks of it within positions lo..hi. The blocks and the plain
+/// text are the composer's (7.7, 8.3): there is one of each in the kernel.
 fn expand_text(cx: &mut Cx, o: &Obj, lo: u64, hi: u64) -> Option<()> {
+    use crate::layout::{blocks, level, plain_text, spans};
     let chars: Vec<char> = o.p.get("chars")?.s()?.chars().collect();
-    let rs = runs(o.seq.as_ref()?.get("chars")?);
-    let all = blocks(o);
-    let inside: Vec<usize> = (0..all.len()).filter(|&i| all[i].lo >= lo && all[i].hi <= hi && (all[i].lo < hi || lo == hi)).collect();
+    let seq = o.seq.as_ref()?.get("chars")?;
+    let (rs, els) = (runs(seq), elements(seq)?);
+    let sp = spans(o, &els);
+    let all = blocks(&sp, 0, chars.len());
+    let role = |i: usize| all[i].span.map(|k| sp[k].role).filter(|r| !r.is_empty()).unwrap_or("paragraph");
+    let lev = |i: usize| all[i].span.map_or(1, |k| level(&sp[k]));
+    let inside: Vec<usize> = (0..all.len()).filter(|&i| all[i].a as u64 >= lo && all[i].b as u64 <= hi && ((all[i].a as u64) < hi || lo == hi)).collect();
     // the shallowest heading level with two or more headings
-    let mut level = None;
-    for l in 1..=6 {
-        if inside.iter().filter(|&&i| all[i].role == "heading" && all[i].level == l).count() >= 2 { level = Some(l); break; }
-    }
+    let level = (1..=6).find(|&l| inside.iter().filter(|&&i| role(i) == "heading" && lev(i) == l).count() >= 2);
     let mut groups: Vec<(usize, usize, bool)> = Vec::new(); // first block, one past the last, begins with its heading
     match level {
         Some(l) => {
             for &i in &inside {
-                let head = all[i].role == "heading" && all[i].level <= l;
+                let head = role(i) == "heading" && lev(i) <= l;
                 match groups.last_mut() {
                     Some(g) if !head => g.1 = i + 1,
                     _ => groups.push((i, i + 1, head)),
@@ -398,14 +409,14 @@ fn expand_text(cx: &mut Cx, o: &Obj, lo: u64, hi: u64) -> Option<()> {
         None => groups = inside.iter().map(|&i| (i, i + 1, false)).collect(),
     }
     for (a, b, head) in groups {
-        let (plo, phi) = (all[a].lo, all[b - 1].hi);
-        let label: String = chars[all[a].lo as usize..all[a].hi as usize].iter().collect();
-        let ty = if level.is_some() { "section" } else { all[a].role.as_str() };
-        let size = plain_blocks(&chars, &all, a, b).chars().count();
-        let anchor = cat!(cx.o(&o.id), " chars=[", plo, ",", phi, "] ", cx.r(&o.rev));
+        let (plo, phi) = (all[a].a, all[b - 1].b);
+        let label: String = chars[all[a].a..all[a].b].iter().collect();
+        let ty = if level.is_some() { "section" } else { role(a) };
+        let mut s = String::new();
+        plain_text(cx.pk, &cx.commit, o, None, Some((a, b)), &mut s, 0);
         let n = if level.is_some() { Some(b - a - head as usize) } else { None };
-        let line = part(cx, anchor, ty, &label, size, cx.last_change(&rs, plo, phi.max(plo + 1)), n);
-        cx.lines.push(line);
+        let r = part(cx, cx.at(o, Some(("chars", plo as u64, phi as u64))), ty, &label, size(&s), cx.last_change(&rs, plo as u64, (phi as u64).max(plo as u64 + 1)), n);
+        cx.push(r);
     }
     Some(())
 }
@@ -416,17 +427,16 @@ fn label_of(o: &Obj) -> String {
     String::new()
 }
 fn plain_size(cx: &Cx, o: &Obj) -> usize {
-    match o.ty.as_str() {
-        "ufo.text" => { let chars: Vec<char> = o.p.get("chars").and_then(|c| c.s()).unwrap_or("").chars().collect(); let bs = blocks(o); if bs.is_empty() { chars.len() } else { plain_blocks(&chars, &bs, 0, bs.len()).chars().count() } }
-        "ufo.face" | "ufo.portal" => o.p.get("of").and_then(|x| x.tag(REF)).and_then(|x| x.id()).and_then(|i| cx.obj(&i)).map(|t| plain_size(cx, &t)).unwrap_or(0),
-        _ => label_of(o).chars().count(),
-    }
+    let of = o.p.get("of").filter(|_| o.ty == "ufo.face").and_then(|x| x.tag(REF)).and_then(|x| x.id());
+    let mut s = String::new();
+    crate::layout::plain(cx.pk, &cx.commit, &of.unwrap_or(o.id), &mut s, 0);
+    size(&s)
 }
-fn object_part(cx: &Cx, o: &Obj) -> String {
-    let anchor = cat!(cx.o(&o.id), " ", cx.r(&o.rev));
-    part(cx, anchor, &o.ty, &label_of(o), plain_size(cx, o), Some(o.by), None)
+fn object_part(cx: &Cx, o: &Obj) -> R {
+    part(cx, cx.at(o, None), &o.ty, &label_of(o), plain_size(cx, o), Some(o.by), None)
 }
-fn expand_universe(cx: &mut Cx) -> Option<()> {
+/// The parts of a universe (10.2): its roots and faces, then its other objects by type, label and identity.
+fn universe_parts(cx: &mut Cx) -> Option<()> {
     let u = cx.obj(&[0; 16])?;
     let mut first: Vec<Id> = Vec::new();
     if let Some(V::M(roots)) = u.p.get("roots") {
@@ -443,53 +453,56 @@ fn expand_universe(cx: &mut Cx) -> Option<()> {
     }
     crate::small::sort(&mut rest);
     for i in first.iter().chain(rest.iter().map(|r| &r.2)) {
-        if let Some(o) = cx.obj(i) { let line = object_part(cx, &o); cx.lines.push(line); }
+        if let Some(o) = cx.obj(i) { let r = object_part(cx, &o); cx.push(r); }
     }
     Some(())
 }
-fn overview(cx: &mut Cx) -> Option<()> {
+/// `expand` of the universe (10.2): what it is, its seals, features, components and faces, then its parts.
+fn expand_universe(cx: &mut Cx) -> Option<()> {
     let u = cx.obj(&[0; 16])?;
     let head = cx.chain.first()?.clone();
     let mut types: Map<String, usize> = Map::new();
-    let (mut times, mut actors): (Vec<i64>, Vec<String>) = (Vec::new(), Vec::new());
+    let (mut times, mut actors): (Vec<i64>, Vec<V>) = (Vec::new(), Vec::new());
     let ids: Vec<Id> = cx.revs.keys().cloned().collect();
     for i in &ids {
         let Some(o) = cx.obj(i) else { continue };
         *types.entry(o.ty.clone(), 0) += 1;
         if o.ty == "ufo.change" {
             times.push(cx.time(i));
-            if let Some(a) = o.p.get("actor").and_then(|a| a.get("who")).map(|w| cx.jv(w.get("name").unwrap_or(w))) { if !actors.contains(&a) { actors.push(a); } }
+            actors.extend(o.p.get("actor").and_then(|a| a.get("who")).map(Cx::name));
         }
     }
-    crate::small::sort(&mut actors);
-    let line = cat!("universe lineage=", hex(u.p.get("lineage")?.b()?), " commit=", cx.c(&head.0), " height=", head.1.get("height")?.i()?, " objects=", ids.len(), " types=[", types.0.iter().map(|(k, n)| cat!(k, ":", n)).collect::<Vec<_>>().join(","), "] changes=", times.len(), " first=", times.iter().min().unwrap_or(&0), " last=", times.iter().max().unwrap_or(&0), " actors=[", actors.join(","), "]");
-    cx.lines.push(line);
+    let r = R::new("universe").f("lineage", w(hex(u.p.get("lineage")?.b()?))).f("commit", w(cx.c(&head.0))).f("height", V::Int(head.1.get("height")?.i()?)).f("objects", int(ids.len()))
+        .f("types", V::M(types.0.iter().map(|(k, n)| (k.clone(), int(*n))).collect())).f("changes", int(times.len()))
+        .f("first", V::Int(*times.iter().min().unwrap_or(&0))).f("last", V::Int(*times.iter().max().unwrap_or(&0))).f("actors", cx.names(actors));
+    cx.push(r);
     seals(cx);
     if let Some(V::M(fs)) = u.p.get("features") {
         for (name, f) in fs {
-            let line = cat!("feature name=", name, " v=", f.get("v").and_then(|v| v.i()).unwrap_or(0), " required=", f.get("required") == Some(&V::Bool(true)), " supported=", name == "ufo.text");
-            cx.lines.push(line);
+            let r = R::new("feature").f("name", w(name.as_str())).f("v", V::Int(f.get("v").and_then(|v| v.i()).unwrap_or(0))).f("required", V::Bool(f.get("required") == Some(&V::Bool(true)))).f("supported", V::Bool(name == "ufo.text"));
+            cx.push(r);
         }
     }
     // 1.6: what the universe carries for a role, where that is a universe an anchor names: nested if its commit is here
     if let Some(V::M(cs)) = u.p.get("components") {
         for (role, c) in cs {
             let Some(h) = c.tag(ANCHOR).and_then(|a| a.get("u")).and_then(|u| u.hash()) else { continue };
-            let line = cat!("component role=", role, " hash=", cx.c(&h), " status=", if cx.pk.node(&h).is_some() { "current" } else { "absent" });
-            cx.lines.push(line);
+            let r = R::new("component").f("role", w(role.as_str())).f("hash", w(cx.c(&h))).f("status", w(if cx.pk.node(&h).is_some() { "current" } else { "absent" }));
+            cx.push(r);
         }
     }
     for f in u.p.get("faces").map(|f| f.l()).unwrap_or(&[]) {
         let Some(o) = f.tag(REF).and_then(|x| x.id()).and_then(|i| cx.obj(&i)) else { continue };
-        let line = cat!("face id=", cx.o(&o.id), " kind=sampled status=current medium=", o.p.get("medium").and_then(|m| m.s()).unwrap_or(""), " label=", json(&label_of(&o)));
-        cx.lines.push(line);
+        let r = R::new("face").f("id", w(cx.o(&o.id))).f("kind", w("sampled")).f("status", w("current")).f("medium", w(o.p.get("medium").and_then(|m| m.s()).unwrap_or(""))).f("label", V::T(label_of(&o)));
+        cx.push(r);
     }
-    expand_universe(cx)
+    universe_parts(cx)
 }
 
-pub fn project(pk: &Pack, q: &V) -> Option<V> {
+/// The records of a projection, and its header. `q` names it and gives its arguments.
+fn run(pk: &Pack, q: &V) -> Option<(String, Vec<V>)> {
     let commit: H = q.get("commit").and_then(|c| c.s()).and_then(|s| crate::query::chain(pk).iter().map(|c| c.0).find(|h| hex(h) == s)).unwrap_or(pk.head);
-    let mut cx = Cx { pk, commit, revs: rev_map(pk, &commit), chain: chain(pk), lines: Vec::new() };
+    let mut cx = Cx { pk, commit, revs: rev_map(pk, &commit), chain: chain(pk), recs: Vec::new() };
     let name = q.get("name")?.s()?;
     let id: Option<Id> = q.get("o").and_then(|o| o.s()).and_then(|s| cx.revs.keys().find(|k| hex(&k[..]) == s).cloned());
     let (lo, hi) = (q.get("lo").and_then(|x| x.i()).map(|x| x as u64), q.get("hi").and_then(|x| x.i()).map(|x| x as u64));
@@ -500,10 +513,9 @@ pub fn project(pk: &Pack, q: &V) -> Option<V> {
     }
     if let Some(i) = &id {
         args = cat!(" ", cx.o(i));
-        if let (Some(a), Some(b)) = (lo, hi) { put!(args; " chars=[", a, ",", b, "]"); }
+        if let (Some(a), Some(b)) = (lo, hi) { put!(args; "/chars=[", a, ",", b, "]"); }
     }
     match (name, &id) {
-        ("overview", _) => overview(&mut cx)?,
         ("text", Some(i)) => text(&mut cx, i)?,
         ("object", Some(i)) => object(&mut cx, i)?,
         ("history", i) => history(&mut cx, i.as_ref())?,
@@ -516,8 +528,31 @@ pub fn project(pk: &Pack, q: &V) -> Option<V> {
         }
         _ => return None,
     }
-    let mut s = cat!(name, args, " @ commit=", cx.c(&commit), "\n");
-    for l in &cx.lines { s.push_str(l); s.push('\n'); }
-    put!(s; "end lines=", cx.lines.len(), "\n");
-    Some(V::T(s))
+    let mut head = cat!(name, args, " @ commit=", cx.c(&commit), "\n");
+    for r in &cx.recs {
+        let V::M(fields) = r else { continue };
+        for (i, (k, v)) in fields.iter().enumerate() {
+            if i > 0 { put!(head; " ", k, "="); }
+            head.push_str(&cx.jv(v));
+        }
+        head.push('\n');
+    }
+    put!(head; "end lines=", cx.recs.len(), "\n");
+    Some((head, cx.recs))
+}
+/// A projection as the text an agent reads (Appendix B).
+pub fn project(pk: &Pack, q: &V) -> Option<V> {
+    run(pk, q).map(|x| V::T(x.0))
+}
+/// A projection as `ask` gives it to a formula (7.3): the records themselves, a word being a text.
+pub fn records(pk: &Pack, q: &V) -> Option<V> {
+    fn plain(v: V) -> V {
+        match v {
+            V::Tag(WORD, x) => *x,
+            V::L(l) => V::L(l.into_iter().map(plain).collect()),
+            V::M(m) => V::M(m.into_iter().map(|(k, x)| (k, plain(x))).collect()),
+            v => v,
+        }
+    }
+    run(pk, q).map(|x| plain(V::L(x.1)))
 }

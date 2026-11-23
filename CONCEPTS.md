@@ -14,6 +14,23 @@ acceptable there only as a later profile with its design hook kept, not
 as removal. The `snapshot` property and the `status` field keep their
 names. The ranking below still numbers all 123.
 
+**The simplification pass (2026-11-23).** The seven candidates of section
+2 were decided, each change with a vector or a test:
+
+| | Decision | What exercises it |
+| --- | --- | --- |
+| R1 | **Taken.** The scale is gone; an object's own coordinates never move, and trimming or resizing is done where a thing is placed (**A4**) | `history.ufx`, `pins.ufx` and the group `resolve_continuous` regenerated without it; the second independent reader, unmodified, agrees on all 458 values |
+| R2 | **Not taken.** A clock with no end, and one driven by input, have no count to be a sequence of; both kinds stay | — |
+| R3 | **Taken.** A pane is a group that states a transform and a clip: ten primitives | no vector holds either; the kernel's composer already treated them as one |
+| R4 | **Taken as the owner allowed:** a later profile, with its place kept (`components.renderer`, **S5**, the parameter naming a renderer) and its design recorded in ORIENTATION §26 | text only: nothing of it had run |
+| R5 | **Not taken.** The reader shows the three layers apart and the vectors fix three sets; two would rename, not remove | — |
+| R6 | **Taken.** Basis and finding are parts of an origin, not ideas of their own | no change to any byte |
+| R7 | **Taken as a demotion.** The static face is a part of the envelope | no change to any byte |
+
+The specification now counts 112 concepts, 5 names and 55 parts: 172
+terms. Besides the seven, the sixteen projections became eleven, and a
+record of a projection became a value with one spelling.
+
 The specification counts 123 concepts: every idea a capable newcomer must
 learn to understand or build the format, counted without classification
 (SPEC §6.2). It was 121 when first counted honestly; giving "identity" and

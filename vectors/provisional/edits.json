@@ -28,30 +28,30 @@
      537
     ],
     "runs": [
-     "region o:71717171 chars=[423,537] r:85e9e2ee",
+     "region at=o:71717171/chars=[423,537]/r:85e9e2ee",
      "run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",
      "run chars=[471,476] change=o:7095badf basis=witnessed by=person who=\"Reader Test\" sealed=false",
      "run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false"
     ]
    },
    "blocks": [
-    "part o:71717171 chars=[0,20] r:85e9e2ee label=\"The Quarterly Review\"",
-    "part o:71717171 chars=[20,166] r:85e9e2ee label=\"Revenue grew in every re\"",
-    "part o:71717171 chars=[166,185] r:85e9e2ee label=\"First point, short.\"",
-    "part o:71717171 chars=[185,267] r:85e9e2ee label=\"Second point, which runs\"",
-    "part o:71717171 chars=[267,283] r:85e9e2ee label=\"A numbered step.\"",
-    "part o:71717171 chars=[283,305] r:85e9e2ee label=\"Another numbered step.\"",
-    "part o:71717171 chars=[305,317] r:85e9e2ee label=\"Third point.\"",
-    "part o:71717171 chars=[317,387] r:85e9e2ee label=\"What gets measured gets \"",
-    "part o:71717171 chars=[387,417] r:85e9e2ee label=\"total = sum(rows)\\nprint\"",
-    "part o:71717171 chars=[417,423] r:85e9e2ee label=\"Method\"",
-    "part o:71717171 chars=[423,537] r:85e9e2ee label=\"Every figure in this sec\"",
-    "part o:71717171 chars=[537,661] r:85e9e2ee label=\"Where a number differs f\"",
-    "part o:71717171 chars=[661,762] r:85e9e2ee label=\"Nothing here is a foreca\"",
-    "part o:71717171 chars=[762,871] r:85e9e2ee label=\"Readers who want the det\"",
-    "part o:71717171 chars=[871,980] r:85e9e2ee label=\"The appendix lists what \"",
-    "part o:71717171 chars=[980,1083] r:85e9e2ee label=\"Corrections are welcome \"",
-    "part o:71717171 chars=[1083,1083] r:85e9e2ee label=\"\""
+    "part at=o:71717171/chars=[0,20]/r:85e9e2ee label=\"The Quarterly Review\"",
+    "part at=o:71717171/chars=[20,166]/r:85e9e2ee label=\"Revenue grew in every re\"",
+    "part at=o:71717171/chars=[166,185]/r:85e9e2ee label=\"First point, short.\"",
+    "part at=o:71717171/chars=[185,267]/r:85e9e2ee label=\"Second point, which runs\"",
+    "part at=o:71717171/chars=[267,283]/r:85e9e2ee label=\"A numbered step.\"",
+    "part at=o:71717171/chars=[283,305]/r:85e9e2ee label=\"Another numbered step.\"",
+    "part at=o:71717171/chars=[305,317]/r:85e9e2ee label=\"Third point.\"",
+    "part at=o:71717171/chars=[317,387]/r:85e9e2ee label=\"What gets measured gets \"",
+    "part at=o:71717171/chars=[387,417]/r:85e9e2ee label=\"total = sum(rows)\\nprint\"",
+    "part at=o:71717171/chars=[417,423]/r:85e9e2ee label=\"Method\"",
+    "part at=o:71717171/chars=[423,537]/r:85e9e2ee label=\"Every figure in this sec\"",
+    "part at=o:71717171/chars=[537,661]/r:85e9e2ee label=\"Where a number differs f\"",
+    "part at=o:71717171/chars=[661,762]/r:85e9e2ee label=\"Nothing here is a foreca\"",
+    "part at=o:71717171/chars=[762,871]/r:85e9e2ee label=\"Readers who want the det\"",
+    "part at=o:71717171/chars=[871,980]/r:85e9e2ee label=\"The appendix lists what \"",
+    "part at=o:71717171/chars=[980,1083]/r:85e9e2ee label=\"Corrections are welcome \"",
+    "part at=o:71717171/chars=[1083,1083]/r:85e9e2ee label=\"\""
    ]
   },
   "edit-paragraph-start.ufx": {
@@ -89,30 +89,30 @@
      683
     ],
     "runs": [
-     "region o:71717171 chars=[656,683] r:87f75c1e",
+     "region at=o:71717171/chars=[656,683]/r:87f75c1e",
      "run chars=[656,666] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",
      "run chars=[666,673] change=o:d5fa1f44 basis=witnessed by=person who=\"Reader Test\" sealed=false",
      "run chars=[673,683] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false"
     ]
    },
    "blocks": [
-    "part o:71717171 chars=[0,25] r:87f75c1e label=\"Now: The Quarterly Revie\"",
-    "part o:71717171 chars=[25,171] r:87f75c1e label=\"Revenue grew in every re\"",
-    "part o:71717171 chars=[171,190] r:87f75c1e label=\"First point, short.\"",
-    "part o:71717171 chars=[190,272] r:87f75c1e label=\"Second point, which runs\"",
-    "part o:71717171 chars=[272,288] r:87f75c1e label=\"A numbered step.\"",
-    "part o:71717171 chars=[288,310] r:87f75c1e label=\"Another numbered step.\"",
-    "part o:71717171 chars=[310,322] r:87f75c1e label=\"Third point.\"",
-    "part o:71717171 chars=[322,392] r:87f75c1e label=\"What gets measured gets \"",
-    "part o:71717171 chars=[392,422] r:87f75c1e label=\"total = sum(rows)\\nprint\"",
-    "part o:71717171 chars=[422,428] r:87f75c1e label=\"Method\"",
-    "part o:71717171 chars=[428,542] r:87f75c1e label=\"Every figure in this sec\"",
-    "part o:71717171 chars=[542,666] r:87f75c1e label=\"Where a number differs f\"",
-    "part o:71717171 chars=[666,774] r:87f75c1e label=\"Truly, Nothing here is a\"",
-    "part o:71717171 chars=[774,887] r:87f75c1e label=\"All readers who want the\"",
-    "part o:71717171 chars=[887,996] r:87f75c1e label=\"The appendix lists what \"",
-    "part o:71717171 chars=[996,1099] r:87f75c1e label=\"Corrections are welcome \"",
-    "part o:71717171 chars=[1099,1099] r:87f75c1e label=\"\""
+    "part at=o:71717171/chars=[0,25]/r:87f75c1e label=\"Now: The Quarterly Revie\"",
+    "part at=o:71717171/chars=[25,171]/r:87f75c1e label=\"Revenue grew in every re\"",
+    "part at=o:71717171/chars=[171,190]/r:87f75c1e label=\"First point, short.\"",
+    "part at=o:71717171/chars=[190,272]/r:87f75c1e label=\"Second point, which runs\"",
+    "part at=o:71717171/chars=[272,288]/r:87f75c1e label=\"A numbered step.\"",
+    "part at=o:71717171/chars=[288,310]/r:87f75c1e label=\"Another numbered step.\"",
+    "part at=o:71717171/chars=[310,322]/r:87f75c1e label=\"Third point.\"",
+    "part at=o:71717171/chars=[322,392]/r:87f75c1e label=\"What gets measured gets \"",
+    "part at=o:71717171/chars=[392,422]/r:87f75c1e label=\"total = sum(rows)\\nprint\"",
+    "part at=o:71717171/chars=[422,428]/r:87f75c1e label=\"Method\"",
+    "part at=o:71717171/chars=[428,542]/r:87f75c1e label=\"Every figure in this sec\"",
+    "part at=o:71717171/chars=[542,666]/r:87f75c1e label=\"Where a number differs f\"",
+    "part at=o:71717171/chars=[666,774]/r:87f75c1e label=\"Truly, Nothing here is a\"",
+    "part at=o:71717171/chars=[774,887]/r:87f75c1e label=\"All readers who want the\"",
+    "part at=o:71717171/chars=[887,996]/r:87f75c1e label=\"The appendix lists what \"",
+    "part at=o:71717171/chars=[996,1099]/r:87f75c1e label=\"Corrections are welcome \"",
+    "part at=o:71717171/chars=[1099,1099]/r:87f75c1e label=\"\""
    ]
   },
   "edit-positioned.ufx": {
@@ -203,10 +203,10 @@
       "$bytes": "71717171717171717171717171717171"
      },
      "old": {
-      "$anchor": "o:71717171 chars=[538,668] r:ec3712a8"
+      "$anchor": "o:71717171/chars=[538,668]/r:ec3712a8"
      },
      "val": {
-      "$anchor": "o:71717171 chars=[538,662] r:ec3712a8"
+      "$anchor": "o:71717171/chars=[538,662]/r:ec3712a8"
      }
     },
     {
@@ -220,10 +220,10 @@
       "$bytes": "71717171717171717171717171717171"
      },
      "old": {
-      "$anchor": "o:71717171 chars=[668,769] r:ec3712a8"
+      "$anchor": "o:71717171/chars=[668,769]/r:ec3712a8"
      },
      "val": {
-      "$anchor": "o:71717171 chars=[662,769] r:ec3712a8"
+      "$anchor": "o:71717171/chars=[662,769]/r:ec3712a8"
      }
     }
    ],
@@ -233,30 +233,30 @@
      678
     ],
     "runs": [
-     "region o:71717171 chars=[652,678] r:ec3712a8",
+     "region at=o:71717171/chars=[652,678]/r:ec3712a8",
      "run chars=[652,662] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",
      "run chars=[662,668] change=o:7095badf basis=witnessed by=person who=\"Reader Test\" sealed=false",
      "run chars=[668,678] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false"
     ]
    },
    "blocks": [
-    "part o:71717171 chars=[0,20] r:ec3712a8 label=\"The Quarterly Review\"",
-    "part o:71717171 chars=[20,166] r:ec3712a8 label=\"Revenue grew in every re\"",
-    "part o:71717171 chars=[166,185] r:ec3712a8 label=\"First point, short.\"",
-    "part o:71717171 chars=[185,267] r:ec3712a8 label=\"Second point, which runs\"",
-    "part o:71717171 chars=[267,283] r:ec3712a8 label=\"A numbered step.\"",
-    "part o:71717171 chars=[283,305] r:ec3712a8 label=\"Another numbered step.\"",
-    "part o:71717171 chars=[305,317] r:ec3712a8 label=\"Third point.\"",
-    "part o:71717171 chars=[317,387] r:ec3712a8 label=\"What gets measured gets \"",
-    "part o:71717171 chars=[387,417] r:ec3712a8 label=\"total = sum(rows)\\nprint\"",
-    "part o:71717171 chars=[417,423] r:ec3712a8 label=\"Method\"",
-    "part o:71717171 chars=[423,538] r:ec3712a8 label=\"Every figure in this sec\"",
-    "part o:71717171 chars=[538,662] r:ec3712a8 label=\"Where a number differs f\"",
-    "part o:71717171 chars=[662,769] r:ec3712a8 label=\"Note: Nothing here is a \"",
-    "part o:71717171 chars=[769,878] r:ec3712a8 label=\"Readers who want the det\"",
-    "part o:71717171 chars=[878,987] r:ec3712a8 label=\"The appendix lists what \"",
-    "part o:71717171 chars=[987,1090] r:ec3712a8 label=\"Corrections are welcome \"",
-    "part o:71717171 chars=[1090,1090] r:ec3712a8 label=\"\""
+    "part at=o:71717171/chars=[0,20]/r:ec3712a8 label=\"The Quarterly Review\"",
+    "part at=o:71717171/chars=[20,166]/r:ec3712a8 label=\"Revenue grew in every re\"",
+    "part at=o:71717171/chars=[166,185]/r:ec3712a8 label=\"First point, short.\"",
+    "part at=o:71717171/chars=[185,267]/r:ec3712a8 label=\"Second point, which runs\"",
+    "part at=o:71717171/chars=[267,283]/r:ec3712a8 label=\"A numbered step.\"",
+    "part at=o:71717171/chars=[283,305]/r:ec3712a8 label=\"Another numbered step.\"",
+    "part at=o:71717171/chars=[305,317]/r:ec3712a8 label=\"Third point.\"",
+    "part at=o:71717171/chars=[317,387]/r:ec3712a8 label=\"What gets measured gets \"",
+    "part at=o:71717171/chars=[387,417]/r:ec3712a8 label=\"total = sum(rows)\\nprint\"",
+    "part at=o:71717171/chars=[417,423]/r:ec3712a8 label=\"Method\"",
+    "part at=o:71717171/chars=[423,538]/r:ec3712a8 label=\"Every figure in this sec\"",
+    "part at=o:71717171/chars=[538,662]/r:ec3712a8 label=\"Where a number differs f\"",
+    "part at=o:71717171/chars=[662,769]/r:ec3712a8 label=\"Note: Nothing here is a \"",
+    "part at=o:71717171/chars=[769,878]/r:ec3712a8 label=\"Readers who want the det\"",
+    "part at=o:71717171/chars=[878,987]/r:ec3712a8 label=\"The appendix lists what \"",
+    "part at=o:71717171/chars=[987,1090]/r:ec3712a8 label=\"Corrections are welcome \"",
+    "part at=o:71717171/chars=[1090,1090]/r:ec3712a8 label=\"\""
    ]
   }
  }

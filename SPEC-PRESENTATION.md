@@ -2,7 +2,7 @@
 
 **Version 0.8 — draft for review. Nothing here is frozen. There is no implementation: only test vectors, throwaway code and test readers.**
 
-This part specifies how a universe describes what it shows: the eleven primitives and their layout, formulas, the algorithm that composes a description into rows, lines and pages, Portals, and faces.
+This part specifies how a universe describes what it shows: the ten primitives and their layout, formulas, the algorithm that composes a description into rows, lines and pages, Portals, and faces.
 
 This is one part of the specification of the UFO format, and is written to
 be read on its own by someone who has read the core, [SPEC.md](SPEC.md),
@@ -20,7 +20,7 @@ carries a label such as **[C3]** is a requirement in full; a term in
 | Document | Sections | Holds |
 | --- | --- | --- |
 | [SPEC.md](SPEC.md), the core | §0–§6, Appendices C, D, F | storage, memory and addressing: records, objects, changes, the pack, anchors, text, derivation, the Chronicle; limits, the glossary, the test vectors |
-| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the eleven primitives, formulas, composition, Portals, faces |
+| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the ten primitives, formulas, composition, Portals, faces |
 | [SPEC-PLAYER.md](SPEC-PLAYER.md) | §9–§11, Appendix B | the kernel, the drawing contract, the host interface, onboard tools, the light cone, the agent interface, the player's budgets |
 | [SPEC-EXECUTION.md](SPEC-EXECUTION.md) | §12, Appendix E | Compute-lets, code as description, the printer, the ledger, tests |
 | [SPEC-TRAVEL.md](SPEC-TRAVEL.md) | §13–§14 | envelopes, what leaves a reader, the reader ladder, trust |
@@ -35,11 +35,11 @@ Section numbers run through all the documents and none is used twice, so
 
 ## 7. The primitive vocabulary
 
-### 7.1 The eleven primitives
+### 7.1 The ten primitives
 
 Everything a universe presents is described with these and nothing else.
-Ten are object types; the eleventh, the formula, is a value. A clock maps
-time as a pane maps space.
+Nine are object types; the tenth, the formula, is a value. A group
+arranges space and a clock maps time.
 
 | Primitive | Type | What it describes | Axes it offers |
 | --- | --- | --- | --- |
@@ -47,11 +47,10 @@ time as a pane maps space.
 | **Path** | `ufo.path` | vector geometry with fill and stroke | `x`, `y` (continuous) |
 | **Raster** | `ufo.raster` | a grid of pixels from an asset, a surface, or a video at a moment | `x`, `y`; `t` if timed |
 | **Samples** | `ufo.samples` | audio from an asset or a surface | `t` (continuous) |
-| **Pane** | `ufo.pane` | a two-dimensional coordinate space with a transform and a clip, holding children | `x`, `y`; `children` (keyed) |
-| **Group** | `ufo.group` | an ordered composition of children under a layout rule | `children` (keyed) |
+| **Group** | `ufo.group` | an ordered composition of children under a layout rule, in a two-dimensional coordinate space that it may transform and clip | `x`, `y`; `children` (keyed) |
 | **Clock** | `ufo.clock` | a time mapping and interval (§4.5), holding children | `t`; `children` (keyed) |
 | **Portal** | `ufo.portal` | a reference to another object, presented through its own description (§7.8) | those of its parent |
-| **Surface** | `ufo.surface` | a pane whose content a Compute-let produces live (§12.1); it may hold children that the Compute-let places within what it draws (§7.6) | `x`, `y`, `t`, plus any the Compute-let declares; `children` (keyed) |
+| **Surface** | `ufo.surface` | a group whose content a Compute-let produces live (§12.1); it may hold children that the Compute-let places within what it draws (§7.6) | `x`, `y`, `t`, plus any the Compute-let declares; `children` (keyed) |
 | **Data** | `ufo.data` | typed values and tables | `rows`, `cols` (keyed) |
 | **Formula** | a value | a pure expression computing a value from data, time, input and other values (§7.3) | — |
 
@@ -80,8 +79,9 @@ A group lays out its children by one of three rules:
   gives each child a finite available size; a child reports the size it uses
   within that; no child's size can depend on a later sibling or on its
   parent's final size. Layout therefore terminates in one pass per level.
-- **[V2]** Lengths are in the units of the nearest enclosing pane. The root
-  pane's unit is the CSS reference pixel (1/96 inch).
+- **[V2]** Lengths are in the units of the nearest enclosing group, as its
+  `transform` and those above it leave them. The root's unit is the CSS
+  reference pixel (1/96 inch).
 
 ### 7.3 Formulas
 
@@ -92,7 +92,7 @@ structure, never as text to be parsed; a readable spelling is a projection.
 | Group | Operators |
 | --- | --- |
 | reference | `get` (a property of an object, by ref and key path), `cell` (a table cell by row and column key), `col` (a column as a list), `arg` (a named value supplied by the enclosing `each`, or by the Portal that presents this, §7.6), `size` (the laid-out width and height of an earlier sibling in the same group), `ask` (the records of a projection, §10.1) |
-| environment | `time` (the enclosing clock's time), `input` (the pointer's position and whether it is pressed, within the enclosing pane, and the `src` of the item under it), `view` (the available width and height), `state` (a named value of the presentation state) |
+| environment | `time` (the enclosing clock's time), `input` (the pointer's position and whether it is pressed, within the enclosing group, and the `src` of the item under it), `view` (the available width and height), `state` (a named value of the presentation state) |
 | arithmetic | `+ − × ÷ mod neg abs min max floor ceil round sqrt pow exp ln sin cos atan2` |
 | logic | `= ≠ < ≤ > ≥ and or not if` |
 | text | `concat len slice format` (numbers and dates to text by a stated pattern) |
@@ -176,10 +176,11 @@ The test applied to this draft:
 | Stack layout | deleted | a one-row or one-column `grid`; back-to-front stacking is `absolute` |
 | Paragraph, heading, list item | moved, not deleted | they are block spans of a text (§5.1). The text profile has ten roles whose default presentation the kernel knows (Appendix A), and §6.1 counts them: a small document vocabulary lives inside the text primitive |
 | Page | deleted | a region of fixed size holding a group |
-| Slide | deleted | a pane under a clock |
+| Slide | deleted | a group under a clock |
+| Pane | deleted | a group with `absolute` layout: any group may state `w`, `h`, a `transform` and a `clip` |
 | Chart | deleted | data, formulas and paths under `each` |
 | Table view | deleted | a `grid` group under `each` over a data object |
-| Timeline, canvas | deleted | a clock whose `t` is a sequence, with `plays` (§4.5); a pane with `absolute` children |
+| Timeline, canvas | deleted | a clock whose `t` is a sequence, with `plays` (§4.5); a group with `absolute` children |
 | Scene graph, camera, mesh, material | deleted from the format | data that a surface's Compute-let reads and draws (§7.5) |
 | Edge | deleted | a property holding a ref (§1.5) |
 | Playback settings on a Portal | deleted | looping is a clock's `repeat`; muting is a samples' `gain`; whether time runs unprompted is the clock's mode; controls are the tools' interface (§9.6) |
@@ -198,15 +199,15 @@ type the kernel knows.
 | Medium | Composition |
 | --- | --- |
 | Document | a text, presented as a `flow` group; Portals at positions in it |
-| Paginated document | the same text sampled into panes of page size (§8.4) |
+| Paginated document | the same text sampled into groups of page size (§8.4) |
 | Spreadsheet | a data object; a `grid` group under `each` presenting it; cells may hold formulas |
-| Chart | a pane holding paths and text under `each` over a data object |
+| Chart | a group holding paths and text under `each` over a data object |
 | Diagram | a data object of nodes and links; a layout Compute-let, or formulas, giving positions; paths and text |
-| Slide deck | a clock in `held` mode over a list of panes, advanced by input |
+| Slide deck | a clock in `held` mode over a list of groups, advanced by input |
 | Video | a clock holding clocks, each bringing a raster, samples, text, paths or Portals into presence for an interval |
 | Recorded footage | a raster whose source is a video asset and whose time is the clock's |
 | Animation | any of the above with formulas of `time` |
-| Interface | panes, groups, text and paths with `on` handlers that set presentation state |
+| Interface | groups, text and paths with `on` handlers that set presentation state |
 | Application, game | a surface |
 | 3D scene | a data object in the glTF model, with `x`, `y`, `z` and `t` axes; a surface that names it in `of` and whose Compute-let draws it using the `gpu` capability; children placed by anchors into the scene |
 
@@ -233,7 +234,8 @@ or any other table. To a place: a region on `x`, `y`, `z`. To a time: a
 region on `t`. A comment on a doorway, evidence for the dimensions of a
 beam, a summary of the east wing and a decision about a material are all
 ordinary anchors to the scene object, and survive edits by the ordinary
-rules: keys persist, and rescaling the scene sets the scales of its axes.
+rules: keys persist, and a scene is resized where it is placed, leaving
+its own coordinates as they were (**A4**).
 
 *Attribution is ordinary.* Each row was set by a change, so `why` on a node
 answers who or what placed it, from what prompt, on what evidence.
@@ -246,7 +248,7 @@ knows nothing of a scene's hierarchy.
 
 *What appears inside the scene is format data too.* A surface names the
 object it presents in `of`. Its children — a Portal onto a spreadsheet, a
-pane holding a page of text — are objects, each with `place.at`: an
+group holding a page of text — are objects, each with `place.at`: an
 anchor into the scene naming the node on which the child sits. That node's
 row gives its position, orientation and the size of the rectangle, in
 scene units. So "the spreadsheet is on the north wall" is a fact in the
@@ -322,7 +324,7 @@ range into the element identities of the elements concerned and submits a
 knows it is editing a piece of text and nothing more (**K2**).
 
 **Children of a surface.** A surface MAY have `children`, a keyed map of
-objects: Portals, or panes, groups and texts directly. Where each child
+objects: Portals, or groups and texts directly. Where each child
 sits is stated in the child's `place.at`, an anchor into the object the
 surface presents (its `of`), so that the arrangement is data. The kernel
 does not draw the placement; the surface's Compute-let does, using the
@@ -350,7 +352,7 @@ page, which block it belongs to, and which line of how many it is.
 | a text | by the steps below |
 | a group with `flow` | the rows of its children, in order. The first row of each child after the first has the larger of its own gap and the group's `gap`. A child of a flow is a block unless its `place` is `inline`. Consecutive inline children share lines: each is placed after the last at its own width, a new line beginning when the next does not fit, and each line is one row, as tall as its tallest child |
 | a group with `grid` | one row: its tracks are sized as below and each child composed in its cell |
-| a group with `absolute`; a pane | one row, of the object's `h`: each child composed at its own `w` and placed at its `x`, `y`, in list order, back to front |
+| a group with `absolute` | one row, of the object's `h`: each child composed at its own `w` and placed at its `x`, `y`, in list order, back to front |
 | a path, raster or samples; a surface | one row, of its `h`, holding its item |
 | a Portal that states `h` | one row of that height: the target composed at the Portal's width, its rows stacked, then fitted into the Portal's rectangle by `fit` and clipped (**O2**) |
 | a Portal that states no `h` | the rows of its target, composed in the target's universe (§1.8) at the Portal's width: it takes the height they need, as a text does. Where **O4** or **O7** says so, one row showing its label |
@@ -467,8 +469,8 @@ the page's width.
   parameters, the presentation state and the replies of `measure`. Given
   the same of each, every kernel produces the same display list. Where two
   hosts measure the same text differently — other fonts, other shaping —
-  its lines, and so its pages, may differ between them. With the same
-  fonts and one renderer they do not (§8.4).
+  its lines, and so its pages, may differ between them. A later profile
+  may fix them (§8.4).
 
 Not yet an algorithm, and not exercised: floats (§7.2) and hit testing.
 The line-breaking steps above replace a host operation that an earlier
@@ -478,7 +480,7 @@ draft and the measurement spike used; they have not themselves been run.
 
 ### 7.8 Portals
 
-A **Portal** (`ufo.portal`) is a pane in a parent that presents one other
+A **Portal** (`ufo.portal`) is a place in a parent that presents one other
 object. Each Portal is an **occurrence**: an object in its own right, with
 its own object identity, distinct from what it presents.
 
@@ -493,7 +495,7 @@ its own object identity, distinct from what it presents.
 | `label` | accessible name; also what the plain-text face shows |
 
 A Portal's position is its place in its parent: in a text, the character
-covered by its `embed` span; in a group or pane, its entry among the
+covered by its `embed` span; in a group, its entry among the
 children; in time, the interval of the clock that holds it. Each is
 addressable by an anchor and survives edits by the rules of §4.3. A Portal
 has no timing of its own: how its target's time relates to its parent's is
@@ -602,7 +604,7 @@ layout or style. It is Unicode text, in lines ended by U+000A.
 | Object | Its plain text |
 | --- | --- |
 | a text | one line for each block (§7.7), in order: the block's characters, without those under `markup` spans. A list item's line begins with two spaces for each level above the first, then its marker — `•`, its number and a full stop, or its literal text — and a space. An empty line separates two blocks unless both are list items. An embedded child contributes its own plain text in place: within the line if that is a single line, otherwise as lines of its own |
-| a group, pane or clock | the plain text of its children, in list order, each starting a new line; for a group under `each`, that of each copy of its template |
+| a group or clock | the plain text of its children, in list order, each starting a new line; for a group under `each`, that of each copy of its template |
 | a Portal | the plain text of what it presents — the object, or the region its anchor names — where that is in this universe or in a universe nested in the file (§1.8). Content from another universe is marked: a line holding the Portal's label and a colon, then the content with `> ` before each of its lines. Where the target is in a linked universe, where the chain of **O7** already holds it, or beyond the reader's limit on nesting (§3.1): one line, the Portal's label, followed for a linked universe by a space and `(ufo:` the commit hash in lowercase hexadecimal `)` |
 | a data object | its tables in key order. For each: a line of the columns' labels, then a line for each row, in the table's order; cells in the order of their columns, separated by U+0009. A cell that holds a formula gives its value. A tab or a line break inside a cell is written as a space |
 | a surface | the plain text of what it presents, then that of its children |
@@ -627,59 +629,27 @@ is.
 | Plain text | the plain-text face | — |
 | Table file | a data object's rows | columns, order |
 | Image | one moment, one viewport | time, viewport, resolution |
-| Paged document | the flow, broken into page-sized panes | page size, margins |
+| Paged document | the flow, broken into page-sized groups | page size, margins |
 | Video | a span of time at a picture rate | time range, picture rate, viewport, resolution |
 | Audio | a span of time, samples only | time range, sample rate |
 | Original bytes | an asset, exactly | — |
 
-There are two **determinism tiers**.
+Presentation and export use the host's text shaping and rasterization.
+Two readers produce equivalent results: the same content, structure,
+order and layout decisions made by the kernel, with glyph shapes and
+anti-aliasing as the host renders them.
 
-- **Live.** Presentation uses the host's text shaping and rasterization. Two
-  readers produce equivalent results: the same content, structure, order and
-  layout decisions made by the kernel, with glyph shapes and anti-aliasing
-  as the host renders them.
-- **Canonical.** A canonical export is reproducible given a named renderer.
-  **[S5]** The same universe, face, parameters and renderer MUST yield
-  identical bytes on every reader; this follows from **M5**.
-
-The **renderer** is a component identified by its hash, like any other
-(**K3**): a Compute-let with no surface, which the reader runs and
-addresses on one port. It does three things, and takes nothing from the
-host but bytes:
-
-| Message to the renderer | Reply |
-| --- | --- |
-| `{measure: measure-request}` | a `measure-reply` (§9.3): during a canonical export the kernel sends `measure` here, not to the host |
-| `{render: {list, w, h, scale}}` | `{pixels: {mem, w, h}}`, and `{samples: {mem, n, hz, channels}}` if the list sounds: the display list of §9.2, executed |
-| `{encode: {format, parameters}}` | `{bytes: {mem, len}}`: what was last rendered, encoded |
-
-Replies name ranges of the renderer's own memory, which the reader reads.
-The renderer reads the fonts, images and other blobs a display list names
-through one capability, `blobs`, whose scope is those hashes and whose one
-operation is `read(hash, offset, length)`.
-
-A renderer declares what it reproduces: which display-list items, and which
-formats of raster, samples and font. An export is canonical only if all it
-draws is within that declaration; otherwise the reader does not call it
-canonical, and says which item prevents it. A surface drawn through `gpu`
-is within it only for a renderer that carries those operations in software
-(Appendix E). The export's parameters name the renderer by hash, and a
-canonical export kept as a rendition records them in its origin (§5.3).
-
-A renderer is used only when a canonical export is requested. It is never
-part of an ordinary file's player, is not counted in the player's budgets
-(§11.1), and nothing else in a reader depends on it. A universe that wants
-its canonical exports to be possible anywhere carries one under
-`components.renderer`; otherwise a reader holds one, or finds one by a
-location hint (§2.5). A web envelope opened as a page reaches no network
-(§13.2), so it makes canonical exports only with a renderer it carries.
-
-This specification defines no rasterizer and no shaping algorithm, and
-chooses no renderer: an existing engine may fill the role, and a different
-one may later, without any file changing its meaning. The engines measured
-so far, for text and paths alone, come to about 0.9 MiB; decoders and
-encoders for the formats of §9.5 would add to that, and have not been
-measured.
+**Reproducible exports are a later profile.** An export whose bytes are
+the same on every reader needs a renderer that takes nothing from the
+host but bytes. This version keeps the place for one and specifies
+nothing more: `components.renderer` (§1.6) names a renderer by its hash,
+and an export's parameters MAY name one. A reader that is asked for a
+reproducible export and implements no such profile says that it is
+unavailable, and MUST NOT call an export made with the host's rendering
+reproducible. **[S5]** Where a profile defines it, the same universe,
+face, parameters and renderer MUST yield identical bytes on every
+reader; this follows from **M5**. No renderer is part of an ordinary
+file's player or counted in its budgets (§11.1).
 
 An export is a fixed performance. It carries no structure, history or
 behavior, unless it is an envelope (§13.2). Importing an exported file creates
@@ -693,31 +663,28 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 | --- | --- | --- | --- |
 | Block, line, row | part | what composition divides a text into: by its block roles, by the kernel's line breaking, and into the units that pages are filled with | 7.7 |
 | Data | concept | tables of values | 7.1 |
-| Determinism tier | part | which of two promises an export makes: the host's rendering, or a named renderer's | 8.4 |
 | Export | concept | a face sampled with stated parameters and encoded | 8.4 |
 | Face | concept | a presentation of a universe: sampled, carried or transmuted | 8.1 |
 | Formula | concept | a pure, terminating expression over data, time, input and presentation state | 7.3 |
 | Fragment | part | the part of a piece that falls on one line | 7.7 |
-| Group | concept | children laid out by flow, by grid or by absolute position | 7.1 |
+| Group | concept | children laid out by flow, by grid or by absolute position, in a space it may transform and clip | 7.1 |
 | Handler | concept | what a primitive does on input: set presentation state, propose a change, or act on a subject | 7.6 |
 | Layout | concept | how a group places its children: `flow`, `grid` or `absolute` | 7.2 |
 | Occurrence | part | one presenting of an object through one Portal | 7.8 |
-| Pane | concept | a two-dimensional space with a transform and a clip, holding children | 7.1 |
 | Path | concept | a shape | 7.1 |
 | Piece | part | characters in one font, size and direction: what the host is asked to measure | 7.7 |
 | Plain-text face | concept | an object's text in reading order | 8.3 |
 | Portal | concept | a place in a parent that presents another object, here or in another universe | 7.8 |
 | Poster | concept | the rendition shown where a Compute-let cannot or may not run | 7.6 |
 | Presentation state | concept | named values a reader holds for one presentation and never writes to the universe | 7.3 |
-| Primitive | concept | one of the eleven kinds of thing a universe can describe | 7.1 |
+| Primitive | concept | one of the ten kinds of thing a universe can describe | 7.1 |
 | Projection | concept | anything generated on demand and never stored | 8.1 |
 | Raster | concept | pixels, still or moving | 7.1 |
-| Renderer | concept | a Compute-let, named by hash, that measures, draws and encodes for reproducible exports | 8.4 |
 | Role | part | what a span says a stretch of text is: a heading, a list item, emphasis | 5.1, Appendix A |
 | Sampled, carried | part | of a face: composed on demand; stored as a rendition | 8.1 |
 | Samples | concept | sound | 7.1 |
 | Subject | concept | a universe the reader hands to what it presents, so that tools can reach the work | 7.6 |
-| Surface | concept | a pane a Compute-let draws | 7.1 |
+| Surface | concept | a group a Compute-let draws | 7.1 |
 | Text | concept | characters, with spans for structure and style | 7.1 |
 | Transclusion | part | a Portal whose target is a region of another object | 7.8 |
 
@@ -725,11 +692,11 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 
 ## Appendix A. Properties of the primitives
 
-All lengths are in the units of the enclosing pane. Colors are sRGB with
+All lengths are in the units of the enclosing group. Colors are sRGB with
 alpha, as four floats from 0 to 1. Properties in *italics* say what a thing
 is and MUST NOT be formulas (§7.1); all others may be.
 
-**Common to all:** `scales` (§4.3), `label`, `role`, `lang`, `opacity`, `visible`, `on` (map
+**Common to all:** `label`, `role`, `lang`, `opacity`, `visible`, `on` (map
 from an input event name — `press`, `enter`, `leave`, `key`, `change` — to
 `{set: name, to: formula}`, `{propose: operations}` (§7.6), or
 `{deliver: true}` for surfaces), `from` (§5.3). Of the events: `press` is
@@ -747,8 +714,7 @@ surface), `x`, `y`, `w`, `h`, `row`, `col`, `span`, `align`, `grow`,
 | Path | `d`: list of segments `[M x y]`, `[L x y]`, `[C x1 y1 x2 y2 x y]`, `[Q x1 y1 x y]`, `[Z]`; `fill` and `stroke`: a color or a gradient `{kind, stops, from, to}`; `width`, `join`, `cap`, `dash`, `rule` |
 | Raster | *`source`*: ref to an asset or surface; `time` (for video sources); `crop`; `fit`; `smooth` |
 | Samples | *`source`*: ref to an asset or surface; `gain`; `pan`; `time` |
-| Pane | *`children`*; `w`, `h`; `transform`: six floats; `clip`: a path or boolean; `background`; `scroll` |
-| Group | *`children`*; `layout`: `flow`, `grid` or `absolute`; `direction`; `gap`; `rows`, `cols` (for `grid`); `each`, `as` |
+| Group | *`children`*; `layout`: `flow`, `grid` or `absolute`; `direction`; `gap`; `rows`, `cols` (for `grid`); `each`, `as`; `w`, `h`; `transform`: six floats; `clip`: a path or boolean; `background`; `scroll` |
 | Clock | *`children`*; `start`, `end`, `rate`, `offset`, `repeat`, `mode`; `drive` (formula, for `held`); for a timeline, `t` (a count, edited by `splice`) and `plays` (map of `{at, of, offset}`) |
 | Portal | §7.8 |
 | Surface | *`computelet`*: ref; *`of`*: ref to the object it presents, if it presents one; `w`, `h`; *`ports`*: map from port name to the surface it connects to; *`children`* |
@@ -758,7 +724,7 @@ surface), `x`, `y`, `w`, `h`, `row`, `col`, `span`, `align`, `grow`,
 
 | Properties | Value |
 | --- | --- |
-| `x`, `y`, `w`, `h`, `gap`, `size`, `width` | a float, in the units of the enclosing pane |
+| `x`, `y`, `w`, `h`, `gap`, `size`, `width` | a float, in the units of the enclosing group |
 | `margin` | one float, or four: top, right, bottom, left |
 | `opacity`, `gain` | a float from 0 to 1; `pan` from −1 to 1 |
 | `visible`, `smooth`, `slant`, `editable` | a boolean |
@@ -784,7 +750,7 @@ to. The continuous axes and their extents are:
 | Type | Axis | Extent |
 | --- | --- | --- |
 | Clock | `t` | `start` to `end`, in flicks; for a timeline, a sequence axis over its elements |
-| Pane, group, surface, raster, path, Portal | `x`, `y` | 0 to `w`, 0 to `h` |
+| Group, surface, raster, path, Portal | `x`, `y` | 0 to `w`, 0 to `h` |
 | Raster or samples from a timed source | `t` | 0 to the source's duration, in flicks |
 | Data | those it declares in `axes` | as declared |
 | Surface | those its Compute-let declares in `axes` (§12.1) | as declared |

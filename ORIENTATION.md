@@ -1311,3 +1311,53 @@ name — where rule **K6** says it should be description.
 
 The kernel with all this is 5 151 lines of its own and 96.0 KiB
 compressed, three quarters of the limit, with formulas barely begun.
+
+## 26. The simplification pass (2026-11-23)
+
+Asked for by the owner before any work on formulas: queries and
+projections first, then the seven candidates of `CONCEPTS.md`, with the
+kernel's compressed size before and after.
+
+**The kernel.** 117 859 bytes compressed before, 116 026 after (113.3 KiB
+of 128); 6 191 lines of its own before, 6 150 after. By function bytes,
+projections and queries are a quarter of the kernel, and they stayed a
+quarter: what they hold is resolution, digests, layers, outlines, history
+and attribution, which is the format. What went:
+
+- A record of a projection is now a value, spelled as text by one
+  function. Before, each projection wrote text and `ask` read the text
+  back into values.
+- The outline had its own copy of the block finder and of the plain-text
+  face, weaker than the composer's (it ignored markup, embedded objects
+  and nested universes). There is now one of each, and two sizes in the
+  vectors were corrected by it.
+- The scale, and the pane as a type.
+
+Still doubled, and left: sequences are resolved once by elements (the
+composer, the write path) and once by runs (anchors, timelines); the
+vector harness asks the kernel through a second door, `query`, beside
+the projections; two walkers collect refs.
+
+**The format.** Sixteen projections became eleven: `overview` is `expand`
+of the universe, `recipe` is `why` of a derived object, `items` is
+`expand` of a module, `calls` is a `search`, and a function's history is
+`history`. Every field of a record is named, and an anchor is one value.
+Of the seven candidates, five were taken (the table is at the head of
+`CONCEPTS.md`): 118 concepts became 112, eleven primitives ten.
+
+**Reproducible exports, as a later profile.** What was decided before it
+was set aside, kept here and no longer in the specification: the
+renderer is a component named by its hash, a Compute-let with no surface
+that takes nothing from the host but bytes; it answers `measure` in the
+host's place, executes a display list into pixels and samples, and
+encodes them; it reads fonts and images through one capability scoped to
+their hashes; it declares what it reproduces, and an export outside that
+is not called reproducible; no engine is chosen, and those measured for
+text and paths alone came to about 0.9 MiB.
+
+**Found and not fixed.** The tools universe is over its budget: 26.4 KiB
+as a pack and 33 KiB added to the file that carries it, against 24 KiB.
+Its formulas repeat whole sub-expressions because a formula cannot name
+a value and use it twice, and its records are stored uncompressed;
+compressed whole it is 4.9 KiB. The outline of a universe lists its
+other objects one by one, where §10.2 says grouped by type.

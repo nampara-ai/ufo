@@ -52,7 +52,7 @@ alone it should:
    work is withheld, report it as withheld.
 5. Handle sequences: `seq`, runs, tombstones. Resolve every anchor you
    find in any property against its object, at every commit: sequence,
-   continuous and keyed regions; scales; extents.
+   continuous and keyed regions; extents.
 6. Compute the digest of a pin as §4.4 defines it: a function that takes
    an object, an optional region and a salt. You have no expected values
    yet; just implement it.

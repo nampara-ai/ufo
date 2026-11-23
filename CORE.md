@@ -73,8 +73,8 @@ pages: open, universal, and independent of any application.
 
 11. **Anchor.** An object and a region on its axes. Axes are *sequence*,
     *continuous* or *keyed*. A sequence region is two boundaries, each
-    fixed to an element; a continuous region is in the axis's base
-    coordinates, mapped through a scale the object holds; a keyed region is
+    fixed to an element; a continuous region is in the object's own
+    coordinates, which never move under it; a keyed region is
     a list of keys. An anchor is resolved against the current revision
     alone — no history, no replay — and is reported detached, never
     re-found by matching, when what it named is gone. A span of a text is
@@ -96,9 +96,9 @@ pages: open, universal, and independent of any application.
 
 ## Presentation (SPEC §7–§9)
 
-14. **Eleven primitives.** Text (characters plus spans for structure and
-    style), path, raster, samples, pane (maps space), group (lays out by
-    flow, grid or absolute position), clock (maps time), Portal (presents
+14. **Ten primitives.** Text (characters plus spans for structure and
+    style), path, raster, samples, group (lays out by flow, grid or
+    absolute position, and may transform and clip its space), clock (maps time), Portal (presents
     another object, here or in another universe), surface (drawn by a
     program, and may hold children), data, formula (a pure expression over
     data, time, input and state). Handlers on primitives set presentation
@@ -132,12 +132,11 @@ pages: open, universal, and independent of any application.
     offered. Every object has a plain-text face, which keeps paragraph
     breaks and list markers and includes, marked, the text of universes
     nested in the file. An export is a face sampled with stated parameters.
-    Live presentation uses the host's text rendering; a canonical export is
-    reproducible given a renderer named by its hash, a component fetched
-    only when such an export is asked for and never part of an ordinary
-    file's player.
-17. **Onboard tools.** Kernel functions — overview, search, history, why,
-    diff, verify, expand, recipe, propose, try, derive, refresh, undo,
+    Presentation and export use the host's text rendering; an export
+    reproducible byte for byte is a later profile, with its place kept: a
+    renderer named by its hash, never part of an ordinary file's player.
+17. **Onboard tools.** Kernel functions — expand, text, search, history, why,
+    diff, verify, propose, try, derive, refresh, undo,
     export — and an interface
     to them that is itself a universe, carried by hash and presented with
     the universe being worked on as its *subject*. Agents use the same
@@ -219,8 +218,8 @@ pages: open, universal, and independent of any application.
 
 ## Limits it holds itself to (SPEC §6)
 
-Eleven primitives, three layouts, three axis kinds, four operations, ten
-host functions, 118 concepts for a newcomer to learn, 58 of them in the core, and five founding names; a kernel of at most 128 KiB as it travels,
+Ten primitives, three layouts, three axis kinds, four operations, ten
+host functions, 112 concepts for a newcomer to learn, 55 of them in the core, and five founding names; a kernel of at most 128 KiB as it travels,
 compressed, and 7 000 lines, rebuilt to the same bytes by anyone;
 one implementation of everything in the project's readers; additions only
 by showing that data, formulas or composition cannot do the job; and

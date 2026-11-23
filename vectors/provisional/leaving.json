@@ -114,8 +114,8 @@
   "a_reader_of_the_copy": {
    "plain_text_face_is_that_of_the_whole_pack": true,
    "why": [
-    "why o:71717171 chars=[423,537] @ commit=c:07964126",
-    "region o:71717171 chars=[423,537] r:85e9e2ee",
+    "why o:71717171/chars=[423,537] @ commit=c:07964126",
+    "region at=o:71717171/chars=[423,537]/r:85e9e2ee",
     "run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",
     "run chars=[471,476] change=o:7095badf basis=witnessed by=person who=\"Reader Test\" sealed=false",
     "run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",

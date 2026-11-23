@@ -28,7 +28,7 @@ chooses a technology it gives the reason, so the choice can be challenged.
 | Document | Sections | Holds |
 | --- | --- | --- |
 | [SPEC.md](SPEC.md), the core | §0–§6, Appendices C, D, F | storage, memory and addressing: records, objects, changes, the pack, anchors, text, derivation, the Chronicle; limits, the glossary, the test vectors |
-| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the eleven primitives, formulas, composition, Portals, faces |
+| [SPEC-PRESENTATION.md](SPEC-PRESENTATION.md) | §7–§8, Appendix A | the ten primitives, formulas, composition, Portals, faces |
 | [SPEC-PLAYER.md](SPEC-PLAYER.md) | §9–§11, Appendix B | the kernel, the drawing contract, the host interface, onboard tools, the light cone, the agent interface, the player's budgets |
 | [SPEC-EXECUTION.md](SPEC-EXECUTION.md) | §12, Appendix E | Compute-lets, code as description, the printer, the ledger, tests |
 | [SPEC-TRAVEL.md](SPEC-TRAVEL.md) | §13–§14 | envelopes, what leaves a reader, the reader ladder, trust |
@@ -88,7 +88,7 @@ A universe is a set of objects, stored as immutable records named by hash,
 so that its state is one hash and so is its whole history. It moves forward
 only by changes, which are objects too and record what was done, by whom
 and from what. Any place in any object is named by an anchor that survives
-edits. What a universe shows is described with eleven primitives; one small
+edits. What a universe shows is described with ten primitives; one small
 kernel, compiled once to WebAssembly, composes the description into a list
 of things to draw and play, and the host draws them. A face is any
 presentation of a universe: sampled from the description, carried as a
@@ -1063,7 +1063,7 @@ each is resolved by a reader that knows nothing of the object's type.
 | Kind | Bound to | A region is | Examples |
 | --- | --- | --- | --- |
 | **sequence** | a sequence property (§1.7): one with an entry in `seq`. The axis has the property's name | `["s", from, to]`: two boundaries | characters of a text, the time of a timeline |
-| **continuous** | an *extent* the object's type defines | `["c", low, high]`, low ≤ high, in the axis's base coordinates | the time of a clock, width, height, the bytes of an asset |
+| **continuous** | an *extent* the object's type defines | `["c", low, high]`, low ≤ high, in the object's own coordinates | the time of a clock, width, height, the bytes of an asset |
 | **keyed** | a property that is a map, or a list of refs in which no object appears twice; the axis has the property's name | `["k", key, …]` | rows and columns of a table, children of a group, functions of a module |
 
 A region states its own kind in its first element, so that an anchor can
@@ -1082,8 +1082,8 @@ continuous axes, `x`, `y` and `z`, and is as much a part of the anchor
 model as a line of text: a volume is a region on all three, a moment in an
 animated scene adds `t`, and a part of the scene is a key.
 
-The **extent** of a continuous axis is a pair `[low, high]` in present
-coordinates: where the axis begins and ends. This document defines two.
+The **extent** of a continuous axis is a pair `[low, high]`: where the
+axis begins and ends. This document defines two.
 A clock's `t` runs from its `start` to its `end` (§4.5). An asset's
 `bytes` runs from 0 to the length of its bytes (§5.2). Every other extent
 is defined with the type that has it, in the part of the specification
@@ -1113,27 +1113,14 @@ end is "before the element that follows" takes in what is typed at its
 end, and one whose end is "after its last element" does not. Whoever makes
 the anchor chooses.
 
-**Continuous axis.** An object MAY hold, in a property `scales`, for any of
-its continuous axes, a list `[a, b, c]` — *a* and *b* positive integers, *c* an integer, or a
-float on an axis whose positions are floats:
-the axis's **scale**, mapping base coordinates to current ones. A position
-*x* in base coordinates is now at *x·a/b + c*; with integer positions the
-division rounds toward negative infinity. Whoever makes an anchor from a
-current position *y* writes the base position *(y − c)·b/a*, rounded the
-same way; an anchor made from a position and resolved at once may
-therefore land one unit below it, and never above. An axis with no scale has the
-scale `[1, 1, 0]`. A change that moves everything on an axis — trimming the
-start of a recording, rescaling a drawing — sets the scale in the same
-change, as an ordinary `set`, and regions follow with no further act.
-`scales` is a map from axis name to scale.
-
-The region, now in present coordinates, is then clipped to the extent,
-both taken as closed intervals: `[low, high]` against `[e₀, e₁]` gives
-`[max(low, e₀), min(high, e₁)]`. A region that only touches an end of the
-extent resolves to that point. A region wholly outside it — `high` below
-`e₀`, or `low` above `e₁` — is detached. Where the reader does not know
-the extent, because it does not know the object's type, the region is not
-clipped and is never detached, and the reader reports it as *unclipped*.
+**Continuous axis.** A region is in the object's own coordinates, and
+nothing maps it. It is clipped to the extent, both taken as closed
+intervals: `[low, high]` against `[e₀, e₁]` gives `[max(low, e₀),
+min(high, e₁)]`. A region that only touches an end of the extent resolves
+to that point. A region wholly outside it — `high` below `e₀`, or `low`
+above `e₁` — is detached. Where the reader does not know the extent,
+because it does not know the object's type, the region is not clipped and
+is never detached, and the reader reports it as *unclipped*.
 
 **Keyed axis.** A region resolves to those of its keys that are present.
 
@@ -1149,9 +1136,12 @@ clipped and is never detached, and the reader reports it as *unclipped*.
   unchanged in a copy whose history is withheld (§13.3).
 - **[A3]** Two readers resolving the same anchor against the same revision
   MUST obtain the same result.
-- **[A4] Content that moves is anchored where it lives.** A scale carries
-  an anchor through a uniform shift or scaling of an axis, and through
-  nothing else. Time that is edited is therefore a sequence, whose anchors
+- **[A4] Content that moves is anchored where it lives.** An object's own
+  coordinates never move under an anchor. A clock is shortened at either
+  end by its `start` and `end`, which move no time within it; a recording
+  is trimmed, and a drawing or a scene resized, where it is placed, by
+  what plays or holds it, and its own axes stay as they were. Time that
+  is edited is a sequence, whose anchors
   name elements and survive a cut as anchors in a text survive a deletion
   (§4.5). Space has no such order: moving one thing in a scene shifts
   nothing else, so there is nothing for a splice to express. An
@@ -1244,7 +1234,7 @@ as two integers; the product is rounded toward negative infinity. Outside
 its interval the clock's content is not present. A clock MAY carry `repeat`,
 a count or `forever`: its interval then recurs end to end. A clock has no
 layout of its own: its children occupy the box the clock was given, in
-order from back to front, and are arranged by being groups or panes.
+order from back to front, and are arranged by being groups.
 
 A clock is in one of three modes:
 
@@ -1403,8 +1393,7 @@ Any file can enter a universe as an asset, before any presenter understands
 it. `bytes` is set whole and is never edited in place: it is not a
 sequence property, and a different file is a different value. Its
 `bytes` axis is continuous, in whole bytes: the region `["c", 3, 7]` is
-the four bytes at offsets 3 to 6. Its extent is from 0 to the length, and
-it never has a scale.
+the four bytes at offsets 3 to 6. Its extent is from 0 to the length.
 
 - **[X4]** Exporting an asset's original bytes MUST reproduce them exactly
   and MUST be offered separately from any export of a presentation of it.
@@ -1449,12 +1438,12 @@ once.
   a reader showing it MUST be able to lead the person to each source region.
 - **[D3] Made again in one step.** `refresh` (§10.3) repeats a recipe. The
   kernel does not run models: a writer that has the model takes the recipe
-  from `recipe` — the same sources, resolved as they now are; the same
+  from `why` — the same sources, resolved as they now are; the same
   `how`, model, prompt and parameters — runs it, and hands the result to
   `refresh`, which commits it as `derive` would, naming the earlier change
   in its origin's `context`. For a derivation by a tool the reader holds,
   the reader does all of it. The result may give new revisions to objects
-  the earlier derivation made, add objects and drop some; `recipe` lists
+  the earlier derivation made, add objects and drop some; `why` lists
   those a person has edited since, so that a writer can ask before
   replacing them. The earlier revisions remain in history. Where part of the recipe is withheld
   — a prompt, in a copy published without working history (§13.3) — the
@@ -1624,7 +1613,7 @@ revised once, with reasons, before anything is frozen.
 
 | Measure | Limit | Now | Reason |
 | --- | --- | --- | --- |
-| Primitives | 11 | 11 | these sufficed for all four worked examples (§15) |
+| Primitives | 10 | 10 | these sufficed for all four worked examples (§15); an eleventh, the pane, failed the deletion test (§7.4) |
 | Layout rules | 3 | 3 | two candidates were deleted (§7.4) |
 | Roles of a text that the kernel presents | 10 | 10 | the document vocabulary inside the text primitive (§5.1, Appendix A) |
 | Axis kinds | 3 | 3 | every anchor in §15 uses one of them |
@@ -1634,11 +1623,11 @@ revised once, with reasons, before anything is frozen.
 | Frame kinds | 6 | 6 | |
 | Formula operators | 64 | 52 | a spreadsheet's essentials, and `ask`; anything larger is a Compute-let |
 | Base host functions | 12 | 10, plus 2 exports | small enough to implement identically on every host |
-| Capabilities | 20 | 18 | each is something only a host can provide (**H4**) |
-| Operations across UFO's own capabilities | 64 | 28 written: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `engine` 6, `text` 3, `present` 2, `blobs` 1. `objects` exposes the projections and actions | seven optional capabilities are unwritten, and count here when they are |
+| Capabilities | 20 | 17 | each is something only a host can provide (**H4**) |
+| Operations across UFO's own capabilities | 64 | 27 written: `store` 8, `inflate` 2, `verify` 1, `media` 1, `encode` 4, `engine` 6, `text` 3, `present` 2. `objects` exposes the projections and actions | seven optional capabilities are unwritten, and count here when they are |
 | Operations of `gpu` | — | 27 sketched (Appendix E) | counted apart: they mirror an outside standard, WebGPU, and are not the format's to keep small |
-| Concepts | 118 | 118 | what a capable newcomer must learn (§6.2): 58 for the core, 60 across the four profiles. Five founding names — Chronicle, ledger, light cone, player, onboard tools — are kept as the vision's vocabulary and counted apart, as names. The limit is the honest count; a new concept MUST displace one |
-| All defined terms | 176 | 176 | concepts, and the names of parts and statuses. The limit is the honest count; a new term MUST displace one |
+| Concepts | 112 | 112 | what a capable newcomer must learn (§6.2): 55 for the core, 57 across the four profiles. Five founding names — Chronicle, ledger, light cone, player, onboard tools — are kept as the vision's vocabulary and counted apart, as names. The limit is the honest count; a new concept MUST displace one |
+| All defined terms | 172 | 172 | concepts, and the names of parts and statuses. The limit is the honest count; a new term MUST displace one |
 
 ### 6.2 Glossary
 
@@ -1655,14 +1644,14 @@ A word has one meaning throughout the specification.
 
 | Part | Concepts | Founding names | Parts and statuses | All terms |
 | --- | --- | --- | --- | --- |
-| Core | 58 | 1 | 33 | 92 |
-| Presentation | 21 | 0 | 11 | 32 |
+| Core | 55 | 1 | 35 | 91 |
+| Presentation | 19 | 0 | 10 | 29 |
 | The player | 13 | 3 | 2 | 18 |
 | Execution | 12 | 1 | 4 | 17 |
-| Travel and trust | 14 | 0 | 3 | 17 |
-| **The whole format** | **118** | **5** | **53** | **176** |
+| Travel and trust | 13 | 0 | 4 | 17 |
+| **The whole format** | **112** | **5** | **55** | **172** |
 
-The eleven primitives, the four operations, the three kinds of axis and
+The ten primitives, the four operations, the three kinds of axis and
 the three layouts are counted where they are named: a newcomer learns
 each. Earlier drafts reported 39 concepts by listing only those that
 could not be expressed as compositions of others, and placing the rest in
@@ -1679,7 +1668,7 @@ different question from the one a newcomer asks.
 | Asset | concept | an object whose `bytes` is a blob | 5.2 |
 | Attribution | concept | origin, evidence and decision, read for a region | 5.4 |
 | Axis | concept | a named dimension of an object: sequence, continuous or keyed | 4.2 |
-| Basis | concept | how an origin is known: witnessed, inferred by a stated method, or unknown | 5.4 |
+| Basis | part | the field of an origin that says how it is known: witnessed, inferred by a stated method, or unknown | 5.4 |
 | Blob | concept | bytes of any size, stored as chunks under a tree divided by the content itself | 1.4 |
 | Border | part | the moment of import or export | 5.3 |
 | Boundary | part | one end of a sequence region, fixed before or after an element | 4.3 |
@@ -1702,7 +1691,7 @@ different question from the one a newcomer asks.
 | Element identity | concept | the permanent name of an element: the change that inserted it and a number | 1.7 |
 | Evidence | concept | what supports content | 5.4 |
 | Feature | concept | a declared requirement a reader needs in order to interpret a universe | 1.6 |
-| Finding | concept | a later statement about origin, added beside the first and never replacing it | 5.4 |
+| Finding | part | an origin stated later, added beside the first and never replacing it | 5.4 |
 | Flick | part | the unit of time: 1/705 600 000 of a second | 4.5 |
 | Frame | concept | one unit of a pack: a record, an index, a seal, a head, or a list of what is absent | 2.1 |
 | Hash | concept | the SHA-256 digest that names a record | 1.1 |
@@ -1724,7 +1713,7 @@ different question from the one a newcomer asks.
 | Offset | part | a position in a pack, in bytes | 2.1 |
 | Opening | part | the small record that connects a veiled indirect to its content | 1.4 |
 | Operation | concept | one edit to the state: `new`, `set`, `splice` or `drop` | 1.7 |
-| Origin | concept | who or what contributed content | 5.4 |
+| Origin | concept | who or what contributed content, and how that is known | 5.4 |
 | Pack | concept | the byte format that holds a universe's records: the file | 2 |
 | Person | part | the human using a reader | 0.1 |
 | Pin | concept | an anchor with a digest of what it covered | 4.4 |
@@ -1744,7 +1733,6 @@ different question from the one a newcomer asks.
 | Root clock | part | the time at the top of a presentation, supplied by the reader | 4.5 |
 | Root hash | concept | the hash of a commit | 1.6 |
 | Run | part | consecutive elements written as `[change, first, count]` | 1.7 |
-| Scale | concept | on a continuous axis, the mapping from the coordinates anchors are written in to present ones | 4.3 |
 | Sequence property | concept | a property edited by `splice`: a text, a byte string, a list or a count | 1.7 |
 | Signature | part | the fixed bytes that begin a pack | 2.1 |
 | Span | concept | an anchor on a text's elements, with a role and properties | 5.1 |
@@ -1975,7 +1963,7 @@ throwaway kernel on the packs above:
 | `provisional/leaving.json` | for `edit-one-word.ufx`: what `leaving` says would travel for each of the two defaults, and the published copy (§13.3 **E12**, Appendix B) |
 | `provisional/roles.json` | the accessible nodes of `compose.ufx` and of a tools line, as a display list carries them: what a host must expose (§9.2) |
 | `quirks/` | the corpus of differences between browser engines: one small page for each, with the naive construction beside it, and `quirks.json` saying what each engine does and the rule that prevents it (§13.2 **E21** to **E25**, §9.3 **H9**) |
-| `provisional/projections.json` | twelve projections of the packs, as text: `overview`, `object`, `text`, `history`, `why`, and outlines by `expand` (§10.1, §10.2, Appendix B) |
+| `provisional/projections.json` | eleven projections of the packs, as text: `object`, `text`, `history`, `why`, and outlines by `expand` (§10.1, §10.2, Appendix B) |
 
 `spike/QUERY-NOTES.md` and `spike/COMPOSITION-NOTES.md` list each place
 where the text did not decide what the kernel should do, and what it did.
@@ -1983,11 +1971,11 @@ where the text did not decide what the kernel should do, and what it did.
 | File | Contents |
 | --- | --- |
 | `vectors/minimal.ufx` | a whole pack of 2599 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
-| `vectors/history.ufx` | a pack of 27722 bytes holding three commits, built to exercise what the first does not (below) |
+| `vectors/history.ufx` | a pack of 27649 bytes holding three commits, built to exercise what the first does not (below) |
 | `vectors/nested.ufx`, `vectors/linked.ufx` | one universe twice, of 4031 and 2391 bytes: with the records of a second universe that its Portal names, and without them (§1.8). The root hash is the same |
 | `vectors/timeline.ufx` | a pack of 11695 bytes holding four commits of one timeline (§4.5): ten seconds of time with three plays; two seconds cut from the middle; one second inserted; the start of a play cut |
 | `vectors/published.ufx` | `history.ufx` as it is published (§13.3): a pack of 9437 bytes holding its content and attribution layers, its seal, and an `absent` frame saying that working history is withheld |
-| `vectors/pins.ufx` | a pack of 7886 bytes holding one commit: a text with an empty block and an inline span, an asset, a clock with a scale, and an object holding an anchor of every kind (§4.2 to §4.4, §5.2) |
+| `vectors/pins.ufx` | a pack of 7813 bytes holding one commit: a text with an empty block and an inline span, an asset, a clock, and an object holding an anchor of every kind (§4.2 to §4.4, §5.2) |
 | `vectors/published-timeline.ufx`, `vectors/published-nested.ufx` | `timeline.ufx` and `nested.ufx` as they are published (§2.5): 3778 and 2557 bytes |
 | `vectors/edit-one-word.ufx`, `vectors/edit-paragraph-start.ufx` | `compose.ufx` after edits made through a kernel's gate: one word changed; text typed at the very start of a paragraph (§1.7 **L1**, §5.1) |
 | `vectors/edit-positioned.ufx` | `compose.ufx` after text was typed in front of a word it shares letters with, reported by position (§9.3 **H8**) |
@@ -2004,7 +1992,7 @@ object map gains an interior node; one node frame and three chunk frames are
 compressed, and two properties are kept outside their nodes. A frame of unknown
 kind precedes it and a seal follows it, with its own head. Its third
 commit, by a person, appends a character, inserts and removes another,
-shortens the clock and sets its frame, drops the asset and records a
+shortens the clock, drops the asset and records a
 decision. The file ends with a chain of two indexes and four heads.
 
 | Group | What is fixed |
@@ -2021,7 +2009,7 @@ decision. The file ends with a chain of two indexes and four heads.
 | `resolve_sequence` | a sequence with removed elements, and nine regions resolved against it (§4.3) |
 | `merge_readiness` | two writers diverging from one text, with insertions at the same place, inside their own earlier insertions and after an element the other removes; the order of elements and the text, identical whichever writer's operations are taken first (§1.10) |
 | `digests` | two pins at the last commit of `history.ufx`, each with its salt, its covered value as bytes, the objects followed and the digest (§4.4): a passage of the text with the span that touches it, and the face object, whose ref to the text is followed |
-| `resolve_continuous` | six regions resolved through a scale: shift, integer rounding of both signs, clipping, detachment, floats |
+| `resolve_continuous` | six regions against an extent: inside, clipped at each end, touching an end, detached, floats |
 | `timeline` | for each of the four commits of `timeline.ufx`: the count, the `seq`, where three anchors and three plays resolve, and at sampled positions the element there and the time of each play present. The fourth commit cuts the start of a play |
 | `published` | the hashes of the content layer and of the attribution layer of `history.ufx`, the number of records in its working history, and what a reader of `published.ufx` finds: the same state, the same text, the same answer to who wrote each character. Generator and kernel agree |
 | `pins` | where each anchor of `pins.ufx` resolves: continuous regions inside, clipped to, touching and outside an extent, one whose extent is unknown, keyed regions, a point. Eight digests, each with its covered value and followed objects, one for each choice §4.4 settles |
@@ -2036,7 +2024,7 @@ Three values, for a first check without opening the files:
 | --- | --- |
 | Hash of the chunk `abc` | `1e18834c426d00e57788444cb3ccd62c771b420c095bb0c4e040a8c122c4570d` |
 | Root hash of `minimal.ufx` | `804ec174f46f773d36c1fe7318c999ff21c338b735cb4e5068224725b9cce8bf` |
-| Root hash of `history.ufx` | `821d84843a250c08a1f2b36670e715fd8c1ac1c2f0bcc5ad787277f7b7a76d72` |
+| Root hash of `history.ufx` | `dc47050bc643c94005a4653cca968819a6644cc4f9c337a4d447337e9d3e1806` |
 
 How far these have been checked. For version 0.8 two independent readers
 were written from this document alone, one after the other, each with

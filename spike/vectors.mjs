@@ -50,12 +50,12 @@ let agree = 0, differ = 0; const check = (what, a, b) => { if (same(a, b)) agree
 
 // ---- projections and outlines (section 10.1, 10.2, Appendix B) ----
 { const cases = [
-    ['history.ufx', { name: 'overview' }], ['history.ufx', { name: 'expand' }],
+    ['history.ufx', { name: 'expand' }],
     ['history.ufx', { name: 'text', o: 'a1'.repeat(16) }], ['history.ufx', { name: 'object', o: 'a1'.repeat(16) }],
     ['history.ufx', { name: 'history', o: 'a1'.repeat(16) }], ['history.ufx', { name: 'why', o: 'a1'.repeat(16) }],
     ['history.ufx', { name: 'why', o: 'a1'.repeat(16), lo: 7, hi: 12 }],
     ['compose.ufx', { name: 'expand', o: '71'.repeat(16) }], ['compose.ufx', { name: 'expand', o: '71'.repeat(16), lo: 0, hi: 485 }],
-    ['minimal.ufx', { name: 'overview' }], ['nested.ufx', { name: 'expand' }], ['timeline.ufx', { name: 'expand' }] ];
+    ['minimal.ufx', { name: 'expand' }], ['nested.ufx', { name: 'expand' }], ['timeline.ufx', { name: 'expand' }] ];
   const res = [];
   for (const [f, q] of cases) { const k = await open(f); const text = k.query({ q: 'project', ...q }); res.push({ pack: f, projection: q.name, arguments: Object.fromEntries(Object.entries(q).filter(([k]) => k !== 'name')), text }); if (text === null) console.log('NO ANSWER:', f, JSON.stringify(q)); }
   out('projections.json', { what: 'projections of the vector packs, as the text Appendix B fixes: the header, one record a line, and the count. Outlines are the projection `expand`', projections: res });
