@@ -6,9 +6,9 @@
  "what": "containment (PRESENTATION 7.6 F6, F8 to F11; 7.3 F2, F4): a file whose own description tries each way out. `must` is what the rules require of every reader; `here` is what this kernel did",
  "pack": {
   "file": "contained.ufx",
-  "length": 16588,
-  "sha256": "542909fb43b7a7b8978a1f325a5a86fcda3f5104fd6b2545acb4455390d20ca6",
-  "root_hash": "6f692f6eb5c5d2620c0f470dee476cc3743184e33a4541415fbfda4d63a08f71"
+  "length": 20099,
+  "sha256": "d017e6736ebc909f2e6f7dc6f53f7f5d8e85e7feb54a7147d5e925fa7e8e548b",
+  "root_hash": "5ee44dbd2736c249d9b300213738dc42b2842e8cdef335c2eaa481a814e6b0f5"
  },
  "reader": "the reader's own tools (spike/envelope/tools.ufx) present the pack as their subject, in the name of Reader Test",
  "attempts": [
@@ -28,7 +28,7 @@
    "here": "the label NO-SUCH-OPERATOR"
   },
   {
-   "attempt": "a text doubled until it would weigh 2 097 153",
+   "attempt": "a text doubled until it would count 2 097 153",
    "must": "an error value (F2): the label is shown",
    "here": "the label TOO-HEAVY"
   },
@@ -38,7 +38,12 @@
    "here": "the label NO-OTHER-UNIVERSE"
   },
   {
-   "attempt": "a formula that reads a value weighing 524 289 twenty-four times",
+   "attempt": "sixty-five formulas, one inside another, kept in pieces outside the node",
+   "must": "an error value (F2): the label is shown",
+   "here": "the label TOO-DEEP"
+  },
+  {
+   "attempt": "a formula that reads a value counting 524 289 twenty-four times",
    "must": "an error value from where the composition has worked out 10 000 000 (F2): the label is shown",
    "here": "the label BOUND-SPENT"
   },
@@ -51,6 +56,11 @@
    "attempt": "get, by a ref to an object of its own universe",
    "must": "its value",
    "here": "OWN label=as it was made"
+  },
+  {
+   "attempt": "sixty-four formulas, one inside another",
+   "must": "the value: 64 deep is allowed (F2)",
+   "here": "DEEP x"
   },
   {
    "attempt": "the reader's tools, beside a file that spends its bound",
@@ -120,11 +130,11 @@
   {
    "attempt": "the same, and the person applies it",
    "must": "one change through the gate, by the person, recording their decision and what in the file asked (F10)",
-   "here": "change id=o:d5fa1f44 commit=c:3510ebf0 t… actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\"; origin.context o:90909090"
+   "here": "change id=o:d5fa1f44 commit=c:7de5e776 t… actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\"; origin.context o:90909090"
   }
  ],
  "after": {
   "height": 1,
-  "history": "change id=o:d5fa1f44 commit=c:3510ebf0 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\""
+  "history": "change id=o:d5fa1f44 commit=c:7de5e776 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\""
  }
 }

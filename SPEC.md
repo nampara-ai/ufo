@@ -1474,7 +1474,7 @@ the change that introduced the content:
 | `who` | for `person`: a principal (§14.1) |
 | `model` | for `model`: the model's identifier as its provider states it |
 | `prompt` | for `model`: a ref to the text object holding the prompt, or the conversation it was part of |
-| `context` | list of pins to what the contribution was made from or answers: for a model, what it was given; for an undo or a refresh, the earlier change |
+| `context` | list of pins to what the contribution was made from or answers: for a model, what it was given; for an undo or a refresh, the earlier change; for a change a handler in the file proposed and a person applied (§7.6 **F10**), the object whose handler it was |
 | `tool` | for `tool`: name and version of the deterministic process |
 | `asked` | for `model` and `tool`: the principal at whose request it ran |
 | `copied` | an anchor to the region this content was copied from |
@@ -1984,6 +1984,9 @@ throwaway kernel on the packs above:
 | `provisional/leaving.json` | for `edit-one-word.ufx`: what `leaving` says would travel for each of the two defaults, and the published copy (§13.3 **E12**, Appendix B) |
 | `provisional/decisions.json` | for `decided.ufx`: two edits by one person, then by another the newer accepted and the older rejected; the history with the decision that stands about each change; `why` of the paragraph after the rejection; and a second rejection refused (§5.4 **R9**) |
 | `provisional/undo.json` | for `undone.ufx`: an edit, and its undoing at the person's asking: the origin of the undoing, `why` of the paragraph, and a second undo refused (§9.6) |
+| `provisional/asset.json` | for `asset.ufx`: two files taken in as assets by one person (§5.2, §1.7 `new`), each with its length and SHA-256, and the second retired by an undo (`drop`); that neither is live, so a published copy holds neither (§2.5) |
+| `provisional/data.json` | for `table.ufx` and `table-edited.ufx`: a data object presented as a table in a grid, a total worked out by a formula, what `number` gives, and changes its own handlers proposed and a person applied, with the origin and decision each records (§7.2, §7.3, §7.6 **F10**) |
+| `provisional/containment.json` | for `contained.ufx`: a file whose description tries each way out — a subject, the tools' state, another universe, every action, an operator that is not one, a value past the bound of size, a composition past the bound of work, handlers for events that are not a person's — with what the rules require of each (§7.3 **F2**, **F4**; §7.6 **F6**, **F8** to **F11**) |
 | `vectors/bad-seal.ufx`, group `seals` | `history.ufx` with one bit of its seal's signature changed; the bytes that were signed, and what a reader that can check a signature finds of each pack, and one that cannot (§14.2; §9.3 `verify`) |
 | `provisional/roles.json` | the accessible nodes of `compose.ufx` and of a tools line, as a display list carries them: what a host must expose (§9.2) |
 | `quirks/` | the corpus of differences between browser engines: one small page for each, with the naive construction beside it, and `quirks.json` saying what each engine does and the rule that prevents it (§13.2 **E21** to **E25**, §9.3 **H9** to **H11**) |

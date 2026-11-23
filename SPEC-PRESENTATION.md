@@ -95,7 +95,7 @@ structure, never as text to be parsed; a readable spelling is a projection.
 | environment | `time` (the enclosing clock's time), `input` (the pointer's position and whether it is pressed, within the enclosing group, and the `src` of the item under it), `view` (the available width and height), `state` (a named value of the presentation state) |
 | arithmetic | `+ − × ÷ mod neg abs min max floor ceil round sqrt pow exp ln sin cos atan2` |
 | logic | `= ≠ < ≤ > ≥ and or not if` |
-| text | `concat len slice format` (numbers and dates to text by a stated pattern) |
+| text | `concat len slice format` (numbers and dates to text by a stated pattern) `number` (a text to the number it spells) |
 | lists | `list count sum mean nth sort filter map range` |
 
 `filter`, `map` and `sort` take a formula applied to each item, which refers
@@ -103,12 +103,20 @@ to the item with `arg`.
 
 - **[F1] Pure.** A formula has no effect and reads nothing but its arguments
   and the environment operators above.
-- **[F2] Terminating.** There is no recursion and no unbounded loop. The
-  dependency graph among formulas MUST be acyclic; a formula in a cycle
-  evaluates to an error value. One composition evaluates at most 10⁷
-  operator applications; a formula reached after that evaluates to an error
-  value. The figure is fixed here, not left to readers, so that all readers
-  agree.
+- **[F2] Terminating, and bounded.** There is no recursion and no unbounded
+  loop. The dependency graph among formulas MUST be acyclic; a formula in a
+  cycle evaluates to an error value. Work is counted by the size of what
+  is worked out: a value counts one, and one for each scalar value of a
+  text or byte of a byte string, and what each item of a list and each
+  value of a map counts. An operator application whose value would count
+  more than 2²⁰ is an error value. One composition, or one performance of
+  a handler, works out at most 10⁷ in all, each application adding what
+  its value counts; a formula reached after that evaluates to an error
+  value. Formulas nest at most 64 deep, the outermost counting one: one
+  deeper is an error value.
+  The figures are fixed here, not left to readers, so that all readers
+  agree, and so that nothing a file describes can keep a reader busy or
+  fill its memory.
 - **[F3] Deterministic.** Arithmetic is IEEE 754 binary64. Because every
   reader runs the same compiled kernel (§9.1), every operator, including the
   transcendental ones, gives bit-identical results everywhere.
@@ -124,7 +132,8 @@ to the item with `arg`.
 
 **Operators, exactly.** Arguments are evaluated left to right before an
 operator is applied, except that `if`, `and` and `or` evaluate only what
-they need. Each application counts one toward the bound of **F2**.
+they need. Each application counts what its value counts toward the bound
+of **F2**.
 Integers and floats are both numbers here; arithmetic is done in binary64,
 and a result that is not finite is an error value.
 
@@ -140,12 +149,13 @@ and a result that is not finite is an error value.
 | `and or not if` | on booleans; `if(c, a, b)` |
 | `concat len slice` | `len` counts the scalar values of a text or the items of a list; `slice(x, from, to)` takes those from index *from* up to but not including *to*, counted from 0 and clipped to the ends |
 | `format` | `format(n, pattern)`: a pattern is `0` followed optionally by `.` and one `0` for each decimal place, optionally containing `,` to group thousands, optionally ending `%`, which multiplies by 100. For a time, a pattern made of `YYYY`, `MM`, `DD`, `hh`, `mm`, `ss` and any other characters, in UTC |
+| `number` | `number(text)`: the number a text spells, where the text is digits, at most fifteen, with `-` before them or one `.` among them or neither, and a digit on each side of the `.`: an integer if there is no `.`. Any other text, and anything that is not a text, an error value. It is how what a person types into a figure becomes a figure |
 | `list count sum mean nth range` | `sum` of nothing is 0 and `mean` of nothing an error value; `nth(list, i)` counts from 0 and is an error value outside the list; `range(a, b)` is the integers from *a* up to but not including *b*, at most 2²⁰ of them |
 | `sort filter map` | `sort(list, key)` is stable and ascending by the key formula's value, or by the items themselves |
 | `get cell col` | `get(ref, path)` is the value at a key path of an object's properties; `cell(ref, row, col)` a cell's value, a formula there being evaluated; `col(ref, col)` a column's values in the table's order. A missing object, key or cell is an error value |
 | `let` | `let(name, value, …, body)`: each name, a text, is bound to its value, which is worked out once; a later value may read the names before it; the result is the body's. A name is read with `arg`, and hides one of the same name outside. With no body, or a name that is not a text, an error value |
 | `arg size time input view state` | `size(key)` is `[w, h]`; `time` is in flicks; `input` is `[x, y, pressed, src]`, `src` being the anchor carried by the item under the pointer (§9.2); `view` is `[w, h]`; `state(name)` is null until set |
-| `ask` | `ask(projection, argument…)` is the records a projection of §10.1 returns for those arguments, as a list of maps from field name to value. A projection is a function of a commit, so `ask` is as pure as `get`. It reads the universe the formula is in, or a subject it was given (§7.6). Each record counts one toward the bound of **F2** |
+| `ask` | `ask(projection, argument…)` is the records a projection of §10.1 returns for those arguments, as a list of maps from field name to value. A projection is a function of a commit, so `ask` is as pure as `get`. It reads the universe the formula is in, or a subject it was given (§7.6) |
 
 **Repetition.** A group MAY carry `each`: a formula yielding a list or a ref
 to a data object, and `as`, a name. Its single child is then a template,
@@ -282,18 +292,20 @@ program, and let programs take part in composition.
 **Handlers that propose changes.** An `on` handler (Appendix A) may carry
 `propose`: a list of operations (§1.7) in which any field may be a formula.
 When the event occurs, the kernel evaluates the formulas — against data,
-presentation state and the event — and submits the result as a change, with
-origin `{basis: witnessed, by: person}` naming the person using the reader.
-It is verified and committed, or refused, like any change (**L4**). A
-checkbox, a form, an editable cell and a button that adds a row are
-therefore description, with no Compute-let.
+presentation state and the event — and states each operation against the
+state as it is (**L2**). What comes of that is a request, and writes
+nothing (**F10**): the reader's tools put it to the person, and what the
+person applies is their change, verified and committed, or refused, like
+any change (**L4**). A checkbox, a form, an editable cell and a button
+that adds a row are therefore description, with no Compute-let.
 
-A handler may instead carry `act`: the name of any action of §10.3 and its
+In a universe that a reader presents as a tool for another (§9.6), a
+handler may instead carry `act`: the name of any action of §10.3 and its
 arguments, in which any field may be a formula. The kernel performs it as
-the act of the person using the reader. `propose` is the commonest case and
-keeps its own spelling. An action that needs something only the person can
-supply — a file to import, a place to save, a recipient — makes the reader
-ask for it.
+the act of the person using the reader. An action that needs something
+only the person can supply — a file to import, a place to save, a
+recipient — makes the reader ask for it. Nowhere else does `act` do
+anything (**F9**).
 
 **Subjects.** A Portal MAY pass values to what it presents, in `with`; the
 description presented reads them with `arg`, and a Portal there MAY have
@@ -314,6 +326,47 @@ universe, which the description reads as `arg("subject")`.
   change and commits it or refuses it whole (**L4**); where a change of
   its kind needs the person's approval (§12.6, **U11**), it needs it
   here.
+
+**What a file's own description can reach.** A PDF could carry a program
+that ran when the file was opened, and readers spent decades containing
+it. Here the description a file carries is not a program, and these four
+rules say all that it can do. They hold for every universe but the one a
+reader has itself chosen to present as its tools. Anything more is a
+Compute-let, which runs only by the person's explicit grant (§12).
+
+- **[F8] It reads its own universe and nothing else.** A formula reads its
+  arguments, the universe it is in at the commit presented, the
+  presentation state of its own presentation, and the environment
+  operators of §7.3. A ref names an object of that universe; where there
+  is none, `get` is an error value. It cannot read the presentation state
+  of what presents it, the reader's tools, a subject, or any other
+  universe: each attempt is an error value, never a value.
+- **[F9] Its handlers do two things.** `{set, to}` sets a value of its own
+  presentation state. `{propose}` asks for operations on objects of its
+  own universe. A handler that carries anything else — `act`, with any
+  action of §10.3 — is not performed, and nothing is said of it to the
+  host: no file is offered, none is asked for, nothing is fetched. What a
+  file presents is told apart from the reader's tools by the kernel, never
+  by an identity the file gives: an object in a file that has the identity
+  of one of the tools' is still the file's.
+- **[F10] A proposal writes nothing.** What a handler proposes is handed,
+  as the event `propose`, to the Portal through which the reader presents
+  the universe: the operations as stated, and the object whose handler
+  proposed them. With no handler for it there, nothing happens. The
+  reader's tools show the person what would change, in their own place,
+  which the file cannot draw on or read. Only what the person then
+  applies is committed: a change whose origin is that person, whose
+  `context` names the object that asked (§5.4), and which, where the
+  reader asked first, records the person's decision about it with the
+  verdict `approve`. It is whole or not at all (**L4**), and a state that
+  has moved on since it was stated refuses it (**L2**).
+- **[F11] Only a person's input performs a handler.** The events of
+  Appendix A are all of them a person's: a press, a key, the pointer, a
+  text entered. Nothing is performed when a file is opened, when time
+  passes, when the view changes, or because another handler ran; a
+  handler under any other name is never performed. A file is therefore
+  changed only by an act of a person in the reader, and never by being
+  read.
 
 **Editable text.** A text primitive, or a region of one, marked `editable`
 accepts text entry. The host supplies the editing surface it already has —
@@ -369,7 +422,9 @@ their column widths; fraction rows share what remains of the group's `h`,
 and count as `fit` if it has none. A child sits in the cell its `row` and
 `col` name, counted from 0, across the tracks its `span` gives, placed by
 `align`. Under `each`, the copies of the template fill cells in order, row
-by row.
+by row. Where the grid's `role` is `table` or `rowgroup`, each of its rows
+is a node of role `row` holding the nodes of its cells, so that what is
+laid out as a table is one to whoever does not see it (§9.2).
 
 **A text into rows.**
 
@@ -700,10 +755,14 @@ is and MUST NOT be formulas (§7.1); all others may be.
 **Common to all:** `label`, `role`, `lang`, `opacity`, `visible`, `on` (map
 from an input event name — `press`, `enter`, `leave`, `key`, `change` — to
 `{set: name, to: formula}`, `{propose: operations}` (§7.6), or
-`{deliver: true}` for surfaces), `from` (§5.3). Of the events: `press` is
-a pointer going down and up on the item, or Enter or Space while it has
-focus; `enter` and `leave` are the pointer's; `key` is a key going down
-while it has focus; `change` is an `edit` event delivered to it (§9.2).
+`{deliver: true}` for surfaces; or a list of these, performed in order),
+`from` (§5.3). Of the events: `press` is a pointer going down and up on the
+item, or Enter or Space while it has focus; `enter` and `leave` are the
+pointer's; `key` is a key going down while it has focus; `change` is an
+`edit` event delivered to it (§9.2), whose text a handler reads as
+`arg("text")`. A Portal in a reader's tools has one more, `propose`: what
+a handler in the universe it presents has asked for (**F10**), read as
+`arg("proposal")`.
 
 **In a parent:** `place` (including `at`, an anchor, for a child of a
 surface), `x`, `y`, `w`, `h`, `row`, `col`, `span`, `align`, `grow`,

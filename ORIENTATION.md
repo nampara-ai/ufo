@@ -1460,3 +1460,45 @@ found undecided were settled in §5.4.
 keep components by their hash, so that a reader holding one skips the
 embedded copy in the browser too. That is the reader ladder's job
 (§13.5), not a web page's.
+
+## 30. The base's list complete: undo, seals, assets, tables, and a file that is contained (2026-11-23)
+
+The owner's list for the base is built, each step measured
+(`spike/SIZE-NOTES.md`; `spike/SPLIT.md` section 10). The base is
+125 533 bytes compressed, of 131 072.
+
+**Undo, seals, assets (3c to 3e).** An undo is a change by a tool at a
+person's asking. Each seal's signature is checked by the host with what
+the browser has, and the tools say what was found, never more. A file of
+the person's choosing is taken in exactly as an asset; undoing that
+retires it. A file that nothing in the document names is not live, so a
+published copy does not carry it, and the tools say so when it is added.
+Placing an asset in the document is not built.
+
+**What a file's own description can do (3f).** The owner's rule: this is
+where PDF went wrong with scripting, so it is strict. A file's formulas
+are worked out, bounded in size, work and depth by fixed figures
+(§7.3 **F2**), and read only the file's own universe and its own
+presentation state (**F8**). Its handlers set that state, or ask for a
+change to their own universe; every other action does nothing (**F9**).
+What is asked for writes nothing: the reader's tools put it to the
+person, in a place the file cannot draw on, and what the person applies
+is their change, recorded with their decision and with what in the file
+asked (**F10**). Nothing is performed but on a person's input (**F11**).
+`vectors/contained.ufx` tries twenty-four ways out, and each comes to
+what the rules require, in Node and in three browser engines.
+
+**Tables.** A data object is presented by a grid under `each`, as a
+table to whoever does not see it. A figure is typed and becomes a number
+(`number`); a total is a formula. `vectors/table.ufx`.
+
+**What this does not do.** A grid fills its cells in order: explicit
+placement, spans and row sizes are not built. Only `set`s of one object
+are handed on from a file's handler. The operators are the base's few:
+no `sum`, no `col`. This reader always asks before applying what a file
+proposes; a reader may come to remember a person's standing answer for
+a kind of change, and that is not designed. A file with no tools in a
+reader with none is shown to be read, and its own state does not work
+there. None of it has been tried on a phone, in Safari, or with a
+screen reader.
+

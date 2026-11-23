@@ -205,6 +205,11 @@ however fully they are written.
 
 - **Subjects** (§7.6, **F6**, **F7**), `ask` and `act`: how tools reach
   the work.
+- **What a file's own description can reach** (§7.6, **F8** to **F11**;
+  §7.3 **F2** by size): the founding documents ask that a document be
+  alive without becoming a program that runs on whoever opens it. No
+  single passage states these four rules; they are the owner's, made
+  where PDF's scripting went wrong.
 - **Composition** of grid, absolute position, clocks, inline boxes in
   flow, page headers and footers (§7.7); every formula operator (§7.3);
   the types of Appendix A.

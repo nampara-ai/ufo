@@ -227,6 +227,14 @@
   "provisional/asset.json": {
    "status": "provisional",
    "note": "the author's kernel wrote the pack. The second independent reader, unmodified, replayed the conservation of all four commits of asset.ufx, among them one that makes an object (`new`) and one that retires one (`drop`): every one ok. It also found each file's bytes under one blob: 70008 bytes in nine parts and 61 bytes in one, each with the SHA-256 the vector states. What `object` gives for an asset, the kind told from content and name, and what the tools say are the author's kernel only"
+  },
+  "provisional/data.json": {
+   "status": "provisional",
+   "note": "the author's kernel made table.ufx's presentation and wrote table-edited.ufx. The second independent reader, unmodified, replayed the conservation of all five commits of table-edited.ufx: every one ok. It does not lay out a grid or work out formulas, so what is presented, what `number` gives and what the handlers propose are the author's kernel only, in Node and in three browser engines"
+  },
+  "provisional/containment.json": {
+   "status": "provisional",
+   "note": "the author's kernel only, in Node and in three browser engines: twenty-four attempts, each coming to what the rules require. No independent reader has composed this pack"
   }
  },
  "note": "Both readers are instances of the model that wrote the specification. Two of them agreeing does not make a vector confirmed: that needs an implementation from a different model family, or a person."

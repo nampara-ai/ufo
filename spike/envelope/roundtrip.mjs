@@ -114,10 +114,12 @@ r.press('Document'); assert.strictEqual(r.shown(), docText); assert.strictEqual(
   assert(HOSTILE.words.every(w => h.texts().filter(x => x.on === 1 && w.startsWith(x.s.trim()) && x.s.trim()).every(x => x.press && x.lit)), 'the formulas of the file are not evaluated, or its words cannot be pressed');
   for (const [label, what, must] of [['NO-SUBJECT-HERE', 'a Portal whose `of` is arg("subject"), with a `with` that names a subject', 'no subject is given (F6): the label is shown'],
     ['NO-ASKING-A-SUBJECT', 'a formula that asks a projection of arg("subject")', 'an error value (F8): the label is shown'], ['NO-SUCH-OPERATOR', 'a formula with an operator that is not one (`fetch`, of an address)', 'an error value (F4): the label is shown; nothing is fetched'],
-    ['TOO-HEAVY', 'a text doubled until it would weigh 2 097 153', 'an error value (F2): the label is shown'], ['NO-OTHER-UNIVERSE', 'get, by a ref to an identity that is an object of the reader\'s tools and not of this universe', 'an error value (F8): the label is shown'],
-    ['BOUND-SPENT', 'a formula that reads a value weighing 524 289 twenty-four times', 'an error value from where the composition has worked out 10 000 000 (F2): the label is shown'],
+    ['TOO-HEAVY', 'a text doubled until it would count 2 097 153', 'an error value (F2): the label is shown'], ['NO-OTHER-UNIVERSE', 'get, by a ref to an identity that is an object of the reader\'s tools and not of this universe', 'an error value (F8): the label is shown'],
+    ['TOO-DEEP', 'sixty-five formulas, one inside another, kept in pieces outside the node', 'an error value (F2): the label is shown'],
+    ['BOUND-SPENT', 'a formula that reads a value counting 524 289 twenty-four times', 'an error value from where the composition has worked out 10 000 000 (F2): the label is shown'],
     ['NOTHING-AFTER-THE-BOUND', 'a formula reached after the bound is spent', 'an error value (F2): the label is shown']]) { assert(has(label), 'not shown: ' + label + ' in ' + lines().join(' / ')); tried(what, must, 'the label ' + label); }
   assert(has('OWN label=as it was made')); tried('get, by a ref to an object of its own universe', 'its value', 'OWN label=as it was made');
+  assert(has('DEEP x')); tried('sixty-four formulas, one inside another', 'the value: 64 deep is allowed (F2)', 'DEEP x');
   assert(/^State c:/.test(h.status()), 'the tools do not work beside a file that spends its bound: ' + h.status()); tried('the reader\'s tools, beside a file that spends its bound', 'they work: the bound is the file\'s composition\'s, not theirs', 'the status is shown');
   // the tools' state is not the file's: the reader turns editing on and has a name; the file's formulas see neither
   h.press('Edit'); assert(/recorded as made by Reader Test/.test(h.status()) && has('STATE who=nobody editing=off ran=nothing'), lines().find(l => l.startsWith('STATE')));

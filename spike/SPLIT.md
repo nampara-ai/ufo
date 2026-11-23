@@ -335,3 +335,42 @@ binding now reads what it inflates itself (quirks 07, **H11**).
 **Not done.** A page cannot take a component from anywhere but its own
 file. No component is yet added to a file by a reader when the file
 comes to need one. The formulas and time components do not exist.
+
+## 10. The base with its list complete (2026-11-23)
+
+The owner's list for the base, a to f, is built. Sizes after each step
+are in `SIZE-NOTES.md`.
+
+| | Compressed | KiB |
+| --- | ---: | ---: |
+| The kernel whole | 132 512 | 129.4 |
+| **The base** | **125 533** | **122.6** |
+| Printer | 5 019 | 4.9 |
+| Agent | 3 714 | 3.6 |
+
+The limit binds the base: 131 072. 5 539 bytes are left. The whole kernel
+is now larger than the limit, which is what the division is for: a file
+carries the base and what it lists.
+
+Since section 9 the base grew by 10 689 bytes: undo about 1 090; seals
+962; adding an asset 930; and 3f, 6 198 in the base.
+
+What the base now does that it did not: undo; says whether each seal's
+signature is good; takes in a file as an asset and retires one; lays out
+a grid, presents a data object row by row, and says that a table is a
+table; works out the formulas of the file itself, bounded; performs the
+file's own handlers, which set its own state or ask for a change; and
+puts what they ask to the person.
+
+What is still not in any part: placing an asset in the document;
+exporting an asset's bytes; a grid's explicit placement and spans; the
+operators beyond the base's; clocks and absolute placement.
+
+**What a file weighs now.** The one-paragraph envelope, `minimal.ufx`
+with the tools nested, is 212 549 bytes (it was 191 748 in section 9):
+the base in base64 167 380, the pack 27 856 of which the tools are the
+larger part, the binding 10 046.
+
+The acceptance table on three engines with the base alone in each page:
+`spike/out/envelope-test-all.txt`.
+

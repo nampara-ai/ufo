@@ -272,7 +272,7 @@ export function table() {
 export const HOSTILE = { words: ['SAVE-ME', 'SWITCH-ME', 'DECIDE-ME', 'UNDO-ME', 'IMPORT-ME', 'COMMIT-ME', 'REACH-ME', 'SPLICE-ME', 'BOTH-ME', 'HONEST-ME'] };
 export function hostile() {
   // its text has the identity of the tools' Save bar, and a span with the key of that bar's first word: a press on it is still the file's
-  const pk = new Pack('ufo-spike-hostile-salt'), [HF, HG, HP, HC, HS, HA, HN, HB, HX, HD, HL, HO] = [0x92, 0x93, 0x95, 0x9c, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9d, 0x9e].map(id), HT = id(0x90);
+  const pk = new Pack('ufo-spike-hostile-salt'), [HF, HG, HP, HC, HS, HA, HN, HB, HX, HD, HL, HO, HQ, HR] = [0x92, 0x93, 0x95, 0x9c, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9d, 0x9e, 0x9f, 0xa0].map(id), HT = id(0x90);
   const S = f('arg', 'subject'), own = { op: 'set', obj: ref(HG), key: 'label', val: 'changed by the file' };
   const press = { 'SAVE-ME': { act: 'export', universe: S, history: true, name: 'taken.ufx.html' }, 'SWITCH-ME': [{ set: 'face', to: 'text' }, { set: 'editing', to: true }, { set: 'who', to: 'Mallory' }, { set: 'pending', to: { lines: [], ops: [] } }],
     'DECIDE-ME': { act: 'decide', about: 'o:9c9c9c9c', verdict: 'reject', who: 'Mallory' }, 'UNDO-ME': { act: 'undo', who: 'Mallory' }, 'IMPORT-ME': { act: 'import', who: 'Mallory' },
@@ -287,10 +287,13 @@ export function hostile() {
   // spending the bound: a text that weighs 524 289 is read twenty-four times, which is more than 10 000 000
   let half = 'xxxxxxxx'; for (let k = 0; k < 16; k++) half = f('let', 'a', half, join(f('arg', 'a'), f('arg', 'a')));
   const spend = f('let', 'h', half, f('list', ...Array.from({ length: 24 }, () => len(f('arg', 'h')))));
+  // depth: formulas one inside another, sixty-four and sixty-five of them. A value nests at most 64 deep as it is encoded (SPEC 1.2), so the
+  // chain is kept in pieces outside the node (1.4, kind "v"), each piece nine formulas
+  const deep = n => { let v = 'x'; for (let k = 1; k <= n; k++) { v = join(v); if (k % 9 === 0 && k < n) v = new Tag(55464, ['v', pk.blob(enc(v))]); } return v; };
   const line = (o, of, label) => [o, 'ufo.portal', { of, label }];
   const root = universe(pk, HC, id(0x66), [
     [HF, 'ufo.face', { of: ref(HG), medium: 'document' }],
-    [HG, 'ufo.group', { label: 'as it was made', children: [ref(HT), ref(HP), ref(HS), ref(HA), ref(HN), ref(HB), ref(HD), ref(HO), ref(HX), ref(HL)], on: { load: { set: 'ran', to: 'load' }, time: { set: 'ran', to: 'time' }, view: { set: 'ran', to: 'view' } } }],
+    [HG, 'ufo.group', { label: 'as it was made', children: [ref(HT), ref(HP), ref(HS), ref(HA), ref(HN), ref(HB), ref(HD), ref(HO), ref(HQ), ref(HR), ref(HX), ref(HL)], on: { load: { set: 'ran', to: 'load' }, time: { set: 'ran', to: 'time' }, view: { set: 'ran', to: 'view' } } }],
     [HT, 'ufo.text', { chars, spans }],
     [HP, 'ufo.portal', { of: S, with: { subject: ref(U) }, editable: true, label: 'NO-SUBJECT-HERE' }],
     line(HS, join('STATE who=', iff(is(st('who'), null), 'nobody', st('who')), ' editing=', iff(is(st('editing'), true), 'on', 'off'), ' ran=', iff(is(st('ran'), null), 'nothing', st('ran'))), 'STATE-FAILED'),
@@ -299,6 +302,8 @@ export function hostile() {
     line(HB, join('BIG ', num(len(twice))), 'TOO-HEAVY'),
     line(HD, join('OWN label=', get(ref(HG), 'label')), 'OWN-FAILED'),
     line(HO, join('OTHER ', get(ref(id(0x85)), 'label')), 'NO-OTHER-UNIVERSE'),
+    line(HQ, join('DEEP ', deep(63)), 'DEEP-FAILED'),
+    line(HR, join('DEEPER ', deep(64)), 'TOO-DEEP'),
     line(HX, join('SPENT ', num(len(spend))), 'BOUND-SPENT'),
     line(HL, join('AF', 'TER'), 'NOTHING-AFTER-THE-BOUND'),
   ]);

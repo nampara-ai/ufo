@@ -567,3 +567,35 @@ What 3e found, and what it does not do:
 - Exporting an asset's original bytes (SPEC 5.2 **X4**) is not built.
 - The independent reader, unmodified, replays the conservation of all four
   commits of `vectors/asset.ufx`, and finds each file's exact bytes.
+
+## 3f: grid, data, and a file's own formulas and handlers (2026-11-23)
+
+| | Whole kernel (`size.mjs`) | Added |
+| --- | ---: | ---: |
+| After 3e | 124 121 | |
+| 3f. Grid layout and `each` over a data object in the kernel proper; an environment of its own for what a file presents; the bounds of F2 by size and depth; `number`; `get` by ref; handlers of a file (`set`, `propose`); a proposal handed to the tools and applied through the gate | 130 805 | 6 684 |
+
+After 3f, divided (`divide.mjs`): **base 125 533 bytes** compressed (122.6 KiB
+of 128; 5 539 bytes are left), printer 5 019, agent 3 714; the whole
+132 512; the division costs 1 754. Two clean divisions give the same bytes.
+The host is unchanged by 3f (10 046 bytes as shipped). The tools universe is
+16 338 bytes of 24 576: the panel that asks cost about 2 200.
+
+The outline measured grid and data at 3 236 together. What the outline did
+not have, about 3 450: the file's own environment and state, the bounds,
+telling the file's items from the tools', the handler of a file, stating a
+proposal and describing it in words for the person, applying it with its
+decision and what asked, and `number`. Unifying the single `set` with the
+proposal path took 774 back.
+
+Not built, and so not in these figures: a grid's `rows`, `row`, `col`,
+`span` and `align` (cells fill in order; a row is as tall as its tallest
+cell); proposals other than `set`s of one object; every operator beyond the
+base's (the formulas component); a formula in a cell of a data object.
+
+If the base needs the room: the applying of a proposal, the handler's
+`propose` and `number` could be a component carried by files with values to
+edit, as the owner allowed. By the sizes of those functions before
+optimisation, scaled by the base's ratio, that is about 2.8 KB. It is an
+estimate, not a measurement.
+

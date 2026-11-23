@@ -13,9 +13,10 @@ Please record what actually happens.
 
 | File | What it is |
 | --- | --- |
-| `compose.ufx.html` | the test document (*The Quarterly Review*) as exported: 202 119 bytes. Its pack carries the tools (the words at the top and everything they do) as a universe nested in it |
-| `compose-edited.ufx.html` | the same after edits by "Ada Tester", saved by the page itself in the test run with "For people working on this" chosen: everything, with its working history: 241 972 bytes |
-| `compose-published.ufx.html` | the same state, saved with "For readers" chosen: the document and who made it, with the working history withheld: 193 464 bytes |
+| `compose.ufx.html` | the test document (*The Quarterly Review*) as exported: 222 909 bytes. Its pack carries the tools (the words at the top and everything they do) as a universe nested in it |
+| `compose-edited.ufx.html` | the same after edits by "Ada Tester", saved by the page itself in the test run with "For people working on this" chosen: everything, with its working history: 263 350 bytes |
+| `compose-published.ufx.html` | the same state, saved with "For readers" chosen: the document and who made it, with the working history withheld: 212 462 bytes |
+| `table.ufx.html` | a short document with a table, for the ninth thing to try, below: 226 630 bytes |
 | `index.html` | a plain page linking them, for hosting (it asks search engines not to index it) |
 
 Hosted address used below (a placeholder until the files are put there):
@@ -121,6 +122,82 @@ On a small phone the panel of step 4 may be taller than the screen. The
 part held at the top then scrolls within itself: drag inside it to reach
 **Save this copy**. *Expectation:* this works; say if the panel's lower
 part cannot be reached.
+
+## Adding a file
+
+An eighth thing to try, on any route where step 3 worked, with any of
+the files.
+
+1. Tap **Edit** and give your name. A new word appears under the name:
+   **Add a file**.
+2. Tap **Add a file**. *Expectation:* the phone's own chooser opens
+   (Photos, Files, or the camera, as the phone offers). Choose a small
+   photo or any file.
+3. *Expectation:* the lines at the top say "Added (its name): (its
+   kind), (so many) bytes, kept exactly as given, recorded as added by
+   (your name). Nothing in the document uses it yet: it stays with the
+   working history, and a copy for readers does not carry it. Not yet in
+   a file." The document does not change: placing a file in the document
+   is not built.
+4. Tap **Add a file** again and close the chooser without choosing.
+   *Expectation:* nothing changes.
+5. Tap **Changes**, then **Undo my last change**. *Expectation:* "Undone:
+   your change o:…".
+
+| Step | Result (passed / failed / not attempted) | What I saw |
+| --- | --- | --- |
+| Add a file opens the phone's chooser | | |
+| The chosen file is reported with its name, kind and size | | |
+| Closing the chooser with nothing chosen changes nothing | | |
+| Undo my last change undoes the adding | | |
+
+What kind of chooser a phone opens for a page's request, and whether a
+photo is handed over as it is or converted first (an iPhone may hand a
+JPEG where the photo is HEIC), is not known here. Please note the kind
+the line reports.
+
+## A table, and a document that asks to change itself
+
+A ninth thing to try: `table.ufx.html`. It is a short document with a
+table of three rows, a total, and a word, **Show the note**.
+
+1. Open it. *Expectation:* "Costs", a line of text, a table with the
+   headings Item, Amount, Paid and three rows, then "Total: 195.50" and
+   the word **Show the note**.
+2. Tap **Show the note**. *Expectation:* a line appears, "Note: the
+   figures are in euros."; nothing is recorded as a change, and the
+   "State c:…" line is as it was. Tap it again and the line goes.
+3. Tap **not paid** in the second row. *Expectation:* the table does not
+   change. A panel opens among the lines at the top: "The document asks
+   to change itself", "Set rows.r2.paid of o:b4b4b4b4: from no to yes.",
+   and two words, **Apply** and **Dismiss**.
+4. Tap **Dismiss**. *Expectation:* the panel goes; nothing changed.
+5. Tap **Edit**, give your name, tap **not paid** again, then **Apply**.
+   *Expectation:* the second row now says "paid", and the lines at the
+   top say "Changed, and recorded as change o:… by (your name)."
+6. Still with Edit on, tap the figure **45.50**. *Expectation:* the
+   phone's keyboard opens on a field holding "45.50". Replace it with
+   50 and tap **Done**. The panel asks: "Set rows.r2.amount of
+   o:b4b4b4b4: from 45.5 to 50." Tap **Apply**: the row says "50.00" and
+   the total "Total: 200.00".
+7. Tap a figure and type something that is not a number, such as
+   "fifty". *Expectation:* nothing is asked and nothing changes.
+
+| Step | Result (passed / failed / not attempted) | What I saw |
+| --- | --- | --- |
+| The table is drawn in three columns, with the total | | |
+| Show the note shows and hides a line, and records nothing | | |
+| A tap on "not paid" asks first, in the lines at the top | | |
+| Dismiss: nothing changes | | |
+| Apply, in my name: the row changes, and it is recorded as mine | | |
+| A figure typed: asked, applied, and the total follows | | |
+| A word typed for a figure: nothing is asked | | |
+
+With VoiceOver: the table should be announced as a table of four rows
+and three columns, named "Costs"; moving through it should read each
+heading and each cell; "not paid" should be reached as something that
+can be activated; and the panel should be reached as a region named "A
+change the document asks for". None of this has been heard.
 
 ## With a keyboard (a computer, or a keyboard attached to a tablet)
 
