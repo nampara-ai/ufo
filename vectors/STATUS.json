@@ -182,8 +182,11 @@
    "note": "the author's kernel only"
   },
   "provisional/edits.json": {
-   "status": "provisional",
-   "note": "packs written by the author's kernel; an independent reader replayed each change with conservation ok, which checks the operations and not the attribution stated here"
+   "status": "reproduced",
+   "by": [
+    "the second independent reader of 2026-11-22, in a third round on 2026-11-23: it worked out the attribution and the block positions from the revised core alone, then compared"
+   ],
+   "note": "the entries for edit-one-word.ufx and edit-paragraph-start.ufx. Positions are half-open. Any entry added later is provisional until it is checked the same way"
   },
   "provisional/envelope.json": {
    "status": "provisional",
