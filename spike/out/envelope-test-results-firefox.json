@@ -29,7 +29,7 @@
    "no tools": "passed",
    "safeguard": "passed",
    "decisions": "passed",
-   "components": "failed",
+   "components": "passed",
    "sent on": "passed"
   },
   "http origin": {
@@ -95,9 +95,9 @@
   }
  },
  "host": {
-  "lines": 275,
-  "source_bytes": 19234,
-  "shipped_bytes": 9551,
+  "lines": 276,
+  "source_bytes": 19481,
+  "shipped_bytes": 9644,
   "longest": 150,
   "minifier": "terser 5.51.4",
   "options": "--module --ecma 2020 --compress --mangle",
@@ -124,5 +124,5 @@
   ]
  },
  "total": 250,
- "failures": 1
+ "failures": 0
 }

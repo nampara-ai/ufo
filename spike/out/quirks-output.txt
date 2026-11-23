@@ -1,23 +1,25 @@
 
-quirks corpus, 7 entries; engines chromium 153.0.8010.12, firefox 155.0, webkit 26.6. A naive page "fails" or "passes"; (!) marks one that did not do what the index records.
-entry                                    | chromium     | firefox      | webkit      
-00-envelope                              | pass         | pass         | pass        
-01-no-icon-request                       | pass         | pass         | pass        
-  01-no-icon-request.naive.html          | passes       | fails        | passes      
-  01-no-icon-request.naive2.html         | fails        | fails        | passes      
-02-look-without-style                    | pass         | pass         | pass        
-  02-look-without-style.naive.html       | fails        | fails        | fails       
-  02-look-without-style.naive2.html      | fails        | fails        | fails       
-03-save-as-bytes                         | pass         | pass         | pass        
-  03-save-as-bytes.naive.html            | passes       | passes       | passes      
-04-edit-positions                        | pass         | pass         | pass        
-  04-edit-positions.naive.html           | passes       | passes       | fails       
-  04-edit-positions.naive2.html          | fails        | fails        | fails       
-05-touch-beside-a-button                 | pass         | pass         | pass        
-  05-touch-beside-a-button.naive.html    | passes       | passes       | fails       
-06-focus-lost-while-placing              | pass         | pass         | pass        
-  06-focus-lost-while-placing.naive.html | fails        | passes       | passes      
-harness-screenshot                       | clean        | clean        | 1 violation 
-harness-local-file-request               | 1 reported   | 0 reported   | 1 reported  
+quirks corpus, 8 entries; engines chromium 153.0.8010.12, firefox 155.0, webkit 26.6. A naive page "fails" or "passes"; (!) marks one that did not do what the index records.
+entry                                      | chromium     | firefox      | webkit      
+00-envelope                                | pass         | pass         | pass        
+01-no-icon-request                         | pass         | pass         | pass        
+  01-no-icon-request.naive.html            | passes       | fails        | passes      
+  01-no-icon-request.naive2.html           | fails        | fails        | passes      
+02-look-without-style                      | pass         | pass         | pass        
+  02-look-without-style.naive.html         | fails        | fails        | fails       
+  02-look-without-style.naive2.html        | fails        | fails        | fails       
+03-save-as-bytes                           | pass         | pass         | pass        
+  03-save-as-bytes.naive.html              | passes       | passes       | passes      
+04-edit-positions                          | pass         | pass         | pass        
+  04-edit-positions.naive.html             | passes       | passes       | fails       
+  04-edit-positions.naive2.html            | fails        | fails        | fails       
+05-touch-beside-a-button                   | pass         | pass         | pass        
+  05-touch-beside-a-button.naive.html      | passes       | passes       | fails       
+06-focus-lost-while-placing                | pass         | pass         | pass        
+  06-focus-lost-while-placing.naive.html   | fails        | passes       | passes      
+07-failed-inflation-is-silent              | pass         | pass         | pass        
+  07-failed-inflation-is-silent.naive.html | passes       | fails        | passes      
+harness-screenshot                         | clean        | clean        | 1 violation 
+harness-local-file-request                 | 1 reported   | 0 reported   | 1 reported  
 
-21 of 21 passed; every naive page behaved as the index records
+24 of 24 passed; every naive page behaved as the index records

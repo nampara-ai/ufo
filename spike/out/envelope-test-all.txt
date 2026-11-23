@@ -1,6 +1,6 @@
-chromium: running (output in spike/out/envelope-test-output-chromium.txt) … 246 of 246 passed, exit 0, 88 s
-firefox: running (output in spike/out/envelope-test-output-firefox.txt) … 246 of 246 passed, exit 0, 107 s
-webkit: running (output in spike/out/envelope-test-output-webkit.txt) … 246 of 246 passed, exit 0, 102 s
+chromium: running (output in spike/out/envelope-test-output-chromium.txt) … 250 of 250 passed, exit 0, 90 s
+firefox: running (output in spike/out/envelope-test-output-firefox.txt) … 250 of 250 passed, exit 0, 110 s
+webkit: running (output in spike/out/envelope-test-output-webkit.txt) … 250 of 250 passed, exit 0, 103 s
 
 step × context × engine. In each cell one letter an engine, in the order chromium, firefox, webkit: p passed, F FAILED, - not attempted there.
 The phones are each engine's own: chromium: Pixel 7 (412 by 839) and Galaxy S8 (360 by 740); firefox: Firefox, 412 by 839 at 2.625, touch and Firefox, 360 by 740 at 3, touch; webkit: iPhone 14 (390 by 664) and iPhone SE (320 by 568).
@@ -26,29 +26,32 @@ reopened        | ---  | ppp              | ppp         | ppp           | ppp   
 no tools        | ---  | ppp              | ---         | ---           | ---            | ---         | ---    | ---       
 safeguard       | ---  | ppp              | ---         | ---           | ---            | ---         | ---    | ---       
 decisions       | ---  | ppp              | ---         | ---           | ---            | ---         | ---    | ---       
+components      | ---  | ppp              | ---         | ---           | ---            | ---         | ---    | ---       
 sent on         | ---  | ppp              | ppp         | ---           | ---            | ---         | ---    | ---       
 static face     | ---  | ---              | ---         | ---           | ---            | ppp         | ---    | ---       
 reader          | ---  | ---              | ---         | ---           | ---            | ---         | ppp    | ---       
 valid           | ---  | ---              | ---         | ---           | ---            | ---         | ---    | ppp       
 quirks          | ppp  | ---              | ---         | ---           | ---            | ---         | ---    | ---       
 
-totals: chromium 246 of 246 checks passed; firefox 246 of 246 checks passed; webkit 246 of 246 checks passed; quirks corpus 21 of 21
-entry                                    | chromium     | firefox      | webkit      
-00-envelope                              | pass         | pass         | pass        
-01-no-icon-request                       | pass         | pass         | pass        
-  01-no-icon-request.naive.html          | passes       | fails        | passes      
-  01-no-icon-request.naive2.html         | fails        | fails        | passes      
-02-look-without-style                    | pass         | pass         | pass        
-  02-look-without-style.naive.html       | fails        | fails        | fails       
-  02-look-without-style.naive2.html      | fails        | fails        | fails       
-03-save-as-bytes                         | pass         | pass         | pass        
-  03-save-as-bytes.naive.html            | passes       | passes       | passes      
-04-edit-positions                        | pass         | pass         | pass        
-  04-edit-positions.naive.html           | passes       | passes       | fails       
-  04-edit-positions.naive2.html          | fails        | fails        | fails       
-05-touch-beside-a-button                 | pass         | pass         | pass        
-  05-touch-beside-a-button.naive.html    | passes       | passes       | fails       
-06-focus-lost-while-placing              | pass         | pass         | pass        
-  06-focus-lost-while-placing.naive.html | fails        | passes       | passes      
-harness-screenshot                       | clean        | clean        | 1 violation 
-harness-local-file-request               | 1 reported   | 0 reported   | 1 reported  
+totals: chromium 250 of 250 checks passed; firefox 250 of 250 checks passed; webkit 250 of 250 checks passed; quirks corpus 24 of 24
+entry                                      | chromium     | firefox      | webkit      
+00-envelope                                | pass         | pass         | pass        
+01-no-icon-request                         | pass         | pass         | pass        
+  01-no-icon-request.naive.html            | passes       | fails        | passes      
+  01-no-icon-request.naive2.html           | fails        | fails        | passes      
+02-look-without-style                      | pass         | pass         | pass        
+  02-look-without-style.naive.html         | fails        | fails        | fails       
+  02-look-without-style.naive2.html        | fails        | fails        | fails       
+03-save-as-bytes                           | pass         | pass         | pass        
+  03-save-as-bytes.naive.html              | passes       | passes       | passes      
+04-edit-positions                          | pass         | pass         | pass        
+  04-edit-positions.naive.html             | passes       | passes       | fails       
+  04-edit-positions.naive2.html            | fails        | fails        | fails       
+05-touch-beside-a-button                   | pass         | pass         | pass        
+  05-touch-beside-a-button.naive.html      | passes       | passes       | fails       
+06-focus-lost-while-placing                | pass         | pass         | pass        
+  06-focus-lost-while-placing.naive.html   | fails        | passes       | passes      
+07-failed-inflation-is-silent              | pass         | pass         | pass        
+  07-failed-inflation-is-silent.naive.html | passes       | fails        | passes      
+harness-screenshot                         | clean        | clean        | 1 violation 
+harness-local-file-request                 | 1 reported   | 0 reported   | 1 reported  

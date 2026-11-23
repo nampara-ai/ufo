@@ -13,9 +13,9 @@ Please record what actually happens.
 
 | File | What it is |
 | --- | --- |
-| `compose.ufx.html` | the test document (*The Quarterly Review*) as exported: 225 235 bytes. Its pack carries the tools (the words at the top and everything they do) as a universe nested in it |
-| `compose-edited.ufx.html` | the same after edits by "Ada Tester", saved by the page itself in the test run with "For people working on this" chosen: everything, with its working history: 263 700 bytes |
-| `compose-published.ufx.html` | the same state, saved with "For readers" chosen: the document and who made it, with the working history withheld: 203 984 bytes |
+| `compose.ufx.html` | the test document (*The Quarterly Review*) as exported: 202 119 bytes. Its pack carries the tools (the words at the top and everything they do) as a universe nested in it |
+| `compose-edited.ufx.html` | the same after edits by "Ada Tester", saved by the page itself in the test run with "For people working on this" chosen: everything, with its working history: 241 972 bytes |
+| `compose-published.ufx.html` | the same state, saved with "For readers" chosen: the document and who made it, with the working history withheld: 193 464 bytes |
 | `index.html` | a plain page linking them, for hosting (it asks search engines not to index it) |
 
 Hosted address used below (a placeholder until the files are put there):
