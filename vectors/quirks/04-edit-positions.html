@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!-- Each change in the text box is reported as (at, removed, inserted): from where the caret was before, or where an input method began, to where the selection ends after; the report is checked against the text before and after, and where it does not account for the change the whole text is reported instead. Every engine: the reports add up to the text, whatever is typed, removed, pasted, cut or undone. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>04 where a text box was changed</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-1As/syZdflFwm9RNT5Bc1XLOhaIIKoCrNK7y02iNw3A='; style-src 'sha256-VwJYb9DpUq9ftUDHbdhcTMn6sWSJ0JAGjwpLX+Yhjss='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}</style>
+</head><body>
+<h1>04 where a text box was changed</h1>
+<p>Each change in the text box is reported as (at, removed, inserted): from where the caret was before, or where an input method began, to where the selection ends after; the report is checked against the text before and after, and where it does not account for the change the whole text is reported instead. Every engine: the reports add up to the text, whatever is typed, removed, pasted, cut or undone.</p>
+<p>Result: <span id="result">not finished</span></p>
+<textarea id="t" rows="4" cols="60" aria-label="text">Revenue grew in every region this quarter, and for the first time the growth came mostly from customers.</textarea><p><button type="button" id="done">Done</button></p>
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+const area = document.getElementById('t'), problems = []; let held = area.value, text = [...held], sel = null, comp = null, placed = 0, whole = 0;
+const count = s => [...s].length;
+const report = ev => { if ('at' in ev) { placed++; text.splice(ev.at, ev.del, ...ev.ins); } else { whole++; text = [...ev.s]; } };   // what a kernel does with a report
+area.addEventListener('beforeinput', () => { sel = area.selectionStart; });
+area.addEventListener('compositionstart', () => { comp = area.selectionStart; });
+area.addEventListener('compositionend', () => setTimeout(() => { comp = null; }));
+area.addEventListener('input', () => {
+  const was = held, now = area.value, to = area.selectionStart, end = area.selectionEnd, at = Math.min(sel ?? to, comp ?? to, to);
+  const ins = now.slice(at, end), del = was.length - now.length + ins.length;
+  const found = del >= 0 && was.slice(0, at) === now.slice(0, at) && was.slice(at + del) === now.slice(end);
+  held = now; sel = null;
+  report(found ? { at: count(was.slice(0, at)), del: count(was.slice(at, at + del)), ins } : { s: now });
+});
+document.getElementById('done').onclick = () => { if (text.join('') !== area.value) problems.push('the reports do not add up to the text: ' + JSON.stringify(text.join('').slice(0, 40)) + ' is not ' + JSON.stringify(area.value.slice(0, 40)));
+  document.documentElement.dataset.detail = placed + ' with a position, ' + whole + ' without'; finish(problems, 50); };</script></body></html>

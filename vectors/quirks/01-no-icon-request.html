@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<!-- The page names its own icon, an empty data: address, and its policy allows images from data: and nowhere else. Every engine: no request beside the page, no violation, nothing on the console. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>01 no icon request</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Bt89UK1Eaw9jC7OsIWR/2nWuSSkZYjypIEpxO9TTggw='; style-src 'sha256-VwJYb9DpUq9ftUDHbdhcTMn6sWSJ0JAGjwpLX+Yhjss='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}</style>
+</head><body>
+<h1>01 no icon request</h1>
+<p>The page names its own icon, an empty data: address, and its policy allows images from data: and nowhere else. Every engine: no request beside the page, no violation, nothing on the console.</p>
+<p>Result: <span id="result">not finished</span></p>
+
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+finish();</script></body></html>

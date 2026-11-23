@@ -1,7 +1,8 @@
 // The web binding of the UFO player (SPEC-PLAYER 9.1): all the script this file ships.
-// It knows encoded values, the kernel's entry points, the display-list items it can draw, raw input,
-// how to measure and inflate, a text-entry widget, and how to hand a file to the person.
+// It knows encoded values, the kernel's entry points, the display-list items it can draw and the roles a group of them
+// may carry, raw input, how to measure and inflate, a text-entry widget, and how to hand a file to the person.
 // What is shown, and what any of it means, is the kernel's business and is not known here.
+// Nothing here writes a style: how the page looks is its style sheet's alone. This script changes attributes and text.
 const $ = s => document.querySelector(s), U8 = Uint8Array, enc = new TextEncoder(), dec = new TextDecoder();
 
 // ---- encoded values (SPEC 1.2), as much as a binding needs ----
@@ -103,6 +104,56 @@ function draw(g, list) {
   }
 }
 
+// ---- the same list for whoever does not see it (9.2: `role`, `label`, `level`): its nodes, as elements ----
+// A `push` that carries a role opens a node, and a later group of the same `id` goes on with it. The text of a node is that
+// of the text items in it, each with what it says comes `then`. Elements are kept from one drawing to the next and only
+// what differs is touched, so that what has the focus keeps it and a place in the reading is not lost.
+const EL = { heading: 'h1', paragraph: 'p', quote: 'blockquote', code: 'pre', button: 'button', item: 'div listitem', link: 'a link' };
+const attr = (el, name, v) => v === undefined ? el.removeAttribute(name) : el.getAttribute(name) !== String(v) && el.setAttribute(name, v);
+function element(it) {   // the element of a role; a role with none of its own is handed on as it is named
+  const [tag, role] = (EL[it.role] || 'div ' + it.role).split(' ');
+  const el = document.createElement(it.role === 'heading' ? 'h' + Math.min(it.level || 1, 6) : tag);
+  attr(el, 'role', role);
+  if (tag === 'button') el.type = tag;
+  return el;
+}
+function nodes(root, list) {
+  const open = [root], pushed = [], seen = new Set(), at = [[1, 1, 0, 0]], kept = root.kept || new Map();
+  root.next = root.firstChild;
+  for (const [kind, it] of list) {
+    const p = open[open.length - 1], m = at[at.length - 1], t = it?.m;
+    if (kind === 'push') {
+      at.push(t ? [m[0] * t[0], m[1] * t[3], m[0] * t[4] + m[2], m[1] * t[5] + m[3]] : m);
+      let el = null;
+      if (it.role) {
+        const is = it.role + (it.level || '');
+        el = kept.get(it.id);
+        if (el?.is !== is) Object.assign(el = element(it), { is, node: it.id });
+        if (!seen.has(el)) {   // met for the first time in this list: put where the list has it, if it is not there
+          seen.add(el);
+          if (p.next === el) p.next = el.nextSibling; else p.insertBefore(el, p.next);
+          el.next = el.firstChild; el.xy = null;
+        }
+        attr(el, 'aria-label', it.label); attr(el, 'lang', it.lang);
+        attr(el, 'aria-pressed', it.pressed); attr(el, 'aria-current', it.current);
+        // what can be pressed can be reached by the keyboard; a button that cannot be is passed over and says so
+        attr(el, 'tabindex', it.press ? 0 : el.type ? -1 : undefined); attr(el, 'aria-disabled', it.press || !el.type ? undefined : true);
+        open.push(el);
+      }
+      pushed.push(el);
+    } else if (kind === 'pop') {
+      at.pop();
+      if (pushed.pop()) open.pop();
+    } else if (kind === 'text') {
+      const s = it.s + (it.then || ''), old = p.next;
+      p.xy ||= [m[0] * (it.x + it.adv / 2) + m[2], m[1] * (it.y - it.size / 3) + m[3]];   // a point on it: where a press on the node is
+      if (old?.nodeType === 3) { if (old.data !== s) old.data = s; p.next = old.nextSibling; } else p.insertBefore(new Text(s), old);
+    }
+  }
+  for (const el of [root, ...seen]) while (el.next) { const gone = el.next; el.next = gone.nextSibling; gone.remove(); }
+  root.kept = new Map(Array.from(seen, el => [el.node, el]));
+}
+
 // ---- what the host supplies (SPEC-PLAYER 9.3): text measure, inflate, time, random bytes ----
 const ruler = document.createElement('canvas').getContext('2d');
 function measure({ piece, at }) {   // the advance of a piece up to each offset, its ascent and descent
@@ -129,28 +180,33 @@ const imports = {
 };
 
 // ---- effects: what the kernel asks of the host after each input event ----
-const player = $('#ufo-player'), canvas = $('#ufo-player canvas'), entry = $('#ufo-entry'), area = $('#ufo-entry textarea');
-let shown = [], mounted = 0, width = 0;
+const player = $('#ufo-player'), sheets = [...player.querySelectorAll('canvas')], entry = $('#ufo-entry'), area = $('#ufo-entry textarea');
+let shown = [], mounted = 0, width = 0, back = null, held = '', sel = null, comp = null;
 const DO = {
-  draw({ list, w, h }) {   // a display list, on a canvas of w by h CSS pixels at the device's own density
-    const r = globalThis.devicePixelRatio || 1, g = canvas.getContext('2d');
-    canvas.width = Math.ceil(w * r); canvas.height = Math.ceil(h * r);
-    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  draw({ on, list, w, h }) {   // a display list, on one of the page's canvases, w by h CSS pixels at the device's own density
+    const c = sheets[on], r = globalThis.devicePixelRatio || 1, g = c.getContext('2d');
+    c.width = Math.ceil(w * r); c.height = Math.ceil(h * r); c.w = w;   // how large it is on the page follows from these, by the style sheet
     g.setTransform(r, 0, 0, r, 0, 0);
-    draw(g, shown = list);
+    draw(g, shown[on] = list);
+    nodes(c.previousElementSibling, list);
   },
-  edit(e) {   // the text capability's edit: mount the text-entry widget on a rectangle, or take it away
+  edit(e) {   // the text capability's edit: mount the text-entry widget with a text, or take it away
     entry.hidden = !e;
-    if (!e) return;
-    mounted = e.id;
-    Object.assign(entry.style, { left: e.at[0] + 'px', top: e.at[1] + 'px', width: e.at[2] + 'px' });
-    area.style.font = fontOf(e); area.style.height = e.at[3] + 24 + 'px';
-    area.value = e.s;
+    if (!e) return back?.isConnected && back.focus();   // the focus goes back to where it was
+    mounted = e.id; back = document.activeElement;
+    area.rows = Math.min(12, Math.ceil(e.at[3] / e.size / 1.4) + 1);
+    area.value = e.s; held = area.value; sel = comp = null;
+    if (held !== e.s) send({ edit: mounted, s: held });   // the widget holds line ends its own way: say what it holds
     area.focus();
   },
-  deliver({ name, type, bytes }) {   // a file for the person: offered as a download
+  show({ on, at }) {   // bring a rectangle of a canvas into view, below whatever is held at the top
+    const c = sheets[on], k = c.clientWidth / c.w, top = c.getBoundingClientRect().top + at[1] * k, low = top + at[3] * k;
+    const head = on ? $('#ufo-top').getBoundingClientRect().bottom + 8 : 0, foot = innerHeight - 8;
+    if (top < head || low > foot) scrollBy(0, top < head || low - top > foot - head ? top - head : low - foot);
+  },
+  deliver({ name, bytes }) {   // a file for the person: offered as a download, as bytes of no declared kind, which nothing will try to show
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new File([bytes], name, { type })); a.download = name;
+    a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' })); a.download = name;
     a.click();
   },
   ask({ label }) { send({ answer: prompt(label) }); },   // something only the person can supply
@@ -158,9 +214,34 @@ const DO = {
 function send(event) {   // one raw input event to the kernel; then whatever it asks for, done blindly
   for (const [kind, v] of got(call('input', event)) || []) DO[kind]?.(v);
 }
-canvas.onclick = e => send({ press: [e.offsetX, e.offsetY] });
-$('#ufo-entry button').onclick = () => send({ edit: mounted, s: area.value });
-$('#ufo-entry button + button').onclick = () => send({ edit: mounted });
+// ---- raw input: presses, the keyboard's focus, what is done in the text-entry widget, the size of the view ----
+sheets.forEach((c, on) => {
+  const root = c.previousElementSibling, press = el => el?.xy && send({ press: el.xy, on });
+  c.addEventListener('click', e => send({ press: [e.offsetX, e.offsetY].map(x => x * c.w / c.clientWidth), on }));
+  root.addEventListener('click', e => press(e.target.closest('[tabindex="0"]')));   // a press on a node is a press on the point where it is drawn
+  root.addEventListener('keydown', e => {   // Enter or Space on what has the focus is a press; a button makes its own click of them
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.localName !== 'button') { e.preventDefault(); press(e.target); }
+  });
+  root.addEventListener('focusin', e => send({ focus: e.target.node, on }));
+  root.addEventListener('focusout', e => e.relatedTarget?.node || send({ focus: null, on }));
+});
+// Each change in the widget is reported with where it was, in scalar values of the text as it was held: from where the caret
+// was before (or where an input method began) to where the selection ends after. Where that does not account for the change,
+// or nothing said where the caret was, the whole text is reported and no position.
+const count = s => [...s].length;
+area.addEventListener('beforeinput', () => { sel = area.selectionStart; });
+area.addEventListener('compositionstart', () => { comp = area.selectionStart; });
+area.addEventListener('compositionend', () => setTimeout(() => { comp = null; }));
+area.addEventListener('input', () => {
+  const was = held, now = area.value, to = area.selectionStart, end = area.selectionEnd, at = Math.min(sel ?? to, comp ?? to, to);
+  const ins = now.slice(at, end), del = was.length - now.length + ins.length;
+  const found = del >= 0 && was.slice(0, at) === now.slice(0, at) && was.slice(at + del) === now.slice(end);
+  held = now; sel = null;
+  send(found ? { edit: mounted, at: count(was.slice(0, at)), del: count(was.slice(at, at + del)), ins } : { edit: mounted, s: now });
+});
+area.addEventListener('keydown', e => e.key === 'Escape' && send({ edit: mounted, end: false }));
+$('#ufo-entry button').onclick = () => send({ edit: mounted, end: true, s: area.value });
+$('#ufo-entry button + button').onclick = () => send({ edit: mounted, end: false });
 const view = () => { if (ex && player.clientWidth !== width) send({ view: [width = player.clientWidth, innerHeight] }); };
 addEventListener('resize', view);
 

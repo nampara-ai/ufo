@@ -1,0 +1,13 @@
+chromium-desktop-saved-1.ufx: state b005577676acf273 by the final head; 6 commits, conservation ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+chromium-desktop-saved-2.ufx: state ad426864eecd030d by the final head; 7 commits, conservation ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+chromium-http-saved-1.ufx: state 9fad32754dfe3d9b by the final head; 11 commits, conservation ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+chromium-http-saved-2.ufx: state c1bfed57b3aa7096 by the final head; 12 commits, conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+chromium-phone-larger-saved-2.ufx: state 243061a68a7c005e by the final head; 7 commits, conservation ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+chromium-phone-smaller-saved-2.ufx: state 1ec8efbbb21a2922 by the final head; 7 commits, conservation ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-all-edits.ufx: state 15c33299360801b9 by the final head; 7 commits, conservation ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-edit-positioned.ufx: state a4a5e8c2173b395f by the final head; 2 commits, conservation ok ok; whole true; missing 0; index problems 0; reported {}
+node-many-edits.ufx: state 337aca21478f5b3d by the final head; 12 commits, conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-one-word.ufx: state 07964126cb8f3b69 by the final head; 2 commits, conservation ok ok; whole true; missing 0; index problems 0; reported {}
+node-paragraph-start.ufx: state 78e414e3082fbcc2 by the final head; 5 commits, conservation ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-two-words.ufx: state ff848e120ea7c93b by the final head; 6 commits, conservation ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+tools.ufx: state 06f9bc8dafc2d727 by the final head; 1 commits, conservation ok; whole true; missing 0; index problems 0; reported {}

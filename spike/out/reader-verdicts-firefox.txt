@@ -1,0 +1,13 @@
+firefox-desktop-saved-1.ufx: state f70119dfbaa909ba by the final head; 6 commits, conservation ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+firefox-desktop-saved-2.ufx: state 1c9d5a6885ec19f2 by the final head; 7 commits, conservation ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+firefox-http-saved-1.ufx: state dbfca2de20efff43 by the final head; 11 commits, conservation ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+firefox-http-saved-2.ufx: state d82bece77fd7ec76 by the final head; 12 commits, conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+firefox-phone-larger-saved-2.ufx: state 238b72d9f1bb3fd7 by the final head; 7 commits, conservation ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+firefox-phone-smaller-saved-2.ufx: state 0586a3fdefe98ac0 by the final head; 7 commits, conservation ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-all-edits.ufx: state 15c33299360801b9 by the final head; 7 commits, conservation ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-edit-positioned.ufx: state a4a5e8c2173b395f by the final head; 2 commits, conservation ok ok; whole true; missing 0; index problems 0; reported {}
+node-many-edits.ufx: state 337aca21478f5b3d by the final head; 12 commits, conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-one-word.ufx: state 07964126cb8f3b69 by the final head; 2 commits, conservation ok ok; whole true; missing 0; index problems 0; reported {}
+node-paragraph-start.ufx: state 78e414e3082fbcc2 by the final head; 5 commits, conservation ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-two-words.ufx: state ff848e120ea7c93b by the final head; 6 commits, conservation ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+tools.ufx: state 06f9bc8dafc2d727 by the final head; 1 commits, conservation ok; whole true; missing 0; index problems 0; reported {}

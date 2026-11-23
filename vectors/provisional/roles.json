@@ -1,0 +1,338 @@
+{
+ "status": {
+  "status": "provisional",
+  "note": "the author's kernel only"
+ },
+ "what": "the nodes of an accessibility tree (SPEC-PLAYER 9.2) for the universe in vectors/compose.ufx and for the tools universe of the web envelope spike, as the kernel's display lists carry them: exactly what a host must expose",
+ "how": "In a display list a `push` that carries `role` opens a node and its `pop` closes it; a later group with the same `id` goes on with the same node (a paragraph that runs over a page, a button broken over two lines). A node's text is the `s` of the text items directly in it, in list order, each followed by its `then` if it has one (the space after a list marker; the line break that ended a line). Here each node is given with everything its `push` says of it but `id`, which only tells nodes apart, and with `content`: its texts and the nodes in it, in reading order.",
+ "vocabulary": {
+  "role": "document, toolbar, button, status, region, heading, paragraph, list, item, quote, code, link. Of these 9.2 names heading, paragraph, list, item, link, button and region; a host hands any other on as it is named",
+  "level": "of a heading (1 to 6) and of an item (its depth of nesting, from 1)",
+  "label": "the name of a node whose text does not name it",
+  "lang": "the language of what it holds",
+  "ordered": "on a list whose first item is numbered",
+  "value": "on a numbered item: its number",
+  "own": "on an item whose marker is text of its own, neither the bullet nor a number",
+  "press": "pressing it does something: a host makes it reachable by the keyboard, and Enter or Space on it is a press at a point where it is drawn",
+  "pressed": "of a thing that is on or off: which",
+  "current": "of things that choose among several: whether this is the one chosen"
+ },
+ "measure": "synthetic, as in composition.json: the advance of a piece up to an offset is (the number of Unicode scalar values) × size × f, f being 0.6 for a monospaced font, otherwise 0.55 at weight 700 or more, otherwise 0.5; ascent 0.8 × size, descent 0.2 × size. The nodes do not depend on it, nor on the width: only where lines break does",
+ "pack": {
+  "file": "compose.ufx",
+  "sha256": "b6d514a293fef29961d2b5c5d67af6edeec76ee788b816c94a02ea90d35783f2"
+ },
+ "width": 480,
+ "document_face": [
+  {
+   "role": "heading",
+   "level": 1,
+   "content": [
+    "The Quarterly Review"
+   ]
+  },
+  {
+   "role": "paragraph",
+   "content": [
+    "Revenue grew in every region this quarter, and for the first time the growth came mostly from customers who had been with us for more than a year."
+   ]
+  },
+  {
+   "role": "list",
+   "content": [
+    {
+     "role": "item",
+     "level": 1,
+     "content": [
+      "• First point, short."
+     ]
+    },
+    {
+     "role": "item",
+     "level": 1,
+     "content": [
+      "• Second point, which runs long enough to need a second line at the width used here.",
+      {
+       "role": "list",
+       "ordered": true,
+       "content": [
+        {
+         "role": "item",
+         "level": 2,
+         "value": 1,
+         "content": [
+          "1. A numbered step."
+         ]
+        },
+        {
+         "role": "item",
+         "level": 2,
+         "value": 2,
+         "content": [
+          "2. Another numbered step."
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "role": "item",
+     "level": 1,
+     "content": [
+      "• Third point."
+     ]
+    }
+   ]
+  },
+  {
+   "role": "quote",
+   "content": [
+    "What gets measured gets managed, and what gets explained gets trusted."
+   ]
+  },
+  {
+   "role": "code",
+   "content": [
+    "total = sum(rows)\nprint(total)"
+   ]
+  },
+  {
+   "role": "heading",
+   "level": 2,
+   "content": [
+    "Method"
+   ]
+  },
+  {
+   "role": "paragraph",
+   "content": [
+    "Every figure in this section was taken from the ledger at the close of the quarter and has not been adjusted since."
+   ]
+  },
+  {
+   "role": "paragraph",
+   "content": [
+    "Where a number differs from the one reported last time, the difference is explained beside it and the earlier value is kept."
+   ]
+  },
+  {
+   "role": "paragraph",
+   "content": [
+    "Nothing here is a forecast. The next section says what the team expects, and why, and how sure it is."
+   ]
+  },
+  {
+   "role": "paragraph",
+   "content": [
+    "Readers who want the detail behind a line can open it: each row leads back to the entries it was summed from."
+   ]
+  },
+  {
+   "role": "paragraph",
+   "content": [
+    "The appendix lists what was left out and the reason for each omission, so that nothing is absent by accident."
+   ]
+  },
+  {
+   "role": "paragraph",
+   "content": [
+    "Corrections are welcome and are recorded with the name of whoever made them and the evidence they gave."
+   ]
+  }
+ ],
+ "tools": {
+  "pack": {
+   "file": "spike/envelope/tools.ufx (written by spike/envelope/mkpack.mjs)",
+   "sha256": "4923a2f8339981fd6ea25c6797836783ac881206b604daa6b3bdee9b484ab2bb"
+  },
+  "what": "the first of the reader's two lists (the tools, held in view; the second is the subject), at first, after a press on \"Pages\", and after a further press on \"Edit\". `current` and `pressed` are formulas over the presentation state in the tools universe; the kernel reports their values and knows nothing of what they mean",
+  "at_first": [
+   {
+    "lang": "en",
+    "role": "toolbar",
+    "label": "Tools",
+    "content": [
+     {
+      "role": "button",
+      "press": true,
+      "current": true,
+      "content": [
+       "Document"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "current": false,
+      "content": [
+       "Pages"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "current": false,
+      "content": [
+       "Text"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "pressed": false,
+      "content": [
+       "Edit"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "content": [
+       "Save"
+      ]
+     }
+    ]
+   },
+   {
+    "role": "status",
+    "content": []
+   }
+  ],
+  "after_pages": [
+   {
+    "lang": "en",
+    "role": "toolbar",
+    "label": "Tools",
+    "content": [
+     {
+      "role": "button",
+      "press": true,
+      "current": false,
+      "content": [
+       "Document"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "current": true,
+      "content": [
+       "Pages"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "current": false,
+      "content": [
+       "Text"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "pressed": false,
+      "content": [
+       "Edit"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "content": [
+       "Save"
+      ]
+     }
+    ]
+   },
+   {
+    "role": "status",
+    "content": []
+   }
+  ],
+  "after_edit": [
+   {
+    "lang": "en",
+    "role": "toolbar",
+    "label": "Tools",
+    "content": [
+     {
+      "role": "button",
+      "press": true,
+      "current": false,
+      "content": [
+       "Document"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "current": true,
+      "content": [
+       "Pages"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "current": false,
+      "content": [
+       "Text"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "pressed": true,
+      "content": [
+       "Edit"
+      ]
+     },
+     "   ",
+     {
+      "role": "button",
+      "press": true,
+      "content": [
+       "Save"
+      ]
+     }
+    ]
+   },
+   {
+    "role": "status",
+    "content": []
+   }
+  ],
+  "subject": {
+   "what": "the second list is one node, the Portal onto the subject, holding the nodes of compose.ufx in the face shown. While the Portal is editable every block of the subject says it can be pressed; in the pages face each page is a region",
+   "at_first": {
+    "role": "document",
+    "label": "The document these tools work on",
+    "blocks": 16,
+    "that_can_be_pressed": 0
+   },
+   "regions_after_pages": [
+    "Page 1",
+    "Page 2",
+    "Page 3",
+    "Page 4"
+   ],
+   "after_edit": {
+    "blocks": 16,
+    "that_can_be_pressed": 16
+   }
+  }
+ }
+}

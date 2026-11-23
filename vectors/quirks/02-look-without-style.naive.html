@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!-- Naive: the script writes a style attribute and makes a style element. Every engine (Chromium 153, Firefox 155, WebKit 26) refuses both under a policy that names styles by hash, reports style-src-attr and style-src-elem violations, and nothing moves. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>02 the look changes without a style being written</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-rFEQ9gmxJIvWxqj1xW9nZrPpcKU9GqulZb0M5QcDdBU='; style-src 'sha256-1ymVRFp86dnbHfmgoBLLSEyg76lYKH4Pd6AbKoV0DzU='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}.box{width:200px}.moved{margin-left:20px}canvas{display:block;width:100%;height:auto}[hidden]{display:none!important}</style>
+</head><body>
+<h1>02 the look changes without a style being written</h1>
+<p>Naive: the script writes a style attribute and makes a style element. Every engine (Chromium 153, Firefox 155, WebKit 26) refuses both under a policy that names styles by hash, reports style-src-attr and style-src-elem violations, and nothing moves.</p>
+<p>Result: <span id="result">not finished</span></p>
+<div class="box"><p id="p">a paragraph</p><p id="q">another</p><canvas id="c"></canvas><textarea id="t" rows="2"></textarea></div>
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+document.getElementById('p').setAttribute('style', 'margin-left:20px'); const s = document.createElement('style'); s.textContent = '#q{display:none}'; document.head.append(s);
+Object.assign(document.getElementById('c'), { width: 400, height: 100 }); document.getElementById('t').rows = 5;
+const p = document.getElementById('p'), q = document.getElementById('q'), c = document.getElementById('c'), t = document.getElementById('t'), problems = [];
+const css = (el, k) => getComputedStyle(el)[k];
+if (css(p, 'marginLeft') !== '20px') problems.push('the paragraph did not move: ' + css(p, 'marginLeft'));
+if (css(q, 'display') !== 'none') problems.push('the second paragraph is not hidden');
+if (c.clientWidth !== 200 || c.clientHeight !== 50) problems.push('the canvas is ' + c.clientWidth + ' by ' + c.clientHeight + ', not 200 by 50');
+if (t.rows !== 5) problems.push('the text box has not five rows');
+finish(problems);</script></body></html>

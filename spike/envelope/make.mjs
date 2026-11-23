@@ -10,9 +10,9 @@ const [packPath, outPath] = args; if (!outPath) { console.error('usage: make.mjs
 const pack = new Uint8Array(fs.readFileSync(packPath));
 const k = await start(kernelWasm(), (piece, s) => ({ adv: [...s].length * piece.size / 2, asc: piece.size * 0.8, desc: piece.size * 0.2 }), b => zlib.inflateRawSync(b));
 if (!await k.open(pack)) throw Error('the pack does not open');
-// the static face: the plain-text face, from the kernel, without the line breaks it begins with
+// the static face: the nodes of the primary face as markup, from the kernel. The title, unless given: the first line of the plain-text face
 const text = k.sample({ as: 'text' }).text.replace(/^\n+/, '');
-const parts = { ...fixedParts(pack, { title: title0 || text.split('\n').find(l => l.trim()) || 'Untitled', ...(toolsPath ? { tools: fs.readFileSync(toolsPath) } : {}) }), static: text, date };
+const parts = { ...fixedParts(pack, { title: title0 || text.split('\n').find(l => l.trim()) || 'Untitled', ...(toolsPath ? { tools: fs.readFileSync(toolsPath) } : {}) }), 'static-html': k.sample({ as: 'static' }).html, date };
 const made = k.envelope(parts); if (made.refused) throw Error('no envelope: ' + made.refused);
 fs.writeFileSync(outPath, made.text);
 const n = s => Buffer.byteLength(s), report = { file: outPath, total: n(made.text), gzip: zlib.gzipSync(made.text, { level: 9 }).length, parts: Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, n(v)])) };

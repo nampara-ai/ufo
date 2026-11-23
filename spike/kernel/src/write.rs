@@ -2,7 +2,7 @@
 // positions, replayed on the parent state by the generic rule, compared, and only then written:
 // the revision, the change and its veiled work (1.4), the object map (1.6), the commit.
 // Also the text of a web envelope's pack element read back (SPEC-TRAVEL 13.2).
-use crate::diff::diff;
+use crate::diff::{diff, Edit};
 use crate::pack::*;
 use crate::query::{hex, objects, runs, Run};
 use crate::value::*;
@@ -225,12 +225,14 @@ pub fn propose(pk: &mut Pack, q: &V) -> Result<V, &'static str> {
         q.get("who").and_then(|x| x.s()), int("time"), q.get("random").and_then(|x| x.b()).filter(|b| b.len() == 64)) else {
         return Err("arguments: o (16 bytes), lo, hi, ins (text), who (text), time, random (64 bytes)");
     };
-    edit(pk, id, lo as usize, hi as usize, ins, who, time, random)
+    edit(pk, id, lo as usize, hi as usize, ins, None, who, time, random)
 }
 /// The same, by arguments. The stretch is compared with what it is to read and only the difference
 /// is written (L1): one `splice` for each run of scalar values removed or inserted (diff.rs), all in
-/// one change. `random` is 64 bytes: the change's identity, then three salts.
-pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+/// one change. Or, where it is known where the stretch was changed, `given` says so, and `ins` is not
+/// looked at: edits in order and apart, with positions in the stretch (tool.rs, `net`). `random` is
+/// 64 bytes: the change's identity, then three salts.
+pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Option<Vec<Edit>>, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
     if pk.unread_tail != 0 {
         return Err("the pack was recovered after an interrupted write (2.3): this spike does not truncate it and append (P7)");
     }
@@ -260,9 +262,16 @@ pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, who: &str, t
         return Err("positions out of range");
     }
     let wanted: Vec<char> = ins.chars().collect();
-    let mut edits = diff(&chars[lo..hi], &wanted);
+    let mut edits = given.unwrap_or_else(|| diff(&chars[lo..hi], &wanted));
     if edits.is_empty() {
         return Err("nothing to change");
+    }
+    let mut end = 0;
+    for e in &edits {
+        if e.lo < end || e.hi < e.lo || e.hi > hi - lo || (e.hi == e.lo && e.ins.is_empty()) {
+            return Err("the edits given are not in order, apart and within the stretch");
+        }
+        end = e.hi + 1;
     }
     let change: Id = random.get(..16).and_then(|r| r.try_into().ok()).filter(|_| random.len() == 64).ok_or("random: 64 bytes")?;
     let mut ents = objects(pk, &parent);

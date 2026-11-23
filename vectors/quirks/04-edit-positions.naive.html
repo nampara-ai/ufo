@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!-- Naive: the caret after the change is taken as the end of what was inserted, and the report is not checked. WebKit 26 leaves the text an undo brings back selected, so the caret is at its start: the report is wrong and the reports no longer add up. Chromium 153 and Firefox 155 put the caret after it. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>04 where a text box was changed</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-N101jLcNWw4WlzsmScaBAIVu46dGRJfVxy3lbykydzk='; style-src 'sha256-VwJYb9DpUq9ftUDHbdhcTMn6sWSJ0JAGjwpLX+Yhjss='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}</style>
+</head><body>
+<h1>04 where a text box was changed</h1>
+<p>Naive: the caret after the change is taken as the end of what was inserted, and the report is not checked. WebKit 26 leaves the text an undo brings back selected, so the caret is at its start: the report is wrong and the reports no longer add up. Chromium 153 and Firefox 155 put the caret after it.</p>
+<p>Result: <span id="result">not finished</span></p>
+<textarea id="t" rows="4" cols="60" aria-label="text">Revenue grew in every region this quarter, and for the first time the growth came mostly from customers.</textarea><p><button type="button" id="done">Done</button></p>
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+const area = document.getElementById('t'), problems = []; let held = area.value, text = [...held], sel = null, comp = null, placed = 0, whole = 0;
+const count = s => [...s].length;
+const report = ev => { if ('at' in ev) { placed++; text.splice(ev.at, ev.del, ...ev.ins); } else { whole++; text = [...ev.s]; } };   // what a kernel does with a report
+area.addEventListener('beforeinput', () => { sel = area.selectionStart; });
+area.addEventListener('compositionstart', () => { comp = area.selectionStart; });
+area.addEventListener('compositionend', () => setTimeout(() => { comp = null; }));
+area.addEventListener('input', () => {
+  const was = held, now = area.value, to = area.selectionStart, at = Math.min(sel ?? to, comp ?? to, to);
+  const ins = now.slice(at, to), del = Math.max(0, was.length - now.length + ins.length);
+  held = now; sel = null;
+  report({ at: count(was.slice(0, at)), del: count(was.slice(at, at + del)), ins });
+});
+document.getElementById('done').onclick = () => { if (text.join('') !== area.value) problems.push('the reports do not add up to the text: ' + JSON.stringify(text.join('').slice(0, 40)) + ' is not ' + JSON.stringify(area.value.slice(0, 40)));
+  document.documentElement.dataset.detail = placed + ' with a position, ' + whole + ' without'; finish(problems, 50); };</script></body></html>

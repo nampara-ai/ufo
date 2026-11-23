@@ -1,10 +1,12 @@
 // The web envelope (SPEC-TRAVEL 13.2) as a pure function of its parts: nothing here reads a page.
 //
-// Parts, each a text: title, date, static, style, script, kernel, kernel-hash, tools, pack, skeleton.
+// Parts, each a text: title, date, static, static-html, style, script, kernel, kernel-hash, tools, pack, skeleton.
+// A skeleton asks for those it has gaps for; `static-html` is the static face as markup (layout.rs, `html`),
+// which the kernel writes and nothing else may: its text is escaped there, and it is put in unchanged.
 // The envelope is the skeleton with each gap `{{name}}` replaced, in one pass from the start; what
 // is put in is never looked at for gaps. A gap's name runs to the next `}}`.
 //   {{title}} {{date}} {{static}}       the part, with & < > " written &amp; &lt; &gt; &quot;
-//   {{style}} {{script}} {{kernel}} {{kernel-hash}} {{tools}} {{pack}} {{skeleton}}   the part, unchanged
+//   {{style}} {{script}} {{kernel}} {{kernel-hash}} {{tools}} {{pack}} {{skeleton}} {{static-html}}   the part, unchanged
 //   {{csp:script}} {{csp:style}}        sha256- and the standard base64 of the SHA-256 of the part's UTF-8 bytes
 //   {{<}}                               the character <
 // Refused: a gap that is not closed, a name not listed here, a part that is absent or not a text,
@@ -41,7 +43,7 @@ pub fn envelope(parts: &V) -> Result<String, &'static str> {
                     }
                 }
             }
-            "style" | "script" | "kernel" | "kernel-hash" | "tools" | "pack" | "skeleton" => {
+            "style" | "script" | "kernel" | "kernel-hash" | "tools" | "pack" | "skeleton" | "static-html" => {
                 let p = part(name)?;
                 if holds(p, "</script") || holds(p, "<!--") || (name == "style" && holds(p, "</style")) {
                     return Err("a part to be put in unchanged holds text that would end or escape its element");

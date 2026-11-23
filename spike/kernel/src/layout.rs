@@ -1,6 +1,7 @@
 // From description to display list (SPEC-PRESENTATION 7.7): blocks, pieces, lines, rows, pages.
 // The plain-text face (8.3). Line breaking and bidirectional ordering are the kernel's own.
 use crate::pack::*;
+use crate::spell::{cat, put};
 use crate::value::*;
 use crate::{bidi, linebreak as lb};
 use alloc::boxed::Box;
@@ -17,6 +18,31 @@ pub struct Row {
     pub block: u32,
     pub line: u32,
     pub lines: u32,
+    pub path: Vec<V>, // the nodes it lies in, outermost first: what an accessibility tree needs (PLAYER 9.2)
+}
+/// A node: a group of items that is one thing to an accessibility tree. Its `push` carries the map:
+/// `role`, an `id` that tells nodes apart (a node drawn in several pieces has several groups of one
+/// `id`), and whatever of `level`, `label`, `lang`, `press`, `pressed`, `current` it has. A list says
+/// whether it is `ordered` (its first item is numbered); an item its `value` if it is numbered, or
+/// `own` if its marker is text of its own. The marker itself is a text item of the item, with no `src`.
+pub fn node(role: &str, id: i64, more: Vec<(&'static str, V)>) -> V {
+    let mut m = vec![("role", t(role)), ("id", V::Int(id))];
+    m.extend(more);
+    map(m)
+}
+/// What an object or a span says of itself that a node repeats: its name, its language, and how it
+/// stands (`pressed`, `current`: booleans, in a tools universe usually formulas over its state).
+fn said(v: &V, m: &mut Vec<(&'static str, V)>) {
+    for k in ["label", "lang"] {
+        if let Some(x) = v.get(k).filter(|x| x.s().is_some()) {
+            m.push((k, x.clone()));
+        }
+    }
+    for k in ["pressed", "current"] {
+        if let Some(V::Bool(b)) = v.get(k) {
+            m.push((k, V::Bool(*b)));
+        }
+    }
 }
 #[derive(Clone, PartialEq)]
 struct Style {
@@ -32,6 +58,7 @@ struct Style {
     start: f64, // indents, on the side lines start from and on the other
     end: f64,
     press: V, // in a tools universe: the key of the span whose `on` handler the characters lie under
+    node: V,  // the node the characters lie in, if an inline span makes one (a button, a link)
 }
 pub struct Ctx<'a> {
     pub pk: &'a Pack,
@@ -40,6 +67,17 @@ pub struct Ctx<'a> {
     pub blocks: u32,
     pub measure: &'a dyn Fn(&V) -> Option<V>,
     pub env: Option<&'a crate::tool::Env<'a>>, // what is composed is the reader's tools: formulas have values, items say what pressing them names
+    pub nodes: i64,  // nodes that are not blocks, numbered: an identity is twice a block's number, or twice this and one
+    pub press: bool, // a press on a block does something (its text is editable, 7.6): its node says so
+}
+impl<'a> Ctx<'a> {
+    pub fn new(pk: &'a Pack, measure: &'a dyn Fn(&V) -> Option<V>, env: Option<&'a crate::tool::Env<'a>>) -> Ctx<'a> {
+        Ctx { pk, root: pk.head, chain: Vec::new(), blocks: 0, measure, env, nodes: 0, press: false }
+    }
+    fn next(&mut self) -> i64 {
+        self.nodes += 1;
+        2 * self.nodes + 1
+    }
 }
 /// The block number of the row that holds a subject, as the reader's tools present it (tool.rs).
 pub const SUBJECT: u32 = u32::MAX;
@@ -50,17 +88,25 @@ fn black() -> V {
     V::L(vec![fl(0.0), fl(0.0), fl(0.0), fl(1.0)])
 }
 fn plain_style() -> Style {
-    Style { size: 16.0, weight: 400, slant: false, color: black(), font: V::L(vec![t("serif")]), line: 1.4, align: 0, dir: 0, deco: 0, start: 0.0, end: 0.0, press: V::Null }
+    Style { size: 16.0, weight: 400, slant: false, color: black(), font: V::L(vec![t("serif")]), line: 1.4, align: 0, dir: 0, deco: 0, start: 0.0, end: 0.0, press: V::Null, node: V::Null }
 }
 /// A row of the reader's own words, where an object cannot be presented.
 pub fn label_row(cx: &mut Ctx, s: &str, w: f64) -> Vec<Row> {
-    let st = Style { size: 13.0, slant: true, color: V::L(vec![fl(0.4), fl(0.4), fl(0.4), fl(1.0)]), font: V::L(vec![t("sans-serif")]), ..plain_style() };
-    own_rows(cx, s, &st, w)
+    said_rows(cx, s, w, "paragraph")
 }
-fn own_rows(cx: &mut Ctx, s: &str, st: &Style, w: f64) -> Vec<Row> {
+/// The same, as a node of the role given.
+pub fn said_rows(cx: &mut Ctx, s: &str, w: f64, role: &str) -> Vec<Row> {
+    let st = Style { size: 13.0, slant: true, color: V::L(vec![fl(0.4), fl(0.4), fl(0.4), fl(1.0)]), font: V::L(vec![t("sans-serif")]), ..plain_style() };
+    own_rows(cx, s, &st, w, role)
+}
+fn own_rows(cx: &mut Ctx, s: &str, st: &Style, w: f64, role: &str) -> Vec<Row> {
     let cs: Vec<char> = s.chars().collect();
     let n = cs.len();
-    lines(cx, &Seg { cs, st: vec![0; n], pos: vec![0; n], bx: vec![None; n] }, core::slice::from_ref(st), st, false, w, None).0
+    let mut rows = lines(cx, &Seg { cs, st: vec![0; n], pos: vec![0; n], bx: vec![None; n] }, core::slice::from_ref(st), st, false, w, None).0;
+    for r in rows.iter_mut() {
+        r.path = vec![node(role, 2 * r.block as i64, Vec::new())];
+    }
+    rows
 }
 /// The plain-text face (8.3) as rows: each of its lines set in a monospaced font and broken to the width.
 pub fn plain_rows(cx: &mut Ctx, s: &str, w: f64) -> Vec<Row> {
@@ -69,9 +115,9 @@ pub fn plain_rows(cx: &mut Ctx, s: &str, w: f64) -> Vec<Row> {
     for l in s.trim_end_matches('\n').split('\n') {
         if l.is_empty() {
             cx.blocks += 1;
-            rows.push(Row { h: st.size * st.line, gap: 0.0, items: Vec::new(), keep: false, block: cx.blocks, line: 0, lines: 1 });
+            rows.push(Row { h: st.size * st.line, gap: 0.0, items: Vec::new(), keep: false, block: cx.blocks, line: 0, lines: 1, path: Vec::new() });
         } else {
-            rows.append(&mut own_rows(cx, l, &st, w));
+            rows.append(&mut own_rows(cx, l, &st, w, "paragraph"));
         }
     }
     rows
@@ -89,7 +135,8 @@ pub fn paged(cx: &mut Ctx, root: &H, f: &Obj, params: &V, list: &mut Vec<V>) -> 
     let gap = 16.0;
     for (k, (a, b)) in pages.iter().enumerate() {
         let top = k as f64 * (ph + gap);
-        list.push(V::L(vec![t("push"), map(vec![("m", V::L(vec![fl(1.0), fl(0.0), fl(0.0), fl(1.0), fl(0.0), fl(top)])), ("clip", V::L(vec![fl(0.0), fl(0.0), fl(pw), fl(ph)]))])]));
+        let id = cx.next();
+        list.push(V::L(vec![t("push"), map(vec![("m", V::L(vec![fl(1.0), fl(0.0), fl(0.0), fl(1.0), fl(0.0), fl(top)])), ("clip", V::L(vec![fl(0.0), fl(0.0), fl(pw), fl(ph)])), ("role", t("region")), ("id", V::Int(id)), ("label", V::T(cat!("Page ", k + 1)))])]));
         list.push(V::L(vec![t("path"), map(vec![("d", V::L(vec![V::L(vec![t("M"), fl(0.0), fl(0.0)]), V::L(vec![t("L"), fl(pw), fl(0.0)]), V::L(vec![t("L"), fl(pw), fl(ph)]), V::L(vec![t("L"), fl(0.0), fl(ph)]), V::L(vec![t("Z")])])), ("fill", V::L(vec![fl(1.0), fl(1.0), fl(1.0), fl(1.0)]))])]));
         stack(&rows[*a..*b], ml, mt, list);
         list.push(V::L(vec![t("pop")]));
@@ -138,7 +185,7 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
             }
             m.push(("src", src(cx, uni, id, None)));
             cx.blocks += 1;
-            vec![Row { h: o.p.get("h").and_then(|h| h.f()).unwrap_or(0.0), gap: 0.0, items: vec![V::L(vec![t("path"), map(m)])], keep: false, block: cx.blocks, line: 0, lines: 1 }]
+            vec![Row { h: o.p.get("h").and_then(|h| h.f()).unwrap_or(0.0), gap: 0.0, items: vec![V::L(vec![t("path"), map(m)])], keep: false, block: cx.blocks, line: 0, lines: 1, path: Vec::new() }]
         }
         "ufo.portal" => portal(cx, uni, &o, w),
         _ => {
@@ -147,6 +194,15 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
         }
     };
     cx.chain.pop();
+    // an object that says what it is (`role`) is a node, and what it presents lies in it
+    if let Some(role) = o.p.get("role").and_then(|r| r.s()) {
+        let mut m = Vec::new();
+        said(&o.p, &mut m);
+        let n = node(role, cx.next(), m);
+        for r in rows.iter_mut() {
+            r.path.insert(0, n.clone());
+        }
+    }
     if let (4, Some(last)) = (margin.len(), rows.len().checked_sub(1)) {
         for (k, r) in rows.iter_mut().enumerate() {
             r.items.insert(0, V::L(vec![t("push"), map(vec![("m", V::L(vec![fl(1.0), fl(0.0), fl(0.0), fl(1.0), fl(margin[3]), fl(if k == 0 { margin[0] } else { 0.0 })]))])]));
@@ -258,10 +314,25 @@ fn restyle(st: &mut Style, v: &V) {
     word("decoration", ["none", "underline", "strike"], &mut st.deco);
 }
 /// In a tools universe, a span with an `on` handler gives its key to the characters under it.
-fn pressed(cx: &Ctx, st: &mut Style, s: &Span) {
-    if cx.env.is_some() && s.v.get("on").is_some() {
+fn pressed(cx: &Ctx, st: &mut Style, s: &Span) -> bool {
+    let on = cx.env.is_some() && s.v.get("on").is_some();
+    if on {
         st.press = t(s.key);
     }
+    on
+}
+/// The node a span makes: its role, with `level` for a heading or an item, what it says of itself,
+/// and `press` if pressing it does something.
+fn span_node(s: &Span, role: &str, id: i64, press: bool) -> V {
+    let mut m = Vec::new();
+    if matches!(role, "heading" | "item") {
+        m.push(("level", V::Int(level(s) as i64)));
+    }
+    said(s.v, &mut m);
+    if press {
+        m.push(("press", V::Bool(true)));
+    }
+    node(role, id, m)
 }
 const HEADING: [f64; 6] = [2.0, 1.5, 1.25, 1.1, 1.0, 1.0];
 fn level(s: &Span) -> usize {
@@ -393,9 +464,13 @@ fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Opti
     let marks = markers(&sp, &bl);
     let mut rows: Vec<Row> = Vec::new();
     let mut asked = 0.0f64; // space the block before asked after itself
+    let mut lists: Vec<(V, Option<V>)> = Vec::new(); // the lists open, one a level, each with its latest item
+    let mut ids = vec![0i64; inl.len()]; // the identity of the node each inline span makes, once it is needed
     for (blk, mark) in bl.iter().zip(&marks) {
+        let marker = mark.as_ref().map_or("", |m| m.1.as_str());
         // step 4: the block's style; steps 8: its spacing
         let mut st = text.clone();
+        let mut press = cx.press;
         let (mut before, mut after, mut keep, mut code) = (0.0, line1, false, false);
         if let Some(k) = blk.span {
             let s = &sp[k];
@@ -411,7 +486,7 @@ fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Opti
             chain.push(k);
             for j in chain {
                 role_style(&mut st, &sp[j], &text);
-                pressed(cx, &mut st, &sp[j]);
+                press |= pressed(cx, &mut st, &sp[j]);
             }
             (before, after, keep, code) = match s.role {
                 "heading" => (line1, line1 * 0.5, true, false),
@@ -438,13 +513,19 @@ fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Opti
         };
         for p in blk.a..blk.b {
             let (mut cs, mut left_out, mut child) = (st.clone(), false, None);
-            for s in inl.iter().filter(|s| s.a <= p && p < s.b) {
+            for (k, s) in inl.iter().enumerate().filter(|(_, s)| s.a <= p && p < s.b) {
                 left_out |= s.role == "markup";
                 if s.role == "embed" {
                     child = child_of(s);
                 }
                 role_style(&mut cs, s, &text);
-                pressed(cx, &mut cs, s);
+                let on = pressed(cx, &mut cs, s);
+                if matches!(s.role, "button" | "link") {
+                    if ids[k] == 0 {
+                        ids[k] = cx.next();
+                    }
+                    cs.node = span_node(s, s.role, ids[k], on);
+                }
             }
             if left_out {
                 continue;
@@ -479,10 +560,49 @@ fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Opti
         if out.is_empty() {
             // an empty block: a row one line high
             cx.blocks += 1;
-            out.push(Row { h: st.size * st.line, gap: 0.0, items: Vec::new(), keep: false, block: cx.blocks, line: 0, lines: 1 });
+            out.push(Row { h: st.size * st.line, gap: 0.0, items: Vec::new(), keep: false, block: cx.blocks, line: 0, lines: 1, path: Vec::new() });
         }
         if let Some((_, m)) = mark.take() {
             marker_item(cx, &mut out[0], m, &st, None, w, st.dir == 1);
+        }
+        // the block's node: the first row's block number names it; an item lies in the list of its
+        // level, and that in the item before it of the level above
+        let (s, id) = (blk.span.map(|k| &sp[k]), 2 * out[0].block as i64);
+        let mut path = Vec::new();
+        match s.filter(|s| s.role == "item") {
+            Some(s) => {
+                let lvl = level(s);
+                lists.truncate(lvl);
+                // a numbered item says its number; one whose marker is neither a number nor the bullet, that it is its own
+                let number = marker.strip_suffix('.').filter(|d| !d.is_empty() && d.bytes().all(|c| c.is_ascii_digit())).map(|d| d.bytes().fold(0i64, |n, c| n.wrapping_mul(10).wrapping_add((c - b'0') as i64)));
+                while lists.len() < lvl {
+                    lists.push((node("list", cx.next(), if number.is_some() { vec![("ordered", V::Bool(true))] } else { Vec::new() }), None));
+                }
+                let mut it = span_node(s, "item", id, press);
+                if let V::M(m) = &mut it {
+                    match number {
+                        Some(n) => m.push((String::from("value"), V::Int(n))),
+                        None if marker != "\u{2022}" => m.push((String::from("own"), V::Bool(true))),
+                        None => {}
+                    }
+                }
+                lists[lvl - 1].1 = Some(it);
+                for (l, i) in &lists {
+                    path.push(l.clone());
+                    path.extend(i.clone());
+                }
+            }
+            None => {
+                lists.clear();
+                path.push(match s {
+                    Some(s) => span_node(s, if s.role.is_empty() { "paragraph" } else { s.role }, id, press),
+                    None => node("paragraph", id, if press { vec![("press", V::Bool(true))] } else { Vec::new() }),
+                });
+            }
+        }
+        // (a block with nothing to read, an empty one, is no node: there is nothing to tell of it)
+        for row in out.iter_mut().filter(|_| blk.a < blk.b) {
+            row.path.splice(0..0, path.iter().cloned());
         }
         // step 8
         out[0].gap = out[0].gap.max(before).max(asked);
@@ -522,7 +642,18 @@ fn marker_item(cx: &mut Ctx, row: &mut Row, m: &str, st: &Style, base: Option<f6
     let (adv, asc, desc) = measure(cx, &cs, st, rtl, &[cs.len()]);
     let y = base.unwrap_or((row.h - asc - desc) / 2.0 + asc);
     let x = if rtl { w - st.start + st.size * 0.4 } else { st.start - st.size * 0.4 - adv[0] };
-    row.items.insert(0, text_item(&cs, x, y, st, adv[0], rtl, None));
+    let mut it = text_item(&cs, x, y, st, adv[0], rtl, None);
+    then(&mut it, " ");
+    row.items.insert(0, it);
+}
+/// `then` on a text item: what follows its characters in the text as it is read, and is not drawn:
+/// the space after a marker, the break that ended a line.
+fn then(item: &mut V, s: &str) {
+    if let V::L(l) = item {
+        if let Some(V::M(m)) = l.get_mut(1) {
+            m.push((String::from("then"), t(s)));
+        }
+    }
 }
 
 /// What step 6 sets in lines: presented characters, each with the index of its style, its position in
@@ -657,29 +788,47 @@ fn lines(cx: &mut Ctx, g: &Seg, styles: &[Style], bst: &Style, code: bool, w: f6
         let rtl = para[s] == 1;
         let mut x = if rtl { bst.end + avail - total - spare } else { bst.start + spare };
         let levels: Vec<u8> = fr.iter().map(|f| lvl[f.0 - s]).collect();
-        let mut items = Vec::new();
+        // Where each fragment stands is by visual order; the items are listed in the order of the
+        // text, which is the order they are read in (nothing here overlaps, so painting is the same).
+        let mut xs = vec![0.0; fr.len()];
         for k in bidi::order(&levels) {
-            let (a, b, st) = (fr[k].0, fr[k].1, &styles[pieces[fr[k].2].st]);
+            xs[k] = x;
+            x += advs[k];
+        }
+        let mut items = Vec::new();
+        for k in 0..fr.len() {
+            let (a, b, st, x) = (fr[k].0, fr[k].1, &styles[pieces[fr[k].2].st], xs[k]);
             match (g.bx[a], from) {
                 (Some((cid, bw, bh)), Some((uni, _, _))) => {
                     stack(&compose(cx, uni, &cid, bw), x, base - bh, &mut items);
                 }
                 _ => {
                     let anchor = from.map(|(uni, id, live)| src(cx, uni, id, Some((live[g.pos[a]], live[g.pos[b - 1]]))));
+                    if st.node != V::Null {
+                        items.push(V::L(vec![t("push"), st.node.clone()]));
+                    }
                     items.push(text_item(&cs[a..b], x, base, st, advs[k], levels[k] & 1 == 1, anchor));
                     if st.deco > 0 {
                         let y = base + st.size * if st.deco == 1 { 0.1 } else { -0.3 };
                         let d = V::L(vec![V::L(vec![t("M"), fl(x), fl(y)]), V::L(vec![t("L"), fl(x + advs[k]), fl(y)])]);
                         items.push(V::L(vec![t("path"), map(vec![("d", d), ("stroke", st.color.clone()), ("width", fl(st.size * 0.06))])]));
                     }
+                    if st.node != V::Null {
+                        items.push(V::L(vec![t("pop")]));
+                    }
                 }
             }
-            x += advs[k];
+        }
+        // a line ended by a character that ends lines: the last item says a break follows what it reads
+        if q < n && ends(cs[q - 1]) {
+            if let Some(last) = items.iter_mut().rev().find(|i| i.l().first().and_then(|k| k.s()) == Some("text")) {
+                then(last, "\n");
+            }
         }
         if rows.is_empty() {
             first = (base, rtl);
         }
-        rows.push(Row { h, gap: 0.0, items, keep: false, block: cx.blocks, line: rows.len() as u32, lines: 0 });
+        rows.push(Row { h, gap: 0.0, items, keep: false, block: cx.blocks, line: rows.len() as u32, lines: 0, path: Vec::new() });
         s = q;
     }
     let count = rows.len() as u32;
@@ -691,16 +840,29 @@ fn lines(cx: &mut Ctx, g: &Seg, styles: &[Style], bst: &Style, code: bool, w: f6
 
 /// Rows stacked from `y`, as display-list items.
 pub fn stack(rows: &[Row], x: f64, mut y: f64, out: &mut Vec<V>) -> f64 {
+    let mut open: &[V] = &[]; // the nodes whose groups are open: those of the row before
     for (k, r) in rows.iter().enumerate() {
         if k > 0 {
             y += r.gap;
         }
+        // the nodes this row shares with the last stay open; the others close, and its own open
+        let same = open.iter().zip(&r.path).take_while(|(a, b)| a.get("id") == b.get("id")).count();
+        for _ in same..open.len() {
+            out.push(V::L(vec![t("pop")]));
+        }
+        for n in &r.path[same..] {
+            out.push(V::L(vec![t("push"), n.clone()]));
+        }
+        open = &r.path;
         if !r.items.is_empty() {
             out.push(V::L(vec![t("push"), map(vec![("m", V::L(vec![fl(1.0), fl(0.0), fl(0.0), fl(1.0), fl(x), fl(y)]))])]));
             out.extend(r.items.iter().cloned());
             out.push(V::L(vec![t("pop")]));
         }
         y += r.h;
+    }
+    for _ in open {
+        out.push(V::L(vec![t("pop")]));
     }
     y
 }
@@ -892,4 +1054,78 @@ pub fn block_at(pk: &Pack, src: &V) -> Option<V> {
     let sp = spans(&o, &els);
     let b = blocks(&sp, 0, chars.len()).into_iter().find(|b| b.a <= p && p < b.b)?;
     Some(map(vec![("o", V::B(id.to_vec())), ("key", b.span.map_or(V::Null, |k| t(sp[k].key))), ("lo", V::Int(b.a as i64)), ("hi", V::Int(b.b as i64)), ("text", V::T(chars[b.a..b.b].iter().collect()))]))
+}
+
+// ---- the static face of a web envelope (TRAVEL 13.2) ----
+/// The nodes of a display list as HTML: each node the element of its role, holding the text of its
+/// items as it is read. The only markup is what the table here writes; every character of text is
+/// escaped. A list is `ol` if it is ordered, else `ul`; an item is `li`, with its number as `value`,
+/// and its marker is left to the element to show, unless it is the item's own, which is then
+/// written and the element told (by a class) to show none. Roles with no element of their own (a
+/// button, a link: nothing can be pressed where there is no script) add nothing; any other role
+/// is a `div`.
+pub fn html(list: &[V]) -> String {
+    let (mut out, mut open) = (String::new(), Vec::new()); // of each `push`: its element, and whether it is an item whose marker is not written
+    for item in list {
+        let it = item.l().get(1);
+        let has = |k: &str| it.and_then(|i| i.get(k));
+        match item.l().first().and_then(|k| k.s()) {
+            Some("push") => {
+                let (mut more, mut marked) = (String::new(), false);
+                let tag = match has("role").and_then(|r| r.s()) {
+                    None | Some("button" | "link") => "",
+                    Some("heading") => ["h1", "h2", "h3", "h4", "h5", "h6"][has("level").and_then(|l| l.i()).unwrap_or(1).clamp(1, 6) as usize - 1],
+                    Some("paragraph") => "p",
+                    Some("quote") => "blockquote",
+                    Some("code") => "pre",
+                    Some("list") => if has("ordered").is_some() { "ol" } else { "ul" },
+                    Some("item") => {
+                        match (has("value").and_then(|v| v.i()), has("own")) {
+                            (Some(n), _) => more = cat!(" value=\"", n, "\""),
+                            (_, Some(_)) => more = String::from(" class=\"ufo-own\""),
+                            _ => {}
+                        }
+                        marked = has("own").is_none();
+                        "li"
+                    }
+                    Some(_) => "div",
+                };
+                if !tag.is_empty() {
+                    put!(out; "<", tag, more, ">");
+                }
+                open.push((tag, marked));
+            }
+            Some("pop") => {
+                if let Some((tag, _)) = open.pop().filter(|t| !t.0.is_empty()) {
+                    put!(out; "</", tag, ">\n");
+                }
+            }
+            Some("text") if has("src").is_none() && open.iter().rev().find(|o| !o.0.is_empty()).map_or(false, |o| o.1) => {} // a marker the element shows
+            Some("text") => {
+                for k in ["s", "then"] {
+                    for c in it.and_then(|i| i.get(k)).and_then(|s| s.s()).unwrap_or("").chars() {
+                        match c {
+                            '&' => out.push_str("&amp;"),
+                            '<' => out.push_str("&lt;"),
+                            '>' => out.push_str("&gt;"),
+                            '"' => out.push_str("&quot;"),
+                            c => out.push(c),
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    out
+}
+/// The static face of a universe: the nodes of its primary face. Nothing is measured, so lines end
+/// only where the text ends them, and the result is the same on every host.
+pub fn static_face(pk: &Pack) -> Option<String> {
+    let u = pk.object(&pk.head, &[0; 16])?;
+    let f = pk.object(&pk.head, &u.p.get("roots")?.get("primary")?.tag(REF)?.id()?)?;
+    let mut cx = Ctx::new(pk, &|_| None, None);
+    let (rows, mut list) = (compose(&mut cx, &pk.head, &f.p.get("of")?.tag(REF)?.id()?, 1e9), Vec::new());
+    stack(&rows, 0.0, 0.0, &mut list);
+    Some(html(&list))
 }

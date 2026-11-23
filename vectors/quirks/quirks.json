@@ -1,0 +1,431 @@
+{
+ "status": {
+  "status": "provisional",
+  "note": "the author's envelope and harness only; engines: Chromium 153 (headless shell), Firefox 155, WebKit 26.6 (Playwright builds, Linux)"
+ },
+ "what": "Differences between browser engines that the web envelope (SPEC-TRAVEL 13.2) met, each with a page built so that the difference cannot arise, the naive construction that shows it, and the rule that makes it impossible. A reader or exporter passes an entry when its page gives the result stated in every engine.",
+ "how": "Each page writes its verdict to <html data-result>: \"pass\", or \"fail: \" and why; it counts violations of its own policy. `where` says how it is opened: from a local file, from an http origin, or both. `drive` is real input for the runner to give, in order: focus and click (a selector), caret (a selection in the focused text box, in UTF-16 units), type, insertText, press (a key). `expect.requests` is how many requests the origin may see; `expect.download` a file that must come down. `naive[].fails` says, by engine, what goes wrong with the naive page; an engine not named there passes it. Entry 00 has no page: its subject is the envelope itself.",
+ "runner": "spike/envelope/quirks.mjs",
+ "entries": [
+  {
+   "id": "00-envelope",
+   "name": "The envelope as built: opened, edited by the keyboard, saved and reopened under its own policy",
+   "file": null,
+   "where": [
+    "http"
+   ],
+   "expect": {},
+   "rule": "A web envelope, through opening, every face, an edit, saving and reopening what was saved, MUST cause zero policy violations, write nothing to the console, and make no request but the one that fetched it.",
+   "pass": "built by spike/envelope/make.mjs from vectors/compose.ufx and served from an http origin: after Tab to Edit, Enter, Tab to a paragraph, Enter, typing, Done, Save: one file comes down; it reopens at the same state; over both pages zero securitypolicyviolation events, zero console messages, and the server saw each page asked for once and nothing else",
+   "status": "provisional"
+  },
+  {
+   "id": "01-no-icon-request",
+   "name": "An engine asks the origin for an icon the page never named, and the page's own policy then reports the engine's request",
+   "file": "01-no-icon-request.html",
+   "where": [
+    "file",
+    "http"
+   ],
+   "expect": {
+    "requests": 1
+   },
+   "naive": [
+    {
+     "file": "01-no-icon-request.naive.html",
+     "fails": {
+      "firefox": "from http: GET /favicon.ico is attempted, blocked by default-src 'none', reported as an img-src violation and a console error"
+     }
+    },
+    {
+     "file": "01-no-icon-request.naive2.html",
+     "fails": {
+      "chromium": "console error: loading data:, violates default-src 'none'",
+      "firefox": "img-src violation and console error for data:,"
+     }
+    }
+   ],
+   "rule": "A web envelope MUST name its icon itself, as an empty data: address (<link rel=\"icon\" href=\"data:,\">), and its policy MUST allow images from data: and from nowhere else (img-src data:). No engine then has a reason to ask any origin for anything.",
+   "pass": "opened from a local file and from an http origin: the server sees exactly one request (the page); zero securitypolicyviolation events; zero console messages",
+   "status": "provisional"
+  },
+  {
+   "id": "02-look-without-style",
+   "name": "A style written at run time (a style attribute, a style element made by script) is outside what a policy of hashes states, and is refused",
+   "file": "02-look-without-style.html",
+   "where": [
+    "file",
+    "http"
+   ],
+   "expect": {
+    "requests": 1
+   },
+   "naive": [
+    {
+     "file": "02-look-without-style.naive.html",
+     "fails": {
+      "chromium": "style-src-attr and style-src-elem violations; the style is not applied",
+      "firefox": "the same",
+      "webkit": "the same (\"Refused to apply a stylesheet…\")"
+     }
+    }
+   ],
+   "rule": "Every byte a web envelope's policy constrains MUST be a part whose hash the envelope function writes into the policy: one style, one script. A binding MUST NOT write a style by any means (no style attribute, no style element, no style-sheet interface, no style property): it changes how the page looks only by attributes (hidden, class, width, height, rows, ARIA) whose effect the hashed style sheet states.",
+   "pass": "the four changes take effect (computed style and size checked by the page); zero securitypolicyviolation events; zero console messages. On the envelope itself: a static check that the script holds no style write, and zero violations over open, edit, save and reopen (entry 00)",
+   "note": "Setting a style property through script (element.style.left = …) was allowed under the policy by all three engines here. The rule forbids it all the same, so that what the page may look like is exactly what the hashed style part says.",
+   "status": "provisional"
+  },
+  {
+   "id": "03-save-as-bytes",
+   "name": "A saved file that says it is a page may be opened as one, under the saving page's policy, where download is not honoured",
+   "file": "03-save-as-bytes.html",
+   "where": [
+    "file",
+    "http"
+   ],
+   "expect": {
+    "requests": 1,
+    "download": {
+     "name": "saved.ufx.html",
+     "text": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>saved</title><style>p{color:#060}</style></head><body><p>saved</p></body></html>\n"
+    }
+   },
+   "naive": [
+    {
+     "file": "03-save-as-bytes.naive.html",
+     "fails": {},
+     "expect": {
+      "requests": 1,
+      "download": {
+       "name": "saved.ufx.html",
+       "text": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>saved</title><style>p{color:#060}</style></head><body><p>saved</p></body></html>\n"
+      }
+     }
+    }
+   ],
+   "rule": "A binding hands a file to the person as bytes of no declared kind (application/octet-stream), by a link with download that is never put into the page. It MUST NOT open, show or navigate to what it saves, so that no document but the envelope itself ever has to satisfy the envelope's policy.",
+   "pass": "from a local file and from an http origin: a download named as asked whose bytes are those given; the page's address does not change; zero violations; zero console messages; the server sees one request",
+   "note": "No engine here misbehaved with the naive construction. The rule is kept because the failure it prevents (the saved page shown in place, as a blob: document that inherits the policy) needs no bug, only a browser that ignores the download attribute.",
+   "status": "provisional"
+  },
+  {
+   "id": "04-edit-positions",
+   "name": "Engines say differently where a text box was changed: none gives target ranges for it, and after an undo WebKit leaves the restored text selected",
+   "file": "04-edit-positions.html",
+   "where": [
+    "file"
+   ],
+   "drive": [
+    [
+     "focus",
+     "#t"
+    ],
+    [
+     "caret",
+     0,
+     0
+    ],
+    [
+     "type",
+     "No"
+    ],
+    [
+     "caret",
+     8,
+     14
+    ],
+    [
+     "type",
+     "x"
+    ],
+    [
+     "press",
+     "Backspace"
+    ],
+    [
+     "press",
+     "Delete"
+    ],
+    [
+     "caret",
+     2,
+     9
+    ],
+    [
+     "press",
+     "ControlOrMeta+c"
+    ],
+    [
+     "caret",
+     0,
+     0
+    ],
+    [
+     "press",
+     "ControlOrMeta+v"
+    ],
+    [
+     "caret",
+     2,
+     9
+    ],
+    [
+     "press",
+     "ControlOrMeta+x"
+    ],
+    [
+     "caret",
+     20,
+     20
+    ],
+    [
+     "press",
+     "Control+Backspace"
+    ],
+    [
+     "press",
+     "ControlOrMeta+z"
+    ],
+    [
+     "insertText",
+     "日本"
+    ],
+    [
+     "press",
+     "Enter"
+    ],
+    [
+     "type",
+     "é𝄞"
+    ],
+    [
+     "click",
+     "#done"
+    ]
+   ],
+   "expect": {},
+   "naive": [
+    {
+     "file": "04-edit-positions.naive.html",
+     "drive": [
+      [
+       "focus",
+       "#t"
+      ],
+      [
+       "caret",
+       0,
+       0
+      ],
+      [
+       "type",
+       "No"
+      ],
+      [
+       "caret",
+       8,
+       14
+      ],
+      [
+       "type",
+       "x"
+      ],
+      [
+       "press",
+       "Backspace"
+      ],
+      [
+       "press",
+       "Delete"
+      ],
+      [
+       "caret",
+       2,
+       9
+      ],
+      [
+       "press",
+       "ControlOrMeta+c"
+      ],
+      [
+       "caret",
+       0,
+       0
+      ],
+      [
+       "press",
+       "ControlOrMeta+v"
+      ],
+      [
+       "caret",
+       2,
+       9
+      ],
+      [
+       "press",
+       "ControlOrMeta+x"
+      ],
+      [
+       "caret",
+       20,
+       20
+      ],
+      [
+       "press",
+       "Control+Backspace"
+      ],
+      [
+       "press",
+       "ControlOrMeta+z"
+      ],
+      [
+       "insertText",
+       "日本"
+      ],
+      [
+       "press",
+       "Enter"
+      ],
+      [
+       "type",
+       "é𝄞"
+      ],
+      [
+       "click",
+       "#done"
+      ]
+     ],
+     "fails": {
+      "webkit": "after undo the selection is the restored text (start 17, end 20), not a caret after it: the report says nothing was inserted, and the model no longer matches the text"
+     }
+    },
+    {
+     "file": "04-edit-positions.naive2.html",
+     "drive": [
+      [
+       "focus",
+       "#t"
+      ],
+      [
+       "caret",
+       0,
+       0
+      ],
+      [
+       "type",
+       "No"
+      ],
+      [
+       "caret",
+       8,
+       14
+      ],
+      [
+       "type",
+       "x"
+      ],
+      [
+       "press",
+       "Backspace"
+      ],
+      [
+       "press",
+       "Delete"
+      ],
+      [
+       "caret",
+       2,
+       9
+      ],
+      [
+       "press",
+       "ControlOrMeta+c"
+      ],
+      [
+       "caret",
+       0,
+       0
+      ],
+      [
+       "press",
+       "ControlOrMeta+v"
+      ],
+      [
+       "caret",
+       2,
+       9
+      ],
+      [
+       "press",
+       "ControlOrMeta+x"
+      ],
+      [
+       "caret",
+       20,
+       20
+      ],
+      [
+       "press",
+       "Control+Backspace"
+      ],
+      [
+       "press",
+       "ControlOrMeta+z"
+      ],
+      [
+       "insertText",
+       "日本"
+      ],
+      [
+       "press",
+       "Enter"
+      ],
+      [
+       "type",
+       "é𝄞"
+      ],
+      [
+       "click",
+       "#done"
+      ]
+     ],
+     "fails": {
+      "chromium": "getTargetRanges() is an empty list for a textarea",
+      "firefox": "the same",
+      "webkit": "the same"
+     }
+    }
+   ],
+   "rule": "A binding reports each change of an editing surface as (at, removed, inserted) only when the selection before and after accounts for it exactly: the text before `at` and after the change is unchanged. Otherwise it reports the whole text with no position, and it always reports the whole text when the entry ends. A kernel MUST accept both, and settle any disagreement by the whole text.",
+   "pass": "after typing, replacing a selection, Backspace, Delete, copy and paste, cut, delete-word, undo, text inserted by an input method, a line break and characters outside the basic plane: the reports, applied in order, give exactly the text the box holds",
+   "note": "Seen here: beforeinput and input fire for a textarea in all three with the same inputType values; getTargetRanges() is empty in all three; Firefox sends compositionend before the last input of a composition, the others after; WebKit selects what an undo restores.",
+   "status": "provisional"
+  }
+ ],
+ "harness": [
+  {
+   "id": "harness-screenshot",
+   "name": "Playwright's screenshot puts a style element into the page; in WebKit the page's policy refuses it and reports it",
+   "page": "02-look-without-style.html",
+   "act": "screenshot",
+   "seen": {
+    "chromium": "nothing reported",
+    "firefox": "nothing reported",
+    "webkit": "one style-src-elem violation and a console error for each screenshot"
+   },
+   "rule": "A conformance run takes no picture of a page it is asserting on, and puts nothing into it. What is observed of a page is observed from outside it, or by a script added before the page's own by means its policy does not govern."
+  },
+  {
+   "id": "harness-local-file-request",
+   "name": "Request interception does not report the reading of a local file in Firefox",
+   "page": "02-look-without-style.html",
+   "act": "count",
+   "seen": {
+    "chromium": "the file:// address is reported once",
+    "firefox": "nothing is reported",
+    "webkit": "the file:// address is reported once"
+   },
+   "rule": "That nothing leaves a page is asserted by what every engine shows: the origin's own record of requests, the page's record of what it fetched (resource timing), and its policy violations. A count from the test tool's interception is \"at most the page itself\"."
+  }
+ ]
+}

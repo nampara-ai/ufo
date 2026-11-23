@@ -1,0 +1,109 @@
+{
+ "engine": "chromium",
+ "version": "153.0.8010.12",
+ "phones": [
+  "Pixel 7 (412 by 839)",
+  "Galaxy S8 (360 by 740)"
+ ],
+ "results": {
+  "Node": {
+   "kernel": "passed",
+   "host": "passed"
+  },
+  "desktop, file://": {
+   "opened": "passed",
+   "pure function": "passed",
+   "faces": "passed",
+   "accessible": "passed",
+   "edit": "passed",
+   "one word": "passed",
+   "paragraph start": "passed",
+   "typed": "passed",
+   "saved": "passed",
+   "policy": "passed",
+   "reopened": "passed",
+   "keyboard": "passed",
+   "sent on": "passed"
+  },
+  "http origin": {
+   "opened": "passed",
+   "pure function": "passed",
+   "faces": "passed",
+   "accessible": "passed",
+   "edit": "passed",
+   "one word": "passed",
+   "paragraph start": "passed",
+   "typed": "passed",
+   "saved": "passed",
+   "policy": "passed",
+   "reopened": "passed",
+   "keyboard": "passed",
+   "sent on": "passed"
+  },
+  "scripts off": {
+   "static face": "passed"
+  },
+  "phone, larger": {
+   "opened": "passed",
+   "pure function": "passed",
+   "faces": "passed",
+   "accessible": "passed",
+   "edit": "passed",
+   "one word": "passed",
+   "paragraph start": "passed",
+   "typed": "passed",
+   "saved": "passed",
+   "policy": "passed",
+   "reopened": "passed",
+   "keyboard": "passed"
+  },
+  "phone, smaller": {
+   "opened": "passed",
+   "pure function": "passed",
+   "faces": "passed",
+   "accessible": "passed",
+   "edit": "passed",
+   "one word": "passed",
+   "paragraph start": "passed",
+   "typed": "passed",
+   "saved": "passed",
+   "policy": "passed",
+   "reopened": "passed",
+   "keyboard": "passed"
+  },
+  "reader": {
+   "reader": "passed"
+  },
+  "validators": {
+   "valid": "passed"
+  }
+ },
+ "host": {
+  "lines": 245,
+  "bytes": 15999,
+  "longest": 146,
+  "forbidden": [
+   "face",
+   "editing",
+   "export",
+   "pages",
+   "propose",
+   "splice",
+   "outerHTML",
+   "innerHTML",
+   "envelope",
+   "subject",
+   "tools",
+   "handler",
+   "commit",
+   "anchor",
+   "skeleton",
+   "universe",
+   "pack",
+   "formula",
+   "state"
+  ]
+ },
+ "total": 195,
+ "failures": 0
+}

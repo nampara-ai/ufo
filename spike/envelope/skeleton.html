@@ -4,8 +4,9 @@ UFO file (Universal File Object). Exported {{date}}. Open it in a web browser.
 -->
 <html lang="en"><head><meta charset="utf-8">
 <title>{{title}}</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src '{{csp:script}}' 'wasm-unsafe-eval'; style-src '{{csp:style}}'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src '{{csp:script}}' 'wasm-unsafe-eval'; style-src '{{csp:style}}'; img-src data:; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <style>{{style}}</style>
 </head><body>
 <div id="ufo-static">
@@ -20,12 +21,15 @@ UFO file (Universal File Object). Exported {{date}}. Open it in a web browser.
 <p>The file needs no network, no account and nothing installed.</p>
 <p id="ufo-fail" hidden="">This browser could not run the reader this file carries. The text below is the whole document.</p>
 </div>
-<h1>{{title}}</h1>
-<pre id="ufo-text">{{static}}</pre>
+<div id="ufo-text">
+{{static-html}}</div>
 </div>
 <div id="ufo-player" hidden="">
-<canvas></canvas>
-<div id="ufo-entry" hidden=""><textarea aria-label="The text being changed"></textarea><button type="button">Done</button><button type="button">Cancel</button></div>
+<div id="ufo-top">
+<div class="ufo-nodes"></div><canvas aria-hidden="true"></canvas>
+<div id="ufo-entry" hidden=""><textarea aria-label="The text being changed" rows="4" autocomplete="off"></textarea><button type="button">Done</button><button type="button">Cancel</button></div>
+</div>
+<div class="ufo-nodes"></div><canvas aria-hidden="true"></canvas>
 </div>
 <script type="application/x-ufo-pack">{{pack}}{{<}}/script>
 <script type="application/x-ufo-tools">{{tools}}{{<}}/script>

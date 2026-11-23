@@ -585,3 +585,141 @@ are measuring stubs.
 | Static face | 1 135 |
 | Fixed text of the skeleton with its gaps filled, the title twice, the date, the hash | 2 430 |
 | **Total** | **168 804** |
+
+## 2026-11-23, later: three engines, an accessibility tree, positioned edits
+
+PLAN.md describes the spike before this round. Where the two differ, this
+section is right: the host interface (two lists, `focus`, `show`, the
+`edit` reports), the static face (now markup), the policy (`img-src
+data:`), and the host's numbers.
+
+### Engines
+
+`node spike/envelope/test.mjs` runs Chromium 153, Firefox 155 and WebKit
+26.6 one after another and prints one table, step by context by engine,
+then the quirks corpus (`quirks.mjs`, `vectors/quirks/`). All 195 checks
+pass in each engine; the corpus passes 15 of 15.
+
+Every failure the first version showed in Firefox and WebKit was the
+harness, except one:
+
+| Failure | Cause | Whose | What was done |
+| --- | --- | --- | --- |
+| WebKit, "saved": "Refused to apply a stylesheet…" | Playwright's `page.screenshot()` puts a style element into the page; WebKit applies the page's policy to it and refuses it. The first round took pictures, the second none, which is why only the first failed. Nothing the page did was refused | harness | no picture is taken of a page being asserted; pictures come from pages opened for nothing else, at the end |
+| Firefox, file://, "no request but for the file itself: []" and what followed from it | Playwright's interception does not report Firefox's reading of a local file | harness | the claim is asserted four ways that hold in every engine: interception sees at most the file; the page's resource timing is empty; the server saw the file once and nothing else; no policy violation and nothing on the console |
+| Firefox, http: console error, `/favicon.ico` blocked | Firefox asks the origin for an icon the page never named; the policy stops the request and reports it | envelope | the skeleton names its icon, `<link rel="icon" href="data:,">`, and the policy gains `img-src data:` |
+
+Saving never failed in any engine: `<a download>` on a blob downloads from
+file:// and from http in all three, under `default-src 'none'`, with no
+directive of its own.
+
+The rule the owner then set, and what was done under it: the page's look
+at run time is never a style written by script. The host writes no style
+by any means (no `.style`, no style attribute, no style element; a static
+test fails if it does), though all three engines allow a style property
+set through script under the policy. The canvases are sized by their
+`width` and `height` attributes and the style sheet's `width: 100%;
+height: auto`; the edit box is shown with `hidden` and sized with `rows`;
+the nodes for assistive technology are hidden by a class; the focus ring
+is drawn by the kernel. The file handed over is a blob of
+`application/octet-stream`, so nothing could take it for a page.
+
+### The accessibility tree
+
+Design: the canvases stay, marked `aria-hidden`; beside each, a subtree
+of real elements built from the display list, kept from drawing to
+drawing (only what differs is touched, so focus and a reading position
+survive), visually hidden by the style sheet. Real DOM text in place of
+the canvas was not chosen: it needs geometry at run time, and under the
+rule above geometry cannot be written.
+
+The kernel puts `role` on `push`: a group of items is a node, nesting is
+push nesting, list order is reading order. A node carries `id` (a node
+drawn in several pieces, over a page break or a line break, has several
+groups of one `id`), and what it has of `level`, `label`, `lang`,
+`press`, `pressed`, `current`, `ordered`, `value`, `own`. A text item may
+carry `then`: what follows it as read and is not drawn (the space after
+a marker, the line break that ended a line). Text items of a line are
+now listed in the order of the text, not in visual order.
+
+Roles come from the description, not from the kernel: a block span's
+role, an object's `role` and `label` (the Portal says `document`), an
+inline span of role `button` or `link`. `pressed` and `current` are
+properties of a span, formulas in the tools universe; the kernel reports
+their values and knows nothing of faces. The kernel adds three things of
+its own: `list` around runs of items, `region` "Page n" around each page,
+and `status` around its own words about the last act.
+
+The host knows seven roles as elements (heading, paragraph, quote, code,
+button, item, link) and hands any other on as the `role` attribute of a
+`div` (document, toolbar, list, region, status). What can be pressed
+gets `tabindex="0"`; Enter, Space or a click on it is sent to the kernel
+as `{press: [x, y], on}` at a point where the node is drawn: the same
+raw press the canvas sends. The host reports `{focus: id, on}`; the
+kernel draws a ring round that node and answers `show`, a rectangle to
+bring into view.
+
+The screen is now two lists: the tools and the reader's status, held in
+view (`position: sticky`), and the subject, which scrolls. The edit box
+is in the held part, under the tools, where a phone's keyboard does not
+cover it; the block being changed is ringed.
+
+The static face is now markup, not the plain-text face: `h1` to `h6`,
+`p`, `ul`/`ol`/`li` (a numbered item has `value`), `blockquote`, `pre`,
+written by the kernel from the same nodes, with nothing measured.
+**This changes SPEC-TRAVEL 13.2**: a part `static-html`, put in
+unchanged, was added to the envelope function beside `static`, which is
+still there and still escaped, so `vectors/provisional/envelope.json`
+holds. The skeleton no longer writes the title as a heading: the
+document's own heading is one.
+
+### Positioned edits
+
+While the edit box is mounted the host reports each change as `{edit:
+id, at, del, ins}`, in scalar values of the text as it holds it, or as
+`{edit: id, s}` where it cannot say where; then `{edit: id, end: true,
+s}` or `{end: false}`. The position is from where the caret was at
+`beforeinput` (or where a composition began) to where the selection ends
+at `input`, and is sent only if the text before and after it is
+unchanged; `getTargetRanges()` is empty for a text box in all three
+engines.
+
+The kernel keeps the block as a list of scalar values, each one of the
+block's own or new. At the end: each stretch between two of the block's
+own values that are still there is taken by itself (positions decide
+where); a stretch that reads as it did is no change; one that only lost
+or only gained is written as that; one that did both is compared, before
+with after, and what they share is not written (the comparison decides
+what). "Note: " typed before "Nothing" is one `splice` of six characters
+at the start, with the two `set`s that keep it in its paragraph.
+
+### Sizes
+
+| | Before | Now |
+| --- | ---: | ---: |
+| Host: lines that are not blank or comment (budget 600) | 175 | 245 |
+| Host: bytes as carried (budget 16 384) | 9 827 | 15 999 |
+| Kernel after cargo | 245 806 | 265 233 |
+| Kernel after `wasm-opt -Oz` | 210 911 | 227 469 |
+| Kernel, raw DEFLATE | 98 276 | 105 456 |
+| Kernel lines by hand (`wc -l`, tables apart) | 5 293 | 5 669 |
+
+The host is 385 bytes under its budget of bytes. It is comment that
+fills it: 25 lines.
+
+### Not done, or not shown
+
+- No screen reader was run. What is asserted is what the browser's role
+  queries give (Playwright's, the same code in the three engines), not
+  what VoiceOver, TalkBack, NVDA or JAWS say.
+- The nodes have no geometry (under the rule, none can be written), so
+  exploring the screen by touch does not land on the drawn text, and a
+  screen reader's own cursor does not scroll the canvas: only keyboard
+  focus does, through `show`.
+- A canvas as tall as the whole face (E18) will pass an engine's limit
+  on canvas size for a long document. Not reproduced here.
+- Composition by an input method was driven only in Chromium (through
+  its debugging protocol): six updates, all positioned. Firefox and
+  WebKit saw only text inserted in one step.
+- Safari on macOS does not move focus to buttons with Tab unless the
+  person has turned that on; Playwright's WebKit does. Not testable here.

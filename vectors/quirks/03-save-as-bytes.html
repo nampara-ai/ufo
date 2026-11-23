@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<!-- The script hands over a file by a link it makes and never puts in the page: download names the file, and the address is a blob of bytes of no declared kind. Every engine, from a local file and from http: the file comes down under its name, the page stays, no violation. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>03 a file is handed over as bytes</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-hqFZL7ZWAV2BtZp9qyViqR0OfWIv8Cq404f7IMsopzw='; style-src 'sha256-VwJYb9DpUq9ftUDHbdhcTMn6sWSJ0JAGjwpLX+Yhjss='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}</style>
+</head><body>
+<h1>03 a file is handed over as bytes</h1>
+<p>The script hands over a file by a link it makes and never puts in the page: download names the file, and the address is a blob of bytes of no declared kind. Every engine, from a local file and from http: the file comes down under its name, the page stays, no violation.</p>
+<p>Result: <span id="result">not finished</span></p>
+
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+const href = location.href, a = document.createElement('a');
+a.href = URL.createObjectURL(new Blob(["<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>saved</title><style>p{color:#060}</style></head><body><p>saved</p></body></html>\n"], { type: 'application/octet-stream' })); a.download = 'saved.ufx.html'; a.click();
+setTimeout(() => finish(location.href === href && document.getElementById('result') ? [] : ['the page went elsewhere'], 100), 600);</script></body></html>

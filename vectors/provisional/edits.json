@@ -1,12 +1,15 @@
 {
  "status": {
-  "status": "provisional",
-  "note": "packs written by the author's kernel; an independent reader replayed each change with conservation ok, which checks the operations and not the attribution stated here"
+  "status": "reproduced",
+  "by": [
+   "the second independent reader of 2026-11-22, in a third round on 2026-11-23: it worked out the attribution and the block positions from the revised core alone, then compared"
+  ],
+  "note": "the entries for edit-one-word.ufx and edit-paragraph-start.ufx. Positions are half-open. Any entry added later is provisional until it is checked the same way"
  },
  "what": "two packs written by the author's kernel, each replayed by an independent reader with conservation ok, and what a reader finds in them (sections 1.7, 5.1)",
  "packs": {
   "edit-one-word.ufx": {
-   "what": "compose.ufx after one edit through the gate: in the paragraph at positions 423 to 538, the word \"ledger\" became \"books\". Exactly the five new characters are attributed to the new change; what stands before and after keeps its first attribution",
+   "what": "compose.ufx after one edit through the gate: in the paragraph that now lies at positions 423 to 537 (half-open), the word \"ledger\" became \"books\". Exactly the five new characters are attributed to the new change; what stands before and after keeps its first attribution",
    "commits": [
     {
      "change": "7095badf04294e7398bde2072c51769b",
@@ -52,7 +55,7 @@
    ]
   },
   "edit-paragraph-start.ufx": {
-   "what": "a later state of the same pack, whose last change typed \"Truly, \" at the very start of the paragraph beginning \"Nothing here is a forecast\". The change holds the splice and two sets that move the boundary between the two block spans to before the first new element, so the new text lies in the paragraph it was typed in",
+   "what": "a later state of the same pack, five commits in all. The change at height 2 typed \"Truly, \" at the very start of the paragraph beginning \"Nothing here is a forecast\"; the change at height 4, the last, typed \"Now: \" at the very start of the text. The change at height 2 holds the splice and two sets that move the boundary between the two block spans to before the first new element, so the new text lies in the paragraph it was typed in",
    "commits": [
     {
      "change": "9fc4e90e33587da2c7ec11365b80a5ca",
@@ -110,6 +113,150 @@
     "part o:71717171 chars=[887,996] r:87f75c1e label=\"The appendix lists what \"",
     "part o:71717171 chars=[996,1099] r:87f75c1e label=\"Corrections are welcome \"",
     "part o:71717171 chars=[1099,1099] r:87f75c1e label=\"\""
+   ]
+  },
+  "edit-positioned.ufx": {
+   "status": "provisional",
+   "what": "compose.ufx after one edit through the gate, made from positioned reports: with the editing surface on the paragraph that began \"Nothing here is a forecast\" (positions 662 to 763, half-open), the six characters of \"Note: \" were typed one at a time at its very start. A comparison of the paragraph before and after cannot say where they went (\"Note: \" before \"Nothing\" reads the same as \"e: Not\" after \"Not\"); the positions can. Exactly the six characters typed are attributed to the new change, at the start of the paragraph, and the two sets move the boundary between the two block spans so that they lie in the paragraph they were typed in",
+   "commits": [
+    {
+     "change": "7095badf04294e7398bde2072c51769b",
+     "commit": "a4a5e8c2173b395f3d4ffaa26db2d5a274eab29102e6d8825fbeadea73c7ad88",
+     "height": 1
+    },
+    {
+     "change": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c",
+     "commit": "092acf577819a704d5106c685ec0315f76a87d30ec3b79658b722c3d9ec448c7",
+     "height": 0
+    }
+   ],
+   "reports": {
+    "what": "what the host reported while the editing surface was on the block, in order: `at`, `del`, `ins` in the text of the block as the host held it, counted in Unicode scalar values; then the end of the entry, with the whole text",
+    "block": {
+     "key": "b12",
+     "lo": 662,
+     "hi": 763,
+     "text": "Nothing here is a forecast. The next section says what the team expects, and why, and how sure it is."
+    },
+    "who": "Reader Test",
+    "time": 1767355200000,
+    "events": [
+     {
+      "at": 0,
+      "del": 0,
+      "ins": "N"
+     },
+     {
+      "at": 1,
+      "del": 0,
+      "ins": "o"
+     },
+     {
+      "at": 2,
+      "del": 0,
+      "ins": "t"
+     },
+     {
+      "at": 3,
+      "del": 0,
+      "ins": "e"
+     },
+     {
+      "at": 4,
+      "del": 0,
+      "ins": ":"
+     },
+     {
+      "at": 5,
+      "del": 0,
+      "ins": " "
+     },
+     {
+      "end": true,
+      "s": "Note: Nothing here is a forecast. The next section says what the team expects, and why, and how sure it is."
+     }
+    ]
+   },
+   "operations": [
+    {
+     "op": "splice",
+     "ins": "Note: ",
+     "key": "chars",
+     "obj": {
+      "$bytes": "71717171717171717171717171717171"
+     },
+     "after": [
+      {
+       "$bytes": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c"
+      },
+      661
+     ]
+    },
+    {
+     "op": "set",
+     "key": [
+      "spans",
+      "b11",
+      "at"
+     ],
+     "obj": {
+      "$bytes": "71717171717171717171717171717171"
+     },
+     "old": {
+      "$anchor": "o:71717171 chars=[538,668] r:ec3712a8"
+     },
+     "val": {
+      "$anchor": "o:71717171 chars=[538,662] r:ec3712a8"
+     }
+    },
+    {
+     "op": "set",
+     "key": [
+      "spans",
+      "b12",
+      "at"
+     ],
+     "obj": {
+      "$bytes": "71717171717171717171717171717171"
+     },
+     "old": {
+      "$anchor": "o:71717171 chars=[668,769] r:ec3712a8"
+     },
+     "val": {
+      "$anchor": "o:71717171 chars=[662,769] r:ec3712a8"
+     }
+    }
+   ],
+   "why": {
+    "region": [
+     652,
+     678
+    ],
+    "runs": [
+     "region o:71717171 chars=[652,678] r:ec3712a8",
+     "run chars=[652,662] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",
+     "run chars=[662,668] change=o:7095badf basis=witnessed by=person who=\"Reader Test\" sealed=false",
+     "run chars=[668,678] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false"
+    ]
+   },
+   "blocks": [
+    "part o:71717171 chars=[0,20] r:ec3712a8 label=\"The Quarterly Review\"",
+    "part o:71717171 chars=[20,166] r:ec3712a8 label=\"Revenue grew in every re\"",
+    "part o:71717171 chars=[166,185] r:ec3712a8 label=\"First point, short.\"",
+    "part o:71717171 chars=[185,267] r:ec3712a8 label=\"Second point, which runs\"",
+    "part o:71717171 chars=[267,283] r:ec3712a8 label=\"A numbered step.\"",
+    "part o:71717171 chars=[283,305] r:ec3712a8 label=\"Another numbered step.\"",
+    "part o:71717171 chars=[305,317] r:ec3712a8 label=\"Third point.\"",
+    "part o:71717171 chars=[317,387] r:ec3712a8 label=\"What gets measured gets \"",
+    "part o:71717171 chars=[387,417] r:ec3712a8 label=\"total = sum(rows)\\nprint\"",
+    "part o:71717171 chars=[417,423] r:ec3712a8 label=\"Method\"",
+    "part o:71717171 chars=[423,538] r:ec3712a8 label=\"Every figure in this sec\"",
+    "part o:71717171 chars=[538,662] r:ec3712a8 label=\"Where a number differs f\"",
+    "part o:71717171 chars=[662,769] r:ec3712a8 label=\"Note: Nothing here is a \"",
+    "part o:71717171 chars=[769,878] r:ec3712a8 label=\"Readers who want the det\"",
+    "part o:71717171 chars=[878,987] r:ec3712a8 label=\"The appendix lists what \"",
+    "part o:71717171 chars=[987,1090] r:ec3712a8 label=\"Corrections are welcome \"",
+    "part o:71717171 chars=[1090,1090] r:ec3712a8 label=\"\""
    ]
   }
  }

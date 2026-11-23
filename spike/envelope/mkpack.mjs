@@ -96,17 +96,19 @@ function universe(pk, change, lineage, objects) {
 export function tools() {
   const pk = new Pack('ufo-spike-tools-salt'), [XF, XG, XT, XR, XP, XC] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c].map(id);
   const state = n => formula('state', n), is = (n, v) => formula('=', state(n), v), lit = on => formula('if', on, 'underline', 'none');
-  // each word: what a press on it does (7.6), and a formula that underlines it while what it would set is so (7.3)
+  // each word is a button: what a press on it does (7.6); a formula that underlines it while what it would set is so (7.3);
+  // and the same said for those who do not see it: `current` of the three that choose among things, `pressed` of the one that is on or off
+  const shown = { document: formula('or', is('face', 'document'), is('face', null)), pages: is('face', 'pages'), text: is('face', 'text') }, on = is('editing', true);
   const words = [
-    ['Document', { set: 'face', to: 'document' }, lit(formula('or', is('face', 'document'), is('face', null)))],
-    ['Pages', { set: 'face', to: 'pages' }, lit(is('face', 'pages'))],
-    ['Text', { set: 'face', to: 'text' }, lit(is('face', 'text'))],
-    ['Edit', { set: 'editing', to: formula('not', is('editing', true)) }, lit(is('editing', true))],
-    ['Save', { act: 'export' }, 'none'],
+    ['Document', { set: 'face', to: 'document' }, lit(shown.document), { current: shown.document }],
+    ['Pages', { set: 'face', to: 'pages' }, lit(shown.pages), { current: shown.pages }],
+    ['Text', { set: 'face', to: 'text' }, lit(shown.text), { current: shown.text }],
+    ['Edit', { set: 'editing', to: formula('not', on) }, lit(on), { pressed: on }],
+    ['Save', { act: 'export' }, 'none', {}],
   ];
-  const chars = words.map(w => w[0]).join('   '), spans = { b0: block(XT, XC) }; let at = 0;
-  words.forEach(([w, press, decoration], i) => {
-    spans['t' + i] = { at: anchor({ o: XT, a: { chars: ['s', [XC, at, 0], [XC, at + w.length - 1, 1]] } }), kind: 'inline', role: 'strong', decoration, on: { press } };
+  const chars = words.map(w => w[0]).join('   '), spans = { b0: { ...block(XT, XC), role: 'toolbar', label: 'Tools', lang: 'en' } }; let at = 0;
+  words.forEach(([w, press, decoration, how], i) => {
+    spans['t' + i] = { at: anchor({ o: XT, a: { chars: ['s', [XC, at, 0], [XC, at + w.length - 1, 1]] } }), kind: 'inline', role: 'button', weight: 700, decoration, ...how, on: { press } };
     at += w.length + 3;
   });
   const grey = [F(0.8), F(0.8), F(0.8), F(1)];
@@ -116,7 +118,7 @@ export function tools() {
     [XT, 'ufo.text', { chars, spans, size: F(15), font: ['sans-serif'], margin: [F(10), F(16), F(8), F(16)] }],
     [XR, 'ufo.path', { d: [['M', F(0), F(0)], ['L', F(4000), F(0)]], stroke: grey, width: F(1), h: F(1) }],
     // the subject, in the face the state names, taking text entry while `editing` is set
-    [XP, 'ufo.portal', { of: formula('arg', 'subject'), face: state('face'), editable: is('editing', true), label: 'The document these tools work on' }],
+    [XP, 'ufo.portal', { of: formula('arg', 'subject'), face: state('face'), editable: is('editing', true), role: 'document', label: 'The document these tools work on' }],
   ]);
   return { bytes: pk.b, root, words, portal: { of: ['arg', 'subject'], face: ['state', 'face'], editable: ['=', ['state', 'editing'], true] } };
 }
@@ -125,7 +127,7 @@ export function hostile() {
   const pk = new Pack('ufo-spike-hostile-salt'), [HF, HG, HT, HP, HC] = [0x92, 0x93, 0x91, 0x95, 0x9c].map(id);
   const chars = 'SAVE-ME now, or SWITCH-ME to text.', spans = { b0: block(HT, HC) };
   for (const [key, word, press] of [['x0', 'SAVE-ME', { act: 'export' }], ['x1', 'SWITCH-ME', { set: 'face', to: 'text' }]]) {
-    const i = chars.indexOf(word); spans[key] = { at: anchor({ o: HT, a: { chars: ['s', [HC, i, 0], [HC, i + word.length - 1, 1]] } }), kind: 'inline', role: 'strong', on: { press }, decoration: formula('if', true, 'underline', 'none') };
+    const i = chars.indexOf(word); spans[key] = { at: anchor({ o: HT, a: { chars: ['s', [HC, i, 0], [HC, i + word.length - 1, 1]] } }), kind: 'inline', role: 'button', weight: 700, on: { press }, decoration: formula('if', true, 'underline', 'none') };
   }
   const root = universe(pk, HC, id(0x66), [
     [HF, 'ufo.face', { of: ref(HG), medium: 'document' }],

@@ -3,7 +3,7 @@
 // page and make.mjs use the kernel's. It also writes the small fixed case, spike/out/envelope-case.json:
 //   node spike/envelope/envelope.mjs
 import crypto from 'crypto'; import fs from 'fs'; import { fileURLToPath } from 'url';
-const ESCAPED = ['title', 'date', 'static'], RAW = ['style', 'script', 'kernel', 'kernel-hash', 'tools', 'pack', 'skeleton'];
+const ESCAPED = ['title', 'date', 'static'], RAW = ['style', 'script', 'kernel', 'kernel-hash', 'tools', 'pack', 'skeleton', 'static-html'];
 const escapes = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 export function envelope(parts) {
   const part = n => { if (typeof parts[n] !== 'string') throw Error('a part the skeleton asks for is absent, or is not a text: ' + n); return parts[n]; };

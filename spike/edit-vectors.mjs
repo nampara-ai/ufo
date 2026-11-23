@@ -14,6 +14,15 @@ for (const [f, lo, hi, what] of [
   res[f] = { what, commits: k.query({ q: 'commits' }), why: { region: [lo, hi], runs: lines(k, { name: 'why', o: T, lo, hi }) },
     blocks: lines(k, { name: 'expand', o: T }).map(l => l.split(' type=')[0] + ' ' + (l.match(/label="[^"]{0,24}/) || [''])[0] + '"') };
 }
+// A third pack: an edit the host reported with positions (PLAYER 9.2 `edit`, PRESENTATION 7.6). spike/envelope/roundtrip.mjs writes the pack,
+// with a fixed clock and fixed random bytes, and the reports it gave the kernel (spike/out/edit-positioned.json).
+{ const f = 'edit-positioned.ufx', k = await open(f), given = JSON.parse(fs.readFileSync(new URL('spike/out/edit-positioned.json', root))), { lo } = given.block, hi = lo + 6, change = k.query({ q: 'commits' })[0].change;
+  const ops = JSON.parse(k.query({ q: 'project', name: 'object', o: change }).split('\n').find(l => l.startsWith('prop key=work')).slice('prop key=work value='.length)).ops;
+  res[f] = { status: 'provisional', what: 'compose.ufx after one edit through the gate, made from positioned reports: with the editing surface on the paragraph that began "Nothing here is a forecast" (positions ' + lo + ' to ' + given.block.hi + ', half-open), the six characters of "Note: " were typed one at a time at its very start. A comparison of the paragraph before and after cannot say where they went ("Note: " before "Nothing" reads the same as "e: Not" after "Not"); the positions can. Exactly the six characters typed are attributed to the new change, at the start of the paragraph, and the two sets move the boundary between the two block spans so that they lie in the paragraph they were typed in',
+    commits: k.query({ q: 'commits' }),
+    reports: { what: 'what the host reported while the editing surface was on the block, in order: `at`, `del`, `ins` in the text of the block as the host held it, counted in Unicode scalar values; then the end of the entry, with the whole text', block: given.block, who: given.who, time: given.time, events: given.events },
+    operations: ops, why: { region: [lo - 10, hi + 10], runs: lines(k, { name: 'why', o: T, lo: lo - 10, hi: hi + 10 }) },
+    blocks: lines(k, { name: 'expand', o: T }).map(l => l.split(' type=')[0] + ' ' + (l.match(/label="[^"]{0,24}/) || [''])[0] + '"') }; }
 fs.writeFileSync(new URL('vectors/provisional/edits.json', root), JSON.stringify({ status: STATUSES['provisional/edits.json'],
   what: 'two packs written by the author\'s kernel, each replayed by an independent reader with conservation ok, and what a reader finds in them (sections 1.7, 5.1)', packs: res }, null, 1) + '\n');
 console.log(JSON.stringify(res['edit-one-word.ufx'].why.runs, null, 1), res['edit-paragraph-start.ufx'].blocks.slice(10, 14));

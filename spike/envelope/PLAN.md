@@ -10,6 +10,10 @@ version. This file describes the spike as it now stands; NOTES.md keeps
 the record of the first version and says what changed;
 FINDINGS-STATUS.md goes through the 35 findings one by one.
 
+A later round the same day (three engines, an accessibility tree, positioned
+edits) changed the host interface, the static face and the policy: the last
+section of NOTES.md says how, and is right where this file differs.
+
 ## The five decisions, and what was done about each
 
 1. **The shell counts as host code.** There is no shell. Everything the

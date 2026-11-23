@@ -243,7 +243,10 @@ unsafe fn run(params: &V) -> Option<V> {
         plain(pk, &root, &of(&primary)?, &mut s, 0);
         return Some(map(vec![("text", V::T(s))]));
     }
-    let mut cx = Ctx { pk, root, chain: Vec::new(), blocks: 0, measure: &host, env: None };
+    if mode == "static" {
+        return Some(map(vec![("html", V::T(static_face(pk)?))])); // the static face of a web envelope
+    }
+    let mut cx = Ctx::new(pk, &host, None);
     let mut list = Vec::new();
     if mode == "pages" {
         let (pw, h, pages, rows) = paged(&mut cx, &root, &face("pages").unwrap_or(primary), params, &mut list)?;
@@ -252,6 +255,11 @@ unsafe fn run(params: &V) -> Option<V> {
         return Some(map(vec![("list", V::L(list)), ("w", V::F(pw)), ("h", V::F(h)), ("pages", V::Int(pages.len() as i64)), ("rows", V::Int(rows.len() as i64)), ("breaks", V::L(breaks)), ("detail", detail)]));
     }
     let w = params.get("w").and_then(|w| w.f()).unwrap_or(600.0);
+    if mode == "list" {
+        // the display list of the primary face composed at exactly `w`, its rows stacked from the top left
+        let h = stack(&compose(&mut cx, &root, &of(&primary)?, w), 0.0, 0.0, &mut list);
+        return Some(map(vec![("list", V::L(list)), ("w", V::F(w)), ("h", V::F(h))]));
+    }
     if mode == "rows" {
         // the rows of the primary face composed at exactly `w`, before they are stacked
         return Some(map(vec![("detail", rows_value(&compose(&mut cx, &root, &of(&primary)?, w)))]));

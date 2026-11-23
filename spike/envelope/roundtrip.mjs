@@ -3,7 +3,7 @@
 // two words apart, a removal, the file made by Save, and the things that must not happen (F6, refusals).
 // Build the kernel first (spike/README.md). Run from the repository root: node spike/envelope/roundtrip.mjs
 import fs from 'fs'; import zlib from 'zlib'; import assert from 'assert'; import { start } from '../binding/binding.mjs';
-import { fixedParts, kernelWasm } from './parts.mjs'; import { envelope, fixedCase } from './envelope.mjs'; import { tools as toolsMade, hostile } from './mkpack.mjs';
+import { fixedParts, kernelWasm } from './parts.mjs'; import { tree, flat, read } from './nodes.mjs'; import { envelope, fixedCase } from './envelope.mjs'; import { tools as toolsMade, hostile } from './mkpack.mjs';
 const root = new URL('../../', import.meta.url), out = f => new URL('spike/out/' + f, root);
 const file = f => new Uint8Array(fs.readFileSync(new URL(f, root)));
 const hex = b => Buffer.from(b).toString('hex'), say = (...a) => console.log(...a);
@@ -18,16 +18,19 @@ const parts = fixedParts(file('vectors/compose.ufx'), { title: 'The Quarterly Re
 // ---- a reader: a kernel, the last list it drew, and presses by the place of a word ----
 async function reader(q) {
   const k = await kernel(); assert(await k.start(q), 'starts');
-  const r = { k, list: [], fx: [] };
-  r.send = ev => { r.fx = k.input(ev); const d = r.fx.find(e => e[0] === 'draw'); if (d) { r.list = d[1].list; r.h = d[1].h; } return r.fx; };
-  // the text items as drawn, with where they are on the screen, and whether a stroke lies under them (an underline)
-  r.texts = () => { const st = [[1, 0, 0]], all = []; r.list.forEach(([kind, it], i) => { const m = st[st.length - 1];
+  const r = { k, lists: [[], []], high: [0, 0], fx: [] };
+  // the host's part: it keeps each list as last drawn (a list that has not changed is not sent again)
+  r.send = ev => { r.fx = k.input(ev); for (const [kind, d] of r.fx) if (kind === 'draw') { r.lists[d.on] = d.list; r.high[d.on] = d.h; } r.list = r.lists[1]; r.h = r.high[1]; return r.fx; };
+  // the text items as drawn, with the list each is on (0: the tools, held in view; 1: the subject) and where it is there, and whether a stroke lies under it (an underline)
+  r.texts = () => { const all = []; r.lists.forEach((list, on) => { const st = [[1, 0, 0]]; list.forEach(([kind, it], i) => { const m = st[st.length - 1];
     if (kind === 'push') st.push(it.m ? [m[0] * it.m[0], m[1] + m[0] * it.m[4], m[2] + m[0] * it.m[5]] : m); else if (kind === 'pop') st.pop();
-    else if (kind === 'text') all.push({ ...it, i, X: m[1] + m[0] * it.x, Y: m[2] + m[0] * it.y, lit: r.list[i + 1]?.[0] === 'path' && !!r.list[i + 1][1].stroke && r.list[i + 1][1].d.length === 2 }); });
+    else if (kind === 'text') all.push({ ...it, i, on, X: m[1] + m[0] * it.x, Y: m[2] + m[0] * it.y, lit: list[i + 1]?.[0] === 'path' && !!list[i + 1][1].stroke && list[i + 1][1].d.length === 2 }); }); });
     return all; };
   r.find = starts => r.texts().find(t => t.s.trim().startsWith(starts));
-  r.press = starts => { const t = r.find(starts); assert(t, 'nothing drawn begins ' + starts); return r.send({ press: [t.X + 4, t.Y - 4] }); };
-  r.kinds = () => r.fx.map(e => e[0]).join(' ');
+  r.press = starts => { const t = r.find(starts); assert(t, 'nothing drawn begins ' + starts); return r.send({ press: [t.X + 4, t.Y - 4], on: t.on }); };
+  r.kinds = () => r.fx.map(e => e[0]).filter(k => k !== 'draw').join(' ');   // what the host is asked for beside drawing
+  r.fx1 = kind => (r.fx.find(e => e[0] === kind) || [])[1];
+  r.nodes = on => flat(tree(r.lists[on]));
   r.shown = () => r.texts().map(t => t.s).join('');
   r.head = () => k.query({ q: 'commits' })[0];
   r.send({ view: [600, 800] });
@@ -39,7 +42,14 @@ const why = (k, lo, hi) => k.query({ q: 'project', name: 'why', o: T, lo, hi }).
 const work = (k, change) => JSON.parse(k.query({ q: 'project', name: 'object', o: change }).split('\n').find(l => l.startsWith('prop key=work')).slice('prop key=work value='.length)).ops;
 const blockOf = (r, starts) => r.k.blockAt({ tag: 55462, v: r.find(starts).src.v });
 // an edit made the way a person makes it: press a block, the host's editing surface is mounted, it reports the new text
-const edit = (r, starts, change) => { r.press(starts); const e = r.fx.find(e => e[0] === 'edit'); assert(e && e[1], 'no editing surface was asked for: ' + r.kinds()); const s = change(e[1].s); r.send({ edit: e[1].id, s }); return { old: e[1].s, s, asked: e[1] }; };
+// Here the host reports nothing of where: only the whole text when the person is done. The kernel falls back on the difference.
+const edit = (r, starts, change) => { r.press(starts); const e = r.fx.find(e => e[0] === 'edit'); assert(e && e[1], 'no editing surface was asked for: ' + r.kinds()); const s = change(e[1].s); r.send({ edit: e[1].id, end: true, s }); return { old: e[1].s, s, asked: e[1] }; };
+// And with positions: each thing done in the editing surface reported as it is done, `[at, del, ins]` in the text as the host holds it; then done, with the whole text.
+const typed = (r, starts, steps) => { r.press(starts); const e = r.fx1('edit'); assert(e, 'no editing surface was asked for: ' + r.kinds()); let s = [...e.s]; const events = [];
+  for (const st of steps) { const ev = typeof st === 'string' ? { edit: e.id, s: st } : { edit: e.id, at: st[0], del: st[1], ins: st[2] }; if (typeof st === 'string') s = [...st]; else s.splice(st[0], st[1], ...st[2]); events.push(ev); assert.deepStrictEqual(r.send(ev), [], 'a report from the editing surface asks nothing of the host'); }
+  events.push({ edit: e.id, end: true, s: s.join('') }); r.send(events.at(-1)); return { old: e.s, s: s.join(''), events: events.map(({ edit, ...rest }) => rest) }; };
+// the letters of a word typed one at a time from a place, as a keyboard reports them
+const keys = (at, word) => [...word].map((c, i) => [at + i, 0, c]);
 
 // ---- start: the reader's own act. The tools are the screen; the working universe is their subject ----
 const r = await reader({ parts, name: 'compose.ufx.html' });
@@ -48,42 +58,69 @@ say('started: head', head0.commit.slice(0, 16), 'height', head0.height, '; drawn
 say('\nthe tools universe, as composed (what a press on each names):');
 for (const t of r.texts().filter(t => t.press)) say('  ', JSON.stringify(t.s).padEnd(12), 'press: ' + t.press, t.lit ? '(underlined)' : '');
 assert.deepStrictEqual(r.texts().filter(t => t.press).map(t => t.s), ['Document', 'Pages', 'Text', 'Edit', 'Save']);
-const subject = () => r.texts().filter(t => !t.press && t.Y > 60);
+const subject = () => r.texts().filter(t => t.on === 1);
 assert(subject().length > 20 && subject().every(t => !('press' in t)), 'nothing of the subject carries press');
 assert(r.find('Document').lit && !r.find('Pages').lit && !r.find('Edit').lit, 'the tools show which face is on: a formula over state');
 
+// ---- what an accessibility tree needs (9.2): the nodes of each list, as a host finds them ----
+const how = n => n.role + (n.level ? ' ' + n.level : '') + ('current' in n ? (n.current ? ' current' : ' not-current') : '') + ('pressed' in n ? (n.pressed ? ' pressed' : ' not-pressed') : '') + (n.press ? ' press' : '');
+const toolsNow = () => r.nodes(0).map(n => `${how(n)} ${JSON.stringify(n.label ?? n.text)}`);
+say('\nthe nodes of the tools, as a host must expose them:'); for (const l of toolsNow()) say('  ' + l);
+assert.deepStrictEqual(toolsNow(), ['toolbar "Tools"', 'button current press "Document"', 'button not-current press "Pages"', 'button not-current press "Text"', 'button not-pressed press "Edit"', 'button press "Save"', 'status ""']);
+{ const doc = r.nodes(1); say('the nodes of the subject (the first of', doc.length + '):'); for (const n of doc.slice(0, 12)) say('  ' + '  '.repeat(n.depth) + how(n) + ' ' + JSON.stringify(n.label ?? n.text).slice(0, 60));
+  assert.deepStrictEqual(doc.slice(0, 2).map(n => [n.depth, n.role, n.label ?? n.text]), [[0, 'document', 'The document these tools work on'], [1, 'heading', 'The Quarterly Review']]);
+  assert.deepStrictEqual(doc.filter(n => n.role === 'heading').map(n => [n.level, n.text]), [[1, 'The Quarterly Review'], [2, 'Method']]);
+  assert.deepStrictEqual(doc.filter(n => n.role === 'list' || n.role === 'item').map(n => [n.depth, n.role, n.text]), [[1, 'list', ''], [2, 'item', '• First point, short.'], [2, 'item', '• Second point, which runs long enough to need a second line at the width used here.'],
+    [3, 'list', ''], [4, 'item', '1. A numbered step.'], [4, 'item', '2. Another numbered step.'], [2, 'item', '• Third point.']]);
+  assert.strictEqual(doc.find(n => n.role === 'code').text, 'total = sum(rows)\nprint(total)'); assert(doc.find(n => n.role === 'quote').text.startsWith('What gets measured gets managed, and what gets explained gets trusted.'));
+  assert(doc.every(n => !n.press && n.role), 'nothing of the subject can be pressed while it is not editable, and no text lies outside a node');
+  // the text of the nodes, read in order, is the plain-text face (8.3) but for its empty lines and the indent of nested items: nothing is lost and nothing comes twice
+  const flatten = s => s.replace(/\s+/g, ' ').trim(); assert.strictEqual(flatten(doc.map(n => n.text).join(' ')), flatten(r.k.sample({ as: 'text' }).text)); }
+
 // ---- faces: presentation state set by handlers, read by the Portal's `face` formula ----
-const docHigh = r.h, docText = r.shown();
+const docHigh = r.h, docText = r.shown(), docNodes = r.nodes(1);
 r.press('Pages'); assert(r.find('Pages').lit && !r.find('Document').lit); assert(r.h > docHigh * 1.5 && r.list.filter(i => i[0] === 'push' && i[1].clip).length >= 2, 'pages are drawn');
+assert.deepStrictEqual(toolsNow().slice(1, 4), ['button not-current press "Document"', 'button current press "Pages"', 'button not-current press "Text"']);
+{ const pg = r.nodes(1), regions = pg.filter(n => n.role === 'region'); assert(regions.length >= 2 && regions[0].label === 'Page 1' && regions[1].label === 'Page 2', 'each page is a region, named');
+  const doc = pg.filter(n => n.role !== 'region' && n.role !== 'document'); assert.deepStrictEqual(doc.filter(n => n.role === 'heading').map(n => n.text), ['The Quarterly Review', 'Method']);
+  assert.deepStrictEqual(doc.map(n => [n.role, n.text]), docNodes.filter(n => n.role !== 'document').map(n => [n.role, n.text]), 'the pages hold the same nodes with the same text: a paragraph that runs over a page is one node'); }
 say('\nface pages:', r.list.filter(i => i[0] === 'push' && i[1].clip).length, 'pages,', r.h, 'high');
 r.press('Text'); assert(r.find('Text').lit); const mono = r.texts().filter(t => t.font[0] === 'monospace');
 assert(mono.length > 10 && mono.map(t => t.s).join('').includes('• First point, short.') && mono.every(t => !t.src), 'the plain-text face, in a monospaced font');
 say('face text:', mono.length, 'lines of plain text, the first', JSON.stringify(mono[0].s));
+assert.deepStrictEqual(toolsNow().slice(1, 4), ['button not-current press "Document"', 'button not-current press "Pages"', 'button current press "Text"']);
 r.press('Document'); assert.strictEqual(r.shown(), docText); assert.strictEqual(r.head().commit, head0.commit, 'changing face changes no byte');
 
 // ---- F6: nothing in a file can act, or take a subject ----
 { const h = await reader({ parts: { ...parts, pack: Buffer.from(hostile().bytes).toString('base64') }, name: 'hostile.ufx.html', who: 'Reader Test' });
   const before = JSON.stringify(h.list, (k, v) => v instanceof Uint8Array ? hex(v) : v), t = h.find('SAVE-ME');
   assert(t && !t.press && !t.lit && !h.find('SWITCH-ME').press, 'a handler in the working universe gives its text nothing to press; its formula is not evaluated');
-  for (const w of ['SAVE-ME', 'SWITCH-ME']) { h.press(w); assert.strictEqual(h.kinds(), 'draw', 'a press on ' + w + ' did: ' + h.kinds()); assert.strictEqual(JSON.stringify(h.list, (k, v) => v instanceof Uint8Array ? hex(v) : v), before); }
+  for (const w of ['SAVE-ME', 'SWITCH-ME']) { h.press(w); assert.strictEqual(h.kinds(), '', 'a press on ' + w + ' did: ' + h.kinds()); assert.strictEqual(JSON.stringify(h.list, (k, v) => v instanceof Uint8Array ? hex(v) : v), before); }
   assert(h.find('NO-SUBJECT-HERE'), 'a Portal in the working universe whose `of` is arg("subject") shows its label: it was given no subject');
   say('\nF6: in a working universe that carries handlers and a Portal onto arg("subject"): presses did nothing, the Portal shows its label'); }
 
 // ---- editing is off: a press on the document does nothing. On: the reader asks who the person is, once ----
-r.press('Every figure'); assert.strictEqual(r.kinds(), 'draw', 'a press on the document with editing off: ' + r.kinds());
+r.press('Every figure'); assert.strictEqual(r.kinds(), '', 'a press on the document with editing off: ' + r.kinds());
 r.press('Edit'); assert(r.find('Edit').lit, 'Edit shows that editing is on');
-r.press('Every figure'); assert.strictEqual(r.kinds(), 'draw ask', 'the reader asks for the name of its principal: ' + r.kinds());
-say('\nask ->', JSON.stringify(r.fx[1][1]));
-r.send({ answer: 'Reader Test' }); assert.strictEqual(r.kinds(), 'draw edit'); const asked = r.fx[1][1];
+assert.strictEqual(toolsNow()[4], 'button pressed press "Edit"'); assert(r.nodes(1).filter(n => ['heading', 'paragraph', 'item', 'quote', 'code'].includes(n.role)).every(n => n.press), 'while the subject is editable every block of it says it can be pressed');
+// focus: the host says which node has it; the kernel rings the node and asks for it to be brought into view
+{ const para = r.nodes(1).find(n => n.text.startsWith('Every figure')), items = r.lists[1].length; r.send({ focus: r.lists[1].find(i => i[0] === 'push' && i[1].role === 'paragraph' && i[1].press).id ?? 0, on: 1 });
+  const id = r.lists[1].filter(i => i[0] === 'push' && i[1].role === 'paragraph')[2][1].id; r.send({ focus: id, on: 1 }); assert.strictEqual(r.kinds(), 'show'); const ring = r.lists[1].at(-1);
+  assert(r.lists[1].length === items + 1 && ring[0] === 'path' && ring[1].stroke && r.fx1('show').on === 1 && r.fx1('show').at[1] > 100, 'the node with the focus is ringed'); assert(para);
+  r.send({ focus: null }); assert.strictEqual(r.lists[1].length, items, 'and the ring goes when the focus does'); }
+r.press('Every figure'); assert.strictEqual(r.kinds(), 'ask', 'the reader asks for the name of its principal: ' + r.kinds());
+say('\nask ->', JSON.stringify(r.fx1('ask')));
+r.send({ answer: 'Reader Test' }); assert.strictEqual(r.kinds(), 'edit show'); const asked = r.fx1('edit');
 say('edit ->', JSON.stringify({ ...asked, s: asked.s.slice(0, 40) + '…' }));
 assert(asked.s.startsWith('Every figure in this section') && asked.at.length === 4 && asked.at[3] > 20 && asked.size === 16);
-r.send({ press: [20, 20] }); assert.strictEqual(r.kinds(), '', 'while the editing surface is mounted a press does nothing');
-r.send({ edit: asked.id }); assert.strictEqual(r.kinds(), 'draw edit'); assert.strictEqual(r.fx[1][1], null, 'given up: unmounted'); assert.strictEqual(r.head().commit, head0.commit);
+r.send({ press: [20, 20] }); assert.deepStrictEqual(r.fx, [], 'while the editing surface is mounted a press does nothing');
+assert(r.lists[1].at(-1)[0] === 'path' && r.lists[1].at(-1)[1].stroke, 'the block being changed is ringed');
+r.send({ edit: asked.id, end: false }); assert.strictEqual(r.kinds(), 'edit'); assert.strictEqual(r.fx1('edit'), null, 'given up: unmounted'); assert.strictEqual(r.head().commit, head0.commit);
 
 // ---- one word changed: one word attributed ----
 const b10 = blockOf(r, 'Every figure');
 const one = edit(r, 'Every figure', s => s.replace('ledger', 'books'));
-assert.strictEqual(r.kinds(), 'draw edit'); assert.strictEqual(r.fx[1][1], null);
+assert.strictEqual(r.kinds(), 'edit'); assert.strictEqual(r.fx1('edit'), null);
 const c1 = r.head(); assert.strictEqual(c1.height, head0.height + 1);
 const id1 = r.head().change, change1 = id1.slice(0, 8); assert(r.shown().includes('change ' + change1 + ' by Reader Test'));
 const w1 = why(r.k, b10.lo, b10.lo + [...one.s].length), ops1 = work(r.k, id1);
@@ -129,6 +166,43 @@ fs.writeFileSync(out('edited-paragraph-start.ufx'), r.k.packBytes());
   say('"Note: " typed before "Nothing": the work is', JSON.stringify(ops.map(o => ({ op: o.op, ins: o.ins, after: o.after && o.after[1] }))));
   assert.deepStrictEqual(ops.map(o => [o.op, o.ins]), [['splice', 'e: Not']]); assert.strictEqual(blockOf(x, 'Note: Nothing').text, e.s); assert.strictEqual(blockOf(x, 'Note: Nothing').key, b12.key); }
 
+// ---- positioned reports: the host says where each thing was done. Positions decide where; the comparison of before with after removes what is the same (L1) ----
+{ const fresh = async () => { const x = await reader({ parts, name: 'x', who: 'Reader Test' }); x.press('Edit'); return x; };
+  const made = (x, e) => { const ops = work(x.k, x.head().change); return ops.map(o => o.op === 'splice' ? [o.old ?? '', o.ins ?? ''] : ['set', o.key.join('.')]); };
+  // the case the difference gets wrong: "Note: " typed, a key at a time, immediately before "Nothing"
+  const x = await fresh(), b = blockOf(x, 'Nothing here'), h0 = x.head().height;
+  const e = typed(x, 'Nothing here', keys(0, 'Note: ')), ops = work(x.k, x.head().change), w = why(x.k, b.lo - 10, b.lo + 16);
+  say('\n"Note: " typed before "Nothing", reported with positions. The work:'); for (const o of ops) say('  ' + JSON.stringify(o)); say('why, for the end of the block before and the start of this one:'); for (const l of w) say('  ' + l);
+  assert.deepStrictEqual(made(x), [['', 'Note: '], ['set', 'spans.b11.at'], ['set', 'spans.' + b.key + '.at']], 'exactly the six characters typed, where they were typed');
+  assert(w.length === 3 && w[1].includes(`chars=[${b.lo},${b.lo + 6}]`) && w[1].includes('change=o:' + x.head().change.slice(0, 8)) && w[1].includes('who="Reader Test"') && !w[0].includes(x.head().change.slice(0, 8)) && !w[2].includes(x.head().change.slice(0, 8)), 'attributed at the start, and nothing else');
+  assert.strictEqual(blockOf(x, 'Note: Nothing').text, e.s); assert.strictEqual(blockOf(x, 'Note: Nothing').key, b.key); assert.strictEqual(x.head().height, h0 + 1);
+  fs.writeFileSync(new URL('vectors/edit-positioned.ufx', root), x.k.packBytes());
+  fs.writeFileSync(out('edit-positioned.json'), JSON.stringify({ block: { key: b.key, lo: b.lo, hi: b.hi, text: b.text }, events: e.events, who: 'Reader Test', time: DAY, change: x.head().change }, null, 1) + '\n');
+  // a word replaced by selecting it and typing: the first key replaces the selection, the rest follow. The stretch is compared: here nothing is shared
+  { const at = blockOf(x, 'Every figure').text.indexOf('ledger'), r2 = typed(x, 'Every figure', [[at, 6, 'b'], ...keys(at + 1, 'ooks')]); assert.deepStrictEqual(made(x), [['ledger', 'books']]); assert(r2.s.includes('from the books at')); }
+  // where the word typed shares letters with the one it replaced, only the letters that differ are written: positions say which stretch, the comparison what of it
+  { const at = [...blockOf(x, 'Every figure').text].join('').indexOf('taken'); typed(x, 'Every figure', [[at, 5, 't'], ...keys(at + 1, 'oken')]); assert.deepStrictEqual(made(x), [['a', 'o']]); }
+  // a run of backspaces, from the end of what goes
+  { const t = blockOf(x, 'The appendix').text, at = t.indexOf(' by accident'); typed(x, 'The appendix', Array.from({ length: 12 }, (_, i) => [at + 11 - i, 1, ''])); assert.deepStrictEqual(made(x), [[' by accident', '']]); }
+  // a paste: many characters in one report; and a second thing done elsewhere in the same entry: two splices, one change
+  { const t = blockOf(x, 'Readers who').text, at = t.indexOf('detail'); typed(x, 'Readers who', [[at, 0, 'whole of the '], [0, 7, 'Those']]); assert.deepStrictEqual(made(x), [['Reader', 'Tho'], ['', 'e'], ['', 'whole of the ']], 'the stretch replaced is compared (the s of Readers stays); the paste is where it was put'); }
+  // typed and removed again: nothing differs, nothing is written, and the reader says nothing was changed
+  { const n = x.head().height; typed(x, 'Corrections are', [...keys(11, ' truly'), ...Array.from({ length: 6 }, (_, i) => [16 - i, 1, ''])]); assert.strictEqual(x.head().height, n, 'typed and deleted: no change');
+    typed(x, 'Corrections are', [[0, 11, 'C'], ...keys(1, 'orrections')]); assert.strictEqual(x.head().height, n, 'the same characters typed over themselves: no change');
+    typed(x, 'Corrections are', [[0, 1, ''], [0, 0, 'C']]); assert.strictEqual(x.head().height, n, 'a letter removed and typed again: no change');
+    assert.strictEqual(x.kinds(), 'edit'); assert(!x.texts().some(t => t.on === 0 && t.slant), 'and no word about a change'); }
+  // typed over what was typed in the same entry: only what is there at the end counts
+  { typed(x, 'Corrections are', [[0, 0, 'Xq'], [1, 1, ''], [0, 1, 'All c'], [5, 1, '']]); assert.deepStrictEqual(made(x), [['C', 'All c']]); }
+  // the fallback: reports with no position (the whole text each time). The kernel takes the difference for each step, and "Note: " does not land where it was typed
+  { const y = await fresh(), t = blockOf(y, 'Nothing here').text; typed(y, 'Nothing here', ['N' + t, 'No' + t, 'Not' + t, 'Note' + t, 'Note:' + t, 'Note: ' + t]); assert.deepStrictEqual(made(y), [['', 'ote: N']], 'with no positions the difference decides, a step at a time: one letter along here (three, where only the end is reported)');
+    // mixed: a positioned report, then one without: the first keeps its place
+    const t2 = blockOf(y, 'Readers who').text; typed(y, 'Readers who', [[0, 0, 'Re: '], 'Re: ' + t2.replace('detail', 'sums')]); assert.deepStrictEqual(made(y), [['', 'Re: '], ['set', 'spans.b12.at'], ['set', 'spans.b13.at'], ['detail', 'sums']].sort((a, b) => (a[0] === 'set') - (b[0] === 'set')));
+    // a report the kernel cannot place (past the end) is left alone, and one that was never sent is missed: the whole text that ends the entry settles both
+    const z = y.press('The appendix') && y.fx1('edit'); y.send({ edit: z.id, at: 9999, del: 0, ins: '!' }); y.send({ edit: z.id, end: true, s: z.s.replace('reason', 'why') }); assert.deepStrictEqual(made(y), [['reason', 'why']]);
+    // and an entry given up writes nothing, whatever was reported
+    const n = y.head().height, q = y.press('Corrections are') && y.fx1('edit'); y.send({ edit: q.id, at: 0, del: 0, ins: 'zzz' }); y.send({ edit: q.id, end: false }); assert.strictEqual(y.head().height, n); }
+  say('positioned reports: a word replaced, letters shared, backspaces, a paste, typed-and-removed (no change), the fallback with no positions, a missed report: as expected'); }
+
 // ---- two words changed apart: two splices in one change ----
 const b11 = blockOf(r, 'Where a number');
 const three = edit(r, 'Where a number', s => s.replace('number', 'total').replace('kept', 'shown'));
@@ -146,27 +220,27 @@ assert(!work(r.k, r.head().change)[0].ins);
 // the same text reported back: nothing is written
 const n = r.head().height; edit(r, 'The appendix', s => s); assert.strictEqual(r.head().height, n);
 // editing is turned off by the tool that turned it on
-r.press('Edit'); assert(!r.find('Edit').lit); r.press('The appendix'); assert.strictEqual(r.kinds(), 'draw', 'editing is off again');
+r.press('Edit'); assert(!r.find('Edit').lit); r.press('The appendix'); assert.strictEqual(r.kinds(), '', 'editing is off again');
 
 // ---- Save: the handler acts `export`; the kernel makes the envelope and hands the host a file ----
-r.press('Save'); assert.strictEqual(r.kinds(), 'draw deliver');
-const made = r.fx[1][1], page = Buffer.from(made.bytes).toString('utf8'), pack = r.k.packBytes();
-say('\ndeliver ->', JSON.stringify({ name: made.name, type: made.type, bytes: made.bytes.length }), '; the reader says:', JSON.stringify(r.texts().filter(t => t.i < 40 && t.slant).map(t => t.s).join('')));
+r.press('Save'); assert.strictEqual(r.kinds(), 'deliver');
+const made = r.fx1('deliver'), page = Buffer.from(made.bytes).toString('utf8'), pack = r.k.packBytes();
+say('\ndeliver ->', JSON.stringify({ name: made.name, type: made.type, bytes: made.bytes.length }), '; the reader says:', JSON.stringify(r.texts().filter(t => t.on === 0 && t.slant).map(t => t.s).join('')));
 assert.strictEqual(made.name, 'compose-edited.ufx.html'); assert.strictEqual(made.type, 'text/html');
-const now = { ...parts, static: r.k.sample({ as: 'text' }).text.replace(/^\n+/, ''), pack: Buffer.from(pack).toString('base64'), date: '2026-01-02' };
+const now = { ...parts, 'static-html': r.k.sample({ as: 'static' }).html, pack: Buffer.from(pack).toString('base64'), date: '2026-01-02' };
 assert.strictEqual(page, envelope(now), 'the file made by Save is envelope(parts), as a second implementation computes it, byte for byte');
 assert(page.startsWith('<!DOCTYPE html>\n<!--\nUFO file (Universal File Object). Exported 2026-01-02. Open it in a web browser.\n-->\n') && page.endsWith('</script></body></html>'));
 say('the file is envelope(parts) by the JavaScript implementation, byte for byte:', page.length, 'characters');
 // the names that follow
 for (const [name, next] of [['compose-edited.ufx.html', 'compose-edited-2.ufx.html'], ['compose-edited-9.ufx.html', 'compose-edited-10.ufx.html'], ['a.html', 'a-edited.ufx.html'], ['', 'untitled-edited.ufx.html']]) {
-  const x = await reader({ parts, name, who: 'x' }); x.press('Save'); assert.strictEqual(x.fx[1][1].name, next); }
+  const x = await reader({ parts, name, who: 'x' }); x.press('Save'); assert.strictEqual(x.fx1('deliver').name, next); }
 // a reader that was given no parts makes no file, and says so
 { const k = await kernel(); assert(await k.open(file('vectors/compose.ufx'))); assert(k.openTools(file('spike/envelope/tools.ufx'))); const d = k.input({ view: [600, 800] })[0][1];
-  const t = d.list.filter(i => i[0] === 'text').find(i => i[1].s === 'Save')[1], fx = k.input({ press: [16 + t.x + 4, 10 + t.y - 4] });
-  assert(fx.length === 1 && JSON.stringify(fx).includes('No file was made'), 'no parts, no file'); }
+  const t = d.list.filter(i => i[0] === 'text').find(i => i[1].s === 'Save')[1], fx = k.input({ press: [16 + t.x + 4, 10 + t.y - 4], on: 0 });
+  assert(fx.every(e => e[0] === 'draw') && JSON.stringify(fx).includes('No file was made'), 'no parts, no file'); }
 
 // ---- the envelope function: the kernel's and the JavaScript one agree, on a small fixed case and on what is refused ----
-{ const first = { ...parts, static: 'x < y', date: '2026-01-02' }; assert.strictEqual(r.k.envelope(first).text, envelope(first), 'on the parts of a real file the two agree'); }
+{ const first = { ...parts, 'static-html': '<p>x &lt; y</p>', date: '2026-01-02' }; assert.strictEqual(r.k.envelope(first).text, envelope(first), 'on the parts of a real file the two agree'); }
 const fixed = JSON.parse(fs.readFileSync(out('envelope-case.json'), 'utf8'));
 assert.deepStrictEqual(fixed.parts, fixedCase); assert.strictEqual(envelope(fixedCase), fixed.envelope); assert.deepStrictEqual(r.k.envelope(fixedCase), { text: fixed.envelope });
 for (const [what, p] of Object.entries(fixed.refused)) { assert(r.k.envelope(p).refused, what); assert.throws(() => envelope(p), what); say('envelope refused (' + what + '):', r.k.envelope(p).refused); }
@@ -182,8 +256,8 @@ assert.strictEqual(r2.head().commit, r.head().commit, 'the file holds the state 
 assert.deepStrictEqual(why(r2.k, b10.lo, b10.lo + 40), why(r.k, b10.lo, b10.lo + 40));
 assert.deepStrictEqual(Buffer.from(pack.slice(0, file('vectors/compose.ufx').length)), Buffer.from(file('vectors/compose.ufx')), 'the pack was only appended to (P4)');
 const layers = r2.k.query({ q: 'layers' }); assert.strictEqual(layers.missing_from_content_or_attribution, 0);
-r2.press('Save'); assert.strictEqual(r2.fx[1][1].name, 'compose-edited-2.ufx.html');
-assert.strictEqual(Buffer.from(r2.fx[1][1].bytes).toString('utf8'), page, 'saved again with nothing changed, on the same day: the same file, byte for byte');
+r2.press('Save'); assert.strictEqual(r2.fx1('deliver').name, 'compose-edited-2.ufx.html');
+assert.strictEqual(Buffer.from(r2.fx1('deliver').bytes).toString('utf8'), page, 'saved again with nothing changed, on the same day: the same file, byte for byte');
 say('\na fresh kernel started from the parts of the file made: head', r2.head().commit.slice(0, 16), 'height', r2.head().height, '; the same text and why; saved again, the same bytes');
 
 // ---- the gate: what `propose` refuses, each with nothing written ----

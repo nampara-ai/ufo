@@ -1,0 +1,197 @@
+{
+ "engines": {
+  "chromium": {
+   "version": "153.0.8010.12",
+   "failed": 0,
+   "entries": {
+    "00-envelope": "pass",
+    "01-no-icon-request": "pass",
+    "02-look-without-style": "pass",
+    "03-save-as-bytes": "pass",
+    "04-edit-positions": "pass"
+   }
+  },
+  "firefox": {
+   "version": "155.0",
+   "failed": 0,
+   "entries": {
+    "00-envelope": "pass",
+    "01-no-icon-request": "pass",
+    "02-look-without-style": "pass",
+    "03-save-as-bytes": "pass",
+    "04-edit-positions": "pass"
+   }
+  },
+  "webkit": {
+   "version": "26.6",
+   "failed": 0,
+   "entries": {
+    "00-envelope": "pass",
+    "01-no-icon-request": "pass",
+    "02-look-without-style": "pass",
+    "03-save-as-bytes": "pass",
+    "04-edit-positions": "pass"
+   }
+  }
+ },
+ "total": 15,
+ "passed": 15,
+ "failed": 0,
+ "naive": [
+  {
+   "file": "01-no-icon-request.naive.html",
+   "engine": "chromium",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
+   "file": "01-no-icon-request.naive2.html",
+   "engine": "chromium",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: console: error: Loading the image 'data:,' violates the following Content Security Policy directive: \"default-src 'none'\". Note that 'img-src' was not expli; file: violations: img-src data; http: console: error: Loading the image 'data:,' violates the following Content Security Policy directiv"
+  },
+  {
+   "file": "02-look-without-style.naive.html",
+   "engine": "chromium",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the paragraph did not move: 0px; the second paragraph is not hidden; policy violation: style-src-attr inline; policy violation: style-src-elem inline; file: console: error: Applying inline style violates the following Content Security Policy directive 'style-src 'sha256-1ymVRFp86dnbHfmgo"
+  },
+  {
+   "file": "03-save-as-bytes.naive.html",
+   "engine": "chromium",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
+   "file": "04-edit-positions.naive.html",
+   "engine": "chromium",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
+   "file": "04-edit-positions.naive2.html",
+   "engine": "chromium",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the reports do not add up to the text: \"Revenue grew in every region this quarte\" is not \"ReRevenuin every reg日本\\né𝄞ion this quart\""
+  },
+  {
+   "file": "01-no-icon-request.naive.html",
+   "engine": "firefox",
+   "fails": true,
+   "as_recorded": true,
+   "how": "http: fail: policy violation: img-src http://127.0.0.1:44689/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:44689/favic; http: violations: img-src http://127.0.0.1:44689/favicon.ico"
+  },
+  {
+   "file": "01-no-icon-request.naive2.html",
+   "engine": "firefox",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: policy violation: img-src data; file: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at data:, because it violates t; file: violations: img-src data; http: fail: policy violation: img-src data; http: console: e"
+  },
+  {
+   "file": "02-look-without-style.naive.html",
+   "engine": "firefox",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the paragraph did not move: 0px; the second paragraph is not hidden; policy violation: style-src-attr inline; policy violation: style-src-elem inline; file: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked an inline style (style-src-attr) from bein"
+  },
+  {
+   "file": "03-save-as-bytes.naive.html",
+   "engine": "firefox",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
+   "file": "04-edit-positions.naive.html",
+   "engine": "firefox",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
+   "file": "04-edit-positions.naive2.html",
+   "engine": "firefox",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the reports do not add up to the text: \"Revenue grew in every region this quarte\" is not \"ReRevenuin every reg日本\\né𝄞ion this quart\""
+  },
+  {
+   "file": "01-no-icon-request.naive.html",
+   "engine": "webkit",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
+   "file": "01-no-icon-request.naive2.html",
+   "engine": "webkit",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
+   "file": "02-look-without-style.naive.html",
+   "engine": "webkit",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the paragraph did not move: 0px; the second paragraph is not hidden; policy violation: style-src-attr inline; policy violation: style-src-elem inline; file: console: error: Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src dire"
+  },
+  {
+   "file": "03-save-as-bytes.naive.html",
+   "engine": "webkit",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
+   "file": "04-edit-positions.naive.html",
+   "engine": "webkit",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the reports do not add up to the text: \"ReRevenuin every 日本\\né𝄞 this quarter, an\" is not \"ReRevenuin every 日本\\né𝄞ion this quarter,\""
+  },
+  {
+   "file": "04-edit-positions.naive2.html",
+   "engine": "webkit",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the reports do not add up to the text: \"Revenue grew in every region this quarte\" is not \"ReRevenuin every 日本\\né𝄞ion this quarter,\""
+  }
+ ],
+ "harness": {
+  "harness-screenshot chromium": {
+   "violations": [],
+   "requests": 1
+  },
+  "harness-local-file-request chromium": {
+   "violations": [],
+   "requests": 1
+  },
+  "harness-screenshot firefox": {
+   "violations": [],
+   "requests": 0
+  },
+  "harness-local-file-request firefox": {
+   "violations": [],
+   "requests": 0
+  },
+  "harness-screenshot webkit": {
+   "violations": [
+    "style-src-elem inline"
+   ],
+   "requests": 1
+  },
+  "harness-local-file-request webkit": {
+   "violations": [],
+   "requests": 1
+  }
+ },
+ "off": 0
+}

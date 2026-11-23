@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!-- Naive: the place is asked of the event (getTargetRanges). For a text box Chromium 153, Firefox 155 and WebKit 26 all give an empty list, so nothing is known and nothing adds up. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>04 where a text box was changed</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-nObdFv7hJ3jnIpYk/mYbkGBhYMoRyXVvVR47YKsPshs='; style-src 'sha256-VwJYb9DpUq9ftUDHbdhcTMn6sWSJ0JAGjwpLX+Yhjss='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}</style>
+</head><body>
+<h1>04 where a text box was changed</h1>
+<p>Naive: the place is asked of the event (getTargetRanges). For a text box Chromium 153, Firefox 155 and WebKit 26 all give an empty list, so nothing is known and nothing adds up.</p>
+<p>Result: <span id="result">not finished</span></p>
+<textarea id="t" rows="4" cols="60" aria-label="text">Revenue grew in every region this quarter, and for the first time the growth came mostly from customers.</textarea><p><button type="button" id="done">Done</button></p>
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+const area = document.getElementById('t'), problems = []; let held = area.value, text = [...held], sel = null, comp = null, placed = 0, whole = 0;
+const count = s => [...s].length;
+const report = ev => { if ('at' in ev) { placed++; text.splice(ev.at, ev.del, ...ev.ins); } else { whole++; text = [...ev.s]; } };   // what a kernel does with a report
+area.addEventListener('beforeinput', () => { sel = area.selectionStart; });
+area.addEventListener('compositionstart', () => { comp = area.selectionStart; });
+area.addEventListener('compositionend', () => setTimeout(() => { comp = null; }));
+area.addEventListener('beforeinput', e => { const r = e.getTargetRanges()[0]; if (r) report({ at: r.startOffset, del: r.endOffset - r.startOffset, ins: e.data || '' }); });
+document.getElementById('done').onclick = () => { if (text.join('') !== area.value) problems.push('the reports do not add up to the text: ' + JSON.stringify(text.join('').slice(0, 40)) + ' is not ' + JSON.stringify(area.value.slice(0, 40)));
+  document.documentElement.dataset.detail = placed + ' with a position, ' + whole + ' without'; finish(problems, 50); };</script></body></html>
