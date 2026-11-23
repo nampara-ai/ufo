@@ -7,7 +7,7 @@
  ],
  "results": {
   "Node": {
-   "kernel": "failed",
+   "kernel": "passed",
    "host": "passed"
   },
   "desktop, file://": {
@@ -123,5 +123,5 @@
   ]
  },
  "total": 246,
- "failures": 1
+ "failures": 0
 }

@@ -136,7 +136,7 @@
    ],
    "results": {
     "Node": {
-     "kernel": "failed",
+     "kernel": "passed",
      "host": "passed"
     },
     "desktop, file://": {
@@ -252,7 +252,7 @@
     ]
    },
    "total": 246,
-   "failures": 1
+   "failures": 0
   },
   "webkit": {
    "engine": "webkit",
@@ -263,7 +263,7 @@
    ],
    "results": {
     "Node": {
-     "kernel": "failed",
+     "kernel": "passed",
      "host": "passed"
     },
     "desktop, file://": {
@@ -379,7 +379,7 @@
     ]
    },
    "total": 246,
-   "failures": 1
+   "failures": 0
   }
  },
  "quirks": {
@@ -496,7 +496,7 @@
     "engine": "firefox",
     "fails": true,
     "as_recorded": true,
-    "how": "http: fail: policy violation: img-src http://127.0.0.1:40211/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:40211/favic; http: violations: img-src http://127.0.0.1:40211/favicon.ico"
+    "how": "http: fail: policy violation: img-src http://127.0.0.1:37611/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:37611/favic; http: violations: img-src http://127.0.0.1:37611/favicon.ico"
    },
    {
     "file": "01-no-icon-request.naive2.html",
