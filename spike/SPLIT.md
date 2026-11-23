@@ -237,3 +237,38 @@ one that is absent is never made.
 **Still not done.** The web binding does not load components, a file
 does not yet list them, and the envelope still carries the kernel whole.
 A page run with the base alone has not been tried.
+
+## 8. The base after decisions and named values (2026-11-23)
+
+| | Compressed | KiB |
+| --- | ---: | ---: |
+| The kernel whole | 120 347 | 117.5 |
+| **The base** | **113 973** | **111.3** |
+| Printer | 5 057 | 4.9 |
+| Agent | 3 714 | 3.6 |
+
+Since section 7 the base grew by 6 880 bytes: about 2 050 for the
+safeguard and what came with decisions in the projections; 4 095 for
+recording a decision and undoing a rejected change; 386 for named
+values; the rest in the division. Two clean divisions still give the
+same bytes, and the divided kernel still answers as the whole one does
+(`divided.mjs`, 14 of 14, with the safeguard's cases).
+
+The operators the base holds, being those the tools use: `state`, `arg`,
+`let`, `=`, `not`, `and`, `or`, `if`, `+`, `list`, `nth`, `len`,
+`concat`, `slice`, `format`, `get` of a record, `ask`. Every other
+operator of §7.3 is the formulas component's, and is not built.
+
+**What remains for the base, and what it may cost.** These are
+estimates from the size of like code already written, not measurements:
+
+| | Estimate |
+| --- | ---: |
+| Undo: the undoing already written for rejection, with a tool's origin | 0.5 KB |
+| Verifying seals: the bytes signed, the host's `verify`, the result shown | 1 KB |
+| Adding an asset: a new object in a change; the blob writer exists | 1 to 1.5 KB |
+| Grid layout, and the editing of data | 5 to 8 KB |
+| Together | 7.5 to 11 KB |
+
+Against 17.1 KB left, that leaves between 6 and 9.5 KB at the end. The
+largest and least certain is the last.

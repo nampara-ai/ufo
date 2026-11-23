@@ -5,23 +5,23 @@
   "agent": 12
  },
  "whole": {
-  "bytes": 257654,
-  "deflate": 119961,
-  "sha256": "1395d8c42352fde76619ea394085fb7bb21498000b95977d0e09c94b3b5421fd"
+  "bytes": 258451,
+  "deflate": 120347,
+  "sha256": "ae9055dbd74f0a7e7d73a1c18d01dde0af1014cbaaa209137a269d633126986e"
  },
  "base": {
-  "bytes": 243047,
-  "deflate": 113490,
-  "sha256": "4e15460d61be551ffab53aa459bd8a616db18bb2728e41116d8e23caf51d00b5"
+  "bytes": 243851,
+  "deflate": 113973,
+  "sha256": "21a69425010ef1f7ed475da2c3f437714bb9d6ee14fafb89e06ce1f9f43899e9"
  },
  "printer": {
   "bytes": 10110,
   "deflate": 5057,
-  "sha256": "f0321eac38cf37f77a64b99edaa0e0152e039ee1e8126962e535c8c497624120"
+  "sha256": "ece7426a363e4918a0ccc68830f07e28ef05ff1fa3de0e6f48fb7a44ef99f09d"
  },
  "agent": {
   "bytes": 7348,
   "deflate": 3714,
-  "sha256": "5ba2c89a55bdacc3bddaa91f35034779a21a3e3c632de789e9ad9653e5598fd4"
+  "sha256": "1b94659085f96e3ef1961733090bafc91ccde01c694e028d1284e840816c3cea"
  }
 }

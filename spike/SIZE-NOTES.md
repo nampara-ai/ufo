@@ -494,3 +494,11 @@ without that step.
 | The safeguard; what cannot be classified, counted; who first wrote what is put back; the decision that stands, in `history`; what `each` bound, kept for a handler | about +2 050 | |
 | 3a. Decisions: accept, and reject with its undoing (`write::decide`) | +4 095 | |
 | After 3a | 119 961 | 113 490 |
+| 3b. Named values: `let` in formulas | +386 | |
+| After 3b | 120 347 | 113 973 |
+
+The base is 111.3 KiB, 87% of the 128 KiB limit, with 17 099 bytes left
+for undo, verifying seals, adding an asset, and grid layout with the
+editing of data. `let` did not make the tools universe smaller as a pack
+(11 736 bytes against 11 625; its records 31 960 against 32 954): it
+makes each question asked once in a composition.
