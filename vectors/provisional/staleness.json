@@ -3,7 +3,8 @@
   "status": "reproduced",
   "by": [
    "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
-   "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+   "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+   "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
   ]
  },
  "what": "three pins made at the first commit of history.ufx, with the salt of the digests group, and their digests at each later commit. A pin is stale where the digest differs from the one it was made with (section 4.4)",

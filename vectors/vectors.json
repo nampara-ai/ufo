@@ -59,7 +59,8 @@
     "status": "reproduced",
     "by": [
      "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
     ],
     "note": "all but the seal's signature, which the core does not ask a reader to verify"
    },
@@ -74,7 +75,8 @@
     "status": "reproduced",
     "by": [
      "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
     ]
    },
    "value_kept_outside": {
@@ -103,7 +105,8 @@
     "status": "reproduced",
     "by": [
      "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
     ]
    },
    "compose_pack": {
@@ -132,7 +135,8 @@
    "pins": {
     "status": "reproduced",
     "by": [
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
     ]
    },
    "published_timeline": {
@@ -165,18 +169,20 @@
     "status": "reproduced",
     "by": [
      "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
     ]
    },
    "provisional/layers.json": {
     "status": "reproduced",
     "by": [
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
     ]
    },
    "provisional/projections.json": {
     "status": "provisional",
-    "note": "the author's kernel only"
+    "note": "the author's kernel only; eleven projections, in the form of Appendix B as revised on 2026-11-23 (every field named, an anchor one value)"
    },
    "provisional/composition.json": {
     "status": "provisional",
@@ -187,7 +193,7 @@
     "by": [
      "the second independent reader of 2026-11-22, in a third round on 2026-11-23: it worked out the attribution and the block positions from the revised core alone, then compared"
     ],
-    "note": "the entries for edit-one-word.ufx and edit-paragraph-start.ufx. Positions are half-open. Any entry added later is provisional until it is checked the same way"
+    "note": "the entries for edit-one-word.ufx and edit-paragraph-start.ufx. Positions are half-open. Any entry added later is provisional until it is checked the same way. On 2026-11-23 the spelling of the `region` and `part` lines it quotes changed with Appendix B; no position or attribution changed"
    },
    "provisional/envelope.json": {
     "status": "provisional",

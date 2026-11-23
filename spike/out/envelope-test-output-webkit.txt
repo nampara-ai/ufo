@@ -206,3 +206,162 @@
   [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 1 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
   [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 261248 characters, exported 2026-11-23
   [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 5 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] faces: the tools stay in view when the document is scrolled to its end — scrolled 1968px: the tools are at the top of the view, 390 of 390px wide, and work
+  [passed] node boxes: every node's element lies exactly over what is drawn for it (within a pixel), and the element at the middle of a drawn heading, paragraph or button is that node — 27 nodes, the worst 0.022 px off at a device scale of 3; found at their middles: {"button":5,"paragraph":2,"heading":2,"item":5,"quote":1,"code":1}
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[549,554] and chars=[659,664] by Ben Second
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17299,"attribution":3546,"history":44294,"changes":8,"included":44294}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2.ufx.html, 269560 bytes; content 17299, attribution 3546, history 44294 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 269560 characters, exported 2026-11-23
+  [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 1 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
+  [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state 765f409d7e6c78b4
+  -- the copy published for readers, reopened, edited and saved again
+  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[475,480] change=o:59a7b212 basis=witnessed by=person who="Ada Tester" sealed=false
+      change id=o:fe3ab754 time=1795446403855 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+      change id=o:00daf274 time=1795446402938 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+      change id=withheld time=withheld actor=withheld basis=unknown ops=withheld touched=withheld
+  [passed] published: `history` lists every change with its work said to be withheld (E11), and the panel says no working history is held — 7 changes, each "ops=withheld touched=withheld"; 1 of them (changes that left nothing in the text as it stands) withheld whole, and said to be
+  [passed] published: it is edited again, a new change on top of withheld history, and saved again each way — compose-published-2-published.ufx.html (202371 bytes) and compose-published-2-edited-2.ufx.html (208855 bytes), both at cbd03962c67d9ba3
+  [passed] published: the copy published a second time reopens at the state it was saved at, and shows the new edit
+  -- by the keyboard alone, from the file as first made
+  [passed] keyboard: Tab reaches each tool in order, each shown by a ring; Enter on Edit turns editing on and says so — Document, Pages, Text, Edit; Enter and Space press
+  [passed] keyboard: Tab to the field for the name, Enter, type, Tab to Done, Enter: the name is set, with no dialog, and the focus is back on the field — 2 Tabs from Edit (Save, then the field)
+  [passed] keyboard: Tab to a paragraph, Enter opens the labelled edit box, typing, Tab to Done, Enter: changed, and the focus is back on the paragraph — 14 more Tabs to the paragraph (the page scrolled to 466); the work: [["","Keyed in. "]]
+  [passed] keyboard: back to Save with Shift+Tab, Enter opens what will leave; Tab to the choice and Enter, Tab to "Save this copy", Enter: a file comes down, and the status says so — 15 Shift+Tabs; compose-edited.ufx.html; no request, violation, console message or dialog in the whole run
+
+== iPhone SE (320 by 568), file://, taps
+  [passed] opened: the file runs its own kernel under its policy — state 92027a1f85e587f5; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 1 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
+  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 222783 characters, exported 2026-01-02
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 4 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] faces: the tools stay in view when the document is scrolled to its end — scrolled 1197px: the tools are at the top of the view, 320 of 320px wide, and work
+  [passed] node boxes: every node's element lies exactly over what is drawn for it (within a pixel), and the element at the middle of a drawn heading, paragraph or button is that node — 27 nodes, the worst 0.022 px off at a device scale of 2; found at their middles: {"button":5,"paragraph":2,"heading":1,"item":5,"quote":1}
+  [passed] node boxes: the same after scrolling, in the pages face, and after the view is resized — scrolled 15; pages 31 nodes; narrower 31; document 27
+  [passed] node boxes: a pointer press on a node reaches the kernel as the press it is: the node over "Pages" takes the click, and the face changes
+  [passed] accessible: the canvases are hidden from it; the language is declared; the headings, with their levels and names — h1 "The Quarterly Review", h2 "Method"
+  [passed] accessible: the paragraphs in order, the list with its nested numbered items, the quote and the code — 7 paragraphs, 2 lists, 5 items; snapshot in out/aria-webkit.txt
+  [passed] accessible: the five tools are buttons that say how they stand, before and after Pages and Edit are pressed; the state is a status; the name is asked for by a labelled field — aria-current on the three that choose, aria-pressed on Edit and Save; the name is asked for by a field of the tools, named, and by the status
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: one word changed through the tools by selecting it and typing, as Ada Tester — the name was given through the field of the tools; the kernel and the host asked nothing
+      run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      run chars=[471,476] change=o:1b49202a basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      work: [["ledger","books"]]
+  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:1b49202a basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[656,661] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      run chars=[661,667] change=o:2a434f61 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[667,673] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      work: [["","Note: "],["set","spans.b11.at"],["set","spans.b12.at"]]
+  [passed] paragraph start: "Note: " typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph — b12 = [661,768], b11 = [537,661]; run chars=[661,667] change=o:2a434f61 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] typed: a run of Backspace is one removal — [[" by accident",""]]
+  [passed] typed: a word copied and pasted elsewhere is one insertion, where it was pasted — [["","region"]]
+  [passed] typed: typed and deleted again, then the same letters typed over themselves: no change is made, and none is claimed — nothing written; Cancel writes nothing either
+  [passed] typed: a change the widget reports with no position (its text set, as a filled-in or dictated text is) falls back on the difference — [["trusted","known"]]
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17116,"attribution":3113,"history":39618,"changes":7,"included":39618}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited.ufx.html, 261248 bytes; content 17116, attribution 3113, history 39618 bytes
+  [passed] published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too — compose-published-2.ufx.html: 201536 bytes against 261248; pack 21833 against 66616; 22 content and 15 attribution records, 0 of history, 1 absent frame
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 261248 characters, exported 2026-11-23
+  [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 1 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
+  [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state d00917b4e497444a
+  -- the saved file, edited and saved again
+  [passed] opened: the saved file runs its own kernel under its policy — state d00917b4e497444a; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 1 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
+  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 261248 characters, exported 2026-11-23
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 5 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] faces: the tools stay in view when the document is scrolled to its end — scrolled 1613px: the tools are at the top of the view, 320 of 320px wide, and work
+  [passed] node boxes: every node's element lies exactly over what is drawn for it (within a pixel), and the element at the middle of a drawn heading, paragraph or button is that node — 27 nodes, the worst 0.022 px off at a device scale of 2; found at their middles: {"button":5,"paragraph":2,"heading":1,"item":5}
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[549,554] and chars=[659,664] by Ben Second
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":17299,"attribution":3546,"history":44294,"changes":8,"included":44294}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `layers` for what it holds — compose-edited-2.ufx.html, 269560 bytes; content 17299, attribution 3546, history 44294 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 269560 characters, exported 2026-11-23
+  [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 1 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
+  [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state 61e4a4b585f72140
+  -- the copy published for readers, reopened, edited and saved again
+  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[475,480] change=o:1b49202a basis=witnessed by=person who="Ada Tester" sealed=false
+      change id=o:70e7a857 time=1795446423183 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+      change id=o:8143185f time=1795446422310 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld
+      change id=withheld time=withheld actor=withheld basis=unknown ops=withheld touched=withheld
+  [passed] published: `history` lists every change with its work said to be withheld (E11), and the panel says no working history is held — 7 changes, each "ops=withheld touched=withheld"; 1 of them (changes that left nothing in the text as it stands) withheld whole, and said to be
+  [passed] published: it is edited again, a new change on top of withheld history, and saved again each way — compose-published-2-published.ufx.html (202371 bytes) and compose-published-2-edited-2.ufx.html (208855 bytes), both at 812054256ed57a16
+  [passed] published: the copy published a second time reopens at the state it was saved at, and shows the new edit
+  -- by the keyboard alone, from the file as first made
+  [passed] keyboard: Tab reaches each tool in order, each shown by a ring; Enter on Edit turns editing on and says so — Document, Pages, Text, Edit; Enter and Space press
+  [passed] keyboard: Tab to the field for the name, Enter, type, Tab to Done, Enter: the name is set, with no dialog, and the focus is back on the field — 2 Tabs from Edit (Save, then the field)
+  [passed] keyboard: Tab to a paragraph, Enter opens the labelled edit box, typing, Tab to Done, Enter: changed, and the focus is back on the paragraph — 14 more Tabs to the paragraph (the page scrolled to 696); the work: [["","Keyed in. "]]
+  [passed] keyboard: back to Save with Shift+Tab, Enter opens what will leave; Tab to the choice and Enter, Tab to "Save this copy", Enter: a file comes down, and the status says so — 15 Shift+Tabs; compose-edited.ufx.html; no request, violation, console message or dialog in the whole run
+
+== the independent reader (a copy of run.py, universe.py and ufo.py, not modified)
+      node-all-edits.ufx: state 15c33299360801b9 by the final head; layers content 5, attribution 14, working history 33; conservation ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      node-edit-positioned.ufx: state a4a5e8c2173b395f by the final head; layers content 5, attribution 4, working history 8; conservation ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      node-many-edits.ufx: state 337aca21478f5b3d by the final head; layers content 8, attribution 22, working history 67; conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      node-nested-published-then-edited.ufx: state 428082e3ebafe5f7 by the final head; layers content 22, attribution 10, working history 5; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld unavailable; whole false; missing 8 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+            of the changes whose work is present: height 3: unavailable (a value of the parent state is not in the pack)
+      node-nested-published.ufx: state 63dc49f5f5a78c4f by the final head; layers content 22, attribution 8, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld; whole false; missing 8 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      node-nested-whole.ufx: state 63dc49f5f5a78c4f by the final head; layers content 22, attribution 8, working history 16; the tools universe nested, its 17 content records content here; conservation ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      node-one-word.ufx: state 07964126cb8f3b69 by the final head; layers content 5, attribution 4, working history 8; conservation ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      node-paragraph-start.ufx: state 78e414e3082fbcc2 by the final head; layers content 5, attribution 10, working history 23; conservation ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      node-two-words.ufx: state ff848e120ea7c93b by the final head; layers content 5, attribution 12, working history 28; conservation ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      tools.ufx: state fe02912aa960cf61 by the final head; layers content 17, attribution 2, working history 3; conservation ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      vector-edit-one-word-published.ufx: state 07964126cb8f3b69 by the final head; layers content 5, attribution 4, working history 0; conservation withheld withheld; whole false; missing 4 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      webkit-desktop-published-then-edited-published.ufx: state 44ae09ab380d3c12 by the final head; layers content 22, attribution 17, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld withheld; whole false; missing 18 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      webkit-desktop-published-then-edited-whole.ufx: state 44ae09ab380d3c12 by the final head; layers content 22, attribution 17, working history 5; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld unavailable; whole false; missing 16 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+            of the changes whose work is present: height 7: unavailable (a value of the parent state is not in the pack)
+      webkit-desktop-published.ufx: state 3eb17fbd32145aed by the final head; layers content 22, attribution 15, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld; whole false; missing 16 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      webkit-desktop-whole-1.ufx: state 3eb17fbd32145aed by the final head; layers content 22, attribution 15, working history 37; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      webkit-desktop-whole-2.ufx: state 7c8494b8eb2637ba by the final head; layers content 22, attribution 17, working history 42; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      webkit-http-published.ufx: state 107450078cfb5127 by the final head; layers content 22, attribution 24, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld withheld withheld withheld withheld withheld; whole false; missing 26 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      webkit-http-whole-1.ufx: state 107450078cfb5127 by the final head; layers content 22, attribution 24, working history 63; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      webkit-phone-larger-whole-2.ufx: state 765f409d7e6c78b4 by the final head; layers content 22, attribution 17, working history 42; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+      webkit-phone-smaller-published.ufx: state d00917b4e497444a by the final head; layers content 22, attribution 15, working history 0; the tools universe nested, its 17 content records content here; conservation withheld withheld withheld withheld withheld withheld withheld; whole false; missing 16 (unavailable: withheld (working history)); absent frames [{"history":true}]; index problems 0; reported {}
+      webkit-phone-smaller-whole-2.ufx: state 61e4a4b585f72140 by the final head; layers content 22, attribution 17, working history 42; the tools universe nested, its 17 content records content here; conservation ok ok ok ok ok ok ok ok; whole true; missing 0; absent frames []; index problems 0; reported {}
+  [passed] reader: accepts every pack; sees the tools universe nested and its records as content; classes every record a published copy lacks as withheld — 21 packs
+
+== validators
+  [passed] valid: Nu HTML Checker, as made — 0 errors; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
+  [passed] valid: html-validate, as made — no messages
+  [passed] valid: Nu HTML Checker, saved by the page — 0 errors; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
+  [passed] valid: html-validate, saved by the page — no messages
+  [passed] valid: Nu HTML Checker, saved twice — 0 errors; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
+  [passed] valid: html-validate, saved twice — no messages
+
+step | Node | desktop, file:// | http origin | scripts off | phone, larger | phone, smaller | reader | validators
+kernel | passed | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted
+host | passed | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted
+opened | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+pure function | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+faces | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+node boxes | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+accessible | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+keyboard | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+edit | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+one word | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+paragraph start | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+typed | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+what will leave | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+saved | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+published | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+policy | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+reopened | not attempted | passed | passed | not attempted | passed | passed | not attempted | not attempted
+no tools | not attempted | passed | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted
+sent on | not attempted | passed | passed | not attempted | not attempted | not attempted | not attempted | not attempted
+static face | not attempted | not attempted | not attempted | passed | not attempted | not attempted | not attempted | not attempted
+reader | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | passed | not attempted
+valid | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | passed
+
+all 244 passed

@@ -2,7 +2,8 @@
  "status": {
   "status": "reproduced",
   "by": [
-   "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+   "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+   "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
   ]
  },
  "what": "for each pack, every record by the layer it falls in at the last commit: content, attribution, working history (section 13.3). Seals are frames, not records, and always travel",

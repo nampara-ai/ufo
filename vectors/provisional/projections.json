@@ -1,7 +1,7 @@
 {
  "status": {
   "status": "provisional",
-  "note": "the author's kernel only"
+  "note": "the author's kernel only; eleven projections, in the form of Appendix B as revised on 2026-11-23 (every field named, an anchor one value)"
  },
  "what": "projections of the vector packs, as the text Appendix B fixes: the header, one record a line, and the count. Outlines are the projection `expand`",
  "projections": [
