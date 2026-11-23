@@ -21,13 +21,13 @@
    "paragraph start": "passed",
    "typed": "passed",
    "what will leave": "passed",
-   "saved": "failed",
-   "published": "failed",
+   "saved": "passed",
+   "published": "passed",
    "policy": "passed",
    "reopened": "passed",
    "keyboard": "passed",
    "no tools": "passed",
-   "sent on": "failed"
+   "sent on": "passed"
   },
   "http origin": {
    "opened": "passed",
@@ -40,12 +40,12 @@
    "paragraph start": "passed",
    "typed": "passed",
    "what will leave": "passed",
-   "saved": "failed",
-   "published": "failed",
+   "saved": "passed",
+   "published": "passed",
    "policy": "passed",
    "reopened": "passed",
    "keyboard": "passed",
-   "sent on": "failed"
+   "sent on": "passed"
   },
   "scripts off": {
    "static face": "passed"
@@ -61,8 +61,8 @@
    "paragraph start": "passed",
    "typed": "passed",
    "what will leave": "passed",
-   "saved": "failed",
-   "published": "failed",
+   "saved": "passed",
+   "published": "passed",
    "policy": "passed",
    "reopened": "passed",
    "keyboard": "passed"
@@ -78,8 +78,8 @@
    "paragraph start": "passed",
    "typed": "passed",
    "what will leave": "passed",
-   "saved": "failed",
-   "published": "failed",
+   "saved": "passed",
+   "published": "passed",
    "policy": "passed",
    "reopened": "passed",
    "keyboard": "passed"
@@ -121,5 +121,5 @@
   ]
  },
  "total": 244,
- "failures": 17
+ "failures": 0
 }

@@ -23,13 +23,13 @@
      "paragraph start": "passed",
      "typed": "passed",
      "what will leave": "passed",
-     "saved": "failed",
-     "published": "failed",
+     "saved": "passed",
+     "published": "passed",
      "policy": "passed",
      "reopened": "passed",
      "keyboard": "passed",
      "no tools": "passed",
-     "sent on": "failed"
+     "sent on": "passed"
     },
     "http origin": {
      "opened": "passed",
@@ -42,12 +42,12 @@
      "paragraph start": "passed",
      "typed": "passed",
      "what will leave": "passed",
-     "saved": "failed",
-     "published": "failed",
+     "saved": "passed",
+     "published": "passed",
      "policy": "passed",
      "reopened": "passed",
      "keyboard": "passed",
-     "sent on": "failed"
+     "sent on": "passed"
     },
     "scripts off": {
      "static face": "passed"
@@ -63,8 +63,8 @@
      "paragraph start": "passed",
      "typed": "passed",
      "what will leave": "passed",
-     "saved": "failed",
-     "published": "failed",
+     "saved": "passed",
+     "published": "passed",
      "policy": "passed",
      "reopened": "passed",
      "keyboard": "passed"
@@ -80,8 +80,8 @@
      "paragraph start": "passed",
      "typed": "passed",
      "what will leave": "passed",
-     "saved": "failed",
-     "published": "failed",
+     "saved": "passed",
+     "published": "passed",
      "policy": "passed",
      "reopened": "passed",
      "keyboard": "passed"
@@ -123,7 +123,7 @@
     ]
    },
    "total": 244,
-   "failures": 17
+   "failures": 0
   },
   "firefox": {
    "engine": "firefox",
@@ -148,13 +148,13 @@
      "paragraph start": "passed",
      "typed": "passed",
      "what will leave": "passed",
-     "saved": "failed",
-     "published": "failed",
+     "saved": "passed",
+     "published": "passed",
      "policy": "passed",
      "reopened": "passed",
      "keyboard": "passed",
      "no tools": "passed",
-     "sent on": "failed"
+     "sent on": "passed"
     },
     "http origin": {
      "opened": "passed",
@@ -167,12 +167,12 @@
      "paragraph start": "passed",
      "typed": "passed",
      "what will leave": "passed",
-     "saved": "failed",
-     "published": "failed",
+     "saved": "passed",
+     "published": "passed",
      "policy": "passed",
      "reopened": "passed",
      "keyboard": "passed",
-     "sent on": "failed"
+     "sent on": "passed"
     },
     "scripts off": {
      "static face": "passed"
@@ -188,8 +188,8 @@
      "paragraph start": "passed",
      "typed": "passed",
      "what will leave": "passed",
-     "saved": "failed",
-     "published": "failed",
+     "saved": "passed",
+     "published": "passed",
      "policy": "passed",
      "reopened": "passed",
      "keyboard": "passed"
@@ -205,8 +205,8 @@
      "paragraph start": "passed",
      "typed": "passed",
      "what will leave": "passed",
-     "saved": "failed",
-     "published": "failed",
+     "saved": "passed",
+     "published": "passed",
      "policy": "passed",
      "reopened": "passed",
      "keyboard": "passed"
@@ -248,7 +248,7 @@
     ]
    },
    "total": 244,
-   "failures": 17
+   "failures": 0
   },
   "webkit": {
    "engine": "webkit",
@@ -480,7 +480,7 @@
     "engine": "firefox",
     "fails": true,
     "as_recorded": true,
-    "how": "http: fail: policy violation: img-src http://127.0.0.1:44305/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:44305/favic; http: violations: img-src http://127.0.0.1:44305/favicon.ico"
+    "how": "http: fail: policy violation: img-src http://127.0.0.1:45689/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:45689/favic; http: violations: img-src http://127.0.0.1:45689/favicon.ico"
    },
    {
     "file": "01-no-icon-request.naive2.html",

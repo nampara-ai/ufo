@@ -1,6 +1,6 @@
-chromium: running (output in spike/out/envelope-test-output-chromium.txt) … 244 of 244 passed, exit 0, 99 s
-firefox: running (output in spike/out/envelope-test-output-firefox.txt) … 244 of 244 passed, exit 0, 125 s
-webkit: running (output in spike/out/envelope-test-output-webkit.txt) … 244 of 244 passed, exit 0, 116 s
+chromium: running (output in spike/out/envelope-test-output-chromium.txt) … 244 of 244 passed, exit 0, 97 s
+firefox: running (output in spike/out/envelope-test-output-firefox.txt) … 244 of 244 passed, exit 0, 113 s
+webkit: running (output in spike/out/envelope-test-output-webkit.txt) … 244 of 244 passed, exit 0, 107 s
 
 step × context × engine. In each cell one letter an engine, in the order chromium, firefox, webkit: p passed, F FAILED, - not attempted there.
 The phones are each engine's own: chromium: Pixel 7 (412 by 839) and Galaxy S8 (360 by 740); firefox: Firefox, 412 by 839 at 2.625, touch and Firefox, 360 by 740 at 3, touch; webkit: iPhone 14 (390 by 664) and iPhone SE (320 by 568).

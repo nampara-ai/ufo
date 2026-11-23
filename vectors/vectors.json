@@ -60,7 +60,8 @@
     "by": [
      "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
      "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
-     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
+     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458",
+     "the second independent reader again, unmodified, on 2026-11-23, against the packs regenerated with stored pins: 440 of 440 comparisons, and through a harness of the author's driving its own functions, the state of every stored pin (6 of 6)"
     ],
     "note": "all but the seal's signature, which the core does not ask a reader to verify"
    },
@@ -98,7 +99,8 @@
     "status": "reproduced",
     "by": [
      "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+     "the second independent reader again, unmodified, on 2026-11-23, against the packs regenerated with stored pins: 440 of 440 comparisons, and through a harness of the author's driving its own functions, the state of every stored pin (6 of 6)"
     ]
    },
    "published": {
@@ -106,7 +108,8 @@
     "by": [
      "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
      "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
-     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
+     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458",
+     "the second independent reader again, unmodified, on 2026-11-23, against the packs regenerated with stored pins: 440 of 440 comparisons, and through a harness of the author's driving its own functions, the state of every stored pin (6 of 6)"
     ]
    },
    "compose_pack": {
@@ -128,7 +131,8 @@
     "status": "reproduced",
     "by": [
      "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+     "the second independent reader again, unmodified, on 2026-11-23, against the packs regenerated with stored pins: 440 of 440 comparisons, and through a harness of the author's driving its own functions, the state of every stored pin (6 of 6)"
     ],
     "note": "the first reader reproduced the first three commits; the second all four"
    },
@@ -136,13 +140,15 @@
     "status": "reproduced",
     "by": [
      "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
-     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
+     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458",
+     "the second independent reader again, unmodified, on 2026-11-23, against the packs regenerated with stored pins: 440 of 440 comparisons, and through a harness of the author's driving its own functions, the state of every stored pin (6 of 6)"
     ]
    },
    "published_timeline": {
     "status": "reproduced",
     "by": [
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone"
+     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
+     "the second independent reader again, unmodified, on 2026-11-23, against the packs regenerated with stored pins: 440 of 440 comparisons, and through a harness of the author's driving its own functions, the state of every stored pin (6 of 6)"
     ]
    },
    "published_nested": {
@@ -165,21 +171,6 @@
    }
   },
   "files": {
-   "provisional/staleness.json": {
-    "status": "reproduced",
-    "by": [
-     "the independent reader of 2026-11-22, built from the core of version 0.8 alone",
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
-     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
-    ]
-   },
-   "provisional/layers.json": {
-    "status": "reproduced",
-    "by": [
-     "the second independent reader of 2026-11-22, built from the revised core of version 0.8 alone",
-     "the second independent reader again, unmodified, on 2026-11-23, against the vectors regenerated after the scale was removed from continuous axes: 458 of 458"
-    ]
-   },
    "provisional/projections.json": {
     "status": "provisional",
     "note": "the author's kernel only; eleven projections, in the form of Appendix B as revised on 2026-11-23 (every field named, an anchor one value)"
