@@ -69,10 +69,12 @@ pub struct Ctx<'a> {
     pub env: Option<&'a crate::tool::Env<'a>>, // what is composed is the reader's tools: formulas have values, items say what pressing them names
     pub nodes: i64,  // nodes that are not blocks, numbered: an identity is twice a block's number, or twice this and one
     pub press: bool, // a press on a block does something (its text is editable, 7.6): its node says so
+    pub own: bool,   // what was just composed can itself be pressed (a value that takes text entry, an object with a handler)
+    pub seat: u32,   // where in the description what is being composed sits: which child of which group, in which copy of a template
 }
 impl<'a> Ctx<'a> {
     pub fn new(pk: &'a Pack, measure: &'a dyn Fn(&V) -> Option<V>, env: Option<&'a crate::tool::Env<'a>>) -> Ctx<'a> {
-        Ctx { pk, root: pk.head, chain: Vec::new(), blocks: 0, measure, env, nodes: 0, press: false }
+        Ctx { pk, root: pk.head, chain: Vec::new(), blocks: 0, measure, env, nodes: 0, press: false, own: false, seat: 0 }
     }
     fn next(&mut self) -> i64 {
         self.nodes += 1;
@@ -153,8 +155,11 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
     let Some(mut o) = cx.pk.object(uni, id) else {
         return label_row(cx, "(not available)", w);
     };
-    if let Some(env) = cx.env.filter(|_| o.ty == "ufo.text") {
+    if let Some(env) = cx.env {
         o.p = crate::tool::settle(&o.p, env); // 7.3: a property may be a formula; here it has its value
+        if o.p.get("visible") == Some(&V::Bool(false)) {
+            return Vec::new(); // Appendix A, `visible`: when it is present
+        }
     }
     // Appendix A, in a parent: `margin`, one float or four (top, right, bottom, left)
     let margin: Vec<f64> = o.p.get("margin").map(|m| if let Some(x) = m.f() { vec![x; 4] } else { m.l().iter().filter_map(|x| x.f()).collect() }).filter(|m| m.len() == 4).unwrap_or_default();
@@ -165,13 +170,39 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
         "ufo.group" | "ufo.pane" => {
             let gap = o.p.get("gap").and_then(|g| g.f()).unwrap_or(0.0);
             let mut rows = Vec::new();
-            for c in o.p.get("children").map(|c| c.l()).unwrap_or(&[]) {
-                if let Some(cid) = c.tag(REF).and_then(|x| x.id()) {
-                    let mut r = compose(cx, uni, &cid, w);
-                    if let (false, Some(first)) = (rows.is_empty(), r.first_mut()) {
-                        first.gap = first.gap.max(gap);
+            // 7.3, repetition: under `each` the child is a template, presented once for each item of the list the
+            // formula gave, with `arg` of the name in `as` bound to the item. Where formulas have no values, nothing.
+            let items: Vec<Option<V>> = match (cx.env, o.p.get("each")) {
+                (_, None) => vec![None],
+                (Some(_), Some(V::L(l))) => l.iter().cloned().map(Some).collect(),
+                _ => Vec::new(),
+            };
+            let name = String::from(o.p.get("as").and_then(|a| a.s()).unwrap_or(""));
+            for (j, item) in items.into_iter().enumerate() {
+                if let (Some(env), Some(v)) = (cx.env, &item) {
+                    env.args.borrow_mut().push((name.clone(), v.clone()));
+                }
+                for (i, c) in o.p.get("children").map(|c| c.l()).unwrap_or(&[]).iter().enumerate() {
+                    if let Some(cid) = c.tag(REF).and_then(|x| x.id()) {
+                        // Where formulas have values, what is shown comes and goes with the state. A node's identity is
+                        // then to be that of its place in the description, not of how many rows happen to stand before
+                        // it: a host keeps a node by its identity, and with it the focus. Numbering starts afresh, at a
+                        // number made from the seat, for each child of a group and each copy of a template.
+                        let seat = cx.seat;
+                        if cx.env.is_some() {
+                            cx.seat = (seat.wrapping_mul(31).wrapping_add((j * 61 + i + 1) as u32)) & 0xf_ffff;
+                            (cx.blocks, cx.nodes) = (cx.seat << 8, (cx.seat as i64) << 8);
+                        }
+                        let mut r = compose(cx, uni, &cid, w);
+                        cx.seat = seat;
+                        if let (false, Some(first)) = (rows.is_empty(), r.first_mut()) {
+                            first.gap = first.gap.max(gap);
+                        }
+                        rows.append(&mut r);
                     }
-                    rows.append(&mut r);
+                }
+                if let (Some(env), Some(_)) = (cx.env, &item) {
+                    env.args.borrow_mut().pop();
                 }
             }
             rows
@@ -194,10 +225,14 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
         }
     };
     cx.chain.pop();
+    let own = core::mem::take(&mut cx.own);
     // an object that says what it is (`role`) is a node, and what it presents lies in it
     if let Some(role) = o.p.get("role").and_then(|r| r.s()) {
         let mut m = Vec::new();
         said(&o.p, &mut m);
+        if own {
+            m.push(("press", V::Bool(true)));
+        }
         let n = node(role, cx.next(), m);
         for r in rows.iter_mut() {
             r.path.insert(0, n.clone());
@@ -220,10 +255,32 @@ fn portal(cx: &mut Ctx, uni: &H, o: &Obj, w: f64) -> Vec<Row> {
     if let Some(id) = of.tag(REF).and_then(|x| x.id()) {
         return compose(cx, uni, &id, w);
     }
+    if let Some(env) = cx.env {
+        // 7.6: `of` may be `arg`, and here has its value. The subject: only what the reader itself presents as
+        // tools has one to be given (F6). A text: presented as a text that says nothing of itself is (Appendix
+        // A, the defaults). Nothing: the label, as for any target that is not there (O4). What is `editable`
+        // takes text entry, and what has a handler for a press can be pressed: its items say so, naming it.
+        if crate::tool::is_subject(of) {
+            return crate::tool::subject_rows(cx, env, o, w).unwrap_or_else(|| label_row(cx, &label, w));
+        }
+        if matches!(of, V::T(_) | V::Null) {
+            let s = of.s().unwrap_or("");
+            let mut rows = if s.is_empty() { label_row(cx, &label, w) } else { own_rows(cx, s, &plain_style(), w, "paragraph") };
+            let field = o.p.get("editable") == Some(&V::Bool(true));
+            if field || o.p.get("on").and_then(|h| h.get("press")).is_some() {
+                cx.own = true;
+                for item in rows.iter_mut().flat_map(|r| r.items.iter_mut()) {
+                    more(item, "press", V::L(vec![V::B(o.id.to_vec())]));
+                    if field {
+                        more(item, "value", t(s));
+                    }
+                }
+            }
+            return rows;
+        }
+    }
     if of.tag(crate::tool::FORMULA).is_some() {
-        // 7.6: `of` may be `arg`. Only what the reader itself presents as tools has a subject to be
-        // given (F6): for anything a file presents there is no `env`, and the label is shown.
-        return cx.env.and_then(|env| crate::tool::subject_rows(cx, env, o, w)).unwrap_or_else(|| label_row(cx, &label, w));
+        return label_row(cx, &label, w); // for anything a file presents, formulas have no values: the label
     }
     if let Some(a) = of.tag(ANCHOR) {
         // 1.8: an anchor may name a commit of another universe; nested if its records are here
@@ -313,11 +370,12 @@ fn restyle(st: &mut Style, v: &V) {
     word("direction", ["ltr", "rtl", "auto"], &mut st.dir);
     word("decoration", ["none", "underline", "strike"], &mut st.deco);
 }
-/// In a tools universe, a span with an `on` handler gives its key to the characters under it.
-fn pressed(cx: &Ctx, st: &mut Style, s: &Span) -> bool {
+/// In a tools universe, a span with an `on` handler gives the characters under it what a press on them
+/// names: the text, and the span's key.
+fn pressed(cx: &Ctx, st: &mut Style, s: &Span, id: &Id) -> bool {
     let on = cx.env.is_some() && s.v.get("on").is_some();
     if on {
-        st.press = t(s.key);
+        st.press = V::L(vec![V::B(id.to_vec()), t(s.key)]);
     }
     on
 }
@@ -486,7 +544,7 @@ fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Opti
             chain.push(k);
             for j in chain {
                 role_style(&mut st, &sp[j], &text);
-                press |= pressed(cx, &mut st, &sp[j]);
+                press |= pressed(cx, &mut st, &sp[j], &o.id);
             }
             (before, after, keep, code) = match s.role {
                 "heading" => (line1, line1 * 0.5, true, false),
@@ -519,7 +577,7 @@ fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Opti
                     child = child_of(s);
                 }
                 role_style(&mut cs, s, &text);
-                let on = pressed(cx, &mut cs, s);
+                let on = pressed(cx, &mut cs, s, &o.id);
                 if matches!(s.role, "button" | "link") {
                     if ids[k] == 0 {
                         ids[k] = cx.next();
@@ -649,9 +707,16 @@ fn marker_item(cx: &mut Ctx, row: &mut Row, m: &str, st: &Style, base: Option<f6
 /// `then` on a text item: what follows its characters in the text as it is read, and is not drawn:
 /// the space after a marker, the break that ended a line.
 fn then(item: &mut V, s: &str) {
+    more(item, "then", t(s));
+}
+/// One more field on a text item.
+fn more(item: &mut V, k: &str, v: V) {
     if let V::L(l) = item {
+        if l.first().and_then(|k| k.s()) != Some("text") {
+            return;
+        }
         if let Some(V::M(m)) = l.get_mut(1) {
-            m.push((String::from("then"), t(s)));
+            m.push((String::from(k), v));
         }
     }
 }
@@ -1024,19 +1089,7 @@ fn plain_text(pk: &Pack, uni: &H, o: &Obj, region: Option<&V>, out: &mut String,
     }
 }
 
-// ---- for the reader's tools: what a press names, and the block an item lies in ----
-/// The handler a span of the tools universe holds for a press: the texts its primary face presents are searched.
-pub fn handler(pk: &Pack, id: &Id, key: &str, depth: u32) -> Option<V> {
-    let o = pk.object(&pk.head, id)?;
-    if let Some(h) = o.p.get("spans").and_then(|s| s.get(key)).and_then(|s| s.get("on")).and_then(|on| on.get("press")) {
-        return Some(h.clone());
-    }
-    let mut inside: Vec<&V> = o.p.get("children").map(|c| c.l().iter().collect()).unwrap_or_default();
-    if let Some(V::M(m)) = o.p.get("spans") {
-        inside.extend(m.iter().filter_map(|(_, s)| s.get("child")));
-    }
-    inside.iter().filter(|_| depth < 16).filter_map(|c| c.tag(REF)?.id()).find_map(|c| handler(pk, &c, key, depth + 1))
-}
+// ---- for the reader's tools: the block an item lies in ----
 /// The block of a text that holds the characters an item's `src` names: its span's key, its positions, its characters.
 pub fn block_at(pk: &Pack, src: &V) -> Option<V> {
     let a = src.tag(ANCHOR)?;

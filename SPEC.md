@@ -385,7 +385,7 @@ and type `ufo.universe`. Its properties are:
 | --- | --- |
 | `lineage` | 16 random bytes fixed in the first commit; shared by every later state and every fork. Required; every other property here is optional |
 | `roots` | map from names to refs: the named entry points |
-| `components` | map from a role — `tools`, `renderer`, or a prefixed name — to an indirect holding the component's bytes, or an anchor naming a universe, that the universe carries for it (§9.6, §8.4) |
+| `components` | map from a role — `tools`, `renderer`, or a prefixed name — to an indirect holding the component's bytes, or an anchor naming a universe by its universe object (`o` of sixteen zero bytes, `u` the commit), that the universe carries for it (§9.6, §8.4) |
 | `faces` | list of refs to face objects (§8.2) |
 | `summaries` | map from an object's identity, in lowercase hexadecimal, to a list of refs to the summaries whose scope lies in that object (§10.2). The kernel keeps it as `derive` writes them |
 | `features` | map from feature name to `{v: integer, required: boolean}` |
@@ -1971,9 +1971,10 @@ throwaway kernel on the packs above:
 | `provisional/staleness.json` | three pins made at the first commit of `history.ufx`, and whether each is current, stale or detached at each later commit (§4.4) |
 | `provisional/layers.json` | for four packs, the layer of every record: content, attribution, working history (§13.3) |
 | `provisional/edits.json` | for the two edited packs: who is attributed with each stretch around the edit, and where the blocks lie |
-| `provisional/envelope.json` | the web envelope as a function of its parts (§13.2): one fixed case with its exact result, and six cases that are refused |
+| `provisional/envelope.json` | the web envelope as a function of its parts (§13.2): one fixed case with its exact result, and seven cases that are refused |
+| `provisional/leaving.json` | for `edit-one-word.ufx`: what `leaving` says would travel for each of the two defaults, and the published copy (§13.3 **E12**, Appendix B) |
 | `provisional/roles.json` | the accessible nodes of `compose.ufx` and of a tools line, as a display list carries them: what a host must expose (§9.2) |
-| `quirks/` | the corpus of differences between browser engines: one small page for each, with the naive construction beside it, and `quirks.json` saying what each engine does and the rule that prevents it (§13.2 **E21** to **E25**) |
+| `quirks/` | the corpus of differences between browser engines: one small page for each, with the naive construction beside it, and `quirks.json` saying what each engine does and the rule that prevents it (§13.2 **E21** to **E25**, §9.3 **H9**) |
 | `provisional/projections.json` | twelve projections of the packs, as text: `overview`, `object`, `text`, `history`, `why`, and outlines by `expand` (§10.1, §10.2, Appendix B) |
 
 `spike/QUERY-NOTES.md` and `spike/COMPOSITION-NOTES.md` list each place
@@ -1990,6 +1991,7 @@ where the text did not decide what the kernel should do, and what it did.
 | `vectors/published-timeline.ufx`, `vectors/published-nested.ufx` | `timeline.ufx` and `nested.ufx` as they are published (§2.5): 3778 and 2557 bytes |
 | `vectors/edit-one-word.ufx`, `vectors/edit-paragraph-start.ufx` | `compose.ufx` after edits made through a kernel's gate: one word changed; text typed at the very start of a paragraph (§1.7 **L1**, §5.1) |
 | `vectors/edit-positioned.ufx` | `compose.ufx` after text was typed in front of a word it shares letters with, reported by position (§9.3 **H8**) |
+| `vectors/edit-one-word-published.ufx` | `edit-one-word.ufx` as it is published: 5650 bytes against 14667, the same root hash (§2.5, §13.3) |
 | `vectors/module.ufx` | a pack of 3714 bytes holding a described module of two functions (§12.3) |
 | `vectors/compose.ufx` | a pack holding one text with every block role, a document face and a face of pages (§7.7, §8.3) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |

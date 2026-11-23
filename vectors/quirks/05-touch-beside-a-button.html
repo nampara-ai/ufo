@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!-- A press is taken when the click comes, and where it was from the pointer: the element it went down on and the point it came up at (pointerdown, pointerup). Every engine reports the touch where it fell, on the element it fell on, whatever it does with the click. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>05 a touch beside a button is a press where it fell</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-F76CG3K3/O3R814XCTJDgjjagMfC3eEopvw2whrghFI='; style-src 'sha256-Qj/r+VCKQIF5rUSnYZZ3lZJlnH4/OO4g/s+bLwh3UyY='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}.pad{position:relative;height:120px;touch-action:manipulation}.pad *{position:absolute;margin:0;left:0;width:200px;cursor:pointer;overflow:hidden;white-space:nowrap}#b{left:16px;top:10px;height:42px;color:transparent}#a{top:0;height:20px;color:#000}</style>
+</head><body>
+<h1>05 a touch beside a button is a press where it fell</h1>
+<p>A press is taken when the click comes, and where it was from the pointer: the element it went down on and the point it came up at (pointerdown, pointerup). Every engine reports the touch where it fell, on the element it fell on, whatever it does with the click.</p>
+<p>Result: <span id="result">not finished</span></p>
+<div class="pad" id="pad"><p id="b"><span id="a" role="button" tabindex="0">a thing that can be pressed</span> and the rest of its line, which cannot</p></div>
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+const pad = document.getElementById('pad'), b = document.getElementById('b'), got = [];
+let down = null, up = null; addEventListener('pointerdown', e => { down = e; }, true);
+addEventListener('pointerup', e => { up = down && Math.hypot(e.clientX - down.clientX, e.clientY - down.clientY) < 12 ? [down.target.id, Math.round(e.clientX), Math.round(e.clientY)] : null; down = null; }, true);
+addEventListener('click', () => { if (up) got.push(up); up = null; }, true);
+// a touch on the paragraph, 11 pixels under the thing in it that can be pressed (the runner makes it: a real touch, at 60, 31 of the paragraph)
+setTimeout(() => { const r = b.getBoundingClientRect(), want = [Math.round(r.left + 60), Math.round(r.top + 31)], problems = [];
+  if (got.length !== 1) problems.push(got.length + ' presses were taken (by the pointer, at the click), not one'); else { if (got[0][0] !== 'b') problems.push('the press was given to #' + got[0][0] + ', not to the line that was touched');
+    if (Math.abs(got[0][1] - want[0]) > 1 || Math.abs(got[0][2] - want[1]) > 1) problems.push('it is reported at ' + got[0].slice(1) + ', not at ' + want + ' where the touch was'); }
+  finish(problems, 0); }, 1500);</script></body></html>

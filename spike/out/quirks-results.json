@@ -8,7 +8,8 @@
     "01-no-icon-request": "pass",
     "02-look-without-style": "pass",
     "03-save-as-bytes": "pass",
-    "04-edit-positions": "pass"
+    "04-edit-positions": "pass",
+    "05-touch-beside-a-button": "pass"
    }
   },
   "firefox": {
@@ -19,7 +20,8 @@
     "01-no-icon-request": "pass",
     "02-look-without-style": "pass",
     "03-save-as-bytes": "pass",
-    "04-edit-positions": "pass"
+    "04-edit-positions": "pass",
+    "05-touch-beside-a-button": "pass"
    }
   },
   "webkit": {
@@ -30,12 +32,13 @@
     "01-no-icon-request": "pass",
     "02-look-without-style": "pass",
     "03-save-as-bytes": "pass",
-    "04-edit-positions": "pass"
+    "04-edit-positions": "pass",
+    "05-touch-beside-a-button": "pass"
    }
   }
  },
- "total": 15,
- "passed": 15,
+ "total": 18,
+ "passed": 18,
  "failed": 0,
  "naive": [
   {
@@ -57,7 +60,14 @@
    "engine": "chromium",
    "fails": true,
    "as_recorded": true,
-   "how": "file: fail: the paragraph did not move: 0px; the second paragraph is not hidden; policy violation: style-src-attr inline; policy violation: style-src-elem inline; file: console: error: Applying inline style violates the following Content Security Policy directive 'style-src 'sha256-1ymVRFp86dnbHfmgo"
+   "how": "file: fail: the paragraph did not move: 0px; the second paragraph is not hidden; the node is at 16 467 169 22, not at 30 40 120 20; policy violation: style-src-attr inline; policy violation: style-src-elem inline; file: console: error: Applying inline style violates the following Content Security Po"
+  },
+  {
+   "file": "02-look-without-style.naive2.html",
+   "engine": "chromium",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the node is at 16 451 169 22, not at 30 40 120 20; policy violation: style-src-attr inline; file: console: error: Applying inline style violates the following Content Security Policy directive 'style-src 'sha256-HpLiWokuML1YjzwtqBWRgb9KA98I/DSzfI0UWJGqgC; file: violations: style-src-attr"
   },
   {
    "file": "03-save-as-bytes.naive.html",
@@ -81,11 +91,18 @@
    "how": "file: fail: the reports do not add up to the text: \"Revenue grew in every region this quarte\" is not \"ReRevenuin every reg日本\\né𝄞ion this quart\""
   },
   {
+   "file": "05-touch-beside-a-button.naive.html",
+   "engine": "chromium",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
    "file": "01-no-icon-request.naive.html",
    "engine": "firefox",
    "fails": true,
    "as_recorded": true,
-   "how": "http: fail: policy violation: img-src http://127.0.0.1:44689/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:44689/favic; http: violations: img-src http://127.0.0.1:44689/favicon.ico"
+   "how": "http: fail: policy violation: img-src http://127.0.0.1:46883/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:46883/favic; http: violations: img-src http://127.0.0.1:46883/favicon.ico"
   },
   {
    "file": "01-no-icon-request.naive2.html",
@@ -99,7 +116,14 @@
    "engine": "firefox",
    "fails": true,
    "as_recorded": true,
-   "how": "file: fail: the paragraph did not move: 0px; the second paragraph is not hidden; policy violation: style-src-attr inline; policy violation: style-src-elem inline; file: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked an inline style (style-src-attr) from bein"
+   "how": "file: fail: the paragraph did not move: 0px; the second paragraph is not hidden; the node is at 16 465 169 22, not at 30 40 120 20; policy violation: style-src-attr inline; policy violation: style-src-elem inline; file: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings"
+  },
+  {
+   "file": "02-look-without-style.naive2.html",
+   "engine": "firefox",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the node is at 16 449 169 22, not at 30 40 120 20; policy violation: style-src-attr inline; file: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked an inline style (style-src-attr) from being applied because it viol; file: violations: style-src-attr"
   },
   {
    "file": "03-save-as-bytes.naive.html",
@@ -123,6 +147,13 @@
    "how": "file: fail: the reports do not add up to the text: \"Revenue grew in every region this quarte\" is not \"ReRevenuin every reg日本\\né𝄞ion this quart\""
   },
   {
+   "file": "05-touch-beside-a-button.naive.html",
+   "engine": "firefox",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
    "file": "01-no-icon-request.naive.html",
    "engine": "webkit",
    "fails": false,
@@ -141,7 +172,14 @@
    "engine": "webkit",
    "fails": true,
    "as_recorded": true,
-   "how": "file: fail: the paragraph did not move: 0px; the second paragraph is not hidden; policy violation: style-src-attr inline; policy violation: style-src-elem inline; file: console: error: Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src dire"
+   "how": "file: fail: the paragraph did not move: 0px; the second paragraph is not hidden; the node is at 16 492 169 22, not at 30 40 120 20; policy violation: style-src-attr inline; policy violation: style-src-elem inline; file: console: error: Refused to apply a stylesheet because its hash, its nonce, or 'u"
+  },
+  {
+   "file": "02-look-without-style.naive2.html",
+   "engine": "webkit",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the node is at 16 476 169 22, not at 30 40 120 20; policy violation: style-src-attr inline; file: console: error: Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Secu; file: violations: style-src-attr"
   },
   {
    "file": "03-save-as-bytes.naive.html",
@@ -163,6 +201,13 @@
    "fails": true,
    "as_recorded": true,
    "how": "file: fail: the reports do not add up to the text: \"Revenue grew in every region this quarte\" is not \"ReRevenuin every 日本\\né𝄞ion this quarter,\""
+  },
+  {
+   "file": "05-touch-beside-a-button.naive.html",
+   "engine": "webkit",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: the press was given to #a, not to the line that was touched; it is reported at 79,326, not at 92,340 where the touch was"
   }
  ],
  "harness": {

@@ -397,6 +397,67 @@ impl Pack {
     }
 }
 
+// ---- a copy that withholds (2.5, TRAVEL 13.3) ----
+impl Pack {
+    /// Every record held, decoded, in the order of the pack: for nesting this pack's universe in another (1.8).
+    pub fn records(&self) -> Vec<(u8, Vec<u8>)> {
+        let (mut out, mut off) = (Vec::new(), 8);
+        while let Some(f) = self.frame(off).filter(|_| off < self.d.len() - self.unread_tail) {
+            out.extend(self.record_at(off));
+            off = f.next;
+        }
+        out
+    }
+    /// A new pack of the records `keep` says, each once, in the order and the frames they have here
+    /// (E10: withholding removes records and nothing else); then the seal frames and the frames of
+    /// kinds not known (P1); an `absent` frame saying that history is withheld, with whatever an
+    /// `absent` frame here already said; one index of everything; and a head naming the same commit.
+    pub fn published(&self, keep: &dyn Fn(&H) -> bool) -> Option<Vec<u8>> {
+        let (mut d, mut ents, mut later, mut absent) = (SIG.to_vec(), Map::new(), Vec::<u8>::new(), Vec::new());
+        let (mut off, end) = (8, self.d.len() - self.unread_tail);
+        while off < end {
+            let f = self.frame(off)?;
+            match f.kind {
+                1 | 2 => {
+                    if let Some(h) = self.hash_at(off).filter(|h| keep(h) && !ents.contains(h)) {
+                        ents.set(h, d.len());
+                        d.extend(&self.d[off..f.next]);
+                    }
+                }
+                4 | 5 => {}
+                6 => absent = match decode(&self.d[f.start..f.next]) {
+                    Some(V::M(m)) => m,
+                    _ => absent,
+                },
+                _ => later.extend(&self.d[off..f.next]),
+            }
+            off = f.next;
+        }
+        d.extend(later);
+        absent.retain(|e| e.0 != "history");
+        absent.push((String::from("history"), V::Bool(true)));
+        frame_into(&mut d, 6, &encode(&V::M(absent)));
+        let (at, commit_at) = (d.len(), *ents.get(&self.head)?);
+        let mut p = Vec::new();
+        for n in [ents.0.len(), 0, at] {
+            p.extend((n as u64).to_le_bytes());
+        }
+        for (h, o) in &ents.0 {
+            p.extend(h);
+            p.extend((*o as u64).to_le_bytes());
+        }
+        frame_into(&mut d, 4, &p);
+        let mut p = self.head.to_vec();
+        for n in [commit_at, at, 0, d.len() + 75] {
+            p.extend((n as u64).to_le_bytes());
+        }
+        let check = sha256(&[&p]);
+        p.extend(&check[..8]);
+        frame_into(&mut d, 5, &p);
+        Some(d)
+    }
+}
+
 // ---- writing (2.2, 2.4): a commit is an append of records, an index and a head ----
 fn frame_into(d: &mut Vec<u8>, kind: u8, payload: &[u8]) {
     d.extend([kind, 0]);

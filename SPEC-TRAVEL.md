@@ -60,7 +60,7 @@ against the HTML Standard as it stood on the date of this specification
 
 **The envelope is a function of its parts.** A writer never copies a page,
 and never reads one back from a browser. It computes the envelope from
-ten parts, each a text:
+nine parts, each a text:
 
 | Part | What it is |
 | --- | --- |
@@ -69,8 +69,7 @@ ten parts, each a text:
 | `static-html` | the **static face**: the text of the primary face as headings, paragraphs, lists, quotations and code, written by the kernel from the same nodes a reader exposes (§9.2), with nothing measured, up to a size the exporter chooses. A skeleton may instead take `static`, the plain-text face (§8.3) |
 | `style`, `script` | the page's style, and the binding: the only script |
 | `kernel`, `kernel-hash` | the kernel, compressed with DEFLATE and written in standard base64; and the SHA-256 of the uncompressed kernel, in hexadecimal |
-| `tools` | the tools universe (§9.6), a pack, in standard base64 |
-| `pack` | the universe: the pack, in standard base64 (RFC 4648 §4), with no line breaks |
+| `pack` | the universe: the pack, in standard base64 (RFC 4648 §4), with no line breaks. The tools universe travels inside it, nested (§9.6), and is no part of its own |
 | `skeleton` | the fixed text of the page, with gaps |
 
 The envelope is the skeleton with each gap replaced, in one pass from the
@@ -80,7 +79,7 @@ start; what is put in is never searched for gaps. A gap is written
 | Gap | Replaced by |
 | --- | --- |
 | `{{title}}`, `{{date}}`, `{{static}}` | the part, with `&`, `<`, `>` and `"` written `&amp;`, `&lt;`, `&gt;` and `&quot;` |
-| `{{style}}`, `{{script}}`, `{{kernel}}`, `{{kernel-hash}}`, `{{tools}}`, `{{pack}}`, `{{skeleton}}`, `{{static-html}}` | the part, unchanged |
+| `{{style}}`, `{{script}}`, `{{kernel}}`, `{{kernel-hash}}`, `{{pack}}`, `{{skeleton}}`, `{{static-html}}` | the part, unchanged |
 | `{{csp:script}}`, `{{csp:style}}` | `sha256-` and the standard base64 of the SHA-256 of the part's UTF-8 bytes |
 | `{{<}}` | the character `<` |
 
@@ -96,7 +95,7 @@ style, by the two hashes, WebAssembly compilation, and images from
 `data:` addresses, and forbids all network access; the page's icon, named
 as an empty `data:` address; the static face, with a plain explanation of what the
 file is and what to do where only this text is seen; then each of
-`skeleton`, `pack`, `tools` and `kernel` as the text of a `script`
+`skeleton`, `pack` and `kernel` as the text of a `script`
 element of a type that is not executed; and the binding. The envelope
 therefore carries its own skeleton, as a part, and a page obtains every
 part as the exact text of an element it carries. To save, it gives the
@@ -137,13 +136,20 @@ box or chunk of §13.4 — so a binding never parses an envelope (**K2**).
   empty `data:` address, and its policy allows images from `data:` and
   from nowhere else. An engine left to look for an icon asks the network
   for one.
-- **[E23] The look is the hashed style and nothing else.** Every byte the
-  policy constrains is a part whose hash the envelope function writes:
-  one style, one script. A binding MUST NOT write a style by any means —
-  an attribute, a property, a rule, an element. It changes what is seen
-  only through attributes whose effect the hashed style states. The
-  policy and the page are then consistent by construction, in the file as
-  made and in every file it saves.
+- **[E23] The look is the hashed style, and where a node lies.** Every
+  byte the policy constrains is a part whose hash the envelope function
+  writes: one style, one script. A binding MUST NOT write a style by any
+  means — an attribute, a rule, a sheet, an element — with one exception.
+  To lay each accessible node over what is drawn for it (§9.2), it
+  assigns, through the style object of that node's element and in no
+  other way, exactly the four properties `left`, `top`, `width` and
+  `height`, from the node's `box`. It writes no other property, of that
+  element or of any other. That those elements are positioned, that
+  their text is not seen, which of them take a pointer, and everything
+  about the rest of the page is stated by the hashed style and changed
+  only through attributes whose effect it states. The policy and the
+  page are then consistent by construction, in the file as made and in
+  every file it saves.
 - **[E24] Saved as bytes.** A binding hands a file to the person as bytes
   of no declared kind, through a download link that is never part of the
   page, and MUST NOT open, show or go to what it saves.

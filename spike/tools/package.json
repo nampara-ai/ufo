@@ -5,6 +5,7 @@
     "@unicode/unicode-16.0.0": "2.1.0",
     "binaryen": "132.0.0",
     "html-validate": "^11.21.1",
+    "terser": "5.51.4",
     "vnu-jar": "^26.11.20"
   }
 }

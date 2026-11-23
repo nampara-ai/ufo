@@ -145,7 +145,7 @@ use query::query as answer;
 
 static mut PACK: Option<Pack> = None; // the open pack
 static mut SCANNED: Option<Pack> = None; // a pack given to `open`, until `ready`
-static mut TOOLS: Option<Pack> = None; // the tools universe, opened beside the working one
+static mut TOOLS: Option<Pack> = None; // a tools universe the reader holds itself (K3): with none, the one the working universe carries is used
 static mut READER: Option<tool::Reader> = None; // what the reader holds while it presents the tools
 static mut OUT: Vec<u8> = Vec::new();
 
@@ -299,20 +299,18 @@ pub unsafe extern "C" fn open_tools(p: *mut u8, n: usize) -> i32 {
     TOOLS = scan_pack(Vec::from_raw_parts(p, n, n.max(1))).and_then(open_pack);
     TOOLS.is_some() as i32
 }
-/// The reader's own act (F6): `{parts, name, who}`. `parts` are the parts of the web envelope the host
-/// came in, each the text of an element; of them `pack` (the working universe) and `tools` (the tools
-/// universe) are packs in base64. `name` is the file's name; `who`, if the host knows it already,
-/// the person using the reader. The tools are presented with the working universe as their subject.
-/// Returns as `open` does: if `pending` is not 0 the host inflates and then asks `ready`.
+/// The reader's own act (F6): `{parts, name}`. `parts` are the parts of the web envelope the host
+/// came in, each the text of an element; of them `pack` is the working universe's pack, in base64.
+/// `name` is the file's name, which the host knows and the reader hands on to the tools as an
+/// `arg`. The tools universe the working universe carries is presented, with the working universe
+/// as its subject. Returns as `open` does: if `pending` is not 0 the host inflates and then asks `ready`.
 #[no_mangle]
 pub unsafe extern "C" fn start(p: *mut u8, n: usize) -> i32 {
     let q = taken(p, n);
-    let part = |k: &str| q.get("parts").and_then(|p| p.get(k)).and_then(|p| p.s()).and_then(write::unbase64);
-    PACK = None;
-    TOOLS = part("tools").and_then(scan_pack).and_then(open_pack);
-    SCANNED = part("pack").and_then(scan_pack);
-    READER = Some(tool::Reader::new(q.get("parts").cloned().unwrap_or(V::Null), q.get("name").and_then(|n| n.s()).unwrap_or(""), q.get("who").and_then(|w| w.s())));
-    if TOOLS.is_none() || SCANNED.is_none() {
+    (PACK, TOOLS) = (None, None);
+    SCANNED = q.get("parts").and_then(|p| p.get("pack")).and_then(|p| p.s()).and_then(write::unbase64).and_then(scan_pack);
+    READER = Some(tool::Reader::new(q.get("parts").cloned().unwrap_or(V::Null), vec![(String::from("name"), q.get("name").cloned().unwrap_or(t("")))]));
+    if SCANNED.is_none() {
         return 0;
     }
     match pending() {
@@ -324,11 +322,8 @@ pub unsafe extern "C" fn start(p: *mut u8, n: usize) -> i32 {
 #[no_mangle]
 pub unsafe extern "C" fn input(p: *mut u8, n: usize) -> *const u8 {
     let ev = taken(p, n);
-    let rd = READER.get_or_insert_with(|| tool::Reader::new(V::Null, "", None));
-    given(match (TOOLS.as_ref(), PACK.as_mut()) {
-        (Some(tools), Some(pk)) => Some(tool::input(rd, tools, pk, &ev)),
-        _ => None,
-    })
+    let rd = READER.get_or_insert_with(|| tool::Reader::new(V::Null, vec![(String::from("name"), t(""))]));
+    given(PACK.as_mut().map(|pk| tool::input(rd, TOOLS.as_ref(), pk, &ev)))
 }
 /// The web envelope of its parts (envelope.rs), a map of texts: `{text}`, or `{refused: reason}`.
 #[no_mangle]
@@ -344,12 +339,18 @@ pub unsafe extern "C" fn block_at(p: *mut u8, n: usize) -> *const u8 {
     let q = taken(p, n);
     given(PACK.as_ref().and_then(|pk| layout::block_at(pk, q.get("src")?)))
 }
-/// `{o, lo, hi, ins, who, time, random}`: one edit through the gate. `{commit, change, root}`, or `{refused: reason}`.
+/// One change through the gate: `{commit, change, root}`, or `{refused: reason}`. Either `{o, lo, hi, ins, who,
+/// time, random}`, an edit of a text by positions; or `{o, key, val, with, who, time, random}`, a `set` of what
+/// lies at the path `key` of an object's properties, `with` being a pack to nest in this one by the same commit.
 #[no_mangle]
 pub unsafe extern "C" fn propose(p: *mut u8, n: usize) -> *const u8 {
     let q = taken(p, n);
     let r = match PACK.as_mut() {
-        Some(pk) => write::propose(pk, &q),
+        Some(pk) if q.get("key").is_none() => write::propose(pk, &q),
+        Some(pk) => match (q.get("o").and_then(|x| x.id()), q.get("key").map(|k| k.l().iter().filter_map(|k| k.s()).collect::<Vec<&str>>()), q.get("who").and_then(|x| x.s()), q.get("time").and_then(|x| x.i()), q.get("random").and_then(|x| x.b())) {
+            (Some(o), Some(key), Some(who), Some(time), Some(random)) => write::set(pk, o, &key, q.get("val").cloned(), q.get("with").and_then(|w| w.b()).unwrap_or(&[]), who, time as u64, random),
+            _ => Err("arguments: o (16 bytes), key (a list of texts), who (text), time, random (64 bytes)"),
+        },
         None => Err("no pack is open"),
     };
     given(Some(r.unwrap_or_else(|why| map(vec![("refused", t(why))]))))
@@ -358,6 +359,11 @@ pub unsafe extern "C" fn propose(p: *mut u8, n: usize) -> *const u8 {
 #[no_mangle]
 pub unsafe extern "C" fn pack_bytes() -> *const u8 {
     given(PACK.as_ref().map(|pk| V::B(pk.bytes().to_vec())))
+}
+/// The pack as it would be published (TRAVEL 13.3, E9): its content and attribution layers, as a byte string.
+#[no_mangle]
+pub unsafe extern "C" fn published() -> *const u8 {
+    given(PACK.as_ref().and_then(query::published).map(V::B))
 }
 /// The text of a web envelope's pack elements: the pack's bytes, as a byte string, or null if it is not base64.
 #[no_mangle]

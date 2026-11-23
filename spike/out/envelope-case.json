@@ -1,5 +1,9 @@
 {
- "what": "envelope(parts): the definition is at the head of spike/kernel/src/envelope.rs. Every value is a text; the envelope is compared as UTF-8 bytes.",
+ "status": {
+  "status": "provisional",
+  "note": "the author's kernel only"
+ },
+ "what": "envelope(parts): the definition is at the head of spike/kernel/src/envelope.rs. Every value is a text; the envelope is compared as UTF-8 bytes. There is no `tools` part: the tools universe travels in the pack, nested under `components.tools` (SPEC-PLAYER 9.6), and a skeleton that asks for one is refused.",
  "parts": {
   "title": "A & B <c> \"d\"",
   "date": "2026-01-02",
@@ -8,11 +12,10 @@
   "script": "let a = \"{{title}}\" < 1;",
   "kernel": "AAAA",
   "kernel-hash": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
-  "tools": "VE9PTFM=",
   "pack": "UEFDSw==",
-  "skeleton": "{{<}}!-- {{date}} -->\n<title>{{title}}</title><meta content=\"script-src '{{csp:script}}'; style-src '{{csp:style}}'\"><style>{{style}}</style>\n<pre>{{static}}</pre>\n<script type=\"a/pack\">{{pack}}{{<}}/script><script type=\"a/tools\">{{tools}}{{<}}/script><script type=\"a/kernel\" data-hash=\"{{kernel-hash}}\">{{kernel}}{{<}}/script>\n<script type=\"a/skeleton\">{{skeleton}}{{<}}/script><script type=\"module\">{{script}}{{<}}/script>"
+  "skeleton": "{{<}}!-- {{date}} -->\n<title>{{title}}</title><meta content=\"script-src '{{csp:script}}'; style-src '{{csp:style}}'\"><style>{{style}}</style>\n<pre>{{static}}</pre>\n<script type=\"a/pack\">{{pack}}{{<}}/script><script type=\"a/kernel\" data-hash=\"{{kernel-hash}}\">{{kernel}}{{<}}/script>\n<script type=\"a/skeleton\">{{skeleton}}{{<}}/script><script type=\"module\">{{script}}{{<}}/script>"
  },
- "envelope": "<!-- 2026-01-02 -->\n<title>A &amp; B &lt;c&gt; &quot;d&quot;</title><meta content=\"script-src 'sha256-jcHDywFPpGzW9smGdV+EwrNIpN20EtC1FX+raC3fyKk='; style-src 'sha256-p0bF+un5yUb9MBO6xRb8kPHlY2BdpHVtLiFkDrZPF64='\"><style>p{color:red}</style>\n<pre>one &lt; two\n{{pack}} is not filled here</pre>\n<script type=\"a/pack\">UEFDSw==</script><script type=\"a/tools\">VE9PTFM=</script><script type=\"a/kernel\" data-hash=\"df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119\">AAAA</script>\n<script type=\"a/skeleton\">{{<}}!-- {{date}} -->\n<title>{{title}}</title><meta content=\"script-src '{{csp:script}}'; style-src '{{csp:style}}'\"><style>{{style}}</style>\n<pre>{{static}}</pre>\n<script type=\"a/pack\">{{pack}}{{<}}/script><script type=\"a/tools\">{{tools}}{{<}}/script><script type=\"a/kernel\" data-hash=\"{{kernel-hash}}\">{{kernel}}{{<}}/script>\n<script type=\"a/skeleton\">{{skeleton}}{{<}}/script><script type=\"module\">{{script}}{{<}}/script></script><script type=\"module\">let a = \"{{title}}\" < 1;</script>",
+ "envelope": "<!-- 2026-01-02 -->\n<title>A &amp; B &lt;c&gt; &quot;d&quot;</title><meta content=\"script-src 'sha256-jcHDywFPpGzW9smGdV+EwrNIpN20EtC1FX+raC3fyKk='; style-src 'sha256-p0bF+un5yUb9MBO6xRb8kPHlY2BdpHVtLiFkDrZPF64='\"><style>p{color:red}</style>\n<pre>one &lt; two\n{{pack}} is not filled here</pre>\n<script type=\"a/pack\">UEFDSw==</script><script type=\"a/kernel\" data-hash=\"df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119\">AAAA</script>\n<script type=\"a/skeleton\">{{<}}!-- {{date}} -->\n<title>{{title}}</title><meta content=\"script-src '{{csp:script}}'; style-src '{{csp:style}}'\"><style>{{style}}</style>\n<pre>{{static}}</pre>\n<script type=\"a/pack\">{{pack}}{{<}}/script><script type=\"a/kernel\" data-hash=\"{{kernel-hash}}\">{{kernel}}{{<}}/script>\n<script type=\"a/skeleton\">{{skeleton}}{{<}}/script><script type=\"module\">{{script}}{{<}}/script></script><script type=\"module\">let a = \"{{title}}\" < 1;</script>",
  "refused": {
   "a part put in unchanged holds </SCRIPT": {
    "title": "A & B <c> \"d\"",
@@ -22,9 +25,8 @@
    "script": "let a = \"{{title}}\" < 1;",
    "kernel": "AAAA",
    "kernel-hash": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
-   "tools": "x</SCRIPT>",
-   "pack": "UEFDSw==",
-   "skeleton": "{{<}}!-- {{date}} -->\n<title>{{title}}</title><meta content=\"script-src '{{csp:script}}'; style-src '{{csp:style}}'\"><style>{{style}}</style>\n<pre>{{static}}</pre>\n<script type=\"a/pack\">{{pack}}{{<}}/script><script type=\"a/tools\">{{tools}}{{<}}/script><script type=\"a/kernel\" data-hash=\"{{kernel-hash}}\">{{kernel}}{{<}}/script>\n<script type=\"a/skeleton\">{{skeleton}}{{<}}/script><script type=\"module\">{{script}}{{<}}/script>"
+   "pack": "x</SCRIPT>",
+   "skeleton": "{{<}}!-- {{date}} -->\n<title>{{title}}</title><meta content=\"script-src '{{csp:script}}'; style-src '{{csp:style}}'\"><style>{{style}}</style>\n<pre>{{static}}</pre>\n<script type=\"a/pack\">{{pack}}{{<}}/script><script type=\"a/kernel\" data-hash=\"{{kernel-hash}}\">{{kernel}}{{<}}/script>\n<script type=\"a/skeleton\">{{skeleton}}{{<}}/script><script type=\"module\">{{script}}{{<}}/script>"
   },
   "the style holds </style": {
    "title": "A & B <c> \"d\"",
@@ -34,9 +36,8 @@
    "script": "let a = \"{{title}}\" < 1;",
    "kernel": "AAAA",
    "kernel-hash": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
-   "tools": "VE9PTFM=",
    "pack": "UEFDSw==",
-   "skeleton": "{{<}}!-- {{date}} -->\n<title>{{title}}</title><meta content=\"script-src '{{csp:script}}'; style-src '{{csp:style}}'\"><style>{{style}}</style>\n<pre>{{static}}</pre>\n<script type=\"a/pack\">{{pack}}{{<}}/script><script type=\"a/tools\">{{tools}}{{<}}/script><script type=\"a/kernel\" data-hash=\"{{kernel-hash}}\">{{kernel}}{{<}}/script>\n<script type=\"a/skeleton\">{{skeleton}}{{<}}/script><script type=\"module\">{{script}}{{<}}/script>"
+   "skeleton": "{{<}}!-- {{date}} -->\n<title>{{title}}</title><meta content=\"script-src '{{csp:script}}'; style-src '{{csp:style}}'\"><style>{{style}}</style>\n<pre>{{static}}</pre>\n<script type=\"a/pack\">{{pack}}{{<}}/script><script type=\"a/kernel\" data-hash=\"{{kernel-hash}}\">{{kernel}}{{<}}/script>\n<script type=\"a/skeleton\">{{skeleton}}{{<}}/script><script type=\"module\">{{script}}{{<}}/script>"
   },
   "a part holds <!--": {
    "title": "A & B <c> \"d\"",
@@ -46,9 +47,8 @@
    "script": "let a = \"{{title}}\" < 1;",
    "kernel": "<!--",
    "kernel-hash": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
-   "tools": "VE9PTFM=",
    "pack": "UEFDSw==",
-   "skeleton": "{{<}}!-- {{date}} -->\n<title>{{title}}</title><meta content=\"script-src '{{csp:script}}'; style-src '{{csp:style}}'\"><style>{{style}}</style>\n<pre>{{static}}</pre>\n<script type=\"a/pack\">{{pack}}{{<}}/script><script type=\"a/tools\">{{tools}}{{<}}/script><script type=\"a/kernel\" data-hash=\"{{kernel-hash}}\">{{kernel}}{{<}}/script>\n<script type=\"a/skeleton\">{{skeleton}}{{<}}/script><script type=\"module\">{{script}}{{<}}/script>"
+   "skeleton": "{{<}}!-- {{date}} -->\n<title>{{title}}</title><meta content=\"script-src '{{csp:script}}'; style-src '{{csp:style}}'\"><style>{{style}}</style>\n<pre>{{static}}</pre>\n<script type=\"a/pack\">{{pack}}{{<}}/script><script type=\"a/kernel\" data-hash=\"{{kernel-hash}}\">{{kernel}}{{<}}/script>\n<script type=\"a/skeleton\">{{skeleton}}{{<}}/script><script type=\"module\">{{script}}{{<}}/script>"
   },
   "a gap of an unknown name": {
    "title": "A & B <c> \"d\"",
@@ -58,9 +58,20 @@
    "script": "let a = \"{{title}}\" < 1;",
    "kernel": "AAAA",
    "kernel-hash": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
-   "tools": "VE9PTFM=",
    "pack": "UEFDSw==",
    "skeleton": "{{nothing}}"
+  },
+  "a gap named tools, which is no longer a part": {
+   "title": "A & B <c> \"d\"",
+   "date": "2026-01-02",
+   "static": "one < two\n{{pack}} is not filled here",
+   "style": "p{color:red}",
+   "script": "let a = \"{{title}}\" < 1;",
+   "kernel": "AAAA",
+   "kernel-hash": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+   "pack": "UEFDSw==",
+   "skeleton": "{{tools}}",
+   "tools": "VE9PTFM="
   },
   "a gap that is not closed": {
    "title": "A & B <c> \"d\"",
@@ -70,7 +81,6 @@
    "script": "let a = \"{{title}}\" < 1;",
    "kernel": "AAAA",
    "kernel-hash": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
-   "tools": "VE9PTFM=",
    "pack": "UEFDSw==",
    "skeleton": "a {{title"
   },

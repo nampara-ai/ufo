@@ -14,6 +14,16 @@ A later round the same day (three engines, an accessibility tree, positioned
 edits) changed the host interface, the static face and the policy: the last
 section of NOTES.md says how, and is right where this file differs.
 
+A further round (the tools universe nested in the pack and holding all of
+what the tools do; what will leave shown before a save, and a published
+copy; each accessible node placed over what is drawn; the script shipped
+minified) changed the envelope's parts, the host interface, the tools
+universe and the kernel's part in it. The section of NOTES.md headed
+"the tools as description" is right where this file differs: in
+particular there is no `tools` part, no `ask` effect and no `who` at
+`start`, and "What the kernel learned" and "The tools universe" above
+describe the tools universe before it.
+
 ## The five decisions, and what was done about each
 
 1. **The shell counts as host code.** There is no shell. Everything the

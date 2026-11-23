@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!-- Naive: a press is taken from the click event. WebKit 26, for a touch that falls on an element which cannot be pressed (no tabindex, no role of a control) 14 pixels below one that can, gives the click to the one that can, and reports it at a point on that one: the press lands on another thing than was touched. (Here the thing that can be pressed lies inside the paragraph touched, as a button drawn in a line of text does.) Chromium 153 and Firefox 155 give the click to the element touched, where it was touched. A listener on the touched element itself does not change what WebKit does. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>05 naive: a press taken from the click</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-TmoVpkBTph79nfokKrBkx/ZeELgNOymF6FecYT/CRRs='; style-src 'sha256-Qj/r+VCKQIF5rUSnYZZ3lZJlnH4/OO4g/s+bLwh3UyY='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}.pad{position:relative;height:120px;touch-action:manipulation}.pad *{position:absolute;margin:0;left:0;width:200px;cursor:pointer;overflow:hidden;white-space:nowrap}#b{left:16px;top:10px;height:42px;color:transparent}#a{top:0;height:20px;color:#000}</style>
+</head><body>
+<h1>05 naive: a press taken from the click</h1>
+<p>Naive: a press is taken from the click event. WebKit 26, for a touch that falls on an element which cannot be pressed (no tabindex, no role of a control) 14 pixels below one that can, gives the click to the one that can, and reports it at a point on that one: the press lands on another thing than was touched. (Here the thing that can be pressed lies inside the paragraph touched, as a button drawn in a line of text does.) Chromium 153 and Firefox 155 give the click to the element touched, where it was touched. A listener on the touched element itself does not change what WebKit does.</p>
+<p>Result: <span id="result">not finished</span></p>
+<div class="pad" id="pad"><p id="b"><span id="a" role="button" tabindex="0">a thing that can be pressed</span> and the rest of its line, which cannot</p></div>
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+const pad = document.getElementById('pad'), b = document.getElementById('b'), got = [];
+b.onclick = () => {}; pad.addEventListener('click', e => got.push([e.target.id, Math.round(e.clientX), Math.round(e.clientY)]));
+// a touch on the paragraph, 11 pixels under the thing in it that can be pressed (the runner makes it: a real touch, at 60, 31 of the paragraph)
+setTimeout(() => { const r = b.getBoundingClientRect(), want = [Math.round(r.left + 60), Math.round(r.top + 31)], problems = [];
+  if (got.length !== 1) problems.push(got.length + ' presses were taken (by click), not one'); else { if (got[0][0] !== 'b') problems.push('the press was given to #' + got[0][0] + ', not to the line that was touched');
+    if (Math.abs(got[0][1] - want[0]) > 1 || Math.abs(got[0][2] - want[1]) > 1) problems.push('it is reported at ' + got[0].slice(1) + ', not at ' + want + ' where the touch was'); }
+  finish(problems, 0); }, 1500);</script></body></html>

@@ -82,6 +82,7 @@ export async function start(wasmBytes, measure, inflate, clock = {}) {
     blockAt: src => call(ex.block_at, { src }),
     propose: edit => call(ex.propose, edit),
     packBytes: () => { const p = ex.pack_bytes(); return decode(mem().slice(p, p + ex.out_len())); },
+    published: () => { const p = ex.published(); return decode(mem().slice(p, p + ex.out_len())); },   // the pack as it would be published (TRAVEL 13.3)
     findPack: text => call(ex.find_pack, text),
   };
 }

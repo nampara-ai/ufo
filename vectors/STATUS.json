@@ -190,7 +190,7 @@
   },
   "provisional/envelope.json": {
    "status": "provisional",
-   "note": "the envelope as a function of its parts: one fixed case, on which two implementations by the author agree"
+   "note": "the envelope as a function of its parts: one fixed case, on which two implementations by the author agree, and seven refused"
   },
   "provisional/roles.json": {
    "status": "provisional",
@@ -198,7 +198,11 @@
   },
   "quirks/quirks.json": {
    "status": "provisional",
-   "note": "run in three engines by the author's test; no independent implementation has been put through it"
+   "note": "six entries, run in three engines by the author's test; no independent implementation has been put through it"
+  },
+  "provisional/leaving.json": {
+   "status": "provisional",
+   "note": "the author's kernel only. The published pack it names was read by the second independent reader, unmodified: working history 0, every missing record classed as withheld, nothing malformed"
   }
  },
  "note": "Both readers are instances of the model that wrote the specification. Two of them agreeing does not make a vector confirmed: that needs an implementation from a different model family, or a person."

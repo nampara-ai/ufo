@@ -233,16 +233,7 @@ pub fn propose(pk: &mut Pack, q: &V) -> Result<V, &'static str> {
 /// looked at: edits in order and apart, with positions in the stretch (tool.rs, `net`). `random` is
 /// 64 bytes: the change's identity, then three salts.
 pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Option<Vec<Edit>>, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
-    if pk.unread_tail != 0 {
-        return Err("the pack was recovered after an interrupted write (2.3): this spike does not truncate it and append (P7)");
-    }
-    let parent = pk.head;
-    let c = pk.node(&parent).ok_or("the head commit cannot be read")?;
-    let height = c.get("height").and_then(|h| h.i()).ok_or("the head commit has no height")?;
-    if c.get("v") != Some(&V::Int(1)) {
-        return Err("a universe of a format version this kernel does not implement is not written (1.9)");
-    }
-    let o = pk.object(&parent, &id).ok_or("no such object in the current state (L4)")?;
+    let o = pk.object(&pk.head, &id).ok_or("no such object in the current state (L4)")?;
     if o.ty != "ufo.text" {
         return Err("the object is not a text");
     }
@@ -274,10 +265,6 @@ pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Optio
         end = e.hi + 1;
     }
     let change: Id = random.get(..16).and_then(|r| r.try_into().ok()).filter(|_| random.len() == 64).ok_or("random: 64 bytes")?;
-    let mut ents = objects(pk, &parent);
-    if ents.iter().any(|e| e.0 == change) || old_runs.iter().any(|r| r.c == change) {
-        return Err("the identity drawn for the change is already in use");
-    }
     // The operations, by element identity. New items go after the last element an edit removes, so
     // that a boundary fixed to a removed element (the start of a block whose first characters are
     // replaced) still lies before them (4.3); with nothing removed, after the element before the
@@ -375,24 +362,69 @@ pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Optio
             set_in(&mut raw_p, &path, val);
         }
     }
-    // L3, L4, before anything is written: the operations, read back from the bytes that will be the
-    // work, are applied to the parent state by the generic rule, and the result compared exactly.
-    let work = encode(&map(vec![("ops", V::L(ops))]));
-    let ops = decode(&work).and_then(|w| w.get("ops").cloned()).ok_or("work")?;
-    let (p2, seq2) = replay(&id, &change, ops.l(), &o.p, seqs).ok_or("refused: the operations do not apply to the parent state (L2, L4)")?;
-    if encode(&p2) != encode(&p1) || encode(&seq2) != encode(&seq1) {
-        return Err("refused: the operations do not produce the new state (L3)");
-    }
-    // The records. The text's new revision carries everything else as it was (C6).
+    // The text's new revision carries everything else as it was (C6).
     let mut recs: Recs = Vec::new();
-    let (mut rev, mut raw_seq) = (raw.clone(), raw.get("seq").cloned().ok_or("seq")?);
+    let mut raw_seq = raw.get("seq").cloned().ok_or("seq")?;
     let v = held(&mut recs, raw_p.get("chars"), "t", new_chars.as_bytes(), V::T(new_chars.clone()))?;
     set_in(&mut raw_p, &["chars"], Some(v));
     let v = held(&mut recs, raw_seq.get("chars"), "v", &encode(&new_seq), new_seq)?;
     set_in(&mut raw_seq, &["chars"], Some(v));
+    finish(pk, &o, &raw, ops, &p1, Some(&seq1), raw_p, Some(raw_seq), recs, who, time, random)
+}
+/// `set` (1.7) on one object, through the same gate: what lies at `path` in its properties becomes
+/// `val`, or with none is removed. `with` is a pack whose records are to lie in this one from the
+/// same commit on: a universe that the value names by an anchor is then nested here (1.8).
+pub fn set(pk: &mut Pack, id: Id, path: &[&str], val: Option<V>, with: &[u8], who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+    let o = pk.object(&pk.head, &id).ok_or("no such object in the current state (L4)")?;
+    let raw = pk.node(&o.rev).ok_or("the revision cannot be read")?;
+    let (mut p1, mut raw_p) = (o.p.clone(), raw.get("p").cloned().ok_or("the revision has no properties")?);
+    if path.is_empty() || o.ty == "ufo.change" || o.seq.as_ref().map_or(false, |s| s.get(path[0]).is_some()) || raw_p.get(path[0]).map_or(false, |v| v.tag(INDIRECT).is_some()) {
+        return Err("not set by this spike: a change object, a sequence property, or a value kept outside its node");
+    }
+    let mut op = vec![("op", t("set")), ("obj", bytes(&id)), ("key", V::L(path.iter().map(|k| t(k)).collect()))];
+    op.extend(path.iter().try_fold(&o.p, |v, k| v.get(k)).map(|old| ("old", old.clone())));
+    op.extend(val.clone().map(|v| ("val", v)));
+    set_in(&mut p1, path, val.clone()).ok_or("the path passes through a value that is not a map")?;
+    set_in(&mut raw_p, path, val).ok_or("the path passes through a value that is not a map")?;
+    let recs = if with.is_empty() { Vec::new() } else { Pack::scan(with.to_vec()).and_then(Pack::open).ok_or("what is to be nested is not a pack")?.records() };
+    finish(pk, &o, &raw, vec![map(op)], &p1, o.seq.as_ref(), raw_p, raw.get("seq").cloned(), recs, who, time, random)
+}
+/// What every change through the gate comes to, whatever it does to its one object: the operations
+/// checked against the state meant, then the records written and read back. `p1` and `seq1` are
+/// the object's properties and `seq` as they are to be; `raw_p` and `raw_seq` the same as the new
+/// revision is to hold them (values kept outside the node are indirects there).
+fn finish(pk: &mut Pack, o: &Obj, raw: &V, ops: Vec<V>, p1: &V, seq1: Option<&V>, raw_p: V, raw_seq: Option<V>, mut recs: Recs, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+    if pk.unread_tail != 0 {
+        return Err("the pack was recovered after an interrupted write (2.3): this spike does not truncate it and append (P7)");
+    }
+    let (parent, id) = (pk.head, o.id);
+    let c = pk.node(&parent).ok_or("the head commit cannot be read")?;
+    let height = c.get("height").and_then(|h| h.i()).ok_or("the head commit has no height")?;
+    if c.get("v") != Some(&V::Int(1)) {
+        return Err("a universe of a format version this kernel does not implement is not written (1.9)");
+    }
+    let change: Id = random.get(..16).and_then(|r| r.try_into().ok()).filter(|_| random.len() == 64).ok_or("random: 64 bytes")?;
+    let mut ents = objects(pk, &parent);
+    let in_seq = |seq: &V| if let V::M(m) = seq { m.iter().any(|(_, rs)| runs(rs).iter().any(|r| r.c == change)) } else { false };
+    if ents.iter().any(|e| e.0 == change) || o.seq.as_ref().map_or(false, in_seq) {
+        return Err("the identity drawn for the change is already in use");
+    }
+    // L3, L4, before anything is written: the operations, read back from the bytes that will be the
+    // work, are applied to the parent state by the generic rule, and the result compared exactly.
+    let work = encode(&map(vec![("ops", V::L(ops))]));
+    let ops = decode(&work).and_then(|w| w.get("ops").cloned()).ok_or("work")?;
+    let none = V::M(Vec::new());
+    let (p2, seq2) = replay(&id, &change, ops.l(), &o.p, o.seq.as_ref().unwrap_or(&none)).ok_or("refused: the operations do not apply to the parent state (L2, L4)")?;
+    if encode(&p2) != encode(p1) || encode(&seq2) != encode(seq1.unwrap_or(&none)) {
+        return Err("refused: the operations do not produce the new state (L3)");
+    }
+    // The records. The new revision carries everything else as it was (C6).
+    let mut rev = raw.clone();
     let number = raw.get("rev").and_then(|r| r.i()).ok_or("rev")?;
-    for (k, v) in [("rev", V::Int(number + 1)), ("prev", bytes(&o.rev)), ("by", bytes(&change)), ("salt", bytes(&random[16..32])), ("p", raw_p), ("seq", raw_seq)] {
-        set_in(&mut rev, &[k], Some(v));
+    for (k, v) in [("rev", Some(V::Int(number + 1))), ("prev", Some(bytes(&o.rev))), ("by", Some(bytes(&change))), ("salt", Some(bytes(&random[16..32]))), ("p", Some(raw_p)), ("seq", raw_seq)] {
+        if v.is_some() {
+            set_in(&mut rev, &[k], v);
+        }
     }
     let text_rev = node(&mut recs, &rev);
     // the change: its work in a blob, behind an opening (1.4); created by committing, so `rev` 1 and `by` itself
@@ -417,7 +449,7 @@ pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Optio
     let was = pk.bytes().len();
     pk.commit(&recs, &commit).ok_or("the pack could not be extended: nothing was written")?;
     // and read back the ordinary way; if the state written is not the state meant, it is taken off again
-    let back = pk.object(&commit, &id).filter(|b| encode(&b.p) == encode(&p1) && b.seq.as_ref().map(encode) == Some(encode(&seq1)) && b.by == change);
+    let back = pk.object(&commit, &id).filter(|b| encode(&b.p) == encode(p1) && b.seq.as_ref().map(encode) == seq1.map(encode) && b.by == change);
     if back.is_none() || pk.object(&commit, &change).is_none() {
         pk.cut(was);
         return Err("what was written does not read back as the new state: taken off again");

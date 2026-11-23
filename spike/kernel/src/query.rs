@@ -429,7 +429,7 @@ fn reach(pk: &Pack, v: &V, recs: &mut Set<H>, ids: &mut Set<Id>, other: &mut Vec
     }
 }
 /// 2.5: the content and attribution layers of the universe a commit fixes, and of the universes it takes in.
-fn universe_layers(pk: &Pack, commit: &H, also: Option<Id>, content: &mut Set<H>, attribution: &mut Set<H>, attributing: &mut Vec<Id>, done: &mut Set<(H, Id)>) {
+fn universe_layers(pk: &Pack, commit: &H, also: Option<Id>, content: &mut Set<H>, attribution: &mut Set<H>, attributing: &mut Vec<(H, Id)>, live: &mut Vec<(H, Id)>, done: &mut Set<(H, Id)>) {
     let revs = rev_map(pk, commit);
     content.extend(map_nodes(pk, commit));
     let mut at = Some(*commit);
@@ -449,6 +449,7 @@ fn universe_layers(pk: &Pack, commit: &H, also: Option<Id>, content: &mut Set<H>
         let Some(n) = pk.node(rev) else { continue };
         if n.get("type").and_then(|x| x.s()) == Some("ufo.change") { continue; }
         content.insert(*rev);
+        live.push((*commit, i));
         if let Some(b) = n.get("by").and_then(|b| b.id()) { changes.insert(b); }
         let mut ids = Set::new();
         if let Some(p) = n.get("p") { reach(pk, p, content, &mut ids, &mut other); }
@@ -472,7 +473,7 @@ fn universe_layers(pk: &Pack, commit: &H, also: Option<Id>, content: &mut Set<H>
         if !is_change(&c) || !seen.insert(c) { continue; }
         let Some(&rev) = revs.get(&c) else { continue };
         attribution.insert(rev);
-        attributing.push(c);
+        attributing.push((*commit, c));
         if let Some(V::M(m)) = pk.node(&rev).and_then(|n| n.get("p").cloned()) {
             for (k, v) in &m {
                 if k == "work" { continue; }
@@ -483,16 +484,24 @@ fn universe_layers(pk: &Pack, commit: &H, also: Option<Id>, content: &mut Set<H>
         }
     }
     for (u, o) in other {
-        if pk.node(&u).is_some() { universe_layers(pk, &u, Some(o), content, attribution, attributing, done); }
+        if pk.node(&u).is_some() { universe_layers(pk, &u, Some(o), content, attribution, attributing, live, done); }
     }
 }
+/// The layers of the universe a pack's head fixes, with those of the universes it takes in: the
+/// records of the content layer; those of the attribution layer that are not also content; the
+/// attributing changes and the live objects, each with the commit of the universe it is in.
+pub fn split(pk: &Pack) -> (Set<H>, Set<H>, Vec<(H, Id)>, Vec<(H, Id)>) {
+    let (mut content, mut attribution, mut attributing, mut live, mut done) = (Set::new(), Set::new(), Vec::new(), Vec::new(), Set::new());
+    universe_layers(pk, &pk.head, None, &mut content, &mut attribution, &mut attributing, &mut live, &mut done);
+    let attribution: Set<H> = Map(attribution.0.into_iter().filter(|h| !content.contains(&h.0)).collect());
+    (content, attribution, attributing, live)
+}
 fn layers(pk: &Pack) -> Option<V> {
-    let (mut content, mut attribution, mut attributing, mut done) = (Set::new(), Set::new(), Vec::new(), Set::new());
-    universe_layers(pk, &pk.head, None, &mut content, &mut attribution, &mut attributing, &mut done);
+    let (content, attribution, attributing, _) = split(pk);
+    let mut attributing: Vec<Id> = attributing.into_iter().map(|a| a.1).collect();
     let (all, seals) = pk.frames();
     let mut present: Set<H> = Set::new();
     present.extend(all.iter().map(|(_, h, _)| *h));
-    let attribution: Set<H> = Map(attribution.0.into_iter().filter(|h| !content.contains(&h.0)).collect());
     let size = |set: &Set<H>| all.iter().filter(|(_, h, _)| set.contains(h)).map(|(_, _, n)| *n).sum::<usize>();
     let history: Set<H> = Map(present.0.iter().filter(|h| !content.contains(&h.0) && !attribution.contains(&h.0)).cloned().collect());
     let list = |set: &Set<H>| V::L(set.keys().map(|h| t(&hex(h))).collect());
@@ -501,6 +510,11 @@ fn layers(pk: &Pack) -> Option<V> {
     Some(map(vec![("content", layer(&content)), ("attribution", layer(&attribution)), ("working_history", layer(&history)),
         ("seal_frames", V::Int(seals.len() as i64)), ("attributing_changes", V::L(attributing.iter().map(|c| t(&hex(c))).collect())),
         ("missing_from_content_or_attribution", V::Int(content.keys().chain(attribution.keys()).filter(|h| !present.contains(*h)).count() as i64))]))
+}
+/// 13.3, E9: the pack as it is published: its content and attribution layers and nothing else of its records.
+pub fn published(pk: &Pack) -> Option<Vec<u8>> {
+    let (content, attribution, _, _) = split(pk);
+    pk.published(&|h| content.contains(h) || attribution.contains(h))
 }
 
 pub fn query(pk: &Pack, q: &V) -> Option<V> {

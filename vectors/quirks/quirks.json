@@ -16,7 +16,7 @@
    ],
    "expect": {},
    "rule": "A web envelope, through opening, every face, an edit, saving and reopening what was saved, MUST cause zero policy violations, write nothing to the console, and make no request but the one that fetched it.",
-   "pass": "built by spike/envelope/make.mjs from vectors/compose.ufx and served from an http origin: after Tab to Edit, Enter, Tab to a paragraph, Enter, typing, Done, Save: one file comes down; it reopens at the same state; over both pages zero securitypolicyviolation events, zero console messages, and the server saw each page asked for once and nothing else",
+   "pass": "built by spike/envelope/make.mjs from vectors/compose.ufx and served from an http origin: by the keyboard alone: Tab to Edit, Enter; Tab to the field for the name, Enter, typing, Done (no dialog of the browser is shown at any point: one would fail the entry); Tab to a paragraph, Enter, typing, Done; back to Save, Enter, which shows what will leave; the copy with its history chosen, then \"Save this copy\": one file comes down; it reopens at the same state; over both pages zero securitypolicyviolation events, zero console messages, and the server saw each page asked for once and nothing else",
    "status": "provisional"
   },
   {
@@ -68,11 +68,19 @@
       "firefox": "the same",
       "webkit": "the same (\"Refused to apply a stylesheet…\")"
      }
+    },
+    {
+     "file": "02-look-without-style.naive2.html",
+     "fails": {
+      "chromium": "a style-src-attr violation; the node is not placed",
+      "firefox": "the same",
+      "webkit": "the same"
+     }
     }
    ],
-   "rule": "Every byte a web envelope's policy constrains MUST be a part whose hash the envelope function writes into the policy: one style, one script. A binding MUST NOT write a style by any means (no style attribute, no style element, no style-sheet interface, no style property): it changes how the page looks only by attributes (hidden, class, width, height, rows, ARIA) whose effect the hashed style sheet states.",
-   "pass": "the four changes take effect (computed style and size checked by the page); zero securitypolicyviolation events; zero console messages. On the envelope itself: a static check that the script holds no style write, and zero violations over open, edit, save and reopen (entry 00)",
-   "note": "Setting a style property through script (element.style.left = …) was allowed under the policy by all three engines here. The rule forbids it all the same, so that what the page may look like is exactly what the hashed style part says.",
+   "rule": "Every byte a web envelope's policy constrains MUST be a part whose hash the envelope function writes into the policy: one style, one script. A binding MUST NOT write a style by any means (no style attribute, no style element, no style-sheet interface, no style property), with one exception: it places each accessible node over what is drawn for it by assigning, through the element's style object (the CSSOM) and in no other way, exactly the four properties left, top, width and height. Everything else about how those elements look (that they are positioned, transparent, what takes a pointer) and everything about how the rest of the page looks is stated by the hashed style sheet, and changed only by attributes (hidden, class, width, height, rows, ARIA) whose effect it states.",
+   "pass": "the changes take effect (computed style, size and the node's rectangle checked by the page); zero securitypolicyviolation events; zero console messages, from a file and from http, with style-src one hash and no unsafe-inline or unsafe-hashes. On the envelope itself: a static allow-list on the script as written and as shipped (the word style appears only in the query for the page's parts, in the canvas paints fillStyle and strokeStyle, and in assignments of .style.left, .style.top, .style.width, .style.height), and zero violations over open, every face, edits by keyboard and pointer, the Save panel, saving and reopening (entry 00, and test.mjs in every context)",
+   "note": "Setting a style property through script (element.style.left = …) is allowed under a hash-only style policy by all three engines here: the policy governs style attributes and style elements, not the CSSOM. The rule forbids it all the same, but for the four properties that place an accessible node over what is drawn for it, so that what the page may look like is still what the hashed style part says and only where a node lies comes from the drawing. Without that exception the nodes have no geometry, and touch exploration by a screen reader cannot land on what is drawn.",
    "status": "provisional"
   },
   {
@@ -399,6 +407,45 @@
    "rule": "A binding reports each change of an editing surface as (at, removed, inserted) only when the selection before and after accounts for it exactly: the text before `at` and after the change is unchanged. Otherwise it reports the whole text with no position, and it always reports the whole text when the entry ends. A kernel MUST accept both, and settle any disagreement by the whole text.",
    "pass": "after typing, replacing a selection, Backspace, Delete, copy and paste, cut, delete-word, undo, text inserted by an input method, a line break and characters outside the basic plane: the reports, applied in order, give exactly the text the box holds",
    "note": "Seen here: beforeinput and input fire for a textarea in all three with the same inputType values; getTargetRanges() is empty in all three; Firefox sends compositionend before the last input of a composition, the others after; WebKit selects what an undo restores.",
+   "status": "provisional"
+  },
+  {
+   "id": "05-touch-beside-a-button",
+   "name": "A touch on something that cannot be pressed, close to something that can: WebKit gives the click to the neighbour, at a point on the neighbour",
+   "file": "05-touch-beside-a-button.html",
+   "where": [
+    "file"
+   ],
+   "drive": [
+    [
+     "tap",
+     "#b",
+     60,
+     31
+    ]
+   ],
+   "touch": true,
+   "expect": {},
+   "naive": [
+    {
+     "file": "05-touch-beside-a-button.naive.html",
+     "drive": [
+      [
+       "tap",
+       "#b",
+       60,
+       31
+      ]
+     ],
+     "touch": true,
+     "fails": {
+      "webkit": "the click goes to the element with role button and tabindex above the line touched, and its clientX and clientY are a point on that element, not where the touch was"
+     }
+    }
+   ],
+   "rule": "A binding takes where a pointer pressed from the pointer itself: the drawing it went down on, and the point it came up at (pointerdown, then pointerup within a few pixels, no pointercancel between). The click that follows says only that the press is complete: its target and its point are not used, since an engine may move them to a neighbouring control; and where it was moved to something outside the drawing, it is stopped there. A click that no pointer event came before (one made for the person by assistive technology or by script) names an element and no trustworthy point: it is a press on the node that element stands for.",
+   "pass": "a real touch on a paragraph, 11 pixels under a focusable element with role button that lies in it: exactly one press is taken, on the paragraph, at the point touched; zero violations; zero console messages",
+   "note": "Found when the accessible nodes were laid over the drawing (TRAVEL E23, the exception): until then the page held nothing a touch could be given to but the canvas. The piece of a button that was drawn on a second line had no element over it, and a tap on it was delivered as a click on the button above. In WebKit 26.6 as Playwright builds it for Linux; whether Safari on iOS does the same was not observed, but iOS is where this adjustment of touches is known from.",
    "status": "provisional"
   }
  ],

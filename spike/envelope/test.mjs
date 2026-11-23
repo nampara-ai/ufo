@@ -9,11 +9,11 @@
 // No picture is taken of a page that is being asserted: Playwright's screenshot puts a style element into the page, which in WebKit the
 // page's own policy refuses (vectors/quirks: harness). Pictures are taken at the end, of pages opened for nothing else.
 import fs from 'fs'; import os from 'os'; import path from 'path'; import http from 'http'; import zlib from 'zlib'; import { execFileSync, spawn } from 'child_process'; import { fileURLToPath, pathToFileURL } from 'url';
-import { start } from '../binding/binding.mjs'; import { kernelWasm } from './parts.mjs'; import { envelope } from './envelope.mjs'; import { tree, flat } from './nodes.mjs';
+import { start } from '../binding/binding.mjs'; import { kernelWasm, shipped as minified, MINIFY } from './parts.mjs'; import { envelope } from './envelope.mjs'; import { tree, flat } from './nodes.mjs';
 import { playwright, launch, executable, ENGINES } from './engines.mjs';
 const { devices } = playwright, here = p => fileURLToPath(new URL(p, import.meta.url)), out = here('../out/'), shots = here('../out/shots/');
 const arg = n => (i => i < 0 ? null : process.argv[i + 1])(process.argv.indexOf('--' + n)), engineName = arg('engine') || 'all';
-const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'saved', 'policy', 'reopened', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
+const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
 const CONTEXTS = ['Node', 'desktop, file://', 'http origin', 'phone, larger', 'phone, smaller', 'scripts off', 'reader', 'validators'];
 if (![...ENGINES, 'all'].includes(engineName)) { console.error('--engine chromium|firefox|webkit'); process.exit(2); }
 
@@ -39,12 +39,14 @@ if (engineName === 'all') {
   fs.writeFileSync(path.join(out, 'envelope-test-results.json'), JSON.stringify({ engines: res, quirks }, null, 1)); process.exit(failed ? 1 : 0);
 }
 
-const READER = '/tmp/claude-0/-home-user-ufo/4e3fe0fb-2c81-5333-8e7a-895d1e899d40/scratchpad/reader3';   // run.py, universe.py, ufo.py: a copy of the independent reader, not modified
+const READER = '/tmp/claude-0/-home-user-ufo/4e3fe0fb-2c81-5333-8e7a-895d1e899d40/scratchpad/readertest2';   // run.py, universe.py, ufo.py: the independent reader; copied from here for each run, never modified
 if (!executable(engineName)) { console.log(`${engineName} is not installed here: not attempted`); process.exit(3); }
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'ufo-envelope-test-'));   // downloads, served files and the reader's copy: not kept
 fs.mkdirSync(shots, { recursive: true });
 const MADE = '2026-01-02', T = '71'.repeat(16);   // the date given to make.mjs; the text object of compose.ufx
 const make = (pack, file, ...more) => execFileSync('node', [here('make.mjs'), pack, file, '--date', MADE, ...more]);
+// the name a copy is given, by the rule the tools universe states as a formula (mkpack.mjs): `n` copies were saved from the page before it
+const nameOf = (file, mark, n) => { const stem = path.basename(file).replace(/\.ufx\.html$/, ''); return (stem.endsWith(mark) ? `${stem}-${n + 2}` : stem + mark + (n ? `-${n + 1}` : '')) + '.ufx.html'; };
 const original = path.join(work, 'compose.ufx.html'); make(here('../../vectors/compose.ufx'), original);
 
 const results = {};   // results[context][step] = 'passed' | 'failed'
@@ -57,27 +59,32 @@ const same = (a, b, why) => must(JSON.stringify(a) === JSON.stringify(b), `${why
 // ---- a kernel in Node, for what is computed independently of the page: the static face of a pack, its state, its nodes ----
 const nodeKernel = () => start(kernelWasm(), (piece, s) => ({ adv: [...s].length * piece.size / 2, asc: piece.size * 0.8, desc: piece.size * 0.2 }), b => zlib.inflateRawSync(b));
 const inNode = async pack64 => { const k = await nodeKernel(); must(await k.open(new Uint8Array(Buffer.from(pack64, 'base64'))), 'the pack does not open in Node');
-  return { html: k.sample({ as: 'static' }).html, text: k.sample({ as: 'text' }).text, head: k.query({ q: 'commits' })[0].commit, nodes: flat(tree(k.sample({ as: 'list', w: 600 }).list)) }; };
+  return { html: k.sample({ as: 'static' }).html, text: k.sample({ as: 'text' }).text, head: k.query({ q: 'commits' })[0].commit, nodes: flat(tree(k.sample({ as: 'list', w: 600 }).list)), layers: k.query({ q: 'layers' }),
+    leaving: history => k.query({ q: 'project', name: 'leaving', history }), history: k.query({ q: 'project', name: 'history', o: T }).split('\n').filter(l => l.startsWith('change ')) }; };
+const packIn = f => /<script type="application\/x-ufo-pack">([^<]*)</.exec(fs.readFileSync(f, 'utf8'))[1];
+// the frames of a pack, by kind (SPEC 2.1), and the value of each `absent` frame as far as this needs it
+const framesOf = pack64 => { const d = Buffer.from(pack64, 'base64'), kinds = {}; let off = 8, absent = 0; while (off < d.length) { const kind = d[off]; let n = 0, sh = 0, p = off + 2, b; do { b = d[p++]; n += (b & 127) * 2 ** sh; sh += 7; } while (b & 128);
+  kinds[kind] = (kinds[kind] || 0) + 1; if (kind === 6 && d.subarray(p, p + n).toString('latin1').includes('ghistory\xf5')) absent++; off = p + n; } return { kinds, absent }; };
 
 // ---- in the page ----
 // The parts, each as the text of the element that carries it: read by the test itself, not through the page's script.
 const partsOf = page => page.evaluate(() => { const t = s => document.querySelector(s).textContent, d = n => t(`script[type="application/x-ufo-${n}"]`);
-  return { title: document.title, style: t('style'), script: t('script[type=module]'), kernel: d('kernel'), 'kernel-hash': document.querySelector('script[type="application/x-ufo-kernel"]').dataset.hash, tools: d('tools'), pack: d('pack'), skeleton: d('skeleton') }; });
+  return { title: document.title, style: t('style'), script: t('script[type=module]'), kernel: d('kernel'), 'kernel-hash': document.querySelector('script[type="application/x-ufo-kernel"]').dataset.hash, pack: d('pack'), skeleton: d('skeleton') }; });
 // What was last drawn: the text items of each list with where they are in CSS pixels of its canvas, and whether a stroke underlines them.
 const look = page => page.evaluate(() => { const texts = [], lists = ufo.drawn();
   lists.forEach((l, on) => { const st = [[1, 0, 0]]; l.forEach(([kind, it], i) => { const m = st[st.length - 1];
     if (kind === 'push') st.push(it.m ? [m[0] * it.m[0], m[1] + m[0] * it.m[4], m[2] + m[0] * it.m[5]] : m); else if (kind === 'pop') st.pop();
-    else if (kind === 'text') texts.push({ s: it.s, on, X: m[1] + m[0] * it.x, Y: m[2] + m[0] * it.y, adv: m[0] * it.adv, size: m[0] * it.size, press: it.press || null, src: !!it.src, mono: it.font[0] === 'monospace', weight: it.weight, slant: !!it.slant,
+    else if (kind === 'text') texts.push({ s: it.s, on, X: m[1] + m[0] * it.x, Y: m[2] + m[0] * it.y, adv: m[0] * it.adv, size: m[0] * it.size, press: it.press ? it.press[1] || true : null, value: it.value, src: !!it.src, mono: it.font[0] === 'monospace', serif: it.font[0] === 'serif', weight: it.weight, slant: !!it.slant,
       lit: !!(l[i + 1] && l[i + 1][0] === 'path' && l[i + 1][1].stroke && l[i + 1][1].d.length === 2) }); }); });
   const rings = lists.map(l => l.filter(i => i[0] === 'path' && i[1].stroke && i[1].d.length === 5 && !i[1].fill).length);
-  return { texts, rings, pages: lists[1].filter(i => i[0] === 'push' && i[1].clip).length, all: texts.map(t => t.s).join(''), said: texts.filter(t => t.on === 0 && t.slant).map(t => t.s).join('') }; });
+  return { texts, rings, pages: lists[1].filter(i => i[0] === 'push' && i[1].clip).length, all: texts.map(t => t.s).join(''), said: texts.filter(t => t.on === 0 && t.serif && !t.press).map(t => t.s).join('') }; });
 const headOf = page => page.evaluate(() => ufo.query({ q: 'commits' })[0]);
 const whyOf = (page, lo, hi) => page.evaluate(([o, lo, hi]) => ufo.query({ q: 'project', name: 'why', o, lo, hi }).split('\n').filter(l => l.startsWith('run ')), [T, lo, hi]);
 const workOf = async (page, change) => (await page.evaluate(o => JSON.parse(ufo.query({ q: 'project', name: 'object', o }).split('\n').find(l => l.startsWith('prop key=work')).slice(20)).ops, change)).map(o => o.op === 'splice' ? [o.old ?? '', o.ins ?? ''] : ['set', o.key.join('.')]);
 const charsOf = page => page.evaluate(o => { const s = ufo.query({ q: 'project', name: 'text', o }).split('\n')[1]; return JSON.parse(s.slice(s.indexOf(' s=') + 3)); }, T);
 const spansOf = async page => Object.fromEntries(Object.entries(JSON.parse((await page.evaluate(o => ufo.query({ q: 'project', name: 'object', o }), T)).split('\n').find(l => l.startsWith('prop key=spans')).slice(21))).map(([k, s]) => [k, /chars=\[(\d+),(\d+)\]/.exec(s.at.$anchor).slice(1).map(Number)]));
 const inked = page => page.evaluate(() => { const c = document.querySelectorAll('#ufo-player canvas')[1], o = document.createElement('canvas'); o.width = c.width; o.height = Math.min(c.height, 4000); const g = o.getContext('2d', { willReadFrequently: true }); g.drawImage(c, 0, 0); const d = g.getImageData(0, 0, o.width, o.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] && d[i] + d[i + 1] + d[i + 2] < 384) n++; return n; });
-const focused = page => page.evaluate(() => { const a = document.activeElement; return { tag: a.localName, text: (a.textContent || '').trim(), pressed: a.getAttribute('aria-pressed'), current: a.getAttribute('aria-current'), seen: a.matches(':focus-visible'), outline: getComputedStyle(a).outlineStyle }; });
+const focused = page => page.evaluate(() => { const a = document.activeElement; return { tag: a.localName, role: a.getAttribute('role'), label: a.getAttribute('aria-label'), text: (a.textContent || '').trim(), pressed: a.getAttribute('aria-pressed'), current: a.getAttribute('aria-current'), seen: a.matches(':focus-visible'), outline: getComputedStyle(a).outlineStyle }; });
 const flatten = s => s.replace(/\s+/g, '');
 
 // ---- the origin the file is sent on to: a server that keeps a record of every request made of it ----
@@ -91,10 +98,13 @@ async function environment(name, browser, options, address, { touch = false, fir
   env = name; console.log(`\n== ${label}`);
   const canvases = page => page.locator('#ufo-player canvas'), entry = page => page.locator('#ufo-entry'), area = page => page.locator('#ufo-entry textarea');
   const pressAt = async (page, t) => { must(t, 'nothing to press'); const c = canvases(page).nth(t.on);
+    if (!t.on) await page.evaluate(y => { const top = document.getElementById('ufo-top'); if (y - top.scrollTop > top.clientHeight - 24 || y < top.scrollTop + 12) top.scrollTop = Math.max(0, y - top.clientHeight / 2); }, t.Y);   // what is held at the top scrolls within itself where it is taller than the view
     if (t.on) await page.evaluate(y => { const r = document.querySelectorAll('#ufo-player canvas')[1].getBoundingClientRect(), top = document.getElementById('ufo-top').getBoundingClientRect().bottom; if (r.top + y < top + 30 || r.top + y > innerHeight - 40) scrollBy(0, r.top + y - (top + innerHeight) / 2); }, t.Y);
     const b = await c.boundingBox(), x = b.x + t.X + Math.min(t.adv / 2, 30), y = b.y + t.Y - t.size / 3; await (touch ? page.touchscreen.tap(x, y) : page.mouse.click(x, y)); };
   const press = async (page, starts) => pressAt(page, (await look(page)).texts.find(t => t.s.trim().startsWith(starts)));
   const hit = (page, sel) => touch ? page.locator(sel).tap() : page.locator(sel).click();
+  // one of the two kinds of copy, by its last word: on a narrow screen the words of a button may be drawn on two lines
+  const choose = async (page, mode) => pressAt(page, (await look(page)).texts.find(t => t.press && t.on === 0 && t.s.includes(mode.split(' ').pop())));
   const open = async (file, who) => {
     const context = await browser.newContext({ acceptDownloads: true, ...options }), page = await context.newPage(), log = { requests: [], errors: [], asked: [], hits: hits.length };
     // every policy violation the page reports, from before its first script: a script added by the test's own means, which the page's policy does not govern
@@ -113,7 +123,7 @@ async function environment(name, browser, options, address, { touch = false, fir
     must(log.requests.every(r => r === url) && log.requests.length <= 1, 'requests seen: ' + JSON.stringify(log.requests));
     same(await page.evaluate(() => performance.getEntriesByType('resource').map(e => e.name)), [], 'the page fetched');
     if (url.startsWith('http')) same(hits.slice(log.hits), [new URL(url).pathname], 'the server was asked for');
-    same(await page.evaluate(() => globalThis.__violations), [], 'policy violations'); same(log.errors, [], 'console');
+    same(await page.evaluate(() => globalThis.__violations), [], 'policy violations'); same(log.errors, [], 'console'); same(log.asked, [], 'the browser\'s own dialogs (the reader has no question of its own)');
     return `${log.requests.length} seen by interception${url.startsWith('http') ? ', 1 by the server' : ''}, 0 fetched by the page, 0 violations, 0 console messages`;
   };
   // the page's own text is envelope(its parts): the parts from its elements, the static face and the state from a kernel in Node
@@ -122,16 +132,20 @@ async function environment(name, browser, options, address, { touch = false, fir
   const editOn = async page => { if (!(await look(page)).texts.find(t => t.s === 'Edit').lit) await press(page, 'Edit'); must((await look(page)).texts.find(t => t.s === 'Edit').lit, 'Edit does not show that editing is on'); };
   // Through the tools, by typing: turn editing on if it is off, press a block, do things in the widget with the keyboard, then Done (or Cancel).
   // `act(old, keys)` gets the text the widget holds and the means: caret(a, b) puts the caret or a selection (the only thing not done by a key), type, key.
+  // who is making the changes: the field the tools show while editing is on. Pressed, it mounts the same widget; the name is typed over what it holds
+  const giveName = async (page, who) => { await editOn(page); const t = (await look(page)).texts.find(t => t.value !== undefined); must(t, 'no field for the name'); if (t.value === who) return 0;
+    await pressAt(page, t); await entry(page).waitFor({ state: 'visible', timeout: 3000 }); const a = area(page); must(await a.inputValue() === t.value, 'the widget holds ' + await a.inputValue()); await a.evaluate(el => el.setSelectionRange(0, el.value.length));
+    await page.keyboard.type(who); await hit(page, '#ufo-entry button >> nth=0'); await entry(page).waitFor({ state: 'hidden', timeout: 3000 }); must((await look(page)).texts.find(t => t.value === who), 'the name is not shown'); return 1; };
   const edit = async (page, log, who, para, act, { done = true, changes = true } = {}) => {
-    await editOn(page); const named = log.asked.length; await press(page, para); await entry(page).waitFor({ state: 'visible', timeout: 3000 });
+    const named = await giveName(page, who); await press(page, para); await entry(page).waitFor({ state: 'visible', timeout: 3000 });
     const a = area(page), old = await a.inputValue(); must(old.startsWith(para), 'the widget holds: ' + old.slice(0, 40)); must(await page.evaluate(() => document.activeElement.localName) === 'textarea', 'the widget does not have the focus');
     await act(old, { caret: (from, to = from) => a.evaluate((el, [from, to]) => el.setSelectionRange(from, to), [from, to]), type: s => page.keyboard.type(s), key: async (k, n = 1) => { for (let i = 0; i < n; i++) await page.keyboard.press(k); }, area: a });
     const s = await a.inputValue(), before = await headOf(page); await hit(page, done ? '#ufo-entry button >> nth=0' : '#ufo-entry button >> nth=1');
     await entry(page).waitFor({ state: 'hidden', timeout: 3000 }); const head = await headOf(page), l = await look(page);
     if (!changes) { must(head.commit === before.commit, 'a change was made'); return { old, s, head }; }
     must(head.height === before.height + 1, 'no change was made: ' + l.said);
-    must(new RegExp(`change\\s*${head.change.slice(0, 8)}\\s*by\\s*${who.replace(' ', '\\s*')}`).test(l.said), 'the reader does not say who changed it: ' + l.said);
-    const chars = await charsOf(page); return { old, s, head, lo: chars.indexOf(s), asked: log.asked.length - named, ops: await workOf(page, head.change) };
+    must(new RegExp(`change\\s*o:${head.change.slice(0, 8)}\\s*by\\s*${who.replace(' ', '\\s*')}\\.\\s*Not\\s*yet\\s*in\\s*a\\s*file`).test(l.said), 'the status does not say who changed it: ' + l.said);
+    const chars = await charsOf(page); return { old, s, head, lo: chars.indexOf(s), named, ops: await workOf(page, head.change) };
   };
   const replaceWord = ([from, to]) => async (old, k) => { const at = old.indexOf(from); must(at >= 0, 'no ' + from); await k.caret(at, at + from.length); await k.type(to); };
 
@@ -155,16 +169,18 @@ async function environment(name, browser, options, address, { touch = false, fir
       const snap = await player.ariaSnapshot(); for (const l of ['- toolbar "Tools":', '- document "The document these tools work on":', '  - heading "The Quarterly Review" [level=1]', '  - list:', '      - list:', '        - listitem: 1. A numbered step.', '  - blockquote: ' + quote]) must(snap.split('\n').includes(l), 'the snapshot has no line ' + l);
       fs.writeFileSync(path.join(out, `aria-${engineName}.txt`), snap + '\n'); return `${want.filter(n => n.role === 'paragraph').length} paragraphs, 2 lists, 5 items; snapshot in out/aria-${engineName}.txt`;
     });
-    await check('accessible: the five tools are buttons that say how they stand, before and after Pages and Edit are pressed; what the reader says is a status', async () => {
-      same(await tools(), [['Document', 'true', null], ['Pages', 'false', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, null]], 'at first');
+    await check('accessible: the five tools are buttons that say how they stand, before and after Pages and Edit are pressed; the state is a status; the name is asked for by a labelled field', async () => {
+      same(await tools(), [['Document', 'true', null], ['Pages', 'false', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, 'false']], 'at first');
       must(await bar.getByRole('button', { name: 'Edit', pressed: false }).count() === 1 && await page.getByRole('status').count() === 1, 'Edit is not a toggle that is off, or there is no status');
-      await press(page, 'Pages'); same(await tools(), [['Document', 'false', null], ['Pages', 'true', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, null]], 'after Pages');
+      await press(page, 'Pages'); same(await tools(), [['Document', 'false', null], ['Pages', 'true', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, 'false']], 'after Pages');
       const regions = await doc.getByRole('region').evaluateAll(rs => rs.map(r => r.getAttribute('aria-label'))); must(regions.length >= 2 && regions[0] === 'Page 1' && regions[1] === 'Page 2', 'the pages are not regions: ' + regions);
       same(await doc.getByRole('paragraph').allTextContents(), want.filter(n => n.role === 'paragraph').map(n => n.text), 'the paragraphs of the pages (one that runs over a page is still one)');
-      await press(page, 'Edit'); same(await tools(), [['Document', 'false', null], ['Pages', 'true', null], ['Text', 'false', null], ['Edit', null, 'true'], ['Save', null, null]], 'after Edit');
-      must(await bar.getByRole('button', { name: 'Edit', pressed: true }).count() === 1, 'Edit is not pressed'); must(await doc.locator('[tabindex="0"]').count() >= 10, 'the blocks cannot be reached');
-      await press(page, 'Edit'); await press(page, 'Document'); same(await tools(), [['Document', 'true', null], ['Pages', 'false', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, null]], 'back');
-      must(await doc.locator('[tabindex]').count() === 0, 'blocks can still be reached with editing off'); return 'aria-current on the three that choose, aria-pressed on Edit';
+      await press(page, 'Edit'); same(await tools(), [['Document', 'false', null], ['Pages', 'true', null], ['Text', 'false', null], ['Edit', null, 'true'], ['Save', null, 'false']], 'after Edit');
+      must(await bar.getByRole('button', { name: 'Edit', pressed: true }).count() === 1, 'Edit is not pressed'); must(await doc.locator('[tabindex="0"]').count() === 0, 'the blocks can be reached before a name is given');
+      const field = page.getByRole('textbox', { name: 'Your name, to record with the changes you make' }); must(await field.count() === 1 && await field.getAttribute('tabindex') === '0' && /first give your name/.test(await page.getByRole('status').textContent()), 'no field for the name, or the status does not ask for it');
+      await giveName(page, 'Ada Tester'); must(await field.textContent() === 'Ada Tester' && /recorded as made by Ada Tester/.test(await page.getByRole('status').textContent()), 'the name is not in the field, or the status does not say it'); must(await doc.locator('[tabindex="0"]').count() >= 10, 'the blocks cannot be reached');
+      await press(page, 'Edit'); await press(page, 'Document'); same(await tools(), [['Document', 'true', null], ['Pages', 'false', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, 'false']], 'back');
+      must(await doc.locator('[tabindex]').count() === 0 && await page.getByRole('textbox').count() === 0, 'blocks can still be reached with editing off, or the field is still there'); return 'aria-current on the three that choose, aria-pressed on Edit and Save; the name is asked for by a field of the tools, named, and by the status';
     });
   };
   // ---- the keyboard alone: Tab to Edit, Enter, Tab to a paragraph, Enter, type, Tab to Done, Enter, back to Save, Enter: a file ----
@@ -172,25 +188,80 @@ async function environment(name, browser, options, address, { touch = false, fir
     const { context, page, log, url } = await open(file, 'Kay Board'); let at = null;
     const tab = async (want, key = 'Tab', most = 40) => { for (let i = 0; i < most; i++) { await page.keyboard.press(key); at = await focused(page); if (want(at)) return i + 1; } throw Error('not reached; the focus is on ' + JSON.stringify(at)); };
     await check('keyboard: Tab reaches each tool in order, each shown by a ring; Enter on Edit turns editing on and says so', async () => {
-      const seq = []; for (const w of ['Document', 'Pages', 'Text', 'Edit']) { await tab(() => true, 'Tab', 1); seq.push(at.text); must(at.tag === 'button' && at.text === w, 'Tab went to ' + JSON.stringify(at)); must((await look(page)).rings[0] === 1, 'no ring is drawn on ' + w); }
+      const seq = []; for (const w of ['Document', 'Pages', 'Text', 'Edit']) { await tab(() => true, 'Tab', 1); seq.push(at.text); must(at.role === 'button' && at.text === w, 'Tab went to ' + JSON.stringify(at)); must((await look(page)).rings[0] === 1, 'no ring is drawn on ' + w); }
       await page.keyboard.press('Enter'); at = await focused(page); must(at.text === 'Edit' && at.pressed === 'true', 'Edit is not pressed, or lost the focus: ' + JSON.stringify(at));
       await page.keyboard.press('Space'); must((await focused(page)).pressed === 'false', 'Space did not press it'); await page.keyboard.press('Space'); must((await focused(page)).pressed === 'true', 'Space did not press it again'); return seq.join(', ') + '; Enter and Space press';
     });
     let made = null;
+    await check('keyboard: Tab to the field for the name, Enter, type, Tab to Done, Enter: the name is set, with no dialog, and the focus is back on the field', async () => {
+      const n = await tab(a => a.role === 'textbox'); must(at.label === 'Your name, to record with the changes you make', 'the field is not named: ' + JSON.stringify(at)); await page.keyboard.press('Enter'); await entry(page).waitFor({ state: 'visible', timeout: 3000 });
+      must((await focused(page)).tag === 'textarea', 'the edit box has not the focus'); await page.keyboard.type('Kay Board'); await tab(a => a.tag === 'button' && a.text === 'Done', 'Tab', 2); await page.keyboard.press('Enter'); await entry(page).waitFor({ state: 'hidden', timeout: 3000 });
+      at = await focused(page); must(at.role === 'textbox' && at.text === 'Kay Board' && !log.asked.length, 'the focus is on ' + JSON.stringify(at)); return `${n} Tabs from Edit (Save, then the field)`;
+    });
     await check('keyboard: Tab to a paragraph, Enter opens the labelled edit box, typing, Tab to Done, Enter: changed, and the focus is back on the paragraph', async () => {
       const n = await tab(a => a.tag === 'p' && a.text.startsWith('Readers who')); must((await look(page)).rings[1] === 1, 'no ring on the paragraph'); const y = await page.evaluate(() => scrollY);
-      await page.keyboard.press('Enter'); await entry(page).waitFor({ state: 'visible', timeout: 3000 }); must(log.asked.length === 1, 'the name was not asked for');
+      await page.keyboard.press('Enter'); await entry(page).waitFor({ state: 'visible', timeout: 3000 });
       must(await page.getByRole('textbox', { name: 'The text being changed' }).count() === 1 && (await focused(page)).tag === 'textarea', 'the edit box is not labelled, or has not the focus');
       await page.keyboard.type('Keyed in. '); await tab(a => a.tag === 'button' && a.text === 'Done', 'Tab', 2); must(at.seen && at.outline !== 'none', 'Done shows no focus: ' + JSON.stringify(at)); const h = await headOf(page);
       await page.keyboard.press('Enter'); await entry(page).waitFor({ state: 'hidden', timeout: 3000 }); const head = await headOf(page); must(head.height === h.height + 1, 'no change');
       at = await focused(page); must(at.tag === 'p' && at.text.includes('Keyed in.'), 'the focus is on ' + JSON.stringify(at)); made = head; return `${n} more Tabs to the paragraph (the page scrolled to ${y}); the work: ${JSON.stringify(await workOf(page, head.change))}`;
     });
-    await check('keyboard: back to Save with Shift+Tab, Enter: a file comes down, and the status says so', async () => {
-      const n = await tab(a => a.tag === 'button' && a.text === 'Save', 'Shift+Tab'); const [download] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), page.keyboard.press('Enter')]);
-      const f = path.join(work, `keyboard-${Date.now()}.html`); await download.saveAs(f); const pack = /<script type="application\/x-ufo-pack">([^<]*)</.exec(fs.readFileSync(f, 'utf8'))[1]; must((await inNode(pack)).head === made.commit, 'the file does not hold the change');
-      must(/^Made .*\.ufx\.html/.test(await page.getByRole('status').textContent()), 'the status does not say a file was made'); await quiet(page, log, url); return `${n} Shift+Tabs; ${download.suggestedFilename()}; no request, violation or console message in the whole run`;
+    await check('keyboard: back to Save with Shift+Tab, Enter opens what will leave; Tab to the choice and Enter, Tab to "Save this copy", Enter: a file comes down, and the status says so', async () => {
+      const n = await tab(a => a.role === 'button' && a.text === 'Save', 'Shift+Tab'); await page.keyboard.press('Enter'); at = await focused(page); must(at.text === 'Save' && at.pressed === 'true', 'Save does not say the panel is open: ' + JSON.stringify(at));
+      must(await page.getByRole('region', { name: 'What will leave' }).count() === 1, 'no panel'); await tab(a => a.role === 'button' && a.text === 'For people working on this'); must(at.current === 'false', 'the copy for people working on this is chosen from the start');
+      await tab(() => true, 'Tab', 1); must(at.text === 'For readers' && at.current === 'true', 'the copy for readers is not the one chosen: ' + JSON.stringify(at)); await tab(() => true, 'Shift+Tab', 1); await page.keyboard.press('Enter'); at = await focused(page);
+      must(at.text === 'For people working on this' && at.current === 'true', 'Enter did not choose it, or the focus was lost: ' + JSON.stringify(at)); await tab(a => a.role === 'button' && a.text === 'Save this copy');
+      const [download] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), page.keyboard.press('Enter')]);
+      const f = path.join(work, `keyboard-${Date.now()}.html`); await download.saveAs(f); must((await inNode(packIn(f))).head === made.commit, 'the file does not hold the change');
+      must((await page.getByRole('status').textContent()).includes('Saved as ' + nameOf(file, '-edited', 0)) && download.suggestedFilename() === nameOf(file, '-edited', 0) && await page.getByRole('region').count() === 0, 'the status does not say a file was made, or the panel is still there'); await quiet(page, log, url); return `${n} Shift+Tabs; ${download.suggestedFilename()}; no request, violation, console message or dialog in the whole run`;
     });
     await context.close();
+  };
+  // ---- where the nodes are: each element exactly over what is drawn for its node, so that what is under a finger or a pointer is that node ----
+  // Of every node the kernel gave a `box` (of one drawn in several pieces, its first): the element's rectangle against the canvas's and the box, in CSS
+  // pixels; and, where its middle is in view and no node within it covers that point, that the element found at the point is that element.
+  const placed = page => page.evaluate(() => { const r = { nodes: 0, worst: 0, off: [], hit: 0, missed: [], roles: {} }, top = document.getElementById('ufo-top').getBoundingClientRect().bottom;
+    document.querySelectorAll('#ufo-player canvas').forEach((c, on) => { const cr = c.getBoundingClientRect(), k = cr.width / c.w, els = [...c.previousElementSibling.querySelectorAll('*')], seen = new Set();
+      for (const [kind, it] of ufo.drawn()[on]) { if (kind !== 'push' || !it.role || !it.box || seen.has(it.id)) continue; seen.add(it.id);
+        const el = els.find(e => e.node === it.id); if (!el) { r.off.push(`no element for ${it.role}`); continue; } const b = el.getBoundingClientRect(), want = [cr.left + it.box[0] * k, cr.top + it.box[1] * k, it.box[2] * k, it.box[3] * k];
+        const d = Math.max(Math.abs(b.left - want[0]), Math.abs(b.top - want[1]), Math.abs(b.width - want[2]), Math.abs(b.height - want[3])); r.nodes++; r.worst = Math.max(r.worst, d); if (d > 1) r.off.push(`${it.role} ${el.textContent.slice(0, 20)}: ${d}`);
+        const x = b.left + b.width / 2, y = b.top + b.height / 2; if (!['heading', 'paragraph', 'button', 'item', 'quote', 'code', 'input'].includes(it.role) || x < 0 || x > innerWidth || y < (on ? top : 0) || y > innerHeight || (on === 0 && y > top)) continue;
+        const at = document.elementFromPoint(x, y); if (at === el || (el.contains(at) && at !== el)) { r.hit++; r.roles[it.role] = (r.roles[it.role] || 0) + 1; } else r.missed.push(`${it.role} ${el.textContent.slice(0, 20)} -> ${at && (at.getAttribute('role') || at.localName)}`); } });
+    return { ...r, dpr: devicePixelRatio }; });
+  const boxes = async (page, first) => {
+    const good = async when => { const r = await placed(page); must(r.nodes >= 15 && !r.off.length, `${when}: ${r.off.slice(0, 4).join('; ') || r.nodes + ' nodes'}`); must(r.hit >= 5 && !r.missed.length, `${when}: at the middle of what is drawn the element is another: ${r.missed.slice(0, 4).join('; ')} (${r.hit} found)`); return r; };
+    await check('node boxes: every node\'s element lies exactly over what is drawn for it (within a pixel), and the element at the middle of a drawn heading, paragraph or button is that node', async () => { const r = await good('as opened');
+      must(r.roles.heading >= 1 && r.roles.paragraph >= 2 && r.roles.button >= 5, 'not every kind was tried: ' + JSON.stringify(r.roles)); return `${r.nodes} nodes, the worst ${r.worst.toFixed(3)} px off at a device scale of ${r.dpr}; found at their middles: ${JSON.stringify(r.roles)}`; });
+    if (!first) return;
+    await check('node boxes: the same after scrolling, in the pages face, and after the view is resized', async () => { const said = [];
+      await page.evaluate(() => scrollBy(0, 330)); await page.waitForTimeout(100); said.push('scrolled ' + (await good('scrolled')).hit); await press(page, 'Pages'); const pg = await good('pages'); said.push(`pages ${pg.nodes} nodes`); await page.evaluate(() => scrollTo(0, 0));
+      const size = page.viewportSize(); await page.setViewportSize({ width: size.width - 97, height: size.height - 60 }); await page.waitForTimeout(300); said.push('narrower ' + (await good('resized')).nodes); await press(page, 'Document'); said.push('document ' + (await good('document, resized')).nodes);
+      await page.setViewportSize(size); await page.waitForTimeout(300); await good('back'); return said.join('; '); });
+    await check('node boxes: a pointer press on a node reaches the kernel as the press it is: the node over "Pages" takes the click, and the face changes', async () => {
+      const t = (await look(page)).texts.find(t => t.s === 'Pages'), b = await canvases(page).first().boundingBox(), x = b.x + t.X + t.adv / 2, y = b.y + t.Y - t.size / 3;
+      must(await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e.getAttribute('role') === 'button' && e.textContent === 'Pages' && !!e.closest('.ufo-nodes'); }, [x, y]), 'the element over the word is not its node');
+      await (touch ? page.touchscreen.tap(x, y) : page.mouse.click(x, y)); must((await look(page)).texts.find(t => t.s === 'Pages').lit, 'the press did not arrive'); await press(page, 'Document'); });
+  };
+  // ---- a published copy, reopened: the same state, faces and `why`; its history says withheld; a new change on top of it; saved again each way ----
+  const republished = async one => {
+    const { context, page, log, url } = await open(one.published, 'nobody'); const got = {};
+    await check('published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch', async () => { must((await headOf(page)).commit === one.head, 'state ' + (await headOf(page)).commit);
+      must(flatten((await look(page)).all).includes(flatten(one.sentence)), 'the edit is not shown'); for (const w of ['Pages', 'Text', 'Document']) { await press(page, w); const l = await look(page); must(l.texts.find(t => t.s === w).lit && await inked(page) > 500, 'the face ' + w); }
+      same(await whyOf(page, ...one.region), one.why, 'why'); await pure(page, one.published); return one.why[1].trim(); });
+    await check('published: `history` lists every change with its work said to be withheld (E11), and the panel says no working history is held', async () => {
+      const h = (await page.evaluate(o => ufo.query({ q: 'project', name: 'history', o }), T)).split('\n').filter(l => l.startsWith('change ')); for (const l of h.slice(0, 3)) console.log('      ' + l);
+      must(h.length === (await headOf(page)).height + 1 && h.every(l => l.endsWith('ops=withheld touched=withheld') && /^change id=(o:[0-9a-f]{8} time=\d+ actor="|withheld time=withheld actor=withheld basis=unknown )/.test(l)) && h.some(l => l.includes('actor="Ada Tester"')), 'history: ' + h.join(' / '));
+      await press(page, 'Save'); const said = flatten(await page.getByRole('region', { name: 'What will leave' }).textContent()); must(said.includes(flatten('none is held here')), said); await press(page, 'Cancel'); return `${h.length} changes, each "ops=withheld touched=withheld"; ${h.filter(l => l.startsWith('change id=withheld')).length} of them (changes that left nothing in the text as it stands) withheld whole, and said to be`; });
+    await check('published: it is edited again, a new change on top of withheld history, and saved again each way', async () => {
+      const e = await edit(page, log, 'Cy Third', edits.second.para, replaceWord(edits.second.words[0])); same(e.ops, [edits.second.words[0]], 'the work');
+      const h = (await page.evaluate(o => ufo.query({ q: 'project', name: 'history', o }), T)).split('\n').filter(l => l.startsWith('change ')); must(h[0].includes('actor="Cy Third"') && /ops=1 touched=\[o:71717171\]$/.test(h[0]) && h[1].endsWith('touched=withheld'), 'history: ' + h.slice(0, 2).join(' / '));
+      const save = async (mode, name) => { await press(page, 'Save'); await choose(page, mode); const [d] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), press(page, 'Save this copy')]); must(d.suggestedFilename() === name, 'named ' + d.suggestedFilename()); const f = path.join(path.dirname(one.published), name); await d.saveAs(f); return f; };
+      got.again = await save('For readers', nameOf(one.published, '-published', 0)); got.whole = await save('For people', nameOf(one.published, '-edited', 1)); got.head = e.head.commit;
+      const a = await inNode(packIn(got.again)), w = await inNode(packIn(got.whole)); must(a.head === e.head.commit && w.head === e.head.commit && a.layers.working_history.records === 0 && a.layers.missing_from_content_or_attribution === 0 && w.layers.working_history.records > 0 && w.layers.missing_from_content_or_attribution === 0, 'the two copies');
+      must(framesOf(packIn(got.whole)).absent === 1, 'the copy with its history no longer says that earlier history is withheld'); await quiet(page, log, url); return `${path.basename(got.again)} (${fs.statSync(got.again).size} bytes) and ${path.basename(got.whole)} (${fs.statSync(got.whole).size} bytes), both at ${e.head.commit.slice(0, 16)}`; });
+    await context.close();
+    if (got.again) await check('published: the copy published a second time reopens at the state it was saved at, and shows the new edit', async () => { const { context, page } = await open(got.again, 'nobody'); must((await headOf(page)).commit === got.head, 'state'); must(flatten((await look(page)).all).includes(flatten(edits.second.words[0][1])), 'the edit'); await context.close(); });
+    Object.assign(one, { republished: got });
   };
   // a to e, starting from `file`; gives the saved file and the state it holds
   const round = async (file, label, who, wantName, firstRound) => {
@@ -210,6 +281,7 @@ async function environment(name, browser, options, address, { touch = false, fir
     await check('faces: the tools stay in view when the document is scrolled to its end', async () => { await press(page, 'Pages'); await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight)); await page.waitForTimeout(100);
       const r = await page.evaluate(() => { const b = document.querySelector('#ufo-player canvas').getBoundingClientRect(); return { top: b.top, bottom: b.bottom, y: scrollY, w: innerWidth, right: b.right }; }); must(r.y > 100 && r.top === 0 && r.bottom > 20 && r.right <= r.w, JSON.stringify(r));
       await press(page, 'Text'); must((await look(page)).texts.find(t => t.s === 'Text').lit, 'a tool pressed there did nothing'); await press(page, 'Document'); await page.evaluate(() => scrollTo(0, 0)); return `scrolled ${r.y}px: the tools are at the top of the view, ${Math.round(r.right)} of ${r.w}px wide, and work`; });
+    await boxes(page, firstRound);
     if (firstRound) await accessible(page, made.parts);
     await check('edit: with editing off, a press on the document does nothing', async () => {
       const l = await look(page); must(l.texts.filter(t => t.press).map(t => t.s).join() === 'Document,Pages,Text,Edit,Save' && l.texts.filter(t => t.src && !t.press).length > 20, 'the working universe carries something to press');
@@ -217,12 +289,12 @@ async function environment(name, browser, options, address, { touch = false, fir
     });
     if (firstRound) {
       let e = null;
-      await check(`edit: one word changed through the tools by selecting it and typing, as ${who}`, async () => { e = await edit(page, log, who, edits.para, replaceWord(edits.word)); must(e.asked === 1 && /name/.test(log.asked[0]), 'the reader did not ask who is editing, once'); done.sentence = e.s; done.old = e.old; return `asked "${log.asked[0]}"`; });
+      await check(`edit: one word changed through the tools by selecting it and typing, as ${who}`, async () => { e = await edit(page, log, who, edits.para, replaceWord(edits.word)); must(!log.asked.length, 'a dialog was shown'); done.sentence = e.s; done.old = e.old; return 'the name was given through the field of the tools; the kernel and the host asked nothing'; });
       await check('one word: why shows three runs, the word alone attributed to the new change, by=person, and the name', async () => {
         const w = await whyOf(page, e.lo, e.lo + [...e.s].length), at = e.lo + e.s.indexOf(edits.word[1]); for (const l of w) console.log('      ' + l); console.log('      work: ' + JSON.stringify(e.ops));
         must(w.length === 3 && !w[0].includes(e.head.change.slice(0, 8)) && !w[2].includes(e.head.change.slice(0, 8)) && w[0].includes(`chars=[${e.lo},${at}]`), 'not three runs');
         must(w[1].includes(`chars=[${at},${at + edits.word[1].length}]`) && w[1].includes('change=o:' + e.head.change.slice(0, 8)) && w[1].includes('by=person') && w[1].includes(`who=${JSON.stringify(who)}`), 'the word is not attributed');
-        same(e.ops, [edits.word], 'the splice is not the word'); return w[1].trim();
+        same(e.ops, [edits.word], 'the splice is not the word'); done.region = [e.lo, e.lo + [...e.s].length]; return w[1].trim();
       });
       await check(`paragraph start: "${edits.start[1]}" typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph`, async () => {
         const spans0 = await spansOf(page), chars0 = await charsOf(page), at = chars0.indexOf(edits.start[0]), [key] = Object.entries(spans0).find(([k, r]) => k[0] === 'b' && r[0] === at), [prev] = Object.entries(spans0).find(([k, r]) => k[0] === 'b' && r[1] === at && r[0] < at);
@@ -230,13 +302,13 @@ async function environment(name, browser, options, address, { touch = false, fir
         for (const l of w) console.log('      ' + l); console.log('      work: ' + JSON.stringify(p.ops));
         same(p.ops, [['', edits.start[1]], ['set', `spans.${prev}.at`], ['set', `spans.${key}.at`]], 'the work'); must(w.length === 3 && w[1].includes(`chars=[${at},${at + edits.start[1].length}]`) && w[1].includes(p.head.change.slice(0, 8)), 'not attributed at the start: ' + w.join(' / '));
         must(spans[key][0] === at && chars.slice(...spans[key]) === p.s, 'the block does not hold the new text: ' + JSON.stringify(chars.slice(...spans[key]).slice(0, 30))); must(spans[prev].join() === spans0[prev].join() && chars.slice(...spans[prev]) === chars0.slice(...spans0[prev]), 'the block before changed');
-        must(p.asked === 0, 'asked for the name again'); const l = await look(page); must(l.texts.find(t => t.s.startsWith(edits.start[1] + edits.start[0])), 'not drawn at the start of its paragraph'); done.sentence2 = p.s; return `${key} = [${spans[key]}], ${prev} = [${spans[prev]}]; ${w[1].trim()}`;
+        must(p.named === 0, 'the name had to be given again'); const l = await look(page); must(l.texts.find(t => t.s.startsWith(edits.start[1] + edits.start[0])), 'not drawn at the start of its paragraph'); done.sentence2 = p.s; return `${key} = [${spans[key]}], ${prev} = [${spans[prev]}]; ${w[1].trim()}`;
       });
       await check('typed: a run of Backspace is one removal', async () => { const [para, gone] = edits.back; const r = await edit(page, log, who, para, async (old, k) => { await k.caret(old.indexOf(gone) + gone.length); await k.key('Backspace', gone.length); }); same(r.ops, [[gone, '']], 'the work'); return JSON.stringify(r.ops); });
       await check('typed: a word copied and pasted elsewhere is one insertion, where it was pasted', async () => { const [para, word] = edits.paste; const r = await edit(page, log, who, para, async (old, k) => { const at = old.indexOf(word); await k.caret(at, at + word.length); await k.key('ControlOrMeta+c'); await k.caret(old.length); await k.key('ControlOrMeta+v'); });
         same(r.ops, [['', word]], 'the work'); must(r.s === r.old + word, 'not pasted at the end'); return JSON.stringify(r.ops); });
       await check('typed: typed and deleted again, then the same letters typed over themselves: no change is made, and none is claimed', async () => {
-        await edit(page, log, who, edits.none, async (old, k) => { await k.caret(5); await k.type(' zz'); await k.key('Backspace', 3); await k.caret(0, 5); await k.type(old.slice(0, 5)); }, { changes: false }); const said = (await look(page)).said; must(!/Changed/.test(said), 'the reader says: ' + said);
+        const r = await edit(page, log, who, edits.none, async (old, k) => { await k.caret(5); await k.type(' zz'); await k.key('Backspace', 3); await k.caret(0, 5); await k.type(old.slice(0, 5)); }, { changes: false }); const said = (await look(page)).said; must(said.includes('change o:' + r.head.change.slice(0, 8)), 'the status names another change than the last one made: ' + said);
         await edit(page, log, who, edits.none, async (old, k) => { await k.type('given up'); }, { changes: false, done: false }); return 'nothing written; Cancel writes nothing either';
       });
       await check('typed: a change the widget reports with no position (its text set, as a filled-in or dictated text is) falls back on the difference', async () => { const [para, from, to] = edits.whole;
@@ -255,14 +327,38 @@ async function environment(name, browser, options, address, { touch = false, fir
       must(await page.getByRole('paragraph').filter({ hasText: done.sentence }).count() === 1, 'not in the accessibility tree');
     });
     await check('edit: nothing turns editing on but the tools, and the tools turn it off', async () => { await press(page, 'Edit'); must(!(await look(page)).texts.find(t => t.s === 'Edit').lit, 'still on'); const h = await headOf(page); await press(page, edits.para); must(await entry(page).isHidden() && (await headOf(page)).commit === h.commit, 'a press edited'); });
-    await check('saved: a new .ufx.html comes down', async () => {
-      done.head = (await headOf(page)).commit;
-      const [download] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), press(page, 'Save')]); const name = download.suggestedFilename(); must(name === wantName, 'named ' + name);
-      done.saved = path.join(path.dirname(file), name); must(done.saved !== file, 'same file'); await download.saveAs(done.saved); await page.waitForTimeout(200);
-      must((await headOf(page)).commit === done.head && page.url() === url, 'the page changed, or went elsewhere'); return `${name}, ${fs.statSync(done.saved).size} bytes`;
+    // ---- Save: what will leave is shown first (E12), with the choice of E9; then a copy each way ----
+    const region = page.getByRole('region', { name: 'What will leave' }), chosen = async () => Object.fromEntries(await region.getByRole('button').evaluateAll(bs => bs.filter(b => b.hasAttribute('aria-current')).map(b => [b.textContent, b.getAttribute('aria-current')])));
+    const num = (said, re) => +(re.exec(said) || [0, NaN])[1], saveCopy = async (mode, name) => { if (!await region.count()) await press(page, 'Save'); if (mode) await choose(page, mode); const [download] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), press(page, 'Save this copy')]);
+      must(download.suggestedFilename() === name, 'named ' + download.suggestedFilename()); const f = path.join(path.dirname(file), name); must(f !== file, 'same file'); await download.saveAs(f); await page.waitForTimeout(200); return f; };
+    let shown = null;
+    await check('what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says', async () => {
+      done.head = (await headOf(page)).commit; let downloads = 0; const count = () => downloads++; page.on('download', count); await press(page, 'Save'); await page.waitForTimeout(150); must(!downloads, 'a file came down before anything was shown');
+      must(await region.count() === 1 && await page.getByRole('toolbar').getByRole('button', { name: 'Save', pressed: true }).count() === 1, 'no region named "What will leave", or Save does not say it is open');
+      same(await chosen(), { 'For people working on this': 'false', 'For readers': 'true' }, 'the choice at first'); const readers = flatten(await region.textContent());
+      must(/Thedocument:\d+objects,\d+bytes\.Italwaystravels/.test(readers) && /Whoandwhatmadeit:\d+changes,from\d{4}-\d\d-\d\d\d\d:\d\dto\d{4}-\d\d-\d\d\d\d:\d\dUTC,\d+bytes\.Thisalwaystravels/.test(readers) && readers.includes(flatten(who)) && /Workinghistory\(everyoperation,andeveryearlierdraft\):withheld\.Its\d+bytesstayhere/.test(readers), 'the layers for readers: ' + readers);
+      await choose(page, 'For people'); same(await chosen(), { 'For people working on this': 'true', 'For readers': 'false' }, 'the choice after a press'); const people = flatten(await region.textContent()); must(/:included,\d+bytes,theworkof\d+changes/.test(people), 'the layers for people working on this: ' + people);
+      shown = { content: num(readers, /objects,(\d+)bytes\.Italways/), attribution: num(readers, /UTC,(\d+)bytes\.This/), history: num(readers, /withheld\.Its(\d+)bytes/), changes: num(readers, /madeit:(\d+)changes/), included: num(people, /included,(\d+)bytes/) };
+      await press(page, 'Cancel'); must(!await region.count() && !downloads && (await headOf(page)).commit === done.head, 'Cancel did not close it, or something was made'); page.off('download', count); return JSON.stringify(shown);
+    });
+    if (done.region) done.why = await whyOf(page, ...done.region);
+    await check('saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel\'s `layers` for what it holds', async () => {
+      done.saved = await saveCopy('For people', wantName); must((await headOf(page)).commit === done.head && page.url() === url, 'the page changed, or went elsewhere');
+      const st = await inNode(packIn(done.saved)), L = st.layers; same([shown.content, shown.attribution, shown.history, shown.included], [L.content.bytes_in_frames, L.attribution.bytes_in_frames, L.working_history.bytes_in_frames, L.working_history.bytes_in_frames], 'the figures shown, against `layers` in Node');
+      must(shown.changes === L.attributing_changes.length && L.missing_from_content_or_attribution === 0 && !framesOf(packIn(done.saved)).absent, 'the changes named, or the copy is not whole'); const said = await page.getByRole('status').textContent();
+      must(said.includes(`Saved as ${wantName}`) && !/for readers|Not yet in a file/.test(said), 'the status: ' + said); return `${wantName}, ${fs.statSync(done.saved).size} bytes; content ${shown.content}, attribution ${shown.attribution}, history ${shown.history} bytes`;
+    });
+    if (firstRound) await check('published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too', async () => {
+      const name = nameOf(file, '-published', 1); done.published = await saveCopy('For readers', name); const pub = packIn(done.published), st = await inNode(pub), L = st.layers, fr = framesOf(pub);
+      must(st.head === done.head, 'another state: ' + st.head); same([L.working_history.records, L.missing_from_content_or_attribution, L.content.bytes_in_frames, L.attribution.bytes_in_frames], [0, 0, shown.content, shown.attribution], 'its layers, by `layers` in Node');
+      must(fr.absent === 1 && fr.kinds[4] === 1 && fr.kinds[5] === 1, 'its frames: ' + JSON.stringify(fr)); must(fs.statSync(done.published).size < fs.statSync(done.saved).size, 'not smaller');
+      must(st.leaving(true).includes('layer name=history included=true objects=0 bytes=0') && st.leaving(true).includes('lacks history=true'), 'leaving, of the copy');
+      const said = flatten(await page.getByRole('status').textContent()); must(said.includes(flatten(`Saved as ${name}`)) && said.includes(flatten('That copy is for readers: its working history was withheld. Everything is still held here')), 'the status: ' + said);
+      const mine = await page.evaluate(() => ufo.query({ q: 'layers' })); must(mine.working_history.bytes_in_frames === shown.history && (await headOf(page)).commit === done.head, 'E13: the page no longer holds its history');
+      return `${name}: ${fs.statSync(done.published).size} bytes against ${fs.statSync(done.saved).size}; pack ${Buffer.from(pub, 'base64').length} against ${Buffer.from(packIn(done.saved), 'base64').length}; ${L.content.records} content and ${L.attribution.records} attribution records, 0 of history, 1 absent frame`;
     });
     await check('pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte', async () => {
-      const bytes = fs.readFileSync(done.saved, 'utf8'), pack = /<script type="application\/x-ufo-pack">([^<]*)</.exec(bytes)[1], st = await inNode(pack), today = new Date().toISOString().slice(0, 10);
+      const bytes = fs.readFileSync(done.saved, 'utf8'), pack = packIn(done.saved), st = await inNode(pack), today = new Date().toISOString().slice(0, 10);
       must(st.head === done.head, 'the pack saved is not at the state the page had'); must(st.html.includes(done.sentence), 'the static face would not hold the edit');
       const parts = { ...made.parts, pack, 'static-html': st.html, date: today }, want = envelope(parts); must(want === bytes, bytes.length === want.length ? 'differs' : `lengths ${bytes.length} and ${want.length}`);
       must(bytes.startsWith(`<!DOCTYPE html>\n<!--\nUFO file (Universal File Object). Exported ${today}. Open it in a web browser.\n-->\n`) && !/--/.test(bytes.slice(20, bytes.indexOf('-->'))), 'the plain-text head'); return `${bytes.length} characters, exported ${today}`;
@@ -280,17 +376,17 @@ async function environment(name, browser, options, address, { touch = false, fir
     must(flatten((await look(page)).all).includes(flatten(was.sentence)), 'edit not shown'); await press(page, 'Text'); must(flatten((await look(page)).texts.filter(t => t.mono).map(t => t.s).join('')).includes(flatten(was.sentence)), 'not in the plain-text face');
     must(/<div id="ufo-text">[^]*?<div id="ufo-player"/.exec(fs.readFileSync(file, 'utf8'))[0].includes(was.sentence), 'the static face of the saved file is old'); await pure(page, file); await quiet(page, log, url); must(!log.asked.length, 'asked'); await context.close(); return 'state ' + was.head.slice(0, 16);
   });
-  const base = path.basename(first).replace(/\.ufx\.html$/, ''), next = b => { const m = /^(.*-edited)(?:-(\d+))?$/.exec(b); return m ? m[1] + '-' + (+(m[2] || 1) + 1) : b + '-edited'; };
-  const one = await round(first, 'the file', 'Ada Tester', next(base) + '.ufx.html', true);
+  const one = await round(first, 'the file', 'Ada Tester', nameOf(first, '-edited', 0), true);
   let two = null;
   if (one.saved) { await reopened(one.saved, one);
     console.log('  -- the saved file, edited and saved again');
-    two = await round(one.saved, 'the saved file', 'Ben Second', next(next(base)) + '.ufx.html', false); if (two.saved) await reopened(two.saved, two);
+    two = await round(one.saved, 'the saved file', 'Ben Second', nameOf(one.saved, '-edited', 0), false); if (two.saved) await reopened(two.saved, two);
   } else step('reopened: (nothing was saved)', false);
+  if (one.published) { console.log('  -- the copy published for readers, reopened, edited and saved again'); await republished(one); } else step('published: (no copy was published)', false);
   console.log('  -- by the keyboard alone, from the file as first made'); await keyboard(first);
-  if (kit && one.saved) { fs.copyFileSync(original, here('phone/compose.ufx.html')); fs.copyFileSync(one.saved, here('phone/compose-edited.ufx.html')); }
+  if (kit && one.saved) { fs.copyFileSync(original, here('phone/compose.ufx.html')); fs.copyFileSync(one.saved, here('phone/compose-edited.ufx.html')); if (one.published) fs.copyFileSync(one.published, here('phone/compose-published.ufx.html')); }
   if (more) await more(open, press);
-  return { one, two, open, press };
+  return { one, two, open, press, look: look };
 }
 
 const browser = await launch(engineName), version = browser.version();
@@ -310,25 +406,41 @@ for (const [key, script, last] of [['kernel', 'roundtrip.mjs', /^OK$/], ['kernel
 
 // ---- host code: everything the page ships as script is the binding; its budget (PLAYER 11.1), and what it may not know or do ----
 console.log('\n== host code (the script as the page carries it)');
-const html0 = fs.readFileSync(original, 'utf8'), shipped = html0.slice(html0.lastIndexOf('<script type="module">') + 22, html0.lastIndexOf('</script>')), lines = shipped.split('\n');
-const counted = lines.filter(l => l.trim() && !l.trim().startsWith('//')).length, longest = Math.max(...lines.map(l => l.length)), size = Buffer.byteLength(shipped);
+// What is shipped is host.mjs minified: the budget of bytes is counted on what is shipped, the budget of lines on the source, and what the script may
+// not know or do is looked for in both.
+const html0 = fs.readFileSync(original, 'utf8'), shipped = html0.slice(html0.lastIndexOf('<script type="module">') + 22, html0.lastIndexOf('</script>')), source = fs.readFileSync(here('host.mjs'), 'utf8'), lines = source.split('\n');
+const counted = lines.filter(l => l.trim() && !l.trim().startsWith('//')).length, longest = Math.max(...lines.map(l => l.length)), size = Buffer.byteLength(shipped), code = lines.filter(l => !l.trim().startsWith('//')).map(l => l.replace(/\s\/\/ .*$/, '')).join('\n');
+const BOTH = [['the source', source], ['what is shipped', shipped]], terser = execFileSync(here('../tools/node_modules/.bin/terser'), ['--version']).toString().trim();
 const FORBIDDEN = ['face', 'editing', 'export', 'pages', 'propose', 'splice', 'outerHTML', 'innerHTML', 'envelope', 'subject', 'tools', 'handler', 'commit', 'anchor', 'skeleton', 'universe', 'pack', 'formula', 'state'];
 // Which engine it runs in is never asked: no name of an engine or a browser, no string that identifies one, no prefixed interface.
 const ENGINE = [/userAgent/i, /\bvendor/i, /platform/i, /webkit/i, /safari/i, /firefox/i, /gecko/i, /chrom(e|ium)/i, /\bmoz|moz[A-Z]/, /\bms[A-Z]/, /\bopera|\bedge\b|trident/i];
-// Nothing it does can fall outside the policy the envelope function writes: it writes no style by any means, makes no script, and opens nothing as a page.
-const STYLE = [/\.style\b\s*[.=\[]/, /setAttribute\(\s*["'`]style/, /cssText/, /insertRule|replaceSync|adoptedStyleSheets|styleSheets/, /createElement\(\s*["'`](style|script|link|iframe|img|object|embed)/, /\beval\(|new Function|setTimeout\(\s*["'`]/, /document\.write|insertAdjacentHTML|srcdoc/, /location\s*=|location\.(href|assign|replace)|window\.open|\.open\(/, /fetch\(|XMLHttpRequest|WebSocket|sendBeacon|EventSource|importScripts|import\(/];
-const code = lines.filter(l => !l.trim().startsWith('//')).join('\n');
-await check('host: one script, the same as spike/envelope/host.mjs', () => { must(shipped === fs.readFileSync(here('host.mjs'), 'utf8').trim() && (html0.match(/<script type="module">/g) || []).length === 2, 'differs'); });   // twice: once in the skeleton's own text
-await check('host: within the budget of a binding, 600 lines and 16 KiB as shipped, no line over 160 characters', () => { must(counted <= 600 && size <= 16384 && longest <= 160, `${counted} lines, ${size} bytes, longest ${longest}`); return `${counted} lines that are not blank or comment (${lines.length} in all), ${size} bytes, longest line ${longest} characters`; });
-await check('host: none of the forbidden knowledge', () => { const text = shipped.replace(/\bdocument\./g, 'DOM.').replace(/\.instance\.exports\b/g, '.instance.EX'), found = [...FORBIDDEN, 'document'].filter(w => text.toLowerCase().includes(w.toLowerCase())); must(!found.length, 'found: ' + found.join(', '));
-  return 'not found, in code or comment, in any letter case, as a word or inside one: ' + [...FORBIDDEN, 'document (but as the DOM global `document.`; and `export` but as the WebAssembly member `.instance.exports`)'].join(', ') + '. The roles of the drawing contract (heading, paragraph, quote, code, button, item, link) are its to know'; });
-await check('host: it never asks which engine it is in (no engine or browser name, no user-agent, vendor or platform string, no prefixed interface)', () => { const found = ENGINE.filter(r => r.test(shipped)).map(String); must(!found.length, 'found: ' + found); return ENGINE.length + ' patterns, none found in code or comment'; });
-await check('host: it writes no style, makes no script or other element a policy would have to allow, opens nothing as a page, and fetches nothing', () => { const found = STYLE.filter(r => r.test(code)).map(String); must(!found.length, 'found: ' + found);
-  same([...code.matchAll(/createElement\((?:'(\w+)')?/g)].map(m => m[1] || 'of a role'), ['of a role', 'canvas', 'a'], 'the elements it makes'); return `${STYLE.length} patterns, none found; it makes only the elements of roles, a canvas to measure with, and the link a file is handed over by`; });
+// The look. An allow-list: wherever the script says `style`, in any letter case, it is one of exactly these: the two words in the query for the page's
+// parts (its style and script elements), or the assignment of one of the four properties left, top, width, height of an element's `.style` (TRAVEL E23).
+// Anything else that says it fails: another property, a style attribute, cssText, setProperty, a rule, a sheet, a style element.
+// (`fillStyle` and `strokeStyle` are the paints of the canvas the drawing contract is carried out on, not the page's style: allowed, as those two names assigned to.)
+const STYLE_OK = [/^(['"`])style,script\1/, /^style\.(left|top|width|height)\s*=(?!=)/], PAINT = /\.(fill|stroke)Style\s*=(?!=)/y, paint = (text, i) => [4, 6].some(k => { PAINT.lastIndex = i - k - 1; return PAINT.test(text) && PAINT.lastIndex > i; });
+const styleUses = text => [...text.matchAll(/style/gi)].map(m => ({ at: m.index, ok: paint(text, m.index) || (text[m.index - 1] === '.' || /['"`]/.test(text[m.index - 1])) && STYLE_OK.some(r => r.test(text.slice(m.index - (text[m.index - 1] === '.' ? 0 : 1)))), near: text.slice(Math.max(0, m.index - 20), m.index + 30).replace(/\s+/g, ' ') }));
+// And what could reach outside the policy by other means: a rule or a sheet, a script or another element the policy would have to allow, a page opened, a request.
+const OUTSIDE = [/cssText|setProperty|insertRule|replaceSync|adoptedStyleSheets|styleSheets|CSSStyleSheet/, /setAttribute\(\s*["'`]style/, /createElement\(\s*["'`](style|script|link|iframe|img|object|embed)/, /\beval\(|new Function|setTimeout\(\s*["'`]/, /document\.write|insertAdjacentHTML|srcdoc/, /location\s*=|location\.(href|assign|replace)|window\.open|\.open\(/, /fetch\(|XMLHttpRequest|WebSocket|sendBeacon|EventSource|importScripts|import\(/];
+await check('host: one script: host.mjs, minified by a pinned tool with fixed options, the same bytes wherever the source lies; and the envelope carries exactly those bytes', () => {
+  must(shipped === minified() && (html0.match(/<script type="module">/g) || []).length === 2, 'the script in the envelope is not host.mjs minified');   // twice: once in the skeleton's own text
+  const said = execFileSync(here('../tools/repro-host.sh'), [original]).toString(); must(/\nreproducible\s*$/.test(said) && said.includes('is exactly these bytes'), said); return `${terser}, options ${MINIFY.join(' ')}; ` + said.trim().split('\n').slice(1, 4).map(l => l.slice(0, 16) + '…' + l.slice(64)).join('; '); });
+await check('host: within the budget of a binding: the source 600 lines with none over 160 characters, what is shipped 16 KiB', () => { must(counted <= 600 && size <= 16384 && longest <= 160, `${counted} lines, ${size} bytes, longest ${longest}`); return `source: ${counted} lines that are not blank or comment (${lines.length} in all), ${Buffer.byteLength(source)} bytes, longest line ${longest} characters; shipped: ${size} bytes`; });
+await check('host: none of the forbidden knowledge, in the source or in what is shipped', () => { for (const [which, text0] of BOTH) { const text = text0.replace(/\bdocument\./g, 'DOM.').replace(/\.instance\.exports\b/g, '.instance.EX'), found = [...FORBIDDEN, 'document'].filter(w => text.toLowerCase().includes(w.toLowerCase())); must(!found.length, `found in ${which}: ` + found.join(', ')); }
+  return 'not found, in code or comment, in any letter case, as a word or inside one: ' + [...FORBIDDEN, 'document (but as the DOM global `document.`; and `export` but as the WebAssembly member `.instance.exports`)'].join(', ') + '. The roles of the drawing contract (heading, paragraph, quote, code, button, item, link, input) are its to know'; });
+await check('host: it never asks which engine it is in (no engine or browser name, no user-agent, vendor or platform string, no prefixed interface), in the source or in what is shipped', () => { for (const [which, text] of BOTH) { const found = ENGINE.filter(r => r.test(text)).map(String); must(!found.length, `found in ${which}: ` + found); } return ENGINE.length + ' patterns, none found in code or comment'; });
+await check('host: of the look it writes exactly the place and size of a node\'s element (left, top, width, height of its `.style`), by an allow-list; it makes no script or other element a policy would have to allow, opens nothing as a page, fetches nothing', () => {
+  const said = []; for (const [which, text] of [['the source', code], ['what is shipped', shipped]]) { const uses = styleUses(text), bad = uses.filter(u => !u.ok); must(!bad.length, `in ${which}, "style" is said where it is not allowed: ` + bad.map(u => u.near).join(' | '));
+    const props = [...text.matchAll(/\.style\.(\w+)\s*=/g)].map(m => m[1]).sort(); same(props, ['height', 'left', 'top', 'width'], `the properties written in ${which}`); const found = OUTSIDE.filter(r => r.test(text)).map(String); must(!found.length, `found in ${which}: ` + found); said.push(`${which}: ${uses.length} uses of the word, all allowed`); }
+  // the allow-list fails on what it must: each of these, put into the source, is found
+  for (const bad of ["el.style.color = 'red'", "el.style['left'] = 0", "el.setAttribute('style', 'left:0')", "el.style.cssText = 'left:0'", "el.style.setProperty('left', 0)", "const s = el.style; s.left = 0", "document.createElement('style')", "sheet.insertRule('p{}')", "document.adoptedStyleSheets = []", "el.STYLE.left = 0", "Object.assign(el.style, { left: 0 })"])
+    must(styleUses(bad).some(u => !u.ok) || OUTSIDE.some(r => r.test(bad)), 'the allow-list lets through: ' + bad);
+  same([...code.matchAll(/createElement\((?:'(\w+)')?/g)].map(m => m[1] || 'of a role'), ['of a role', 'canvas', 'a'], 'the elements it makes'); return said.join('; ') + '; 11 writes it must refuse, refused; it makes only the elements of roles, a canvas to measure with, and the link a file is handed over by'; });
 await check('host: the style part holds no rule that fetches, and the skeleton no style attribute, no handler attribute and no element that loads', () => { const css = fs.readFileSync(here('page.css'), 'utf8'), sk = fs.readFileSync(here('skeleton.html'), 'utf8');
   must(!/url\(|@import|@font-face|expression\(/i.test(css), 'the style fetches'); must(!/\sstyle\s*=|\son[a-z]+\s*=|<(img|iframe|object|embed|video|audio|source|base|form)\b|\ssrc\s*=/i.test(sk), 'the skeleton'); same([...sk.matchAll(/<link[^>]*>/g)].map(m => m[0]), ['<link rel="icon" href="data:,">'], 'links');
-  return 'every byte the policy governs is a part whose hash the envelope function writes: one style, one script; the one link is an icon that is an empty data: address, which img-src data: allows'; });
-globalThis.hostNumbers = { lines: counted, bytes: size, longest, forbidden: FORBIDDEN };
+  must(!/x-ufo-tools|\{\{tools\}\}/.test(sk), 'the skeleton still has a place for a tools part'); const csp = /Content-Security-Policy" content="([^"]*)"/.exec(sk)[1]; must(/style-src '\{\{csp:style\}\}';/.test(csp) && !/unsafe-inline|unsafe-hashes|unsafe-eval'/.test(csp.replace("'wasm-unsafe-eval'", '')), 'the policy: ' + csp);
+  return 'every byte the policy governs is a part whose hash the envelope function writes: one style, one script; style-src is that one hash, with no unsafe-inline and no unsafe-hashes; the one link is an icon that is an empty data: address, which img-src data: allows'; });
+globalThis.hostNumbers = { lines: counted, source_bytes: Buffer.byteLength(source), shipped_bytes: size, longest, minifier: terser, options: MINIFY.join(' '), forbidden: FORBIDDEN };
 }
 
 // ---- a to e on the desktop, from file:// ----
@@ -337,12 +449,21 @@ const desktop = { viewport: { width: 900, height: 900 }, deviceScaleFactor: 2 };
 const f6 = async (open, press) => check('edit: F6, a file whose own content carries handlers and asks for a subject: nothing in it acts', async () => {
   const f = path.join(work, 'hostile.ufx.html'); make(here('../out/hostile.ufx'), f, '--title', 'Hostile'); const { context, page, log } = await open(f, 'nobody'); let downloads = 0; page.on('download', () => downloads++);
   const l = await look(page); must(l.texts.find(t => t.s === 'SAVE-ME' && !t.press && !t.lit) && l.all.includes('NO-SUBJECT-HERE'), 'not as expected: ' + l.all.slice(0, 200)); const h = await headOf(page);
-  same(await page.getByRole('document', { name: 'The document these tools work on' }).locator('button').evaluateAll(bs => bs.map(b => [b.textContent, b.tabIndex, b.getAttribute('aria-disabled'), b.getAttribute('aria-pressed')])), [['SAVE-ME', -1, 'true', null], ['SWITCH-ME', -1, 'true', null]], 'the buttons it carries, to the keyboard and to assistive technology');
+  same(await page.getByRole('document', { name: 'The document these tools work on' }).locator('[role=button]').evaluateAll(bs => bs.map(b => [b.textContent, b.getAttribute('tabindex'), b.getAttribute('aria-disabled'), b.getAttribute('aria-pressed')])), [['SAVE-ME', '-1', 'true', null], ['SWITCH-ME', '-1', 'true', null]], 'the buttons it carries, to the keyboard and to assistive technology');
   for (const w of ['SAVE-ME', 'SWITCH-ME']) await press(page, w); await page.waitForTimeout(300); const l2 = await look(page);
   must(!downloads && (await headOf(page)).commit === h.commit && l2.texts.find(t => t.s === 'Document').lit && !l2.texts.some(t => t.mono) && !log.asked.length && !log.errors.length, 'something happened'); await context.close(); return 'pressed SAVE-ME and SWITCH-ME: no file, no change of face, no change; the Portal shows its label; to the keyboard they are not there';
 });
+// A pack that names no tools universe, in this reader, which has none of its own: the page says so, shows the document to be read, and nothing can be pressed.
+const bare = async (open, press) => check('no tools: a file whose pack carries no tools universe opens, says so in plain words, and shows the document to read; nothing in it can be pressed', async () => {
+  const f = path.join(work, 'bare.ufx.html'); make(here('../../vectors/compose.ufx'), f, '--bare'); const { context, page, log, url } = await open(f, 'nobody');
+  const said = await page.getByRole('status').textContent(); must(/This file carries no tools, and this reader has none of its own/.test(said), 'the status: ' + said); must((await headOf(page)).height === 0, 'the pack was changed');
+  must(await page.getByRole('heading', { name: 'The Quarterly Review', level: 1 }).count() === 1 && await page.getByRole('paragraph').count() >= 6 && await page.locator('#ufo-player [tabindex], #ufo-player [role=button]').count() === 0, 'the document is not there as nodes, or something can be pressed');
+  const l = await d0.look(page); must(l.texts.every(t => !t.press) && l.all.includes('Every figure in this section'), 'not drawn'); await press(page, 'Every figure'); await page.keyboard.press('Tab'); must(await page.locator('#ufo-entry').isHidden() && (await headOf(page)).height === 0, 'a press did something');
+  must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet'); await context.close(); return JSON.stringify(said);
+});
+const d0 = { look };
 const D = 'desktop, file://', H = 'http origin';
-const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: f6 });
+const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press) => { await f6(open, press); await bare(open, press); } });
 
 // ---- f: sent on. The saved file served from another origin; and the packs given to the independent reader ----
 let h = null;
@@ -385,17 +506,25 @@ await browser.close(); server.close();
 
 // ---- the independent reader, on every pack: the tools universe, those the kernel wrote in Node, those taken out of files this engine saved ----
 env = 'reader'; console.log('\n== the independent reader (a copy of run.py, universe.py and ufo.py, not modified)');
-if (d.one.saved) await check('reader: accepts the tools universe, the packs the kernel wrote in Node, and the packs taken out of files saved by the browser', async () => {
+if (d.one.saved) await check('reader: accepts every pack; sees the tools universe nested and its records as content; classes every record a published copy lacks as withheld', async () => {
   const run = path.join(work, 'reader'); fs.mkdirSync(path.join(run, 'packs'), { recursive: true }); for (const f of ['run.py', 'universe.py', 'ufo.py']) fs.copyFileSync(path.join(READER, f), path.join(run, f));
-  const fromPage = { 'desktop-saved-1.ufx': d.one, 'desktop-saved-2.ufx': d.two, 'http-saved-1.ufx': h?.one, 'http-saved-2.ufx': h?.two, 'phone-larger-saved-2.ufx': phones[0]?.two, 'phone-smaller-saved-2.ufx': phones[1]?.two }, heads = {};
-  for (const [n, x] of Object.entries(fromPage)) if (x?.saved) { fs.writeFileSync(path.join(run, 'packs', `${engineName}-${n}`), Buffer.from(/<script type="application\/x-ufo-pack">([^<]*)</.exec(fs.readFileSync(x.saved, 'utf8'))[1], 'base64')); heads[`${engineName}-${n}`] = x.head; }
-  for (const [n, f] of [['tools.ufx', here('tools.ufx')], ['node-edit-positioned.ufx', here('../../vectors/edit-positioned.ufx')], ['node-one-word.ufx', out + 'edited-one-word.ufx'], ['node-paragraph-start.ufx', out + 'edited-paragraph-start.ufx'], ['node-two-words.ufx', out + 'edited-two-words.ufx'], ['node-all-edits.ufx', out + 'edited.ufx'], ['node-many-edits.ufx', out + 'edited-many.ufx']]) fs.copyFileSync(f, path.join(run, 'packs', n));
-  execFileSync('python3', ['run.py'], { cwd: run }); const res = JSON.parse(fs.readFileSync(path.join(run, 'results.json'), 'utf8')), said = [];
-  for (const [n, r] of Object.entries(res)) { const u = r.universes[r.state.root_hash];
-    said.push(`${n}: state ${r.state.root_hash.slice(0, 16)} by the ${r.state.how}; ${u.commits.length} commits, conservation ${u.commits.map(c => c.conservation.result).join(' ')}; whole ${r.whole}; missing ${r.missing_records.length}; index problems ${r.index.problems.length}; reported ${JSON.stringify(r.reported)}`);
-    must(r.state.how === 'final head' && (!heads[n] || r.state.root_hash === heads[n]), n + ': state ' + r.state.root_hash); must(u.commits.every(c => c.conservation.result === 'ok'), n + ': conservation ' + JSON.stringify(u.commits.map(c => c.conservation)));
-    must(r.whole && !r.missing_records.length && !r.index.problems.length && !Object.keys(r.reported).length, n + ': ' + JSON.stringify([r.missing_records, r.index.problems, r.reported])); }
-  must(Object.keys(heads).length >= 4, 'packs from the browser are missing'); fs.writeFileSync(path.join(out, `reader-verdicts-${engineName}.txt`), said.join('\n') + '\n'); console.log(said.map(l => '      ' + l).join('\n')); return Object.keys(res).length + ' packs, every conservation check ok';
+  // from files this engine saved: whole copies, published copies, and a published copy that was then edited again (saved each way)
+  const fromPage = { 'desktop-whole-1.ufx': [d.one.saved, d.one.head], 'desktop-whole-2.ufx': [d.two?.saved, d.two?.head], 'http-whole-1.ufx': [h?.one.saved, h?.one.head], 'phone-larger-whole-2.ufx': [phones[0]?.two?.saved, phones[0]?.two?.head], 'phone-smaller-whole-2.ufx': [phones[1]?.two?.saved, phones[1]?.two?.head],
+    'desktop-published.ufx': [d.one.published, d.one.head], 'http-published.ufx': [h?.one.published, h?.one.head], 'phone-smaller-published.ufx': [phones[1]?.one.published, phones[1]?.one.head],
+    'desktop-published-then-edited-whole.ufx': [d.one.republished?.whole, d.one.republished?.head], 'desktop-published-then-edited-published.ufx': [d.one.republished?.again, d.one.republished?.head] }, heads = {};
+  for (const [n, [f, head]] of Object.entries(fromPage)) if (f) { fs.writeFileSync(path.join(run, 'packs', `${engineName}-${n}`), Buffer.from(packIn(f), 'base64')); heads[`${engineName}-${n}`] = head; }
+  for (const [n, f] of [['tools.ufx', here('tools.ufx')], ['node-edit-positioned.ufx', here('../../vectors/edit-positioned.ufx')], ['node-one-word.ufx', out + 'edited-one-word.ufx'], ['node-paragraph-start.ufx', out + 'edited-paragraph-start.ufx'], ['node-two-words.ufx', out + 'edited-two-words.ufx'], ['node-all-edits.ufx', out + 'edited.ufx'], ['node-many-edits.ufx', out + 'edited-many.ufx'],
+    ['node-nested-whole.ufx', out + 'nested-whole.ufx'], ['node-nested-published.ufx', out + 'nested-published.ufx'], ['node-nested-published-then-edited.ufx', out + 'nested-published-edited.ufx'], ['vector-edit-one-word-published.ufx', here('../../vectors/edit-one-word-published.ufx')]]) if (fs.existsSync(f)) fs.copyFileSync(f, path.join(run, 'packs', n));
+  execFileSync('python3', ['run.py'], { cwd: run }); const res = JSON.parse(fs.readFileSync(path.join(run, 'results.json'), 'utf8')), said = [], toolsRoot = res['tools.ufx'].state.root_hash, toolsContent = res['tools.ufx'].layers.content;
+  for (const [n, r] of Object.entries(res)) { must(!r.reader_crashed, n + ': the reader crashed'); const u = r.universes[r.state.root_hash], classes = [...new Set(r.missing_records.map(m => m.class))], nests = r.other_universes.nested.includes(toolsRoot), published = /published/.test(n), cons = u.commits.map(c => c.conservation.result);
+    said.push(`${n}: state ${r.state.root_hash.slice(0, 16)} by the ${r.state.how}; layers content ${r.counts.content}, attribution ${r.counts.attribution}, working history ${r.counts.working_history}; ${nests ? 'the tools universe nested, its ' + toolsContent.length + ' content records content here; ' : ''}conservation ${cons.join(' ')}; whole ${r.whole}; missing ${r.missing_records.length}${classes.length ? ' (' + classes.join(', ') + ')' : ''}; absent frames ${JSON.stringify(r.absent_frames)}; index problems ${r.index.problems.length}; reported ${JSON.stringify(r.reported)}`);
+    must(r.state.how === 'final head' && (!heads[n] || r.state.root_hash === heads[n]), n + ': state ' + r.state.root_hash); must(!r.index.problems.length && !Object.keys(r.reported).length, n + ': ' + JSON.stringify([r.index.problems, r.reported]));
+    must(classes.every(c => c === 'unavailable: withheld (working history)'), n + ': a missing record is classed ' + classes); must(cons.every(c => ['ok', 'withheld', 'unavailable'].includes(c)), n + ': conservation ' + cons);
+    if (/^(chromium|firefox|webkit)-|nested/.test(n)) { must(nests && toolsContent.every(x => r.layers.content.includes(x)) && (r.layers.live[toolsRoot] || []).length >= 10, n + ': the tools universe is not nested, or its records are not content'); }
+    if (published) must(r.counts.working_history === (/then-edited-whole|then-edited\.ufx/.test(n) ? r.counts.working_history : 0) && !r.whole && r.missing_records.length > 0 && r.absent_frames.length === 1 && r.absent_frames[0].history === true, n + ': not as a published copy is');
+    else must(r.whole && !r.missing_records.length && cons.every(c => c === 'ok'), n + ': not whole, or conservation ' + cons);
+    if (published) { const present = u.commits.filter(c => c.conservation.result !== 'withheld').map(c => `height ${c.height}: ${c.conservation.result}${c.conservation.result === 'ok' ? '' : ' (' + c.conservation.details.join('; ').slice(0, 90) + ')'}`); if (present.length) said.push(`      of the changes whose work is present: ${present.join(', ')}`); } }
+  must(Object.keys(heads).length >= 8, 'packs from the browser are missing: ' + Object.keys(heads)); fs.writeFileSync(path.join(out, `reader-verdicts-${engineName}.txt`), said.join('\n') + '\n'); console.log(said.map(l => '      ' + l).join('\n')); return Object.keys(res).length + ' packs';
 });
 
 // ---- validity (E3): the Nu HTML Checker (needs Java) and html-validate, on the envelope as made and as saved by the page ----

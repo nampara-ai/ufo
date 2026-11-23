@@ -122,7 +122,10 @@ item's number). A node's text is the `s` of the text items directly in
 it, in list order, each followed by its `then` if it has one: what is
 read after it and not drawn, such as the break that ended a line. Within
 a line, text items are listed in the order of the text, not the order
-they are placed in.
+they are placed in. A node's group carries `box`, `[x, y, w, h]` in the
+list's coordinates: the rectangle of the text drawn in it. A node drawn
+in several groups has one for each, and a binding places the node by
+the first.
 
 `role` is one of `document`, `heading`, `paragraph`, `list`, `item`,
 `quote`, `code`, `link`, `button`, `toolbar`, `status`, `image`, `table`,
@@ -362,6 +365,14 @@ written.
   (**L1**), so that characters typed over themselves, or typed and taken
   out again, change nothing. Where reports and the whole text disagree,
   the whole text governs.
+- **[H9] Where a pointer pressed comes from the pointer.** A binding
+  takes the place of a press from the pointer itself: the drawing it
+  went down on and the point it came up at. The click an engine sends
+  afterwards says only that the press is complete; its target and its
+  point are not used, since an engine may move them to a neighbouring
+  control, and a click moved to something outside the drawing is
+  stopped. A click that no pointer came before, made for the person by
+  assistive technology, is a press on the node its element stands for.
 - **[H6]** A reader MUST show the person, at any time, every grant in force,
   and what each program has done with it during the session.
 

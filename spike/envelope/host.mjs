@@ -2,7 +2,8 @@
 // It knows encoded values, the kernel's entry points, the display-list items it can draw and the roles a group of them
 // may carry, raw input, how to measure and inflate, a text-entry widget, and how to hand a file to the person.
 // What is shown, and what any of it means, is the kernel's business and is not known here.
-// Nothing here writes a style: how the page looks is its style sheet's alone. This script changes attributes and text.
+// How the page looks is its style sheet's alone. This script changes attributes and text, and writes one thing of the look:
+// where each node of the drawing lies, as the four properties left, top, width and height of its element (TRAVEL 13.2, E23).
 const $ = s => document.querySelector(s), U8 = Uint8Array, enc = new TextEncoder(), dec = new TextDecoder();
 
 // ---- encoded values (SPEC 1.2), as much as a binding needs ----
@@ -107,19 +108,21 @@ function draw(g, list) {
 // ---- the same list for whoever does not see it (9.2: `role`, `label`, `level`): its nodes, as elements ----
 // A `push` that carries a role opens a node, and a later group of the same `id` goes on with it. The text of a node is that
 // of the text items in it, each with what it says comes `then`. Elements are kept from one drawing to the next and only
-// what differs is touched, so that what has the focus keeps it and a place in the reading is not lost.
-const EL = { heading: 'h1', paragraph: 'p', quote: 'blockquote', code: 'pre', button: 'button', item: 'div listitem', link: 'a link' };
+// what differs is touched, so that what has the focus keeps it and a place in the reading is not lost. Each element is put
+// exactly over what is drawn for its node: the `box` its group carries (of a node drawn in several pieces, the first), so that
+// what lies under a finger or a pointer is the node drawn there. `k` is how many CSS pixels of the page one unit of the list is.
+const EL = { heading: 'h1', paragraph: 'p', quote: 'blockquote', code: 'pre', button: 'div button', item: 'div listitem', link: 'a link',
+  input: 'div textbox' };
 const attr = (el, name, v) => v === undefined ? el.removeAttribute(name) : el.getAttribute(name) !== String(v) && el.setAttribute(name, v);
 function element(it) {   // the element of a role; a role with none of its own is handed on as it is named
   const [tag, role] = (EL[it.role] || 'div ' + it.role).split(' ');
   const el = document.createElement(it.role === 'heading' ? 'h' + Math.min(it.level || 1, 6) : tag);
   attr(el, 'role', role);
-  if (tag === 'button') el.type = tag;
   return el;
 }
-function nodes(root, list) {
-  const open = [root], pushed = [], seen = new Set(), at = [[1, 1, 0, 0]], kept = root.kept || new Map();
-  root.next = root.firstChild;
+function nodes(root, list, k) {
+  const open = [root], pushed = [], seen = new Map(), at = [[1, 1, 0, 0]], kept = root.kept || seen;
+  root.next = root.firstChild; root.box = [0, 0];
   for (const [kind, it] of list) {
     const p = open[open.length - 1], m = at[at.length - 1], t = it?.m;
     if (kind === 'push') {
@@ -127,17 +130,23 @@ function nodes(root, list) {
       let el = null;
       if (it.role) {
         const is = it.role + (it.level || '');
-        el = kept.get(it.id);
+        el = seen.get(it.id) || kept.get(it.id);
         if (el?.is !== is) Object.assign(el = element(it), { is, node: it.id });
-        if (!seen.has(el)) {   // met for the first time in this list: put where the list has it, if it is not there
-          seen.add(el);
-          if (p.next === el) p.next = el.nextSibling; else p.insertBefore(el, p.next);
+        if (!seen.has(it.id)) {   // met for the first time in this list: put where the list has it, if it is not there
+          seen.set(it.id, el);
+          const from = el.parentNode;   // taken from where it was: whatever was to come next there is what came after it
+          if (from?.next === el) from.next = el.nextSibling;
+          if (from !== p || p.next !== el.nextSibling) p.insertBefore(el, p.next);
           el.next = el.firstChild; el.xy = null;
+          const b = el.box = it.box || [p.box[0], p.box[1], 0, 0];
+          el.style.left = (b[0] - p.box[0]) * k + 'px'; el.style.top = (b[1] - p.box[1]) * k + 'px';
+          el.style.width = b[2] * k + 'px'; el.style.height = b[3] * k + 'px';
         }
         attr(el, 'aria-label', it.label); attr(el, 'lang', it.lang);
         attr(el, 'aria-pressed', it.pressed); attr(el, 'aria-current', it.current);
         // what can be pressed can be reached by the keyboard; a button that cannot be is passed over and says so
-        attr(el, 'tabindex', it.press ? 0 : el.type ? -1 : undefined); attr(el, 'aria-disabled', it.press || !el.type ? undefined : true);
+        const dead = !it.press && it.role === 'button';
+        attr(el, 'tabindex', it.press ? 0 : dead ? -1 : undefined); attr(el, 'aria-disabled', dead || undefined);
         open.push(el);
       }
       pushed.push(el);
@@ -146,12 +155,13 @@ function nodes(root, list) {
       if (pushed.pop()) open.pop();
     } else if (kind === 'text') {
       const s = it.s + (it.then || ''), old = p.next;
-      p.xy ||= [m[0] * (it.x + it.adv / 2) + m[2], m[1] * (it.y - it.size / 3) + m[3]];   // a point on it: where a press on the node is
+      const xy = [m[0] * (it.x + it.adv / 2) + m[2], m[1] * (it.y - it.size / 3) + m[3]];
+      for (const el of open) el.xy ||= xy;   // a point on the node, and on each node it lies in that has none yet: where a press on it is
       if (old?.nodeType === 3) { if (old.data !== s) old.data = s; p.next = old.nextSibling; } else p.insertBefore(new Text(s), old);
     }
   }
-  for (const el of [root, ...seen]) while (el.next) { const gone = el.next; el.next = gone.nextSibling; gone.remove(); }
-  root.kept = new Map(Array.from(seen, el => [el.node, el]));
+  for (const el of [root, ...seen.values()]) while (el.next) { const gone = el.next; el.next = gone.nextSibling; gone.remove(); }
+  root.kept = seen;
 }
 
 // ---- what the host supplies (SPEC-PLAYER 9.3): text measure, inflate, time, random bytes ----
@@ -188,7 +198,7 @@ const DO = {
     c.width = Math.ceil(w * r); c.height = Math.ceil(h * r); c.w = w;   // how large it is on the page follows from these, by the style sheet
     g.setTransform(r, 0, 0, r, 0, 0);
     draw(g, shown[on] = list);
-    nodes(c.previousElementSibling, list);
+    nodes(c.previousElementSibling, list, c.clientWidth / w);
   },
   edit(e) {   // the text capability's edit: mount the text-entry widget with a text, or take it away
     entry.hidden = !e;
@@ -209,18 +219,38 @@ const DO = {
     a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' })); a.download = name;
     a.click();
   },
-  ask({ label }) { send({ answer: prompt(label) }); },   // something only the person can supply
 };
 function send(event) {   // one raw input event to the kernel; then whatever it asks for, done blindly
   for (const [kind, v] of got(call('input', event)) || []) DO[kind]?.(v);
 }
 // ---- raw input: presses, the keyboard's focus, what is done in the text-entry widget, the size of the view ----
+// A press of a pointer is the pointer going down and coming up in one place, and then the click that ends it. Where it was is
+// what the pointer said: the point it came up at, on the drawing it went down on. Of the click only that it came is used: where a
+// touch falls on nothing that can be pressed, the click may be given to a neighbour that can, at a point on that neighbour
+// (vectors/quirks 05). Such a click given to something outside the drawing is not that thing's: it goes no further.
+// A click that no pointer came before names a node and no point (one made for the person by other software): a press on that node.
+let down = null, up = null;
+const where = el => sheets.findIndex(c => c.parentNode.contains(el));
+addEventListener('pointerdown', e => { down = e.isPrimary ? e : null; }, true);
+addEventListener('pointercancel', () => { down = null; }, true);
+addEventListener('pointerup', e => {
+  const on = down ? where(down.target) : -1, c = sheets[on], r = c?.getBoundingClientRect();
+  const near = down && Math.hypot(e.clientX - down.clientX, e.clientY - down.clientY) < 12;
+  up = near ? { on, t: performance.now(), at: c && [e.clientX - r.left, e.clientY - r.top].map(v => v * c.w / r.width) } : null;
+  down = null;
+}, true);
+addEventListener('click', e => {
+  const u = up, on = where(e.target);
+  up = null;
+  if (!u || performance.now() - u.t > 700) return on >= 0 && e.target.xy && send({ press: e.target.xy, on });
+  if (u.on < 0) return;
+  if (on !== u.on) { e.stopPropagation(); e.preventDefault(); }
+  send({ press: u.at, on: u.on });
+}, true);
 sheets.forEach((c, on) => {
   const root = c.previousElementSibling, press = el => el?.xy && send({ press: el.xy, on });
-  c.addEventListener('click', e => send({ press: [e.offsetX, e.offsetY].map(x => x * c.w / c.clientWidth), on }));
-  root.addEventListener('click', e => press(e.target.closest('[tabindex="0"]')));   // a press on a node is a press on the point where it is drawn
-  root.addEventListener('keydown', e => {   // Enter or Space on what has the focus is a press; a button makes its own click of them
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.localName !== 'button') { e.preventDefault(); press(e.target); }
+  root.addEventListener('keydown', e => {   // Enter or Space on what has the focus is a press on it: no element here makes a press of its own
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); press(e.target); }
   });
   root.addEventListener('focusin', e => send({ focus: e.target.node, on }));
   root.addEventListener('focusout', e => e.relatedTarget?.node || send({ focus: null, on }));

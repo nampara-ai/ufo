@@ -274,24 +274,93 @@ fn covered(rs: &[Run], lo: u64, hi: u64) -> Vec<Id> {
     }
     out
 }
-fn history(cx: &mut Cx, id: &Id) -> Option<()> {
+/// `history`: the changes that touched an object, or with none named every change of the
+/// universe, newest first. A change whose `work` is withheld (TRAVEL 13.3) cannot be asked what it
+/// touched: it is listed, with `ops` and `touched` given as `withheld` (E11: withheld, never
+/// missing). So is a change whose own revision is withheld, of which the commit says only that it was.
+fn history(cx: &mut Cx, id: Option<&Id>) -> Option<()> {
     let chain = cx.chain.clone();
     for (_, n) in &chain {
-        let Some(cid) = n.get("change").and_then(|c| c.hash()).and_then(|c| cx.pk.node(&c)).and_then(|n| n.get("id").and_then(|i| i.id())) else { continue };
+        let Some(cid) = n.get("change").and_then(|c| c.hash()).and_then(|c| cx.pk.node(&c)).and_then(|n| n.get("id").and_then(|i| i.id())) else {
+            cx.lines.push(String::from("change id=withheld time=withheld actor=withheld basis=unknown ops=withheld touched=withheld"));
+            continue;
+        };
         let Some(p) = cx.change(&cid) else { continue };
+        let held = p.get("work").map_or(false, |w| w.tag(INDIRECT).is_none());
         let ops = p.get("work").and_then(|w| w.get("ops")).map(|o| o.l()).unwrap_or(&[]);
         let mut touched: Vec<Id> = ops.iter().filter_map(|o| o.get("obj").and_then(|i| i.id())).collect();
         crate::small::sort(&mut touched);
         touched.dedup();
-        if !touched.contains(id) { continue; }
+        if held && id.map_or(false, |id| !touched.contains(id)) { continue; }
         let og = p.get("origin");
         let mut line = cat!("change id=", cx.o(&cid), " time=", cx.time(&cid), " actor=", p.get("actor").and_then(|a| a.get("who")).map(|w| cx.jv(w.get("name").unwrap_or(w))).unwrap_or_else(|| "null".into()), " basis=", og.and_then(|o| o.get("basis")).and_then(|b| b.s()).unwrap_or("unknown"));
         if let Some(b) = og.and_then(|o| o.get("by")).and_then(|b| b.s()) { put!(line; " by=", b); }
-        put!(line; " ops=", ops.len(), " touched=[", touched.iter().map(|i| cx.o(i)).collect::<Vec<_>>().join(","), "]");
+        if held {
+            put!(line; " ops=", ops.len(), " touched=[", touched.iter().map(|i| cx.o(i)).collect::<Vec<_>>().join(","), "]");
+        } else {
+            line.push_str(" ops=withheld touched=withheld");
+        }
         if let Some(note) = p.get("work").and_then(|w| w.get("note")).and_then(|n| n.s()) { put!(line; " note=", json(note)); }
         cx.lines.push(line);
     }
     Some(())
+}
+/// `leaving` (10.1, E12): what an export of the universe would carry, by the layers of SPEC 2.5, with
+/// those of the universes it takes in. One `layer` record each for `content`, `attribution` and
+/// `history`, in that order; then the seals; then `lacks`, always: whether the copy would lack
+/// history, by this choice or because what is held here already lacks some. Of each layer: whether
+/// it is included; `objects`, the live objects, the attributing changes, or the objects whose
+/// current revision is neither; `bytes`, of its records as they are framed here; and of the changes
+/// it holds (for `attribution` the attributing changes, for `history` the changes whose `work` is
+/// here) their number, the first and last of their times, the names of their actors and their models.
+fn leaving(cx: &mut Cx, history: bool) -> Option<()> {
+    let pk = cx.pk;
+    let (content, attribution, attributing, live) = split(pk);
+    let (all, _) = pk.frames();
+    let bytes = |keep: &dyn Fn(&H) -> bool| all.iter().filter(|(_, h, _)| keep(h)).map(|(_, _, n)| *n).sum::<usize>();
+    let other = |h: &H| !content.contains(h) && !attribution.contains(h);
+    // every universe taken in, by its commit; and every change of each, by the hash its commit gives
+    let mut universes: Vec<H> = Vec::new();
+    for (u, _) in &live { if !universes.contains(u) { universes.push(*u); } }
+    let (mut worked, mut lacking, mut rest) = (Vec::new(), false, 0usize);
+    for u in &universes {
+        rest += objects(pk, u).iter().filter(|(_, r)| other(r) && pk.node(r).is_some()).count();
+        let mut at = Some(*u);
+        while let Some(n) = at.and_then(|h| pk.node(&h)) {
+            at = n.get("parents").and_then(|p| p.l().first()).and_then(|p| p.hash());
+            let p = n.get("change").and_then(|c| c.hash()).and_then(|c| pk.node(&c)).and_then(|c| c.get("p").cloned());
+            let here = p.as_ref().and_then(|p| p.get("work")?.tag(INDIRECT)?.l().get(1)?.hash()).map_or(false, |h| pk.record(1, &h).is_some());
+            lacking |= !here;
+            worked.extend(p.filter(|_| here));
+        }
+    }
+    let credited: Vec<V> = attributing.iter().filter_map(|(u, i)| pk.object(u, i)).map(|o| o.p).collect();
+    let said = |cx: &Cx, name: &str, included: bool, objects: usize, bytes: usize, changes: &[V]| {
+        let (mut actors, mut models, mut times): (Vec<String>, Vec<String>, Vec<i64>) = (Vec::new(), Vec::new(), Vec::new());
+        for p in changes {
+            times.extend(p.get("time").and_then(|t| t.i()));
+            for (list, v) in [(&mut actors, p.get("actor").and_then(|a| a.get("who")).map(|w| w.get("name").unwrap_or(w))), (&mut models, p.get("origin").and_then(|o| o.get("model")))] {
+                if let Some(s) = v.map(|v| cx.jv(v)).filter(|s| !list.contains(s)) { list.push(s); }
+            }
+        }
+        crate::small::sort(&mut actors);
+        crate::small::sort(&mut models);
+        cat!("layer name=", name, " included=", included, " objects=", objects, " bytes=", bytes, " actors=[", actors.join(","), "] models=[", models.join(","), "] changes=", changes.len(), " first=", times.iter().min().unwrap_or(&0), " last=", times.iter().max().unwrap_or(&0))
+    };
+    let lines = [said(cx, "content", true, live.len(), bytes(&|h| content.contains(h)), &[]), said(cx, "attribution", true, credited.len(), bytes(&|h| attribution.contains(h)), &credited), said(cx, "history", history, rest, bytes(&other), &worked)];
+    cx.lines.extend(lines);
+    seals(cx);
+    let line = cat!("lacks history=", !history || lacking, " blobs=0");
+    cx.lines.push(line);
+    Some(())
+}
+fn seals(cx: &mut Cx) {
+    for s in cx.pk.frames().1.iter().filter_map(|s| decode(s)) {
+        let mut line = cat!("seal commit=", s.get("commit").and_then(|c| c.hash()).map(|c| cx.c(&c)).unwrap_or_default(), " key=", s.get("key").and_then(|k| k.b()).map(hex).unwrap_or_default(), " status=unchecked");
+        if let Some(n) = s.get("name").and_then(|n| n.s()) { put!(line; " name=", json(n)); }
+        if let Some(t) = s.get("time").and_then(|t| t.i()) { put!(line; " time=", t); }
+        cx.lines.push(line);
+    }
 }
 fn part(cx: &Cx, anchor: String, ty: &str, label: &str, size: usize, changed: Option<Id>, parts: Option<usize>) -> String {
     let label: String = label.chars().take(60).collect();
@@ -395,15 +464,18 @@ fn overview(cx: &mut Cx) -> Option<()> {
     crate::small::sort(&mut actors);
     let line = cat!("universe lineage=", hex(u.p.get("lineage")?.b()?), " commit=", cx.c(&head.0), " height=", head.1.get("height")?.i()?, " objects=", ids.len(), " types=[", types.0.iter().map(|(k, n)| cat!(k, ":", n)).collect::<Vec<_>>().join(","), "] changes=", times.len(), " first=", times.iter().min().unwrap_or(&0), " last=", times.iter().max().unwrap_or(&0), " actors=[", actors.join(","), "]");
     cx.lines.push(line);
-    for s in cx.pk.frames().1.iter().filter_map(|s| decode(s)) {
-        let mut line = cat!("seal commit=", s.get("commit").and_then(|c| c.hash()).map(|c| cx.c(&c)).unwrap_or_default(), " key=", s.get("key").and_then(|k| k.b()).map(hex).unwrap_or_default(), " status=unchecked");
-        if let Some(n) = s.get("name").and_then(|n| n.s()) { put!(line; " name=", json(n)); }
-        if let Some(t) = s.get("time").and_then(|t| t.i()) { put!(line; " time=", t); }
-        cx.lines.push(line);
-    }
+    seals(cx);
     if let Some(V::M(fs)) = u.p.get("features") {
         for (name, f) in fs {
             let line = cat!("feature name=", name, " v=", f.get("v").and_then(|v| v.i()).unwrap_or(0), " required=", f.get("required") == Some(&V::Bool(true)), " supported=", name == "ufo.text");
+            cx.lines.push(line);
+        }
+    }
+    // 1.6: what the universe carries for a role, where that is a universe an anchor names: nested if its commit is here
+    if let Some(V::M(cs)) = u.p.get("components") {
+        for (role, c) in cs {
+            let Some(h) = c.tag(ANCHOR).and_then(|a| a.get("u")).and_then(|u| u.hash()) else { continue };
+            let line = cat!("component role=", role, " hash=", cx.c(&h), " status=", if cx.pk.node(&h).is_some() { "current" } else { "absent" });
             cx.lines.push(line);
         }
     }
@@ -422,6 +494,10 @@ pub fn project(pk: &Pack, q: &V) -> Option<V> {
     let id: Option<Id> = q.get("o").and_then(|o| o.s()).and_then(|s| cx.revs.keys().find(|k| hex(&k[..]) == s).cloned());
     let (lo, hi) = (q.get("lo").and_then(|x| x.i()).map(|x| x as u64), q.get("hi").and_then(|x| x.i()).map(|x| x as u64));
     let mut args = String::new();
+    let whole = q.get("history") != Some(&V::Bool(false));
+    if name == "leaving" {
+        args = cat!(" history=", whole);
+    }
     if let Some(i) = &id {
         args = cat!(" ", cx.o(i));
         if let (Some(a), Some(b)) = (lo, hi) { put!(args; " chars=[", a, ",", b, "]"); }
@@ -430,7 +506,8 @@ pub fn project(pk: &Pack, q: &V) -> Option<V> {
         ("overview", _) => overview(&mut cx)?,
         ("text", Some(i)) => text(&mut cx, i)?,
         ("object", Some(i)) => object(&mut cx, i)?,
-        ("history", Some(i)) => history(&mut cx, i)?,
+        ("history", i) => history(&mut cx, i.as_ref())?,
+        ("leaving", _) => leaving(&mut cx, whole)?,
         ("why", Some(i)) => why(&mut cx, i, lo, hi)?,
         ("expand", None) => expand_universe(&mut cx)?,
         ("expand", Some(i)) => {

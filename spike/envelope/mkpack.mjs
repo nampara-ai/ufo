@@ -86,41 +86,93 @@ const id = x => Buffer.alloc(16, x), U = Buffer.alloc(16);
 const pub = { actor: { who: { name: 'UFO spike' }, with: { name: 'spike/envelope/mkpack.mjs', version: '0.0.0' } }, time: 1767225600000, origin: { basis: 'witnessed', by: 'person', who: { name: 'UFO spike' } } };
 // The operations that make an object of given properties: `new`, then a `set` for each, but `chars`, which is spliced in.
 const making = (o, type, p) => [{ op: 'new', obj: o, type }, ...Object.entries(p).map(([key, val]) => key === 'chars' ? { op: 'splice', obj: o, key, after: null, ins: val } : { op: 'set', obj: o, key, val })];
-const block = (T, C) => ({ at: anchor({ o: T, a: { chars: ['s', [C, 0, 0], 'end'] } }), kind: 'block', role: 'paragraph' });
+const block = (T, C, first = 0) => ({ at: anchor({ o: T, a: { chars: ['s', [C, first, 0], 'end'] } }), kind: 'block', role: 'paragraph' });
 function universe(pk, change, lineage, objects) {
   const F0 = objects[0][0], all = [[U, 'ufo.universe', { lineage, roots: { primary: ref(F0) }, faces: [ref(F0)] }], ...objects];
-  return pk.genesis(change, all.map(([o, type, p]) => [o, type, p, p.chars === undefined ? undefined : { chars: [[change, 0, [...p.chars].length]] }]), all.flatMap(([o, type, p]) => making(o, type, p)), pub);
+  let n = 0;   // elements are numbered across everything the change inserts, in the order of its operations (1.7)
+  return pk.genesis(change, all.map(([o, type, p]) => { const k = p.chars === undefined ? 0 : [...p.chars].length; n += k; return [o, type, p, k ? { chars: [[change, n - k, k]] } : p.chars === undefined ? undefined : { chars: [] }]; }), all.flatMap(([o, type, p]) => making(o, type, p)), pub);
 }
 
 // ---- the tools universe (PLAYER 9.6). It names no universe: what it shows and changes is its subject. ----
+// Everything it does is here, as description: formulas (7.3) over its presentation state, over what the reader hands it (`arg`:
+// the subject, and the file's `name`) and over the kernel's projections of the subject (`ask`); handlers (7.6) that set state
+// or `act`. Text that is computed is a list of lines under `each`, each presented by a Portal whose `of` is `arg` (7.8).
+const f = formula, st = n => f('state', n), is = (a, b) => f('=', a, b), not = a => f('not', a), and = (a, b) => f('and', a, b), iff = (c, a, b) => f('if', c, a, b);
+const join = (...a) => f('concat', ...a), list = (...a) => f('list', ...a), get = (m, k) => f('get', m, k), nth = (l, i) => f('nth', l, i), num = n => f('format', n, '0'), len = x => f('len', x), plus = (a, b) => f('+', a, b);
 export function tools() {
-  const pk = new Pack('ufo-spike-tools-salt'), [XF, XG, XT, XR, XP, XC] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c].map(id);
-  const state = n => formula('state', n), is = (n, v) => formula('=', state(n), v), lit = on => formula('if', on, 'underline', 'none');
+  const pk = new Pack('ufo-spike-tools-salt'), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90].map(id);
+  const S = f('arg', 'subject'), editing = is(st('editing'), true), named = not(is(st('who'), null)), share = is(st('share'), true), saving = is(st('panel'), 'save'), lit = on => iff(on, 'underline', 'none');
+  // what the kernel's projections say of the subject: `overview`, the changes newest first, and what a copy would carry
+  const ov = nth(f('ask', 'overview', S), 0), last = nth(f('ask', 'history', S), 0), leaving = f('ask', 'leaving', S, { history: share }), [content, credit, history] = [0, 1, 2].map(i => nth(leaving, i));
+  // The name of a saved file: the name of this one without its ending, then a mark for the kind of copy, then a number if a copy was
+  // already saved from here; a name that has the mark already takes a number. (No operator of 7.3 finds a text in a text or reads a
+  // number from one, so "-edited-2" cannot be counted on from: it becomes "-edited-2-edited".)
+  const name = f('arg', 'name'), ends = (s, suf) => is(f('slice', s, plus(len(s), -suf.length), len(s)), suf), less = (s, k) => f('slice', s, 0, plus(len(s), -k));
+  // (The name without its ending is worked out once, when Save is pressed, and kept in the state as `stem`: a formula has no other way to name a value and use it twice.)
+  const stem0 = iff(ends(name, '.ufx.html'), less(name, 9), iff(ends(name, '.html'), less(name, 5), name)), stem = st('stem'), count = iff(is(st('n'), null), 0, st('n'));
+  const marked = mark => iff(ends(stem, mark), join(stem, '-', num(plus(count, 2))), join(stem, mark, iff(is(count, 0), '', join('-', num(plus(count, 1))))));
+  const saveAs = join(iff(share, marked('-edited'), marked('-published')), '.ufx.html');
+  // the status: which state this is; how to begin; what was just recorded, or why not; what was saved, and what that copy lacks
+  const did = st('did'), out = st('out');
+  const status = join(
+    list(join('State ', get(ov, 'commit'), ', after ', num(get(ov, 'changes')), ' changes.')),
+    iff(and(editing, not(named)), list('To change the text, first give your name: press the line below.'), list()),
+    iff(and(editing, named), list(join('Changes will be recorded as made by ', st('who'), '. Press a paragraph to change it; press the name to change that.')), list()),
+    iff(is(did, null), list(), iff(get(did, 'ok'),
+      iff(is(st('fresh'), true), list(join('Changed, and recorded as change ', get(last, 'id'), ' by ', get(last, 'actor'), '. Not yet in a file.')), list()),
+      list(join('Not changed: ', get(did, 'why'), '.')))),
+    iff(is(out, null), list(), iff(get(out, 'ok'),
+      join(list(join('Saved as ', get(out, 'name'), ': ', num(get(out, 'bytes')), ' bytes, holding state ', f('slice', get(out, 'commit'), 0, 16), '. It has been handed to your browser to save.')),
+        iff(is(st('outshare'), true), list(), list('That copy is for readers: its working history was withheld. Everything is still held here, in this page; to keep it, save a copy for people working on this.'))),
+      list(join('No file was made: ', get(out, 'why'), '.')))));
+  // what will leave (TRAVEL E12): the three layers of SPEC 2.5, as `leaving` counts them for the choice now made
+  const when = t => f('format', t, 'YYYY-MM-DD hh:mm'), bytes = l => num(get(l, 'bytes')), HISTORY = 'Working history (every operation, and every earlier draft): ';
+  const panel = join(
+    list(join('The document: ', num(get(content, 'objects')), ' objects, ', bytes(content), ' bytes. It always travels.'),
+      join('Who and what made it: ', num(get(credit, 'changes')), ' changes, from ', when(get(credit, 'first')), ' to ', when(get(credit, 'last')), ' UTC, ', bytes(credit), ' bytes. This always travels. The names it holds:')),
+    get(credit, 'actors'),
+    iff(is(len(get(credit, 'models')), 0), list('It names no model.'), join(list('The models it names:'), get(credit, 'models'))),
+    list(iff(is(get(history, 'bytes'), 0), join(HISTORY, 'none is held here.'),
+      iff(share, join(HISTORY, 'included, ', bytes(history), ' bytes, the work of ', num(get(history, 'changes')), ' changes.'),
+        join(HISTORY, 'withheld. Its ', bytes(history), ' bytes stay here, and the copy will say that they were withheld.'))),
+      join('The copy will be named ', saveAs, '.')));
   // each word is a button: what a press on it does (7.6); a formula that underlines it while what it would set is so (7.3);
-  // and the same said for those who do not see it: `current` of the three that choose among things, `pressed` of the one that is on or off
-  const shown = { document: formula('or', is('face', 'document'), is('face', null)), pages: is('face', 'pages'), text: is('face', 'text') }, on = is('editing', true);
-  const words = [
-    ['Document', { set: 'face', to: 'document' }, lit(shown.document), { current: shown.document }],
-    ['Pages', { set: 'face', to: 'pages' }, lit(shown.pages), { current: shown.pages }],
-    ['Text', { set: 'face', to: 'text' }, lit(shown.text), { current: shown.text }],
-    ['Edit', { set: 'editing', to: formula('not', on) }, lit(on), { pressed: on }],
-    ['Save', { act: 'export' }, 'none', {}],
-  ];
-  const chars = words.map(w => w[0]).join('   '), spans = { b0: { ...block(XT, XC), role: 'toolbar', label: 'Tools', lang: 'en' } }; let at = 0;
-  words.forEach(([w, press, decoration, how], i) => {
-    spans['t' + i] = { at: anchor({ o: XT, a: { chars: ['s', [XC, at, 0], [XC, at + w.length - 1, 1]] } }), kind: 'inline', role: 'button', weight: 700, decoration, ...how, on: { press } };
-    at += w.length + 3;
-  });
-  const grey = [F(0.8), F(0.8), F(0.8), F(1)];
+  // and the same said for those who do not see it: `current` of those that choose among things, `pressed` of those that are on or off
+  const button = (T, C, at, word, press, how, on) => ({ at: anchor({ o: T, a: { chars: ['s', [C, at, 0], [C, at + word.length - 1, 1]] } }), kind: 'inline', role: 'button', weight: 700, decoration: on === undefined ? 'none' : lit(on), ...how, on: { press } });
+  // the texts, in the order their characters are put in: each begins where the one before ended, in the numbering of the change's elements
+  let next = 0;
+  const bar = (T, words, more = {}) => { const chars = words.map(w => w[0]).join('   '), spans = { b0: { ...block(T, XC, next), ...more } }; let at = next; next += chars.length;
+    words.forEach(([w, press, how, on], i) => { spans['t' + i] = button(T, XC, at, w, press, how, on); at += w.length + 3; }); return { chars, spans, size: F(15), font: ['sans-serif'] }; };
+  const shown = { document: f('or', is(st('face'), 'document'), is(st('face'), null)), pages: is(st('face'), 'pages'), text: is(st('face'), 'text') }, face = (word, to) => [word, { set: 'face', to }, { current: shown[to] }, shown[to]];
+  const words = [face('Document', 'document'), face('Pages', 'pages'), face('Text', 'text'), ['Edit', { set: 'editing', to: not(editing) }, { pressed: editing }, editing], ['Save', [{ set: 'stem', to: stem0 }, { set: 'stem', to: iff(is(stem, ''), 'untitled', stem) }, { set: 'panel', to: iff(saving, null, 'save') }], { pressed: saving }, saving]];
+  const choice = [['For people working on this', { set: 'share', to: true }, { current: share }, share], ['For readers', { set: 'share', to: false }, { current: not(share) }, not(share)]];
+  // Save: the export, with the choice made and the name; then, if it was not refused, what the status is to say of it, and the panel closes
+  const save = [{ act: 'export', universe: S, history: share, name: saveAs, into: 'out' }, { set: 'outshare', to: share }, { set: 'n', to: plus(count, 1) }, { set: 'fresh', to: iff(share, false, st('fresh')) }, { set: 'panel', to: null }];
+  const grey = [F(0.8), F(0.8), F(0.8), F(1)], side = [F(0), F(16), F(6), F(16)], line = X => ['ufo.portal', { of: f('arg', 'line') }];
+  const tBar = bar(XT, words, { role: 'toolbar', label: 'Tools', lang: 'en' }), tHead = { chars: 'What will leave, if you save a copy', spans: { b0: { ...block(XH, XC, next), weight: 700 } }, size: F(15), font: ['sans-serif'] };
+  next += tHead.chars.length; const tChoice = bar(XO, choice), tSave = bar(XB, [['Save this copy', save, {}], ['Cancel', { set: 'panel', to: null }, {}]]);
   const root = universe(pk, XC, id(0x77), [
     [XF, 'ufo.face', { of: ref(XG), medium: 'document' }],
-    [XG, 'ufo.group', { children: [ref(XT), ref(XR), ref(XP)] }],
-    [XT, 'ufo.text', { chars, spans, size: F(15), font: ['sans-serif'], margin: [F(10), F(16), F(8), F(16)] }],
+    [XG, 'ufo.group', { children: [ref(XT), ref(XS), ref(XN), ref(XV), ref(XR), ref(XP)] }],
+    [XT, 'ufo.text', { ...tBar, margin: [F(10), F(16), F(8), F(16)] }],
+    [XS, 'ufo.group', { role: 'status', label: 'State', each: status, as: 'line', children: [ref(XL)], margin: side }],
+    [XL, ...line()],
+    // who is making the changes: a value of the presentation state, shown while editing is on, which takes text entry (7.6)
+    [XN, 'ufo.group', { visible: editing, each: list(st('who')), as: 'who', children: [ref(XW)], margin: side }],
+    [XW, 'ufo.portal', { of: f('arg', 'who'), role: 'input', label: 'Your name, to record with the changes you make', editable: true, on: { change: { set: 'who', to: iff(is(f('arg', 'text'), ''), null, f('arg', 'text')) } } }],
+    [XV, 'ufo.group', { visible: saving, role: 'region', label: 'What will leave', lang: 'en', children: [ref(XH), ref(XE), ref(XO), ref(XB)], margin: side }],
+    [XH, 'ufo.text', tHead],
+    [XE, 'ufo.group', { each: panel, as: 'line', children: [ref(XM)] }],
+    [XM, ...line()],
+    [XO, 'ufo.text', tChoice],
+    [XB, 'ufo.text', tSave],
     [XR, 'ufo.path', { d: [['M', F(0), F(0)], ['L', F(4000), F(0)]], stroke: grey, width: F(1), h: F(1) }],
-    // the subject, in the face the state names, taking text entry while `editing` is set
-    [XP, 'ufo.portal', { of: formula('arg', 'subject'), face: state('face'), editable: is('editing', true), role: 'document', label: 'The document these tools work on' }],
+    // the subject, in the face the state names. It takes text entry while `editing` is set and a name has been given; what is
+    // done there is proposed as a change by that name, and the state then says that there is something not yet in a file
+    [XP, 'ufo.portal', { of: S, face: st('face'), editable: and(editing, named), role: 'document', label: 'The document these tools work on',
+      on: { change: [{ act: 'propose', who: st('who'), into: 'did' }, { set: 'fresh', to: true }] } }],
   ]);
-  return { bytes: pk.b, root, words, portal: { of: ['arg', 'subject'], face: ['state', 'face'], editable: ['=', ['state', 'editing'], true] } };
+  return { bytes: pk.b, root, words: words.map(w => w[0]) };
 }
 // ---- a fixture: a working universe that tries to act and to take a subject (F6). Nothing in it may do anything. ----
 export function hostile() {

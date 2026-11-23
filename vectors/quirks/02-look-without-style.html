@@ -1,24 +1,27 @@
 <!DOCTYPE html>
-<!-- The script moves a paragraph by a class, hides another by the hidden attribute, sizes a canvas by its width and height attributes (the style sheet gives it the width of its box and the height that follows) and a text box by rows. Every engine: all four take effect, and no violation. -->
+<!-- The script moves a paragraph by a class, hides another by the hidden attribute, sizes a canvas by its width and height attributes (the style sheet gives it the width of its box and the height that follows) and a text box by rows. And the one exception: it puts a node where a drawing has it, by assigning the four properties left, top, width and height of the element's style object (the CSSOM), which the style sheet has made absolutely positioned. Every engine: all take effect, and no violation, under a style-src that is one hash, with no unsafe-inline and no unsafe-hashes. -->
 <html lang="en"><head><meta charset="utf-8">
 <title>02 the look changes without a style being written</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-RZ4IDgglqRTseBryJKMSmiWjLEBE129q+9JYVfxgo80='; style-src 'sha256-1ymVRFp86dnbHfmgoBLLSEyg76lYKH4Pd6AbKoV0DzU='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-UQHTg3rYemPL0SjXo0xJuG7dg/dfYyRCrtiouaeyfBI='; style-src 'sha256-HpLiWokuML1YjzwtqBWRgb9KA98I/DSzfI0UWJGqgC0='; img-src data:; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
-<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}.box{width:200px}.moved{margin-left:20px}canvas{display:block;width:100%;height:auto}[hidden]{display:none!important}</style>
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}.box{width:200px}.moved{margin-left:20px}canvas{display:block;width:100%;height:auto}[hidden]{display:none!important}.node{position:absolute;margin:0;overflow:hidden}</style>
 </head><body>
 <h1>02 the look changes without a style being written</h1>
-<p>The script moves a paragraph by a class, hides another by the hidden attribute, sizes a canvas by its width and height attributes (the style sheet gives it the width of its box and the height that follows) and a text box by rows. Every engine: all four take effect, and no violation.</p>
+<p>The script moves a paragraph by a class, hides another by the hidden attribute, sizes a canvas by its width and height attributes (the style sheet gives it the width of its box and the height that follows) and a text box by rows. And the one exception: it puts a node where a drawing has it, by assigning the four properties left, top, width and height of the element's style object (the CSSOM), which the style sheet has made absolutely positioned. Every engine: all take effect, and no violation, under a style-src that is one hash, with no unsafe-inline and no unsafe-hashes.</p>
 <p>Result: <span id="result">not finished</span></p>
-<div class="box"><p id="p">a paragraph</p><p id="q">another</p><canvas id="c"></canvas><textarea id="t" rows="2"></textarea></div>
+<div class="box"><p id="p">a paragraph</p><p id="q">another</p><canvas id="c"></canvas><textarea id="t" rows="2"></textarea></div><p id="n" class="node">a node over a drawing</p>
 <script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
 const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
   document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
 document.getElementById('p').className = 'moved'; document.getElementById('q').hidden = true; Object.assign(document.getElementById('c'), { width: 400, height: 100 }); document.getElementById('t').rows = 5;
+const n = document.getElementById('n'); n.style.left = '30px'; n.style.top = '40px'; n.style.width = '120px'; n.style.height = '20px';
 const p = document.getElementById('p'), q = document.getElementById('q'), c = document.getElementById('c'), t = document.getElementById('t'), problems = [];
 const css = (el, k) => getComputedStyle(el)[k];
 if (css(p, 'marginLeft') !== '20px') problems.push('the paragraph did not move: ' + css(p, 'marginLeft'));
 if (css(q, 'display') !== 'none') problems.push('the second paragraph is not hidden');
 if (c.clientWidth !== 200 || c.clientHeight !== 50) problems.push('the canvas is ' + c.clientWidth + ' by ' + c.clientHeight + ', not 200 by 50');
 if (t.rows !== 5) problems.push('the text box has not five rows');
+const b = document.getElementById('n').getBoundingClientRect(), at = [b.left + scrollX, b.top + scrollY, b.width, b.height].map(Math.round).join(' ');
+if (at !== '30 40 120 20') problems.push('the node is at ' + at + ', not at 30 40 120 20');
 finish(problems);</script></body></html>

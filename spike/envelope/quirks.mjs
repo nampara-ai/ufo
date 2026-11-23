@@ -15,16 +15,16 @@ await new Promise(ok => server.listen(0, '127.0.0.1', ok)); const origin = 'http
 const address = (f, scheme) => scheme === 'http' ? origin + '/' + path.basename(f) : pathToFileURL(f).href;
 
 // One page, opened one way: what it said, and everything seen from outside it.
-async function visit(browser, f, scheme, { drive = [], act = null, until = p => p.waitForFunction(() => document.documentElement.dataset.result, null, { timeout: 8000 }) } = {}) {
-  const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 900, height: 700 } }), page = await context.newPage(), seen = { console: [], requests: [], downloads: [], from: hits.length };
+async function visit(browser, f, scheme, { drive = [], act = null, touch = false, until = p => p.waitForFunction(() => document.documentElement.dataset.result, null, { timeout: 8000 }) } = {}) {
+  const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 900, height: 700 }, hasTouch: touch }), page = await context.newPage(), seen = { console: [], requests: [], downloads: [], from: hits.length };
   await context.addInitScript(() => { globalThis.__violations = []; document.addEventListener('securitypolicyviolation', e => __violations.push(`${e.violatedDirective} ${e.blockedURI}`)); });
   await context.route('**/*', route => { seen.requests.push(route.request().url()); route.continue(); });
-  page.on('console', m => seen.console.push(`${m.type()}: ${m.text().slice(0, 140)}`)); page.on('pageerror', e => seen.console.push('error: ' + String(e).slice(0, 140))); page.on('dialog', d => d.accept('Quirk Runner'));
+  page.on('console', m => seen.console.push(`${m.type()}: ${m.text().slice(0, 140)}`)); page.on('pageerror', e => seen.console.push('error: ' + String(e).slice(0, 140))); page.on('dialog', d => { seen.console.push('a dialog: ' + d.message()); d.dismiss(); });
   page.on('download', async d => { const to = path.join(work, `${Date.now()}-${d.suggestedFilename()}`); await d.saveAs(to); seen.downloads.push({ name: d.suggestedFilename(), file: to }); });
   const url = address(f, scheme); await page.goto(url);
   for (const [what, a, b] of drive) {
     if (what === 'focus') await page.locator(a).focus(); else if (what === 'click') await page.locator(a).click(); else if (what === 'type') await page.keyboard.type(a); else if (what === 'insertText') await page.keyboard.insertText(a);
-    else if (what === 'press') await page.keyboard.press(a); else if (what === 'caret') await page.evaluate(([a, b]) => document.activeElement.setSelectionRange(a, b), [a, b]);
+    else if (what === 'press') await page.keyboard.press(a); else if (what === 'tap') { const r = await page.locator(a).boundingBox(); await page.touchscreen.tap(r.x + b, r.y + drive[0][3]); } else if (what === 'caret') await page.evaluate(([a, b]) => document.activeElement.setSelectionRange(a, b), [a, b]);
   }
   if (act === 'screenshot') await page.screenshot();
   let result = null; try { await until(page); result = await page.evaluate(() => document.documentElement.dataset.result || null); } catch (e) { result = 'fail: ' + String(e).split('\n')[0].slice(0, 120); }
@@ -49,13 +49,16 @@ function wrong(seen, scheme, expect = {}) {
 async function envelope(browser) {
   const f = path.join(work, 'compose.ufx.html'); if (!fs.existsSync(f)) execFileSync('node', [here('make.mjs'), here('../../vectors/compose.ufx'), f, '--date', '2026-01-02']);
   const ready = p => p.waitForFunction(() => globalThis.ufo, null, { timeout: 15000 }), w = [], key = async (p, k, n = 1) => { for (let i = 0; i < n; i++) await p.keyboard.press(k); };
-  const a = await visit(browser, f, 'http', { until: ready }), p = a.page, at = () => p.evaluate(() => document.activeElement.localName + ':' + (document.activeElement.textContent || '').slice(0, 11));
+  const a = await visit(browser, f, 'http', { until: ready }), p = a.page, at = () => p.evaluate(() => (document.activeElement.getAttribute('role') || document.activeElement.localName) + ':' + (document.activeElement.textContent || '').slice(0, 14));
+  const to = async (want, k = 'Tab', most = 40) => { for (let i = 0; i < most && !(await at()).startsWith(want); i++) await key(p, k); if (!(await at()).startsWith(want)) w.push(`${want} was not reached: the focus is on ${await at()}`); };
+  const typed = async s => { await key(p, 'Enter'); await p.locator('#ufo-entry').waitFor({ state: 'visible', timeout: 3000 }); await p.keyboard.type(s); await key(p, 'Tab'); await key(p, 'Enter'); await p.locator('#ufo-entry').waitFor({ state: 'hidden', timeout: 3000 }); };
   try {
+    const before = await p.evaluate(() => ufo.query({ q: 'commits' })[0]);
     await key(p, 'Tab', 4); if (await at() !== 'button:Edit') w.push('four Tabs reach ' + await at()); await key(p, 'Enter');
-    for (let i = 0; i < 30 && !(await at()).startsWith('p:Readers who'); i++) await key(p, 'Tab'); await key(p, 'Enter'); await p.locator('#ufo-entry').waitFor({ state: 'visible', timeout: 3000 });
-    await p.keyboard.type('Quirk. '); await key(p, 'Tab'); await key(p, 'Enter'); await p.locator('#ufo-entry').waitFor({ state: 'hidden', timeout: 3000 });
-    for (let i = 0; i < 40 && await at() !== 'button:Save'; i++) await key(p, 'Shift+Tab'); const state = await p.evaluate(() => ufo.query({ q: 'commits' })[0]);
-    if (state.height !== 1) w.push('no change was made'); await Promise.all([p.waitForEvent('download', { timeout: 10000 }), key(p, 'Enter')]); await p.waitForTimeout(600);
+    await to('textbox:'); await typed('Quirk Runner');   // who is making the changes: a field of the tools the file carries, not a dialog of the browser
+    await to('p:Readers who'); await typed('Quirk. '); const state = await p.evaluate(() => ufo.query({ q: 'commits' })[0]); if (state.height !== before.height + 1) w.push('no change was made');
+    await to('button:Save', 'Shift+Tab'); await key(p, 'Enter'); await to('button:For people'); await key(p, 'Enter'); await to('button:Save this copy');   // what will leave is shown; the copy with its history is chosen
+    await Promise.all([p.waitForEvent('download', { timeout: 10000 }), key(p, 'Enter')]); await p.waitForTimeout(600);
     Object.assign(a.seen, { result: 'pass', violations: await p.evaluate(() => globalThis.__violations), asked: hits.slice(a.seen.from), fetched: await p.evaluate(() => performance.getEntriesByType('resource').map(e => e.name)) });
     const d = a.seen.downloads[0]; w.push(...wrong(a.seen, 'http', { download: d && { name: 'compose-edited.ufx.html', text: fs.readFileSync(d.file, 'utf8') } }));
     if (d) { const saved = path.join(work, 'compose-edited.ufx.html'); fs.copyFileSync(d.file, saved); const b = await visit(browser, saved, 'http', { until: ready });

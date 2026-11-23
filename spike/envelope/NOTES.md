@@ -723,3 +723,194 @@ fills it: 25 lines.
   WebKit saw only text inserted in one step.
 - Safari on macOS does not move focus to buttons with Tab unless the
   person has turned that on; Playwright's WebKit does. Not testable here.
+
+## 2026-11-23, latest: the tools as description, nested in the pack; what will leave; nodes over the drawing; the script shipped minified
+
+Where PLAN.md and the sections above differ from this one, this one is
+right. Tested in headless Chromium 153, Firefox 155 and Playwright's
+WebKit 26.6 on Linux; no real device, no Safari, no screen reader.
+
+### What the tools do is in the tools universe (rule K6)
+
+`mkpack.mjs` writes it; the kernel has nothing that is this tools
+universe's. Three things moved out of kernel code:
+
+- **The status line** is a group of role `status` under `each`: a formula
+  gives a list of lines, and a Portal whose `of` is `arg("line")` presents
+  each. The lines are built with `concat`, `format`, `if`, `get`, `nth`
+  from presentation state and from `ask("overview", arg("subject"))` and
+  `ask("history", arg("subject"))`.
+- **The name of a saved file** is the `name` argument of the `export`
+  action, a formula over `arg("name")` (the file's name, which the host
+  knows and the reader hands on), the choice made, and a count of copies
+  kept in the state.
+- **Who is editing** is a value of the presentation state, `who`. While
+  editing is on the tools show a Portal of role `input` that presents it,
+  is `editable`, and whose `change` handler sets it. The Portal onto the
+  subject is `editable` only once it is set, and its own `change` handler
+  is `[{act: "propose", who: state("who"), into: "did"}, {set: "fresh",
+  to: true}]`. The kernel has no prompt, the host no `ask` effect, and
+  `start` takes no `who`.
+
+General mechanisms the kernel gained for it: the formula operators `ask`,
+`get` (of a map), `nth`, `list`, `len`, `concat`, `slice`, `format`, `+`;
+named values for `arg` (what the reader hands over; what `each` binds;
+`text`, what an edit event carries); `each`/`as` on a group; `visible`;
+a Portal presenting a text value, or its label where it has none; text
+entry on such a value; a handler that is a list; `into` on `act`; the
+`change` event; the actions `export` (with `universe`, `history`, `name`)
+and `propose` (with `who`); and E12 kept by the kernel: an export is
+refused unless what is on the screen asked `leaving` of the subject with
+the same choice.
+
+### The tools universe is nested in the pack
+
+`components.tools` of the working universe's universe object is the
+anchor `{o: sixteen zero bytes, u: the tools universe's commit}`; the
+tools universe's records lie in the same pack. They get there by one
+change through the gate (`propose` with `key: ["components", "tools"]`,
+`val` the anchor, `with` the tools pack): a `set`, replayed and checked
+like any change, by `withTools` in `parts.mjs`, which `make.mjs` calls
+when the pack names no tools. The envelope has no `tools` part: nine
+parts and the skeleton. A pack that names none, in the page, which has no
+tools of its own, is shown to be read: the reader's own sentence in a
+status, and the primary face. A reader that holds a tools universe itself
+uses that one (`open_tools`; K3): the Node tests do, so that the edit
+vectors stay as they were.
+
+### What will leave, and a published copy
+
+`leaving` is a projection of the kernel (`project.rs`), with the layers
+of SPEC 2.5 from `query.rs`. Save sets `panel`; a group `visible` while it
+is set shows, by formula, the three layers, a choice of two buttons
+(`current` says which), and "Save this copy" and "Cancel". "For readers"
+is chosen until the person says otherwise. `Pack::published` writes the
+copy: the records of the content and attribution layers, each once, in
+the frames they had; an `absent` frame `{history: true}`; one index; one
+head. The page's own pack is not touched, and the status says that the
+copy lacks history and the page still holds it. `history` now lists a
+change whose work is withheld, with `ops=withheld touched=withheld`, and
+a change whose own revision is withheld as wholly `withheld`.
+
+### Nodes over the drawing, and the script as shipped
+
+Each node's group in a display list carries `box`, the rectangle of the
+text drawn in it. The host sets `left`, `top`, `width`, `height` on the
+node's element through its style object: the one exception to "the look
+is the hashed style and nothing else". A node drawn in several pieces has
+the rectangle of its first. The elements lie over the canvas. Where a
+pointer pressed is taken from the pointer: the drawing it went down on
+and the point it came up at; the click that follows only says the press
+is complete, and neither its target nor its point is used. A click that
+no pointer came before (assistive technology, or script) is a press on
+the node its element stands for. Buttons are no longer native buttons: Enter and Space
+are handled in one place.
+Node identities are now made from a node's place in the description, so
+that a line more or less of status does not renumber what follows.
+
+`host.mjs` is shipped through terser 5.51.4 (`--module --ecma 2020
+--compress --mangle`), pinned in `spike/tools/package-lock.json`.
+`spike/tools/repro-host.sh` checks the bytes are the same from the source
+where it lies and from a copy elsewhere, and that an envelope carries
+exactly them.
+
+### Sizes
+
+| | Before | Now |
+| --- | ---: | ---: |
+| Host source: lines that are not blank or comment (budget 600) | 245 | 267 |
+| Host source: bytes | 15 999 | 18 170 |
+| Host as shipped: bytes (budget 16 384) | 15 999 | 9 188 |
+| Kernel after cargo | 265 233 | 293 938 |
+| Kernel after `wasm-opt -Oz` | 227 469 | 252 931 |
+| Kernel, raw DEFLATE | 105 456 | 117 859 |
+| Kernel lines by hand (`wc -l`, tables apart) | 5 669 | 6 191 |
+| Tools universe, a pack | 6 795 | 26 400 |
+| Envelope of `compose.ufx` | 168 804 | 225 235 |
+
+The envelope is 86% of 256 KiB. Nothing of the kernel's growth was tuned.
+
+### Found (numbered on from R13)
+
+R14. **Nothing presents a computed value as text.** 7.1 forbids a formula
+    as `chars`; 7.3 says `each` "is how a table becomes rows of text" and
+    does not say what the template is. Here: a Portal whose `of` is `arg`
+    presents a text value as a text with Appendix A's defaults, and where
+    the value is nothing, its label (O4). Such text cannot be styled.
+R15. **`ask` gives "maps from field name to value"** and a record's kind
+    is not a field. Here it is under `is`; what a record writes with no
+    name (the parts of an anchor) is a list under `at`.
+R16. **No operator reads a field of a map.** `get` takes a ref. Here it
+    also takes a map.
+R17. **How `ask` or an action is aimed at a subject is not spelled.**
+    Here the subject stands among the arguments.
+R18. **A handler does one thing**; Save must act, then set state. Here a
+    handler may be a list, performed in order, ended by a refusal.
+R19. **Description cannot read what came of an action.** Here `into`
+    names a state value that receives `{ok, …}` or `{ok: false, why}`.
+R20. **The arguments of an action in a handler have no names.**
+R21. **No operator reads an event** in a handler. Here `arg("text")`.
+R22. **Who "the person using the reader" is** is not said to come from
+    anywhere. Here from the tools, as an argument of `propose`.
+R23. **A formula cannot name a value and use it twice.** The file-name
+    formula made the tools universe 47 KB until its stem was worked out
+    once by a handler and kept in the state. And nothing finds a text in
+    a text or reads a number from one.
+R24. **`format`** cannot tell a time in flicks from one in milliseconds;
+    where the `,` stands is not said; whether `1 + 1` is an integer is
+    not said; nothing joins a list of texts.
+R25. **"An anchor naming a universe"** (1.6): an anchor must have `o`.
+    Written with the universe object's identity.
+R26. **TRAVEL 13.2 still lists `tools` as a part**, against PLAYER 9.6.
+R27. **A reader with no tools and a pack with none**: not said.
+R28. **The tools' author is among "who made it".** The nested universe's
+    attribution layer is taken in (2.5), so `leaving` names its actor
+    beside the document's.
+R29. **`leaving`**: what `objects`, `changes`, `actors` count for each
+    layer is not said; `lacks` is optional, so nothing can find it by
+    position: written always. How its parameters are spelled is not said.
+R30. **`history` and withheld work** (QUERY-NOTES 25): done as above. It
+    cannot then say which changes touched an object, and lists all.
+R31. **Where E12 is enforced** when the showing is description.
+R32. **E13 in a page.** The page is the working copy and is gone when it
+    is closed. The status says so after a copy for readers.
+R33. **Conservation on top of withheld history.** The independent reader
+    reports `unavailable` for a change made on a published copy: the
+    parent state has values, or revisions, that are withheld. L3 should
+    say that only the objects a change touches are needed.
+R34. **An `absent` frame is never taken back.** A copy with its history,
+    of a published copy that was edited, still says `history: true`, and
+    it is true. How several absent frames combine is not said.
+R35. **`input`** (9.2) has no stated behaviour. Here it is a `textbox`
+    that is pressed to bring up the host's editing surface.
+R36. **Node identities** must last from one display list to the next for
+    focus to be kept; 9.2 says a node "carries `id`" and no more.
+R37. **`box`** is not in 9.2. E23 needs the exception stated.
+R40. **A touch beside a button** (quirks 05). Once the nodes lay over
+    the drawing, WebKit gave a tap on the second line of a button broken
+    over two lines to the button above it, as a click at a point on that
+    button: the piece on the second line had no element, the paragraph
+    under the finger could not be pressed, and the engine looked for a
+    neighbour that could. Chromium and Firefox did not. Where a press
+    was is now taken from the pointer events, in every engine, and acted
+    on when the click comes (acting at `pointerup` let the click land on
+    whatever the press had just put under the finger).
+R38. **Tall tools on a small screen.** With the panel open what is held
+    at the top can be taller than the view; it now scrolls within itself.
+R39. **A word of a button may break over two lines**; it is one node.
+
+### Not done, or not shown
+
+- No screen reader was run and no real device used. Whether touch
+  exploration lands on what is drawn is built for and not observed.
+- The text inside a node's element is laid out by the engine, in a font
+  the style sheet guesses; only the element's rectangle is exact.
+- The pieces after the first of a node drawn in several have no element
+  over them.
+- `ask` reads only a subject, not the universe the formula is in. `get`
+  of a ref, `propose` with operations written in a handler, and the other
+  operators of 7.3 are not built. F2's bound is not counted, F4 not met.
+- `history` and `leaving` are computed afresh at every composition.
+- The kernel's growth (25 KB optimised) was not looked into.
+- `vectors/STATUS.json` does not list `provisional/leaving.json` or
+  `edit-one-word-published.ufx`: no script of the spike writes it.
