@@ -505,7 +505,10 @@ fn layers(pk: &Pack) -> Option<V> {
 
 pub fn query(pk: &Pack, q: &V) -> Option<V> {
     match q.get("q")?.s()? {
-        "commits" => Some(V::L(chain(pk).iter().map(|(h, n)| map(vec![("commit", t(&hex(h))), ("height", n.get("height").cloned().unwrap_or(V::Null))])).collect())),
+        "commits" => Some(V::L(chain(pk).iter().map(|(h, n)| {
+            let change = n.get("change").and_then(|c| c.hash()).and_then(|c| pk.node(&c)).and_then(|c| c.get("id")?.id());
+            map(vec![("commit", t(&hex(h))), ("height", n.get("height").cloned().unwrap_or(V::Null)), ("change", change.map_or(V::Null, |c| t(&hex(&c))))])
+        }).collect())),
         "timeline" => timeline(pk, q),
         "digest" => digest_q(pk, q),
         "resolve" => resolve_marks(pk, q),

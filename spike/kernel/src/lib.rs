@@ -6,6 +6,8 @@
 extern crate alloc;
 mod bidi;
 mod bidi_data;
+mod diff;
+mod envelope;
 mod layout;
 mod linebreak;
 mod linebreak_data;
@@ -15,6 +17,7 @@ mod project;
 mod query;
 mod small;
 mod spell;
+mod tool;
 mod value;
 mod write;
 use alloc::string::String;
@@ -28,6 +31,16 @@ use value::*;
 extern "C" {
     /// The `text` capability's `measure` (PLAYER 9.3): request and reply are encoded values.
     fn host_measure(req: *const u8, n: usize, out: *mut u8, cap: usize) -> usize;
+    /// The time now, in milliseconds since 1970 (PLAYER 9.3, `time`).
+    fn host_time() -> f64;
+    /// Fills a buffer with random bytes (PLAYER 9.3, `random`).
+    fn host_random(out: *mut u8, n: usize);
+}
+pub fn now() -> u64 {
+    unsafe { host_time() as u64 }
+}
+pub fn random(buf: &mut [u8]) {
+    unsafe { host_random(buf.as_mut_ptr(), buf.len()) }
 }
 #[cfg(not(any(feature = "std", feature = "cut-alloc")))]
 #[global_allocator]
@@ -133,6 +146,7 @@ use query::query as answer;
 static mut PACK: Option<Pack> = None; // the open pack
 static mut SCANNED: Option<Pack> = None; // a pack given to `open`, until `ready`
 static mut TOOLS: Option<Pack> = None; // the tools universe, opened beside the working one
+static mut READER: Option<tool::Reader> = None; // what the reader holds while it presents the tools
 static mut OUT: Vec<u8> = Vec::new();
 
 #[no_mangle]
@@ -193,14 +207,11 @@ pub unsafe extern "C" fn ready() -> i32 {
 pub unsafe extern "C" fn out_len() -> usize {
     OUT.len()
 }
-fn host(req: &V) -> Option<V> {
+pub fn host(req: &V) -> Option<V> {
     let r = encode(req);
     let mut buf = vec![0u8; 64 + 9 * req.get("at").map_or(0, |a| a.l().len())];
     let n = unsafe { host_measure(r.as_ptr(), r.len(), buf.as_mut_ptr(), buf.len()) };
     decode(buf.get(..n)?)
-}
-fn rect(x: f64, y: f64, w: f64, h: f64) -> V {
-    V::L(vec![V::F(x), V::F(y), V::F(w), V::F(h)])
 }
 /// Samples the primary face. Parameters, an encoded map: `as` ("text", "view", "rows", "pages"), `w`,
 /// and `detail` to have the rows of pages too.
@@ -212,9 +223,7 @@ pub unsafe extern "C" fn sample(p: *mut u8, n: usize) -> *const u8 {
 }
 #[cfg(not(feature = "cut-layout"))]
 unsafe fn run(params: &V) -> Option<V> {
-    // `of: "tools"` samples the tools universe; anything else, the working one
-    let tools = params.get("of").and_then(|o| o.s()) == Some("tools");
-    let pk = if tools { TOOLS.as_ref()? } else { PACK.as_ref()? };
+    let pk = PACK.as_ref()?;
     let root = pk.head;
     let u = pk.object(&root, &[0; 16])?;
     let face = |medium: &str| -> Option<Obj> {
@@ -234,29 +243,13 @@ unsafe fn run(params: &V) -> Option<V> {
         plain(pk, &root, &of(&primary)?, &mut s, 0);
         return Some(map(vec![("text", V::T(s))]));
     }
-    let mut cx = Ctx { pk, root, chain: Vec::new(), blocks: 0, measure: &host, tools };
+    let mut cx = Ctx { pk, root, chain: Vec::new(), blocks: 0, measure: &host, env: None };
     let mut list = Vec::new();
     if mode == "pages" {
-        let f = face("pages").unwrap_or(primary);
-        let s = f.p.get("sampling");
-        let dim = |k: &str, i: usize, d: f64| params.get(k).or(s.and_then(|s| s.get(k))).and_then(|v| v.l().get(i)).and_then(|v| v.f()).unwrap_or(d);
-        let (pw, ph) = (dim("page", 0, 595.0), dim("page", 1, 842.0));
-        let (mt, mr, mb, ml) = (dim("margins", 0, 48.0), dim("margins", 1, 48.0), dim("margins", 2, 48.0), dim("margins", 3, 48.0));
-        let rows = compose(&mut cx, &root, &of(&f)?, pw - ml - mr);
-        let pages = paginate(&rows, ph - mt - mb);
-        let gap = 16.0;
-        for (k, (a, b)) in pages.iter().enumerate() {
-            let top = k as f64 * (ph + gap);
-            // a page is a region of fixed size with a background, holding its share of the flow
-            list.push(V::L(vec![t("push"), map(vec![("m", V::L(vec![V::F(1.0), V::F(0.0), V::F(0.0), V::F(1.0), V::F(0.0), V::F(top)])), ("clip", rect(0.0, 0.0, pw, ph))])]));
-            list.push(V::L(vec![t("path"), map(vec![("d", V::L(vec![V::L(vec![t("M"), V::F(0.0), V::F(0.0)]), V::L(vec![t("L"), V::F(pw), V::F(0.0)]), V::L(vec![t("L"), V::F(pw), V::F(ph)]), V::L(vec![t("L"), V::F(0.0), V::F(ph)]), V::L(vec![t("Z")])])), ("fill", V::L(vec![V::F(1.0), V::F(1.0), V::F(1.0), V::F(1.0)]))])]));
-            stack(&rows[*a..*b], ml, mt, &mut list);
-            list.push(V::L(vec![t("pop")]));
-        }
-        let n = pages.len() as f64;
+        let (pw, h, pages, rows) = paged(&mut cx, &root, &face("pages").unwrap_or(primary), params, &mut list)?;
         let breaks = pages.iter().map(|(a, b)| V::L(vec![V::Int(*a as i64), V::Int(*b as i64)])).collect();
         let detail = if params.get("detail").is_some() { rows_value(&rows) } else { V::Null };
-        return Some(map(vec![("list", V::L(list)), ("w", V::F(pw)), ("h", V::F(n * ph + (n - 1.0).max(0.0) * gap)), ("pages", V::Int(pages.len() as i64)), ("rows", V::Int(rows.len() as i64)), ("breaks", V::L(breaks)), ("detail", detail)]));
+        return Some(map(vec![("list", V::L(list)), ("w", V::F(pw)), ("h", V::F(h)), ("pages", V::Int(pages.len() as i64)), ("rows", V::Int(rows.len() as i64)), ("breaks", V::L(breaks)), ("detail", detail)]));
     }
     let w = params.get("w").and_then(|w| w.f()).unwrap_or(600.0);
     if mode == "rows" {
@@ -298,17 +291,44 @@ pub unsafe extern "C" fn open_tools(p: *mut u8, n: usize) -> i32 {
     TOOLS = scan_pack(Vec::from_raw_parts(p, n, n.max(1))).and_then(open_pack);
     TOOLS.is_some() as i32
 }
-/// `{key}`: the handler the span `key` of the tools universe holds for a press, or null. Nothing in
-/// the working universe is looked at: only what the reader presents as tools acts.
+/// The reader's own act (F6): `{parts, name, who}`. `parts` are the parts of the web envelope the host
+/// came in, each the text of an element; of them `pack` (the working universe) and `tools` (the tools
+/// universe) are packs in base64. `name` is the file's name; `who`, if the host knows it already,
+/// the person using the reader. The tools are presented with the working universe as their subject.
+/// Returns as `open` does: if `pending` is not 0 the host inflates and then asks `ready`.
 #[no_mangle]
-pub unsafe extern "C" fn press(p: *mut u8, n: usize) -> *const u8 {
+pub unsafe extern "C" fn start(p: *mut u8, n: usize) -> i32 {
     let q = taken(p, n);
-    let find = || {
-        let pk = TOOLS.as_ref()?;
-        let face = pk.object(&pk.head, &pk.object(&pk.head, &[0; 16])?.p.get("roots")?.get("primary")?.tag(REF)?.id()?)?;
-        layout::handler(pk, &face.p.get("of")?.tag(REF)?.id()?, q.get("key")?.s()?, 0)
-    };
-    given(find())
+    let part = |k: &str| q.get("parts").and_then(|p| p.get(k)).and_then(|p| p.s()).and_then(write::unbase64);
+    PACK = None;
+    TOOLS = part("tools").and_then(scan_pack).and_then(open_pack);
+    SCANNED = part("pack").and_then(scan_pack);
+    READER = Some(tool::Reader::new(q.get("parts").cloned().unwrap_or(V::Null), q.get("name").and_then(|n| n.s()).unwrap_or(""), q.get("who").and_then(|w| w.s())));
+    if TOOLS.is_none() || SCANNED.is_none() {
+        return 0;
+    }
+    match pending() {
+        0 => ready(),
+        _ => 1,
+    }
+}
+/// One input event (tool.rs): the effects the host is to carry out, a list. Null if nothing is open.
+#[no_mangle]
+pub unsafe extern "C" fn input(p: *mut u8, n: usize) -> *const u8 {
+    let ev = taken(p, n);
+    let rd = READER.get_or_insert_with(|| tool::Reader::new(V::Null, "", None));
+    given(match (TOOLS.as_ref(), PACK.as_mut()) {
+        (Some(tools), Some(pk)) => Some(tool::input(rd, tools, pk, &ev)),
+        _ => None,
+    })
+}
+/// The web envelope of its parts (envelope.rs), a map of texts: `{text}`, or `{refused: reason}`.
+#[no_mangle]
+pub unsafe extern "C" fn envelope(p: *mut u8, n: usize) -> *const u8 {
+    given(Some(match envelope::envelope(&taken(p, n)) {
+        Ok(page) => map(vec![("text", V::T(page))]),
+        Err(why) => map(vec![("refused", t(why))]),
+    }))
 }
 /// `{src}`, the `src` of a text item of the working universe: `{o, key, lo, hi, text}`, the block that holds it.
 #[no_mangle]

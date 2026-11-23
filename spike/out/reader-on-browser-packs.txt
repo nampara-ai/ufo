@@ -1,6 +1,0 @@
-browser-edit-1.ufx dc68e451b97938c7 {'records_in_file_hashed': 17, 'record_frames': 17, 'records_reachable_and_verified': 17, 'records_fetched_by_hash_and_verified': 17, 'content': 5, 'attribution': 4, 'working_history': 8} whole
-   universe dc68e451b979 the pack's own universe [(0, 'ok', 5), (1, 'ok', 6)]
-browser-edit-2.ufx fb7b0f9a2839e2a4 {'records_in_file_hashed': 24, 'record_frames': 24, 'records_reachable_and_verified': 24, 'records_fetched_by_hash_and_verified': 24, 'content': 5, 'attribution': 6, 'working_history': 13} whole
-   universe fb7b0f9a2839 the pack's own universe [(0, 'ok', 5), (1, 'ok', 6), (2, 'ok', 7)]
-browser-http-edit-3.ufx 0da675d918ec6a24 {'records_in_file_hashed': 31, 'record_frames': 31, 'records_reachable_and_verified': 31, 'records_fetched_by_hash_and_verified': 31, 'content': 5, 'attribution': 8, 'working_history': 18} whole
-   universe 0da675d918ec the pack's own universe [(0, 'ok', 5), (1, 'ok', 6), (2, 'ok', 7), (3, 'ok', 8)]

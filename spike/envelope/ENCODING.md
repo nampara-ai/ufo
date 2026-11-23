@@ -1,5 +1,12 @@
 # Carrying bytes in a web envelope more densely than base64
 
+*(2026-11-23: the denser form is no longer wired into `make.mjs` or the
+page. The envelope is now a pure function of its parts, defined with
+base64 (`kernel/src/envelope.rs`), and the page's script may not hold an
+encoder of its own. `dense.mjs` and `encoding-measure.mjs` are kept as the
+measurements behind this file; the sizes of the kernel below are those of
+2026-11-22.)*
+
 Question: can the kernel and the pack be carried in less than base64's
 four characters for three bytes, in an HTML page that is valid under the
 HTML Standard with no reliance on error recovery (SPEC-TRAVEL **E3**), and

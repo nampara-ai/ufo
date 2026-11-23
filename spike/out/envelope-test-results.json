@@ -1,67 +1,91 @@
 {
+ "engine": "chromium",
  "results": {
-  "desktop Chromium, file://": {
+  "kernel alone (Node)": {
+   "kernel": "passed"
+  },
+  "host code": {
+   "host": "passed"
+  },
+  "desktop chromium, file://": {
    "opened": "passed",
-   "two faces": "passed",
+   "pure function": "passed",
+   "faces": "passed",
    "edit": "passed",
+   "one word": "passed",
+   "paragraph start": "passed",
    "saved": "passed",
    "reopened": "passed",
    "sent on": "passed"
   },
-  "Chromium, http origin": {
+  "chromium, http origin": {
    "opened": "passed",
-   "two faces": "passed",
+   "pure function": "passed",
+   "faces": "passed",
    "edit": "passed",
+   "one word": "passed",
+   "paragraph start": "passed",
    "saved": "passed",
    "reopened": "passed",
    "sent on": "passed"
+  },
+  "independent reader": {
+   "reader": "passed"
   },
   "scripts off": {
    "static face": "passed"
   },
-  "iPhone 14 emulated in Chromium, file://": {
+  "iPhone 14 emulated in chromium, file://": {
    "opened": "passed",
-   "two faces": "passed",
+   "pure function": "passed",
+   "faces": "passed",
    "edit": "passed",
+   "one word": "passed",
+   "paragraph start": "passed",
    "saved": "passed",
    "reopened": "passed"
   },
-  "Pixel 7 emulated in Chromium, file://": {
+  "Pixel 7 emulated in chromium, file://": {
    "opened": "passed",
-   "two faces": "passed",
+   "pure function": "passed",
+   "faces": "passed",
    "edit": "passed",
+   "one word": "passed",
+   "paragraph start": "passed",
    "saved": "passed",
    "reopened": "passed"
-  },
-  "dense variant, desktop Chromium, file://": {
-   "dense": "passed"
   },
   "validators": {
    "valid": "passed"
   }
  },
- "timing": {
-  "base64": {
-   "kernel": {
-    "bytes": 85624,
-    "ms": 3.6
-   },
-   "pack": {
-    "bytes": 9339,
-    "ms": 0.4
-   }
-  },
-  "dense": {
-   "kernel": {
-    "bytes": 85624,
-    "ms": 2
-   },
-   "pack": {
-    "bytes": 9339,
-    "ms": 0.2
-   },
-   "encodeKernelMs": 5.08
-  }
+ "host": {
+  "lines": 175,
+  "bytes": 9827,
+  "longest": 144,
+  "forbidden": [
+   "face",
+   "editing",
+   "export",
+   "pages",
+   "propose",
+   "splice",
+   "outerHTML",
+   "innerHTML",
+   "envelope",
+   "subject",
+   "tools",
+   "handler",
+   "commit",
+   "paragraph",
+   "anchor",
+   "skeleton",
+   "universe",
+   "pack",
+   "formula",
+   "state"
+  ]
  },
+ "total": 144,
  "failures": 0
 }

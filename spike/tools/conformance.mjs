@@ -7,7 +7,7 @@
 import fs from 'fs';
 const here = new URL('.', import.meta.url);
 const wasm = fs.readFileSync(new URL('target/wasm32-unknown-unknown/release/ufo_spike_kernel.wasm', here));
-const ex = (await WebAssembly.instantiate(wasm, { 'ufo:host/1': { host_measure: () => 0 } })).instance.exports;
+const ex = (await WebAssembly.instantiate(wasm, { 'ufo:host/1': { host_measure: () => 0, host_time: () => 0, host_random() { } } })).instance.exports;
 const mem = () => new Uint8Array(ex.memory.buffer);
 const call = (f, bytes) => { const p = ex.alloc(bytes.length); mem().set(bytes, p); const o = f(p, bytes.length); return mem().slice(o, o + ex.out_len()); };
 {

@@ -1,163 +1,209 @@
 
-== desktop Chromium, file://
+== kernel alone (Node)
+  [passed] kernel: roundtrip.mjs — 66 lines
+  [passed] kernel: more-edits.mjs — 25 lines
+
+== host code (the script as the page carries it)
+  [passed] host: one script, the same as spike/envelope/host.mjs
+  [passed] host: within the budget of a binding, 600 lines and 16 KiB as shipped, no line over 160 characters — 175 lines that are not blank or comment (189 in all), 9827 bytes, longest line 144 characters
+  [passed] host: none of the forbidden knowledge — not found, in code or comment, in any letter case, as a word or inside one: face, editing, export, pages, propose, splice, outerHTML, innerHTML, envelope, subject, tools, handler, commit, paragraph, anchor, skeleton, universe, pack, formula, state, document (but as the DOM global `document.`; and `export` but as the WebAssembly member `.instance.exports`)
+
+== desktop chromium, file://
   [passed] opened: the file runs its own kernel under its policy — state 092acf577819a704
   [passed] opened: no console errors or warnings
   [passed] opened: no request but for the file itself — 1 request
-  [passed] opened: the page gives itself back byte for byte as its own template — 155979 characters
-  [passed] two faces: document face drawn
-  [passed] two faces: pages face drawn
-  [passed] two faces: text face shown
-  [passed] edit: nothing in the working universe acts
-  [passed] edit: a paragraph changed through the tools, as Ada Tester
-  [passed] edit: the new text shows in the document and text faces
-  [passed] edit: why names the new change, by=person, and the name — run chars=[423,497] change=o:8daa3572 basis=witnessed by=person who="Ada Tester" sealed=false
-  [passed] saved: a new .ufx.html comes down — compose-edited.ufx.html, 163234 bytes
+  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 168798 characters, exported 2026-01-02
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 4 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: one word changed through the tools, as Ada Tester — asked "Your name, to record with the changes you make"
+      run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      run chars=[471,476] change=o:6c900fc9 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      work: [{"op":"splice","old":"ledger","ins":"books","del":[[471,6]]}]
+  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:6c900fc9 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] paragraph start: a word typed at the very start of a paragraph stays in it; the one before is as it was — b12 = [661,769], b11 = [537,661]; 3 operations
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] saved: a new .ufx.html comes down — compose-edited.ufx.html, 183130 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 183124 characters, exported 2026-11-23
   [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state f721a76084301eed
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 4bd9636f31c31650
   -- the saved file, edited and saved again
-  [passed] opened: the saved file runs its own kernel under its policy — state f721a76084301eed
+  [passed] opened: the saved file runs its own kernel under its policy — state 4bd9636f31c31650
   [passed] opened: no console errors or warnings
   [passed] opened: no request but for the file itself — 1 request
-  [passed] opened: the page gives itself back byte for byte as its own template — 163234 characters
-  [passed] two faces: document face drawn
-  [passed] two faces: pages face drawn
-  [passed] two faces: text face shown
-  [passed] edit: nothing in the working universe acts
-  [passed] edit: a paragraph changed through the tools, as Ben Second
-  [passed] edit: the new text shows in the document and text faces
-  [passed] edit: why names the new change, by=person, and the name — run chars=[621,682] change=o:5d82aa74 basis=witnessed by=person who="Ben Second" sealed=false
-  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 170030 bytes
+  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 183124 characters, exported 2026-11-23
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 4 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[545,550] and chars=[655,660] by Ben Second
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 191506 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 191500 characters, exported 2026-11-23
   [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 3ba0eed9ca448df1
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state f4444ecd5c0c802a
+  [passed] edit: F6, a file whose own content carries handlers and asks for a subject: nothing in it acts — pressed SAVE-ME and SWITCH-ME: no file, no change of face, no change; the Portal shows its label
 
-== Chromium, http origin
-  [passed] opened: the file runs its own kernel under its policy — state f721a76084301eed
+== chromium, http origin
+  [passed] opened: the file runs its own kernel under its policy — state 4bd9636f31c31650
   [passed] opened: no console errors or warnings
   [passed] opened: no request but for the file itself — 1 request
-  [passed] opened: the page gives itself back byte for byte as its own template — 163234 characters
-  [passed] two faces: document face drawn
-  [passed] two faces: pages face drawn
-  [passed] two faces: text face shown
-  [passed] edit: nothing in the working universe acts
-  [passed] edit: a paragraph changed through the tools, as Ada Tester
-  [passed] edit: the new text shows in the document and text faces
-  [passed] edit: why names the new change, by=person, and the name — run chars=[423,485] change=o:a1c37862 basis=witnessed by=person who="Ada Tester" sealed=false
-  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 169990 bytes
+  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 183124 characters, exported 2026-11-23
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 4 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: one word changed through the tools, as Ada Tester — asked "Your name, to record with the changes you make"
+      run chars=[769,790] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      run chars=[790,794] change=o:f2647c41 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[794,876] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      work: [{"op":"splice","old":"detail","ins":"sums","del":[[784,6]]}]
+  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[790,794] change=o:f2647c41 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] paragraph start: a word typed at the very start of a paragraph stays in it; the one before is as it was — b14 = [876,991], b13 = [769,876]; 3 operations
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 198766 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 198760 characters, exported 2026-11-23
   [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state ba2e0a6d5eace021
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 6993006dadb80989
   -- the saved file, edited and saved again
-  [passed] opened: the saved file runs its own kernel under its policy — state ba2e0a6d5eace021
+  [passed] opened: the saved file runs its own kernel under its policy — state 6993006dadb80989
   [passed] opened: no console errors or warnings
   [passed] opened: no request but for the file itself — 1 request
-  [passed] opened: the page gives itself back byte for byte as its own template — 169990 characters
-  [passed] two faces: document face drawn
-  [passed] two faces: pages face drawn
-  [passed] two faces: text face shown
-  [passed] edit: nothing in the working universe acts
-  [passed] edit: a paragraph changed through the tools, as Ben Second
-  [passed] edit: the new text shows in the document and text faces
-  [passed] edit: why names the new change, by=person, and the name — run chars=[609,670] change=o:a08088b7 basis=witnessed by=person who="Ben Second" sealed=false
-  [passed] saved: a new .ufx.html comes down — compose-edited-3.ufx.html, 178146 bytes
+  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 198760 characters, exported 2026-11-23
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 4 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[1007,1011] and chars=[1086,1090] by Ben Second
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] saved: a new .ufx.html comes down — compose-edited-3.ufx.html, 206511 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 206505 characters, exported 2026-11-23
   [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state f7890663c115d13b
-  [passed] sent on: the saved file opens, is edited, saved and reopened from http://127.0.0.1:42377
-      browser-edit-1.ufx f721a76084301eed {'records_in_file_hashed': 17, 'record_frames': 17, 'records_reachable_and_verified': 17, 'records_fetched_by_hash_and_verified': 17, 'content': 5, 'attribution': 4, 'working_history': 8} whole
-         universe f721a7608430 the pack's own universe [(0, 'ok', 5), (1, 'ok', 6)]
-      browser-edit-2.ufx 3ba0eed9ca448df1 {'records_in_file_hashed': 24, 'record_frames': 24, 'records_reachable_and_verified': 24, 'records_fetched_by_hash_and_verified': 24, 'content': 5, 'attribution': 6, 'working_history': 13} whole
-         universe 3ba0eed9ca44 the pack's own universe [(0, 'ok', 5), (1, 'ok', 6), (2, 'ok', 7)]
-      browser-http-edit-3.ufx f7890663c115d13b {'records_in_file_hashed': 31, 'record_frames': 31, 'records_reachable_and_verified': 31, 'records_fetched_by_hash_and_verified': 31, 'content': 5, 'attribution': 8, 'working_history': 18} whole
-         universe f7890663c115 the pack's own universe [(0, 'ok', 5), (1, 'ok', 6), (2, 'ok', 7), (3, 'ok', 8)]
-  [passed] sent on: the independent reader accepts the pack made in the browser — browser-edit-1.ufx: 2 commits, conservation ok ok; browser-edit-2.ufx: 3 commits, conservation ok ok ok; browser-http-edit-3.ufx: 4 commits, conservation ok ok ok ok
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 848ffe8b303196cf
+  [passed] sent on: the saved file opens, is edited, saved and reopened from http://127.0.0.1:39569
 
-== scripts off (Chromium, javaScriptEnabled: false)
+== the independent reader (readertest2, copied, not modified)
+      browser-edit-1.ufx: state 4bd9636f31c31650 by the final head; 3 commits, conservation ok ok ok; whole true; missing 0; index problems 0; reported {}
+      browser-edit-2.ufx: state f4444ecd5c0c802a by the final head; 4 commits, conservation ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+      browser-http-edit-3.ufx: state 848ffe8b303196cf by the final head; 6 commits, conservation ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+      node-all-edits.ufx: state 15c33299360801b9 by the final head; 7 commits, conservation ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+      node-many-edits.ufx: state 337aca21478f5b3d by the final head; 12 commits, conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+      node-one-word.ufx: state 07964126cb8f3b69 by the final head; 2 commits, conservation ok ok; whole true; missing 0; index problems 0; reported {}
+      node-paragraph-start.ufx: state 78e414e3082fbcc2 by the final head; 5 commits, conservation ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+      node-two-words.ufx: state ff848e120ea7c93b by the final head; 6 commits, conservation ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+      tools.ufx: state 3919ad3f0460da5f by the final head; 1 commits, conservation ok; whole true; missing 0; index problems 0; reported {}
+  [passed] reader: accepts the tools universe, the packs the kernel wrote in Node, and the packs taken out of files saved by the browser — 9 packs, every conservation check ok
+
+== scripts off (chromium, javaScriptEnabled: false)
   [passed] static face: the original shows the title, the text and what to do
   [passed] static face: the saved file shows the title, the text and what to do
 
-== iPhone 14 emulated in Chromium, file://
+== iPhone 14 emulated in chromium, file://
   [passed] opened: the file runs its own kernel under its policy — state 092acf577819a704
   [passed] opened: no console errors or warnings
   [passed] opened: no request but for the file itself — 1 request
-  [passed] opened: the page gives itself back byte for byte as its own template — 155979 characters
-  [passed] two faces: document face drawn
-  [passed] two faces: pages face drawn
-  [passed] two faces: text face shown
-  [passed] edit: nothing in the working universe acts
-  [passed] edit: a paragraph changed through the tools, as Ada Tester
-  [passed] edit: the new text shows in the document and text faces
-  [passed] edit: why names the new change, by=person, and the name — run chars=[423,497] change=o:dd11770b basis=witnessed by=person who="Ada Tester" sealed=false
-  [passed] saved: a new .ufx.html comes down — compose-edited.ufx.html, 163234 bytes
+  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 168798 characters, exported 2026-01-02
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 4 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: one word changed through the tools, as Ada Tester — asked "Your name, to record with the changes you make"
+      run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      run chars=[471,476] change=o:ae322f1e basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      work: [{"op":"splice","old":"ledger","ins":"books","del":[[471,6]]}]
+  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:ae322f1e basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] paragraph start: a word typed at the very start of a paragraph stays in it; the one before is as it was — b12 = [661,769], b11 = [537,661]; 3 operations
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] saved: a new .ufx.html comes down — compose-edited.ufx.html, 183130 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 183124 characters, exported 2026-11-23
   [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state cb37e6e3e8b09513
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state de6508cffb9f36e5
   -- the saved file, edited and saved again
-  [passed] opened: the saved file runs its own kernel under its policy — state cb37e6e3e8b09513
+  [passed] opened: the saved file runs its own kernel under its policy — state de6508cffb9f36e5
   [passed] opened: no console errors or warnings
   [passed] opened: no request but for the file itself — 1 request
-  [passed] opened: the page gives itself back byte for byte as its own template — 163234 characters
-  [passed] two faces: document face drawn
-  [passed] two faces: pages face drawn
-  [passed] two faces: text face shown
-  [passed] edit: nothing in the working universe acts
-  [passed] edit: a paragraph changed through the tools, as Ben Second
-  [passed] edit: the new text shows in the document and text faces
-  [passed] edit: why names the new change, by=person, and the name — run chars=[621,682] change=o:96266eb4 basis=witnessed by=person who="Ben Second" sealed=false
-  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 170030 bytes
+  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 183124 characters, exported 2026-11-23
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 4 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[545,550] and chars=[655,660] by Ben Second
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 191506 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 191500 characters, exported 2026-11-23
   [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 05a97f3f42111d4c
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 1a16393ca3915e40
 
-== Pixel 7 emulated in Chromium, file://
+== Pixel 7 emulated in chromium, file://
   [passed] opened: the file runs its own kernel under its policy — state 092acf577819a704
   [passed] opened: no console errors or warnings
   [passed] opened: no request but for the file itself — 1 request
-  [passed] opened: the page gives itself back byte for byte as its own template — 155979 characters
-  [passed] two faces: document face drawn
-  [passed] two faces: pages face drawn
-  [passed] two faces: text face shown
-  [passed] edit: nothing in the working universe acts
-  [passed] edit: a paragraph changed through the tools, as Ada Tester
-  [passed] edit: the new text shows in the document and text faces
-  [passed] edit: why names the new change, by=person, and the name — run chars=[423,497] change=o:dd4ef1ce basis=witnessed by=person who="Ada Tester" sealed=false
-  [passed] saved: a new .ufx.html comes down — compose-edited.ufx.html, 163234 bytes
+  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 168798 characters, exported 2026-01-02
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 4 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: one word changed through the tools, as Ada Tester — asked "Your name, to record with the changes you make"
+      run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      run chars=[471,476] change=o:36cddbbf basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      work: [{"op":"splice","old":"ledger","ins":"books","del":[[471,6]]}]
+  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:36cddbbf basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] paragraph start: a word typed at the very start of a paragraph stays in it; the one before is as it was — b12 = [661,769], b11 = [537,661]; 3 operations
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] saved: a new .ufx.html comes down — compose-edited.ufx.html, 183130 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 183124 characters, exported 2026-11-23
   [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 863c29f3fef8c096
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state c084829c92bbdb8a
   -- the saved file, edited and saved again
-  [passed] opened: the saved file runs its own kernel under its policy — state 863c29f3fef8c096
+  [passed] opened: the saved file runs its own kernel under its policy — state c084829c92bbdb8a
   [passed] opened: no console errors or warnings
   [passed] opened: no request but for the file itself — 1 request
-  [passed] opened: the page gives itself back byte for byte as its own template — 163234 characters
-  [passed] two faces: document face drawn
-  [passed] two faces: pages face drawn
-  [passed] two faces: text face shown
-  [passed] edit: nothing in the working universe acts
-  [passed] edit: a paragraph changed through the tools, as Ben Second
-  [passed] edit: the new text shows in the document and text faces
-  [passed] edit: why names the new change, by=person, and the name — run chars=[621,682] change=o:ee98ea7f basis=witnessed by=person who="Ben Second" sealed=false
-  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 170030 bytes
+  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 183124 characters, exported 2026-11-23
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 4 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[545,550] and chars=[655,660] by Ben Second
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] saved: a new .ufx.html comes down — compose-edited-2.ufx.html, 191506 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 191500 characters, exported 2026-11-23
   [passed] opened: the policy is enforced (an inline script put into the page does not run; a fetch is refused)
-  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 48df9a5ae5da31f0
-
-== dense variant, desktop Chromium, file://
-  [passed] dense: opened, edited, saved, reopened with the same state — state 45a1273891304025, saved 149175 bytes
-  decode time in the page, median of 30 (Chromium, this machine): {"base64":{"kernel":{"bytes":85624,"ms":3.6},"pack":{"bytes":9339,"ms":0.4}},"dense":{"kernel":{"bytes":85624,"ms":2},"pack":{"bytes":9339,"ms":0.2},"encodeKernelMs":5.03}}
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces — state 42270d9f32951f8d
 
 == validators
-  [passed] valid: Nu HTML Checker, as made — 0 errors; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
+  [passed] valid: Nu HTML Checker, as made — 0 errors; 4 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
   [passed] valid: html-validate, as made — no messages
-  [passed] valid: Nu HTML Checker, saved by the page — 0 errors; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
+  [passed] valid: Nu HTML Checker, saved by the page — 0 errors; 4 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
   [passed] valid: html-validate, saved by the page — no messages
-  [passed] valid: Nu HTML Checker, saved twice — 0 errors; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
+  [passed] valid: Nu HTML Checker, saved twice — 0 errors; 4 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
   [passed] valid: html-validate, saved twice — no messages
-  [passed] valid: Nu HTML Checker, dense — 0 errors; 3 × warning: Text run is not in Unicode Normalization Form C. ; 3 × warning: Inline script violates Content Security Policy (meta tag): blocked by “script-src” directive (missing “‘unsafe
-  [passed] valid: html-validate, dense — no messages
 
-step | desktop Chromium, file:// | Chromium, http origin | scripts off | iPhone 14 emulated in Chromium, file:// | Pixel 7 emulated in Chromium, file:// | dense variant, desktop Chromium, file:// | validators
-opened | passed | passed | not attempted | passed | passed | not attempted | not attempted
-two faces | passed | passed | not attempted | passed | passed | not attempted | not attempted
-edit | passed | passed | not attempted | passed | passed | not attempted | not attempted
-saved | passed | passed | not attempted | passed | passed | not attempted | not attempted
-reopened | passed | passed | not attempted | passed | passed | not attempted | not attempted
-sent on | passed | passed | not attempted | not attempted | not attempted | not attempted | not attempted
-static face | not attempted | not attempted | passed | not attempted | not attempted | not attempted | not attempted
-dense | not attempted | not attempted | not attempted | not attempted | not attempted | passed | not attempted
-valid | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | passed
+step | kernel alone (Node) | host code | desktop chromium, file:// | chromium, http origin | independent reader | scripts off | iPhone 14 emulated in chromium, file:// | Pixel 7 emulated in chromium, file:// | validators
+kernel | passed | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted
+host | not attempted | passed | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted
+opened | not attempted | not attempted | passed | passed | not attempted | not attempted | passed | passed | not attempted
+pure function | not attempted | not attempted | passed | passed | not attempted | not attempted | passed | passed | not attempted
+faces | not attempted | not attempted | passed | passed | not attempted | not attempted | passed | passed | not attempted
+edit | not attempted | not attempted | passed | passed | not attempted | not attempted | passed | passed | not attempted
+one word | not attempted | not attempted | passed | passed | not attempted | not attempted | passed | passed | not attempted
+paragraph start | not attempted | not attempted | passed | passed | not attempted | not attempted | passed | passed | not attempted
+saved | not attempted | not attempted | passed | passed | not attempted | not attempted | passed | passed | not attempted
+reopened | not attempted | not attempted | passed | passed | not attempted | not attempted | passed | passed | not attempted
+sent on | not attempted | not attempted | passed | passed | not attempted | not attempted | not attempted | not attempted | not attempted
+static face | not attempted | not attempted | not attempted | not attempted | not attempted | passed | not attempted | not attempted | not attempted
+reader | not attempted | not attempted | not attempted | not attempted | passed | not attempted | not attempted | not attempted | not attempted
+valid | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | not attempted | passed
 
-all passed
+all 144 passed

@@ -1,0 +1,9 @@
+browser-edit-1.ufx: state 8f3c5de2f51ab9b6 by the final head; 3 commits, conservation ok ok ok; whole true; missing 0; index problems 0; reported {}
+browser-edit-2.ufx: state 88cd6e4e1d472396 by the final head; 4 commits, conservation ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+browser-http-edit-3.ufx: state d7ba56acdb254b2e by the final head; 6 commits, conservation ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-all-edits.ufx: state 15c33299360801b9 by the final head; 7 commits, conservation ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-many-edits.ufx: state 337aca21478f5b3d by the final head; 12 commits, conservation ok ok ok ok ok ok ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-one-word.ufx: state 07964126cb8f3b69 by the final head; 2 commits, conservation ok ok; whole true; missing 0; index problems 0; reported {}
+node-paragraph-start.ufx: state 78e414e3082fbcc2 by the final head; 5 commits, conservation ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+node-two-words.ufx: state ff848e120ea7c93b by the final head; 6 commits, conservation ok ok ok ok ok ok; whole true; missing 0; index problems 0; reported {}
+tools.ufx: state 3919ad3f0460da5f by the final head; 1 commits, conservation ok; whole true; missing 0; index problems 0; reported {}

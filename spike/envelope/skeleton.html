@@ -1,3 +1,13 @@
+<!DOCTYPE html>
+{{<}}!--
+UFO file (Universal File Object). Exported {{date}}. Open it in a web browser.
+-->
+<html lang="en"><head><meta charset="utf-8">
+<title>{{title}}</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src '{{csp:script}}' 'wasm-unsafe-eval'; style-src '{{csp:style}}'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>{{style}}</style>
+</head><body>
 <div id="ufo-static">
 <div class="ufo-box">
 <p><strong>This is a UFO file: a document that carries its own reader.</strong> You are seeing its text only, because whatever is showing you this page is not running the reader inside the file. Nothing is wrong with the file, and the whole text of the document is below.</p>
@@ -8,25 +18,17 @@
 <li>If you are already in a web browser and still see this, scripts may be switched off, or the browser may be too old to run the reader.</li>
 </ul>
 <p>The file needs no network, no account and nothing installed.</p>
-<p id="ufo-fail" hidden=""></p>
+<p id="ufo-fail" hidden="">This browser could not run the reader this file carries. The text below is the whole document.</p>
 </div>
 <h1>{{title}}</h1>
-<pre id="ufo-text">{{text}}</pre>
+<pre id="ufo-text">{{static}}</pre>
 </div>
 <div id="ufo-player" hidden="">
-<canvas id="ufo-tools"></canvas>
-<p id="ufo-hint" hidden=""></p>
-<p id="ufo-note" hidden=""></p>
-<p id="ufo-saved" hidden=""><a id="ufo-link"></a> <button id="ufo-share" type="button" hidden="">Share…</button></p>
-<div id="ufo-stage">
-<canvas id="ufo-face"></canvas>
-<pre id="ufo-plain" hidden=""></pre>
-<div id="ufo-edit" hidden="">
-<label id="ufo-who-row">Your name, to record with the change: <input id="ufo-who" type="text" value="Anonymous" autocomplete="off"></label>
-<textarea id="ufo-ins" rows="6" aria-label="The paragraph"></textarea>
-<p id="ufo-refused" hidden=""></p>
-<button id="ufo-done" type="button">Done</button><button id="ufo-cancel" type="button">Cancel</button>
+<canvas></canvas>
+<div id="ufo-entry" hidden=""><textarea aria-label="The text being changed"></textarea><button type="button">Done</button><button type="button">Cancel</button></div>
 </div>
-</div>
-<p id="ufo-status"></p>
-</div>
+<script type="application/x-ufo-pack">{{pack}}{{<}}/script>
+<script type="application/x-ufo-tools">{{tools}}{{<}}/script>
+<script type="application/x-ufo-kernel" data-hash="{{kernel-hash}}">{{kernel}}{{<}}/script>
+<script type="application/x-ufo-skeleton">{{skeleton}}{{<}}/script>
+<script type="module">{{script}}{{<}}/script></body></html>

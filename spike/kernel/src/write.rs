@@ -2,6 +2,7 @@
 // positions, replayed on the parent state by the generic rule, compared, and only then written:
 // the revision, the change and its veiled work (1.4), the object map (1.6), the commit.
 // Also the text of a web envelope's pack element read back (SPEC-TRAVEL 13.2).
+use crate::diff::diff;
 use crate::pack::*;
 use crate::query::{hex, objects, runs, Run};
 use crate::value::*;
@@ -216,14 +217,20 @@ fn held(recs: &mut Recs, was: Option<&V>, kind: &str, data: &[u8], inline: V) ->
     }
 }
 
-/// `{o, lo, hi, ins, who, time, random}`: positions lo..hi of the text `o` are replaced with `ins`.
-/// Gives `{commit, change, root}`, or the reason it is refused; then nothing has been written.
+/// `{o, lo, hi, ins, who, time, random}`: positions lo..hi of the text `o` now read `ins`.
+/// Gives `{commit, change, root, ops}`, or the reason it is refused; then nothing has been written.
 pub fn propose(pk: &mut Pack, q: &V) -> Result<V, &'static str> {
     let int = |k: &str| q.get(k).and_then(|x| x.i()).filter(|i| *i >= 0).map(|i| i as u64);
     let (Some(id), Some(lo), Some(hi), Some(ins), Some(who), Some(time), Some(random)) = (q.get("o").and_then(|x| x.id()), int("lo"), int("hi"), q.get("ins").and_then(|x| x.s()),
         q.get("who").and_then(|x| x.s()), int("time"), q.get("random").and_then(|x| x.b()).filter(|b| b.len() == 64)) else {
         return Err("arguments: o (16 bytes), lo, hi, ins (text), who (text), time, random (64 bytes)");
     };
+    edit(pk, id, lo as usize, hi as usize, ins, who, time, random)
+}
+/// The same, by arguments. The stretch is compared with what it is to read and only the difference
+/// is written (L1): one `splice` for each run of scalar values removed or inserted (diff.rs), all in
+/// one change. `random` is 64 bytes: the change's identity, then three salts.
+pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
     if pk.unread_tail != 0 {
         return Err("the pack was recovered after an interrupted write (2.3): this spike does not truncate it and append (P7)");
     }
@@ -245,78 +252,118 @@ pub fn propose(pk: &mut Pack, q: &V) -> Result<V, &'static str> {
     let chars: Vec<char> = text.chars().collect();
     let seq0 = seqs.get("chars").ok_or("`chars` is not a sequence property")?;
     let (old_runs, els0) = (runs(seq0), elements(seq0).ok_or("inconsistent `seq` (X1)")?);
-    if old_runs.len() != seq0.l().len() || els0.iter().filter(|e| e.live).count() != chars.len() {
+    let live: Vec<usize> = (0..els0.len()).filter(|&i| els0[i].live).collect(); // where each position is in the sequence
+    if old_runs.len() != seq0.l().len() || live.len() != chars.len() {
         return Err("`seq` does not account for the characters: the text is inconsistent and is not edited (X1)");
     }
-    if lo > hi || hi > chars.len() as u64 {
+    if lo > hi || hi > chars.len() {
         return Err("positions out of range");
     }
-    let count = ins.chars().count() as u64;
-    if lo == hi && count == 0 {
+    let wanted: Vec<char> = ins.chars().collect();
+    let mut edits = diff(&chars[lo..hi], &wanted);
+    if edits.is_empty() {
         return Err("nothing to change");
     }
-    let change: Id = random[..16].try_into().map_err(|_| "random")?;
+    let change: Id = random.get(..16).and_then(|r| r.try_into().ok()).filter(|_| random.len() == 64).ok_or("random: 64 bytes")?;
     let mut ents = objects(pk, &parent);
     if ents.iter().any(|e| e.0 == change) || old_runs.iter().any(|r| r.c == change) {
         return Err("the identity drawn for the change is already in use");
     }
-    // The operation, by element identity, and the new `seq`, by cutting the runs at the two positions.
-    // New items go after the last element removed, so that a boundary fixed to a removed element (the
-    // start of a block whose first characters are replaced) still lies before them (4.3); with
-    // nothing removed, after the element before `lo`, or at the start.
-    let (mut new_runs, mut del, mut after, mut p) = (Vec::new(), Vec::new(), V::Null, 0u64);
-    if hi == 0 {
-        push_run(&mut new_runs, change, 0, count, true);
+    // The operations, by element identity. New items go after the last element an edit removes, so
+    // that a boundary fixed to a removed element (the start of a block whose first characters are
+    // replaced) still lies before them (4.3); with nothing removed, after the element before the
+    // place, or at the start. Elements are numbered across the operations in their order (1.7).
+    let (mut ops, mut gone, mut put, mut number) = (Vec::new(), vec![false; els0.len()], Vec::new(), 0u64);
+    for e in edits.iter_mut() {
+        (e.lo, e.hi) = (e.lo + lo, e.hi + lo);
     }
-    for r in &old_runs {
-        if !r.live {
-            push_run(&mut new_runs, r.c, r.first, r.count, false);
-            continue;
+    for e in &edits {
+        let after = if e.hi > e.lo { Some(live[e.hi - 1]) } else if e.lo > 0 { Some(live[e.lo - 1]) } else { None };
+        let mut op = vec![("op", t("splice")), ("obj", bytes(&id)), ("key", t("chars"))];
+        if !e.ins.is_empty() {
+            op.push(("after", after.map_or(V::Null, |i| V::L(vec![bytes(&els0[i].c), V::Int(els0[i].n as i64)]))));
+            op.push(("ins", V::T(e.ins.iter().collect())));
+            put.push((after, number, &e.ins));
+            number += e.ins.len() as u64;
         }
-        let q = p + r.count;
-        let (a, b) = (lo.clamp(p, q), hi.clamp(p, q));
-        let last = if hi > lo { hi } else { lo }; // one past the element the new items follow
-        push_run(&mut new_runs, r.c, r.first, a - p, true);
-        push_run(&mut new_runs, r.c, r.first + (a - p), b - a, false);
-        push_run(&mut del, r.c, r.first + (a - p), b - a, true);
-        if p < last && last <= q {
-            after = V::L(vec![bytes(&r.c), V::Int((r.first + (last - 1 - p)) as i64)]);
-            push_run(&mut new_runs, change, 0, count, true);
+        if e.hi > e.lo {
+            let mut del = Vec::new();
+            for &i in &live[e.lo..e.hi] {
+                gone[i] = true;
+                push_run(&mut del, els0[i].c, els0[i].n, 1, true);
+            }
+            op.push(("del", runs_value(&del)));
+            op.push(("old", V::T(chars[e.lo..e.hi].iter().collect())));
         }
-        push_run(&mut new_runs, r.c, r.first + (b - p), q - b, true);
-        p = q;
+        ops.push(map(op));
     }
-    let (lo, hi) = (lo as usize, hi as usize);
-    let mut op = vec![("op", t("splice")), ("obj", bytes(&id)), ("key", t("chars"))];
-    if count > 0 {
-        op.push(("after", after));
-        op.push(("ins", t(ins)));
+    // the new state of the text: every element where it was, the removed ones as tombstones, the new ones in
+    let (mut new_runs, mut new_chars, mut pos) = (Vec::new(), String::new(), 0);
+    for i in 0..=els0.len() {
+        let at = i.checked_sub(1);
+        if let Some(e) = at.map(|i| &els0[i]) {
+            push_run(&mut new_runs, e.c, e.n, 1, e.live && !gone[i - 1]);
+            if e.live {
+                if !gone[i - 1] {
+                    new_chars.push(chars[pos]);
+                }
+                pos += 1;
+            }
+        }
+        for (_, first, ins) in put.iter().filter(|p| p.0 == at) {
+            push_run(&mut new_runs, change, *first, ins.len() as u64, true);
+            new_chars.extend(ins.iter());
+        }
     }
-    if hi > lo {
-        op.push(("del", runs_value(&del)));
-        op.push(("old", V::T(chars[lo..hi].iter().collect())));
-    }
-    let mut ops = vec![map(op)];
-    // the new state of the text
-    let new_chars: String = chars[..lo].iter().cloned().chain(ins.chars()).chain(chars[hi..].iter().cloned()).collect();
     let new_seq = runs_value(&new_runs);
     let (mut p1, mut seq1, mut raw_p) = (o.p.clone(), seqs.clone(), raw.get("p").cloned().ok_or("the revision has no properties")?);
     set_in(&mut p1, &["chars"], Some(V::T(new_chars.clone())));
     set_in(&mut seq1, &["chars"], Some(new_seq.clone()));
-    // 5.1: an inline span left with no extent is removed in the same change, with a `set`
+    // 5.1, both in the same change, each with a `set`. An inline span left with no extent is
+    // removed. And where the stretch gained text at its very start with nothing removed there, the
+    // text is meant to lie in the stretch: a block span that began at that place, or ended there,
+    // would by its own boundary begin or end after the new text, so its boundary is moved to just
+    // before the first new element.
+    let at_start = hi > lo && edits[0].lo == lo && edits[0].hi == lo;
     let els1 = elements(&new_seq).ok_or("seq")?;
     if let Some(V::M(spans)) = o.p.get("spans") {
         for (key, s) in spans {
-            let Some(r) = s.get("at").and_then(|a| a.tag(ANCHOR)).filter(|a| a.get("o").and_then(|o| o.id()) == Some(id)).and_then(|a| a.get("a")).and_then(|a| a.get("chars")).map(|r| r.l()) else { continue };
-            let extent = |els: &[El]| r.len() == 3 && matches!((boundary(els, &r[1]), boundary(els, &r[2])), (Some(a), Some(b)) if a < b);
-            if s.get("kind").and_then(|k| k.s()) == Some("inline") && extent(&els0) && !extent(&els1) {
-                if raw_p.get("spans").and_then(|m| m.get(key)).is_none() {
-                    return Err("a span left with no extent is kept outside the node: not rewritten by this spike");
-                }
-                ops.push(map(vec![("op", t("set")), ("obj", bytes(&id)), ("key", V::L(vec![t("spans"), t(key)])), ("old", s.clone())]));
-                set_in(&mut p1, &["spans", key], None);
-                set_in(&mut raw_p, &["spans", key], None);
+            let Some(r) = s.get("at").and_then(|a| a.tag(ANCHOR)).filter(|a| a.get("o").and_then(|o| o.id()) == Some(id)).and_then(|a| a.get("a")).and_then(|a| a.get("chars")).map(|r| r.l()).filter(|r| r.len() == 3) else { continue };
+            let at = |els: &[El]| (boundary(els, &r[1]), boundary(els, &r[2]));
+            let ((a0, b0), (a1, b1)) = (at(&els0), at(&els1));
+            let (mut r2, first) = (r.to_vec(), V::L(vec![bytes(&change), V::Int(0), V::Int(0)]));
+            let inline = s.get("kind").and_then(|k| k.s()) == Some("inline");
+            let lost = inline && a0 < b0 && a0.is_some() && !(a1 < b1 && a1.is_some());
+            if !inline && at_start && a0 == Some(lo) && b0 > a0 && a1 != a0 {
+                r2[1] = first.clone();
             }
+            if !inline && at_start && b0 == Some(lo) && a0 < b0 && a0.is_some() && b1 != b0 {
+                r2[2] = first;
+            }
+            if !lost && r2 == r {
+                continue;
+            }
+            if raw_p.get("spans").and_then(|m| m.get(key)).and_then(|s| s.get("at")).is_none() {
+                return Err("a span to be rewritten is kept outside the node: not rewritten by this spike");
+            }
+            let (mut path, mut op) = (vec!["spans", key.as_str()], vec![("op", t("set")), ("obj", bytes(&id))]);
+            let mut val = None;
+            if lost {
+                op.push(("old", s.clone()));
+            } else {
+                let mut moved = s.get("at").cloned().ok_or("at")?;
+                if let V::Tag(_, inner) = &mut moved {
+                    set_in(inner, &["a", "chars"], Some(V::L(r2)));
+                }
+                path.push("at");
+                op.push(("old", s.get("at").cloned().ok_or("at")?));
+                op.push(("val", moved.clone()));
+                val = Some(moved);
+            }
+            op.push(("key", V::L(path.iter().map(|k| t(k)).collect())));
+            ops.push(map(op));
+            set_in(&mut p1, &path, val.clone());
+            set_in(&mut raw_p, &path, val);
         }
     }
     // L3, L4, before anything is written: the operations, read back from the bytes that will be the
@@ -345,11 +392,10 @@ pub fn propose(pk: &mut Pack, q: &V) -> Result<V, &'static str> {
     let veiled = V::Tag(INDIRECT, Box::new(V::L(vec![t("v"), bytes(&sha256(&[&[1], &opening])), V::Bool(true)])));
     recs.push((1, opening));
     let whom = map(vec![("name", t(who))]);
-    let mut cp = vec![("work", veiled), ("actor", map(vec![("who", whom.clone()), ("with", map(vec![("name", t("ufo-spike-kernel")), ("version", t("0.0.0"))]))])), ("time", V::Int(time as i64))];
-    if count > 0 {
-        // 1.7: `origin` says where content this change introduces came from, and is absent if it introduces none
-        cp.push(("origin", map(vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom)])));
-    }
+    // The origin is written whatever the change does. 1.7 has it "absent if the change introduces
+    // none", and a removal introduces nothing; but then nothing would say a person made it.
+    let cp = vec![("work", veiled), ("actor", map(vec![("who", whom.clone()), ("with", map(vec![("name", t("ufo-spike-kernel")), ("version", t("0.0.0"))]))])), ("time", V::Int(time as i64)),
+        ("origin", map(vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom)]))];
     let change_rev = node(&mut recs, &map(vec![("k", t("obj")), ("id", bytes(&change)), ("type", t("ufo.change")), ("rev", V::Int(1)), ("by", bytes(&change)), ("salt", bytes(&random[32..48])), ("p", map(cp))]));
     // every other object keeps the revision it had; the change object is added (L3)
     for e in ents.iter_mut().filter(|e| e.0 == id) {
@@ -367,9 +413,21 @@ pub fn propose(pk: &mut Pack, q: &V) -> Result<V, &'static str> {
         pk.cut(was);
         return Err("what was written does not read back as the new state: taken off again");
     }
-    Ok(map(vec![("commit", bytes(&commit)), ("change", bytes(&change)), ("root", bytes(&commit))]))
+    Ok(map(vec![("commit", bytes(&commit)), ("change", bytes(&change)), ("root", bytes(&commit)), ("ops", ops)]))
 }
 
+/// Standard base64 (RFC 4648, section 4) with padding and no line breaks.
+pub fn base64(b: &[u8]) -> String {
+    const A: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(b.len().div_ceil(3) * 4);
+    for g in b.chunks(3) {
+        let n = (g[0] as u32) << 16 | (*g.get(1).unwrap_or(&0) as u32) << 8 | *g.get(2).unwrap_or(&0) as u32;
+        for k in 0..4 {
+            out.push(if k <= g.len() { A[(n >> (18 - 6 * k) & 63) as usize] as char } else { '=' });
+        }
+    }
+    out
+}
 /// Standard base64 (RFC 4648, section 4), with padding and no line breaks, as a web envelope's pack
 /// element holds it; white space around the whole is not counted. None if it is anything else.
 pub fn unbase64(s: &str) -> Option<Vec<u8>> {

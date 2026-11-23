@@ -1,5 +1,12 @@
 # Envelope spike: notes
 
+Three sections, in the order they were written. The first two are the
+record of the first version (2026-11-22) and are kept as written, with a
+dated remark wherever the third reverses them. The third (2026-11-23) is
+the revision after the owner's five decisions. PLAN.md describes the spike
+as it now stands; FINDINGS-STATUS.md says what became of each of the 35
+findings numbered below.
+
 ## 2026-11-22: the kernel's write path, and tools (pieces 1 and 2 of PLAN.md)
 
 What was added to `spike/kernel`: `write.rs` (new: `propose`, the replay, a
@@ -91,6 +98,8 @@ modified) on the two packs written here:
    text does not say which boundaries the `set` of 5.1 should move: the
    block's start alone would leave it overlapping the block before, whose
    end is the same boundary. Not handled.
+   *(2026-11-23: handled. Both boundaries are moved, each with a `set`. See
+   the revision.)*
 3. **"An inline span left with no extent"** (5.1) is not defined. Taken as:
    both boundaries resolve and the first is not before the second, where
    before the change it was. Removed with a `set` on the path
@@ -103,12 +112,17 @@ modified) on the two packs written here:
    after, which could be read either way. Not reduced: what the person put
    is new elements, attributed to them, even where it equals what was
    there. An `ins` equal to `old` is accepted.
+   *(2026-11-23: reversed by the owner. Every edit is reduced to its
+   difference; an `ins` equal to what is there is refused as "nothing to
+   change". See the revision.)*
 5. **`origin` on a change that only removes** (1.7: "absent if the change
    introduces none"). PLAN.md asked for an origin always; the kernel omits
    it when nothing is inserted. The `history` projection then prints
    `basis=unknown` for that change, which reads badly for a removal a
    person plainly made: the actor is still there, but nothing says "by
    person". Worth a sentence in 5.4 or Appendix B.
+   *(2026-11-23: the kernel now writes the origin on every change it makes
+   for a person, a removal included.)*
 6. **Keys of an `obj` node this document does not list**, when a new
    revision is written. Appendix C says they are "preserved", which is
    said of copying. Carried into the new revision.
@@ -221,6 +235,10 @@ inline script put into the page does not run, that `fetch` is refused, and
 that the page makes no request but for itself.
 
 ### How saving works: the page as its own template
+
+*(2026-11-23: superseded. The owner rejected saving that depends on the
+browser's reconstruction of the page. Nothing below is how it works now;
+see the revision.)*
 
 A page opened from `file://` cannot read its own bytes; what it has is the
 document as parsed. So `make.mjs` writes the page **exactly as the HTML
@@ -405,3 +423,165 @@ messages.
 about a page). After one edit the saved file is 163 248 bytes: each edit
 here appends about 5.4 KB to the pack (records, an index, a head), which
 is 7.2 KB in base64.
+
+## 2026-11-23: the revision after the owner's five decisions
+
+The five decisions and what was done are at the head of PLAN.md. This
+section is what was found in doing it. FINDINGS-STATUS.md goes through the
+35 findings above.
+
+**Tested only in headless Chromium** on Linux, as before: desktop from
+`file://`, from an `http://127.0.0.1` origin, and Chromium emulating an
+iPhone 14 and a Pixel 7. `test.mjs --engine firefox|webkit` exists and was
+not run: those engines are not installed here.
+
+### What was added and removed
+
+Kernel: `tool.rs` (343 lines, new), `diff.rs` (96, new), `envelope.rs`
+(60, new); `write.rs` 401 → 459 (`git diff --numstat`: +114 −56),
+`layout.rs` 836 → 895 (+65 −6), `lib.rs` 362 → 382 (+55 −35), `query.rs`
+517 → 520 (+4 −1). Envelope: `host.mjs`, `mkpack.mjs`, `tools.ufx`,
+`skeleton.html` (was `page.html`), `parts.mjs`, `envelope.mjs` new;
+`make.mjs`, `test.mjs`, `roundtrip.mjs` rewritten; `shell.mjs` removed;
+`--dense` removed from `make.mjs` (`dense.mjs` and `encoding-measure.mjs`
+stay as the measurements behind ENCODING.md). `binding.mjs` is now only
+the Node harness of the tests and vector scripts: it gained `start`,
+`input`, `envelope` and the two new imports, and lost `press`.
+
+### Found in doing it
+
+R1. **The skeleton cannot be carried unchanged in a script element and
+    also write `<!--` and `</script`.** The owner's definition has the
+    skeleton as a part put in unchanged, and refuses a part put in
+    unchanged that holds either. One gap was added, `{{<}}`, which gives
+    `<`; the skeleton writes `{{<}}!--` and `{{<}}/script>`. The
+    alternative was to carry the skeleton escaped in an ordinary element,
+    which changes more of the definition.
+
+R2. **`document.title` is not the text of the title element**: it strips
+    and collapses white space. A title with two spaces together would not
+    come back as it went in, and the saved file would differ from the
+    made one. `make.mjs` writes the title already collapsed. The function
+    itself does not care.
+
+R3. **A difference cannot say where typed text went when it repeats its
+    neighbour.** "Note: " typed before "Nothing" and "e: Not" typed after
+    "Not" give the same text. With the prefix set aside first, the kernel
+    writes the second: the text and the block are right, the three letters
+    "Not" attributed to the person are not the three they typed. Setting
+    the suffix aside first would instead misplace text typed at the end of
+    a paragraph that ends as it does (a sentence added after a full stop),
+    which is commoner. Only the host knows where the caret was: 7.6 has
+    the host report "the range replaced and the text that replaced it",
+    and the owner's decision has it report only the new text. Both could
+    hold: the range as a hint the kernel checks against the difference.
+
+R4. **`editable` on a Portal.** 7.6 marks a text primitive, or a region of
+    one, `editable`. The tools universe cannot mark the subject's texts,
+    so here the Portal onto the subject carries `editable` (a formula over
+    state), meaning: what is shown through this accepts text entry. That
+    is what makes "editing is on" description and not kernel knowledge.
+    The specification does not say a Portal may carry it.
+
+R5. **The plain-text face as a `face` hint.** 7.8 has `face` name a face
+    object or a `medium` hint. The plain-text face (8.3) is not a face
+    object. Here the hint `text` means it. The kernel draws it as text
+    items in a monospaced font, broken to the width, so it is on the
+    canvas like everything else (and no more accessible than the rest).
+
+R6. **K6, "it adds no code to the binding and none to the kernel".** It
+    now adds none to the binding. It added to the kernel: formulas and
+    state and handlers, which a kernel has anyway; but also things that
+    are the reader's and had nowhere else to live: the words it says about
+    the last act ("Changed, and recorded as change … by …", "Made … bytes,
+    holding state …", "Not changed: …"), drawn above the subject as the
+    reader's own label rows; the rule for the saved file's name; asking
+    the host for the person's name. A tools universe cannot yet say these:
+    it would need text whose characters are a formula over `ask`.
+
+R7. **`ask`.** 7.6: "an action that needs something only the person can
+    supply … makes the reader ask for it." The host interface has no
+    function for asking a person a question. Here it is an effect, `ask`
+    `{label}`, answered by an input event `answer`; the host shows the
+    browser's prompt. A page embedded where prompts are suppressed would
+    never get a name, and no edit would start.
+
+R8. **The kernel holds the parts.** To make an envelope the kernel needs
+    the script, the style, the skeleton, the tools and its own text, so
+    the host hands all of them over at `start` and the kernel keeps them:
+    about 150 KB of text in its memory that it never looks at, its own
+    130 KB among them. Worse than item 4 of the envelope list, not better.
+    A `store`-like capability that reads a named part on request would
+    avoid it.
+
+R9. **One surface.** The whole screen is one canvas: the toolbar scrolls
+    away with the document. Resizing while the editing surface is mounted
+    redraws under it and does not move it. A press on the canvas while it
+    is mounted does nothing (the host's two buttons end it).
+
+R10. **What a host must still decide.** The editing surface has Done and
+    Cancel buttons and their words are the host's. `deliver` is a download
+    through `a[download]`; the share sheet and the fallback link of the
+    first version are gone. Whether a host may offer sharing for a
+    delivered file is the host's business and nothing in the kernel asks.
+
+R11. **The removal with an origin** departs from the words of 1.7
+    ("absent if the change introduces none"). The independent reader
+    accepts it.
+
+R12. **Formulas only where the reader presents tools.** A formula in a
+    working universe is not evaluated at all (its property is as if
+    absent). That is a limit of the spike, not a reading of 7.3: a working
+    universe is entitled to formulas over its own state. F6 needs only
+    that `arg("subject")` there is an error value and that handlers there
+    are not run.
+
+R13. **The Nu checker** now warns four times, not three: once more for the
+    skeleton's data block. Still no errors.
+
+### Results
+
+`node spike/envelope/test.mjs` (output in `out/envelope-test-output.txt`,
+results in `out/envelope-test-results.json`): 144 checks, all passed. The
+kernel alone (`roundtrip.mjs`, `more-edits.mjs`); the host's budget and
+forbidden words; then on desktop Chromium from `file://`, from an `http:`
+origin, and in the two phone emulations with touch: opened, the file on
+disk is `envelope(parts)`, three faces, one word edited and one word
+attributed, a word typed at the start of a paragraph, saved, the saved
+file is `envelope(parts)`, reopened, two words edited apart, saved again,
+reopened; F6 in the page; the static face with scripts off; the
+independent reader on nine packs (`out/reader-verdicts.txt`): every
+conservation check `ok`, nothing reported; Nu and html-validate.
+
+The page is driven only by clicks or taps on the canvas, typing in the
+textarea, the two buttons and the browser's prompt. `globalThis.ufo` is
+`{drawn, query}`: the list last drawn, and the kernel's read-only queries.
+
+### Size
+
+| Build | After cargo | After `wasm-opt -Oz` | DEFLATE |
+| --- | ---: | ---: | ---: |
+| First version (above) | 214 026 | 183 191 | 85 624 |
+| Now | 245 806 | 210 911 | 98 276 |
+| Difference | +31 780 | +27 720 | +12 652 |
+
+Not broken down by part. One thing was measured: the library's search of
+a text for a text (`str::find` with a text pattern, used three times)
+cost 2 614 optimised bytes and 1 132 deflated, and was replaced by a
+search of bytes. No `core::fmt` came in (`strings | grep -c 3fmt`: 0), no
+dependency was added, the library sort and tree maps are still unused.
+
+Lines (`wc -l`): 5 727 in all; 434 generated; 5 293 by hand, of which 142
+are measuring stubs.
+
+| Part of the envelope of `compose.ufx` | Bytes |
+| --- | ---: |
+| Kernel: 210 911 optimised, 98 276 deflated, in base64 | 131 036 |
+| Pack: 9 339 bytes, in base64 | 12 452 |
+| Tools universe: 6 256 bytes, in base64 | 8 344 |
+| Script: `host.mjs` | 9 827 |
+| Skeleton, as a part (it is also the fixed text of the page) | 2 374 |
+| Style | 1 206 |
+| Static face | 1 135 |
+| Fixed text of the skeleton with its gaps filled, the title twice, the date, the hash | 2 430 |
+| **Total** | **168 804** |

@@ -27,7 +27,7 @@ export function encode(v) {
     else if (Number.isInteger(v) && !Object.is(v, -0) && !put.float) v >= 0 ? head(0, v) : head(1, -1 - v);
     else if (typeof v === 'number') { const f = new DataView(new ArrayBuffer(8)); const h = half(v);   // the shortest width that keeps the value (1.2)
       if (h !== null) out.push(0xf9, h >> 8, h & 255); else if (Math.fround(v) === v) { f.setFloat32(0, v); out.push(0xfa, ...new Uint8Array(f.buffer, 0, 4)); } else { f.setFloat64(0, v); out.push(0xfb, ...new Uint8Array(f.buffer)); } }
-    else if (typeof v === 'string') { const s = new TextEncoder().encode(v); head(3, s.length); out.push(...s); }
+    else if (typeof v === 'string') { const s = new TextEncoder().encode(v); head(3, s.length); for (const x of s) out.push(x); }
     else if (Array.isArray(v)) { head(4, v.length); v.forEach(put); }
     else if (v instanceof Uint8Array) { head(2, v.length); for (const x of v) out.push(x); }   // a byte string
     else if (typeof v.tag === 'number' && 'v' in v && Object.keys(v).length === 2) { head(6, v.tag); put(v.v); }   // a tagged value, as `decode` gives it
@@ -45,34 +45,40 @@ const FLOATS = new Set(['adv', 'asc', 'desc', 'w']);   // fields the contract ty
 // ---- the kernel ----
 // `inflate(bytes, len)` is the host's raw DEFLATE: it returns the inflated bytes (`len` of them are expected) or a
 // Promise of them. In Node: b => zlib.inflateRawSync(b). In a browser: browserInflate, below.
-export async function start(wasmBytes, measure, inflate) {
+// `clock` gives the host's time and random bytes (PLAYER 9.3): { time: () => milliseconds, random: n => Uint8Array }.
+export async function start(wasmBytes, measure, inflate, clock = {}) {
   let ex; const mem = () => new Uint8Array(ex.memory.buffer);
   const give = bytes => { const p = ex.alloc(bytes.length); mem().set(bytes, p); return p; };
   // the text capability's `measure` (PLAYER 9.3): the advance of a piece up to each offset, its ascent and descent.
   // measure(piece, text) -> { adv, asc, desc } comes from the host's own text facilities; breaking lines is the kernel's.
   const answer = ({ piece, at }) => { const cps = [...piece.s], whole = measure(piece, piece.s); return { adv: at.map(o => measure(piece, cps.slice(0, o).join('')).adv), asc: whole.asc, desc: whole.desc }; };
-  const imports = { 'ufo:host/1': { host_measure(req, n, out, cap) { const r = encode(answer(decode(mem().slice(req, req + n)))); if (r.length > cap) return 0; mem().set(r, out); return r.length; } } };
+  const imports = { 'ufo:host/1': { host_measure(req, n, out, cap) { const r = encode(answer(decode(mem().slice(req, req + n)))); if (r.length > cap) return 0; mem().set(r, out); return r.length; },
+    host_time: () => clock.time ? clock.time() : Date.now(),
+    host_random(out, n) { mem().set(clock.random ? clock.random(n) : crypto.getRandomValues(new Uint8Array(n)), out); } } };
   ex = (await WebAssembly.instantiate(wasmBytes, imports)).instance.exports;
   const call = (f, v) => { const q = encode(v); const p = f(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); };
+  const pend = async () => {
+    for (let i = 0, n = ex.pending(); i < n; i++) {
+      const p = ex.pending_get(i), { bytes, len } = decode(mem().slice(p, p + ex.out_len()));
+      let out = null; try { out = inflate && await inflate(bytes, len); } catch { }
+      if (out) ex.pending_put(i, give(out), out.length);
+    }
+    return ex.ready() === 1;
+  };
   return {
     // Two phases, because a browser inflates only asynchronously and a wasm import cannot wait: the kernel lists the
     // compressed payloads it holds, the host inflates them, and `ready` finishes opening. A payload that does not
     // inflate is not handed back, and its record is then unavailable.
-    open: async pack => {
-      if (ex.open(give(pack), pack.length) !== 1) return false;
-      for (let i = 0, n = ex.pending(); i < n; i++) {
-        const p = ex.pending_get(i), { bytes, len } = decode(mem().slice(p, p + ex.out_len()));
-        let out = null; try { out = inflate && await inflate(bytes, len); } catch { }
-        if (out) ex.pending_put(i, give(out), out.length);
-      }
-      return ex.ready() === 1;
-    },
+    open: async pack => ex.open(give(pack), pack.length) === 1 && pend(),
+    // the reader's own act: the tools presented with the working universe as their subject ({ parts, name, who })
+    start: async q => { const b = encode(q); return ex.start(give(b), b.length) === 1 && pend(); },
+    input: event => call(ex.input, event),          // one input event; gives the effects
+    envelope: parts => call(ex.envelope, parts),    // the web envelope of its parts: { text } or { refused }
     print: id => { const p = ex.print(give(id)); return mem().slice(p, p + ex.out_len()); },
     query: q => { const b = encode(q); const p = ex.query(give(b), b.length); return decode(mem().slice(p, p + ex.out_len())); },
     sample: params => { const q = encode(params); const p = ex.sample(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); },
     // for the envelope spike (spike/envelope/PLAN.md): each takes and gives values, and does nothing else
     openTools: pack => ex.open_tools(give(pack), pack.length) === 1,
-    press: key => call(ex.press, { key }),
     blockAt: src => call(ex.block_at, { src }),
     propose: edit => call(ex.propose, edit),
     packBytes: () => { const p = ex.pack_bytes(); return decode(mem().slice(p, p + ex.out_len())); },

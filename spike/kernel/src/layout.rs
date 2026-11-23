@@ -39,8 +39,10 @@ pub struct Ctx<'a> {
     pub chain: Vec<(H, Id)>,
     pub blocks: u32,
     pub measure: &'a dyn Fn(&V) -> Option<V>,
-    pub tools: bool, // what is composed is the reader's tools: its items say what pressing them names
+    pub env: Option<&'a crate::tool::Env<'a>>, // what is composed is the reader's tools: formulas have values, items say what pressing them names
 }
+/// The block number of the row that holds a subject, as the reader's tools present it (tool.rs).
+pub const SUBJECT: u32 = u32::MAX;
 fn fl(x: f64) -> V {
     V::F(x)
 }
@@ -51,11 +53,49 @@ fn plain_style() -> Style {
     Style { size: 16.0, weight: 400, slant: false, color: black(), font: V::L(vec![t("serif")]), line: 1.4, align: 0, dir: 0, deco: 0, start: 0.0, end: 0.0, press: V::Null }
 }
 /// A row of the reader's own words, where an object cannot be presented.
-fn label_row(cx: &mut Ctx, s: &str, w: f64) -> Vec<Row> {
+pub fn label_row(cx: &mut Ctx, s: &str, w: f64) -> Vec<Row> {
     let st = Style { size: 13.0, slant: true, color: V::L(vec![fl(0.4), fl(0.4), fl(0.4), fl(1.0)]), font: V::L(vec![t("sans-serif")]), ..plain_style() };
+    own_rows(cx, s, &st, w)
+}
+fn own_rows(cx: &mut Ctx, s: &str, st: &Style, w: f64) -> Vec<Row> {
     let cs: Vec<char> = s.chars().collect();
     let n = cs.len();
-    lines(cx, &Seg { cs, st: vec![0; n], pos: vec![0; n], bx: vec![None; n] }, &[st.clone()], &st, false, w, None).0
+    lines(cx, &Seg { cs, st: vec![0; n], pos: vec![0; n], bx: vec![None; n] }, core::slice::from_ref(st), st, false, w, None).0
+}
+/// The plain-text face (8.3) as rows: each of its lines set in a monospaced font and broken to the width.
+pub fn plain_rows(cx: &mut Ctx, s: &str, w: f64) -> Vec<Row> {
+    let st = Style { size: 14.0, font: V::L(vec![t("monospace")]), ..plain_style() };
+    let mut rows = Vec::new();
+    for l in s.trim_end_matches('\n').split('\n') {
+        if l.is_empty() {
+            cx.blocks += 1;
+            rows.push(Row { h: st.size * st.line, gap: 0.0, items: Vec::new(), keep: false, block: cx.blocks, line: 0, lines: 1 });
+        } else {
+            rows.append(&mut own_rows(cx, l, &st, w));
+        }
+    }
+    rows
+}
+/// The face of pages (7.7) of what `f` presents, as items: each page a region of fixed size with a
+/// background, holding its share of the flow. Gives the page's width, the height of them all, the
+/// rows each page takes, and the rows.
+pub fn paged(cx: &mut Ctx, root: &H, f: &Obj, params: &V, list: &mut Vec<V>) -> Option<(f64, f64, Vec<(usize, usize)>, Vec<Row>)> {
+    let s = f.p.get("sampling");
+    let dim = |k: &str, i: usize, d: f64| params.get(k).or(s.and_then(|s| s.get(k))).and_then(|v| v.l().get(i)).and_then(|v| v.f()).unwrap_or(d);
+    let (pw, ph) = (dim("page", 0, 595.0), dim("page", 1, 842.0));
+    let (mt, mr, mb, ml) = (dim("margins", 0, 48.0), dim("margins", 1, 48.0), dim("margins", 2, 48.0), dim("margins", 3, 48.0));
+    let rows = compose(cx, root, &f.p.get("of")?.tag(REF)?.id()?, pw - ml - mr);
+    let pages = paginate(&rows, ph - mt - mb);
+    let gap = 16.0;
+    for (k, (a, b)) in pages.iter().enumerate() {
+        let top = k as f64 * (ph + gap);
+        list.push(V::L(vec![t("push"), map(vec![("m", V::L(vec![fl(1.0), fl(0.0), fl(0.0), fl(1.0), fl(0.0), fl(top)])), ("clip", V::L(vec![fl(0.0), fl(0.0), fl(pw), fl(ph)]))])]));
+        list.push(V::L(vec![t("path"), map(vec![("d", V::L(vec![V::L(vec![t("M"), fl(0.0), fl(0.0)]), V::L(vec![t("L"), fl(pw), fl(0.0)]), V::L(vec![t("L"), fl(pw), fl(ph)]), V::L(vec![t("L"), fl(0.0), fl(ph)]), V::L(vec![t("Z")])])), ("fill", V::L(vec![fl(1.0), fl(1.0), fl(1.0), fl(1.0)]))])]));
+        stack(&rows[*a..*b], ml, mt, list);
+        list.push(V::L(vec![t("pop")]));
+    }
+    let n = pages.len() as f64;
+    Some((pw, n * ph + (n - 1.0).max(0.0) * gap, pages, rows))
 }
 
 pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
@@ -63,11 +103,17 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
     if cx.chain.len() >= 16 || cx.chain.contains(&(*uni, *id)) {
         return label_row(cx, "(shown above)", w);
     }
-    let Some(o) = cx.pk.object(uni, id) else {
+    let Some(mut o) = cx.pk.object(uni, id) else {
         return label_row(cx, "(not available)", w);
     };
+    if let Some(env) = cx.env.filter(|_| o.ty == "ufo.text") {
+        o.p = crate::tool::settle(&o.p, env); // 7.3: a property may be a formula; here it has its value
+    }
+    // Appendix A, in a parent: `margin`, one float or four (top, right, bottom, left)
+    let margin: Vec<f64> = o.p.get("margin").map(|m| if let Some(x) = m.f() { vec![x; 4] } else { m.l().iter().filter_map(|x| x.f()).collect() }).filter(|m| m.len() == 4).unwrap_or_default();
+    let w = margin.get(1).map_or(w, |r| w - r - margin[3]);
     cx.chain.push((*uni, *id));
-    let rows = match o.ty.as_str() {
+    let mut rows = match o.ty.as_str() {
         "ufo.text" => text_rows(cx, uni, &o, None, w).unwrap_or_else(|| label_row(cx, "(inconsistent text: not presented)", w)), // step 1
         "ufo.group" | "ufo.pane" => {
             let gap = o.p.get("gap").and_then(|g| g.f()).unwrap_or(0.0);
@@ -101,6 +147,14 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
         }
     };
     cx.chain.pop();
+    if let (4, Some(last)) = (margin.len(), rows.len().checked_sub(1)) {
+        for (k, r) in rows.iter_mut().enumerate() {
+            r.items.insert(0, V::L(vec![t("push"), map(vec![("m", V::L(vec![fl(1.0), fl(0.0), fl(0.0), fl(1.0), fl(margin[3]), fl(if k == 0 { margin[0] } else { 0.0 })]))])]));
+            r.items.push(V::L(vec![t("pop")]));
+        }
+        rows[0].h += margin[0];
+        rows[last].h += margin[2];
+    }
     rows
 }
 fn portal(cx: &mut Ctx, uni: &H, o: &Obj, w: f64) -> Vec<Row> {
@@ -109,6 +163,11 @@ fn portal(cx: &mut Ctx, uni: &H, o: &Obj, w: f64) -> Vec<Row> {
     let Some(of) = o.p.get("of") else { return label_row(cx, &label, w) };
     if let Some(id) = of.tag(REF).and_then(|x| x.id()) {
         return compose(cx, uni, &id, w);
+    }
+    if of.tag(crate::tool::FORMULA).is_some() {
+        // 7.6: `of` may be `arg`. Only what the reader itself presents as tools has a subject to be
+        // given (F6): for anything a file presents there is no `env`, and the label is shown.
+        return cx.env.and_then(|env| crate::tool::subject_rows(cx, env, o, w)).unwrap_or_else(|| label_row(cx, &label, w));
     }
     if let Some(a) = of.tag(ANCHOR) {
         // 1.8: an anchor may name a commit of another universe; nested if its records are here
@@ -200,7 +259,7 @@ fn restyle(st: &mut Style, v: &V) {
 }
 /// In a tools universe, a span with an `on` handler gives its key to the characters under it.
 fn pressed(cx: &Ctx, st: &mut Style, s: &Span) {
-    if cx.tools && s.v.get("on").is_some() {
+    if cx.env.is_some() && s.v.get("on").is_some() {
         st.press = t(s.key);
     }
 }

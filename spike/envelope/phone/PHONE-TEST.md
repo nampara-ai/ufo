@@ -23,7 +23,9 @@ Hosted address used below (a placeholder until the files are put there):
 
 When the file's reader is running you see a row of five words at the top
 — **Document  Pages  Text  Edit  Save** — and the document drawn below it,
-with a grey line at the bottom beginning "State 092acf57…".
+on one drawn surface. (Revised 2026-11-23: the whole screen is now drawn by
+the reader in the file; there is no line of state at the bottom, no link
+and no Share… button. Steps and tables below that mention them are marked.)
 
 When it is not running you see the **static face**: a blue box that begins
 "This is a UFO file: a document that carries its own reader. You are seeing
@@ -38,21 +40,22 @@ mean that route cannot do steps 2 to 6.
 2. **Two faces.** Tap **Pages**: the document appears as small pages with
    grey between them. Tap **Text**: plain text. Tap **Document**: back.
    The word for the face showing is underlined.
-3. **Edit a paragraph.** Tap **Edit** (it becomes underlined and a yellow
-   line says "Editing is on"). Tap a paragraph. A box opens under it with
-   your name ("Anonymous" unless you change it) and the paragraph's text.
-   Change the text, tap **Done**. The paragraph is redrawn with your text,
-   a blue line says "Changed, and recorded as change … by …", and the
-   "State" at the bottom changes. Note the first characters of the new
-   State.
-4. **Save.** Tap **Save**. A blue line says "Made a new file of … bytes"
-   and shows a link named `compose-edited.ufx.html` (or `…-edited-2…`). The
-   browser should offer to download it; if nothing happens, tap the link.
-   If a **Share…** button appears, try that as well and say what it
-   offered.
+3. **Edit a paragraph.** Tap **Edit** (it becomes underlined). Tap a
+   paragraph. The first time, the browser asks "Your name, to record with
+   the changes you make": type it and confirm. A text box then opens over
+   the paragraph, holding its text, with **Done** and **Cancel** under it.
+   Change a word, tap **Done**. The paragraph is redrawn with your text and
+   a grey italic line under the five words says "Changed, and recorded as
+   change … by …". Tap **Edit** again to turn editing off.
+4. **Save.** Tap **Save**. The grey italic line says "Made
+   compose-edited.ufx.html: … bytes, holding state …" (or `…-edited-2…`).
+   Note the first characters of the state. The browser should offer to
+   download the file. There is no link to tap and no Share… button in this
+   revision: if nothing is offered, say so (step 4b does not apply).
 5. **Reopen the saved file.** Find the downloaded file and open it the
-   same way you opened the first. It should show your edit, and the same
-   State you noted in step 3. (If it opens only as the static face, check
+   same way you opened the first. It should show your edit. (To see its
+   state, tap **Save** again: the line names the state, which should be the
+   one you noted in step 4.) (If it opens only as the static face, check
    that the plain text there has your edit: it should.)
 6. **Send it on.** Send the saved file to another device (AirDrop, Mail,
    Messages) and open it there. A computer's browser is the surest check:

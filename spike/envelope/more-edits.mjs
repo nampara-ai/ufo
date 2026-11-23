@@ -19,7 +19,10 @@ const edit = (what, lo, hi, ins, check) => {
   model = [...model.slice(0, lo), ...ins, ...model.slice(hi)];
   assert.deepStrictEqual(chars(), model, what);
   const why = k.query({ q: 'project', name: 'why', o: T, lo, hi: lo + [...ins].length });
-  if (ins) assert(why.split('\n').filter(l => l.startsWith('run ')).every(l => l.includes('change=o:' + hex(r.change).slice(0, 8))), what + ': why');
+  // only the difference is written (L1): what `why` gives the new change is exactly what the operations inserted, and never more than `ins`
+  const mine = why.split('\n').filter(l => l.startsWith('run ') && l.includes('change=o:' + hex(r.change).slice(0, 8))).map(l => /chars=\[(\d+),(\d+)\]/.exec(l)).reduce((n, m) => n + (m[2] - m[1]), 0);
+  const put = r.ops.filter(o => o.op === 'splice').reduce((n, o) => n + [...(o.ins || '')].length, 0), took = r.ops.filter(o => o.op === 'splice').reduce((n, o) => n + [...(o.old || '')].length, 0);
+  assert(mine === put && put <= [...ins].length && took <= hi - lo && [...ins].length - put === hi - lo - took, what + ': why');
   if (check) check(r);
   console.log('ok', (what + ':').padEnd(64), 'commit', hex(r.commit).slice(0, 12), 'pack', k.packBytes().length);
 };
@@ -34,7 +37,6 @@ edit('a removal with nothing put', model.length - 7, model.length, '');
 const b3 = block(model.join('').indexOf('First point')), b4 = block(model.join('').indexOf('Second point'));
 edit('a replacement across the boundary of two blocks', b3.hi - 6, b4.lo + 6, '— AND —', () => { assert.strictEqual(block(b3.lo).key, b3.key); });
 let long = ''; for (let i = 0, x = 7; long.length < 9000; i++) { x = (x * 1103515245 + 12345) >>> 0; long += 'lorem ipsum dolor sit amet '.split(' ')[x % 5] + (x % 11 ? ' ' : '. '); }
-const before = k.packBytes().length;
 edit('a long insertion: `chars`, `seq` or `work` outgrow one chunk or the node', 100, 100, long);
 edit('an edit of a text now kept outside its node', 110, 130, 'short again');
 edit('an edit inside what an earlier edit inserted', 3, 3, 'x');
