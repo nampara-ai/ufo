@@ -1,0 +1,116 @@
+{
+ "status": {
+  "status": "provisional",
+  "note": "packs written by the author's kernel; an independent reader replayed each change with conservation ok, which checks the operations and not the attribution stated here"
+ },
+ "what": "two packs written by the author's kernel, each replayed by an independent reader with conservation ok, and what a reader finds in them (sections 1.7, 5.1)",
+ "packs": {
+  "edit-one-word.ufx": {
+   "what": "compose.ufx after one edit through the gate: in the paragraph at positions 423 to 538, the word \"ledger\" became \"books\". Exactly the five new characters are attributed to the new change; what stands before and after keeps its first attribution",
+   "commits": [
+    {
+     "change": "7095badf04294e7398bde2072c51769b",
+     "commit": "07964126cb8f3b6902cfbbfe4ab1deb4c9b186758d99376d0d8ad5146caf35c3",
+     "height": 1
+    },
+    {
+     "change": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c",
+     "commit": "092acf577819a704d5106c685ec0315f76a87d30ec3b79658b722c3d9ec448c7",
+     "height": 0
+    }
+   ],
+   "why": {
+    "region": [
+     423,
+     537
+    ],
+    "runs": [
+     "region o:71717171 chars=[423,537] r:85e9e2ee",
+     "run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",
+     "run chars=[471,476] change=o:7095badf basis=witnessed by=person who=\"Reader Test\" sealed=false",
+     "run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false"
+    ]
+   },
+   "blocks": [
+    "part o:71717171 chars=[0,20] r:85e9e2ee label=\"The Quarterly Review\"",
+    "part o:71717171 chars=[20,166] r:85e9e2ee label=\"Revenue grew in every re\"",
+    "part o:71717171 chars=[166,185] r:85e9e2ee label=\"First point, short.\"",
+    "part o:71717171 chars=[185,267] r:85e9e2ee label=\"Second point, which runs\"",
+    "part o:71717171 chars=[267,283] r:85e9e2ee label=\"A numbered step.\"",
+    "part o:71717171 chars=[283,305] r:85e9e2ee label=\"Another numbered step.\"",
+    "part o:71717171 chars=[305,317] r:85e9e2ee label=\"Third point.\"",
+    "part o:71717171 chars=[317,387] r:85e9e2ee label=\"What gets measured gets \"",
+    "part o:71717171 chars=[387,417] r:85e9e2ee label=\"total = sum(rows)\\nprint\"",
+    "part o:71717171 chars=[417,423] r:85e9e2ee label=\"Method\"",
+    "part o:71717171 chars=[423,537] r:85e9e2ee label=\"Every figure in this sec\"",
+    "part o:71717171 chars=[537,661] r:85e9e2ee label=\"Where a number differs f\"",
+    "part o:71717171 chars=[661,762] r:85e9e2ee label=\"Nothing here is a foreca\"",
+    "part o:71717171 chars=[762,871] r:85e9e2ee label=\"Readers who want the det\"",
+    "part o:71717171 chars=[871,980] r:85e9e2ee label=\"The appendix lists what \"",
+    "part o:71717171 chars=[980,1083] r:85e9e2ee label=\"Corrections are welcome \"",
+    "part o:71717171 chars=[1083,1083] r:85e9e2ee label=\"\""
+   ]
+  },
+  "edit-paragraph-start.ufx": {
+   "what": "a later state of the same pack, whose last change typed \"Truly, \" at the very start of the paragraph beginning \"Nothing here is a forecast\". The change holds the splice and two sets that move the boundary between the two block spans to before the first new element, so the new text lies in the paragraph it was typed in",
+   "commits": [
+    {
+     "change": "9fc4e90e33587da2c7ec11365b80a5ca",
+     "commit": "78e414e3082fbcc2a71cb8ed79932b8e7314e9510e464f26378deaea5180ccad",
+     "height": 4
+    },
+    {
+     "change": "3a5f84a9cef3183d6287acd1f61b4065",
+     "commit": "1dbdd321a63814a20d4bfb87fddacd1630f2a0778fdb62f93e741b9b61611690",
+     "height": 3
+    },
+    {
+     "change": "d5fa1f44698eb3d8fd22476c91b6db00",
+     "commit": "bae409da172fd7b2017c7cc3c02a72405f7d5add8c73a2ad1aec4dbbd26d1168",
+     "height": 2
+    },
+    {
+     "change": "7095badf04294e7398bde2072c51769b",
+     "commit": "07964126cb8f3b6902cfbbfe4ab1deb4c9b186758d99376d0d8ad5146caf35c3",
+     "height": 1
+    },
+    {
+     "change": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c",
+     "commit": "092acf577819a704d5106c685ec0315f76a87d30ec3b79658b722c3d9ec448c7",
+     "height": 0
+    }
+   ],
+   "why": {
+    "region": [
+     656,
+     683
+    ],
+    "runs": [
+     "region o:71717171 chars=[656,683] r:87f75c1e",
+     "run chars=[656,666] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",
+     "run chars=[666,673] change=o:d5fa1f44 basis=witnessed by=person who=\"Reader Test\" sealed=false",
+     "run chars=[673,683] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false"
+    ]
+   },
+   "blocks": [
+    "part o:71717171 chars=[0,25] r:87f75c1e label=\"Now: The Quarterly Revie\"",
+    "part o:71717171 chars=[25,171] r:87f75c1e label=\"Revenue grew in every re\"",
+    "part o:71717171 chars=[171,190] r:87f75c1e label=\"First point, short.\"",
+    "part o:71717171 chars=[190,272] r:87f75c1e label=\"Second point, which runs\"",
+    "part o:71717171 chars=[272,288] r:87f75c1e label=\"A numbered step.\"",
+    "part o:71717171 chars=[288,310] r:87f75c1e label=\"Another numbered step.\"",
+    "part o:71717171 chars=[310,322] r:87f75c1e label=\"Third point.\"",
+    "part o:71717171 chars=[322,392] r:87f75c1e label=\"What gets measured gets \"",
+    "part o:71717171 chars=[392,422] r:87f75c1e label=\"total = sum(rows)\\nprint\"",
+    "part o:71717171 chars=[422,428] r:87f75c1e label=\"Method\"",
+    "part o:71717171 chars=[428,542] r:87f75c1e label=\"Every figure in this sec\"",
+    "part o:71717171 chars=[542,666] r:87f75c1e label=\"Where a number differs f\"",
+    "part o:71717171 chars=[666,774] r:87f75c1e label=\"Truly, Nothing here is a\"",
+    "part o:71717171 chars=[774,887] r:87f75c1e label=\"All readers who want the\"",
+    "part o:71717171 chars=[887,996] r:87f75c1e label=\"The appendix lists what \"",
+    "part o:71717171 chars=[996,1099] r:87f75c1e label=\"Corrections are welcome \"",
+    "part o:71717171 chars=[1099,1099] r:87f75c1e label=\"\""
+   ]
+  }
+ }
+}

@@ -622,7 +622,7 @@ These limits change only on measurement.
 | Kernel source: its own code, excluding tests, generated tables and anything borrowed | 7 000 lines | set from the compressed limit at the measured density of 16.7 compressed bytes a line, with a margin; see below |
 | The kernel's bytes, rebuilt from its source | identical | **[B5]** a kernel is named by its hash in every file that carries it. Anyone MUST be able to rebuild those exact bytes from the source, with a stable release of the compiler and tools the source names, and no others. A build that needs an unstable compiler, or that differs from one machine to the next, is not a kernel |
 | Binding source, per host | 600 lines | the base functions, the drawing contract and the kernel's own capabilities. Each optional capability a host offers is counted apart, and reported |
-| Web binding, as shipped | 16 KiB | |
+| Web binding, as shipped | 16 KiB | every script an envelope carries is the binding and counts here and in the line above, as carried in the page. A host has no other code |
 | Tools universe (§9.6), as carried | 24 KiB | description only; no code |
 | Web envelope holding one paragraph | 256 KiB | the compressed kernel in base64 (171 KiB at its limit), the binding, the tools universe inside the pack in base64 (32 KiB), the static face, the rest of the pack |
 | Web envelope for each worked example of §15 | reported | no limit yet; measured and published with the first implementation |

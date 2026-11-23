@@ -180,6 +180,14 @@
   "provisional/composition.json": {
    "status": "provisional",
    "note": "the author's kernel only"
+  },
+  "provisional/edits.json": {
+   "status": "provisional",
+   "note": "packs written by the author's kernel; an independent reader replayed each change with conservation ok, which checks the operations and not the attribution stated here"
+  },
+  "provisional/envelope.json": {
+   "status": "provisional",
+   "note": "the envelope as a function of its parts: one fixed case, on which two implementations by the author agree"
   }
  },
  "note": "Both readers are instances of the model that wrote the specification. Two of them agreeing does not make a vector confirmed: that needs an implementation from a different model family, or a person."

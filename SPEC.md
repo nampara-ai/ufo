@@ -409,7 +409,7 @@ the universe: one commit. Its properties are:
 | `work` | a veiled indirect (§1.4) to `{ops, note}`: the operations, and optionally why the change was made, in the actor's words |
 | `actor` | `{who, with}`: the principal (§14.1) who committed the change, and the name and version of the software used |
 | `time` | milliseconds since 1970-01-01T00:00:00Z, as the actor reported it |
-| `origin` | where content introduced by this change came from (§5.4); absent if the change introduces none |
+| `origin` | who or what made this change and where what it introduces came from (§5.4). Present on every change a person or a model makes, a removal included |
 | `evidence` | list of support links recorded by this change (§5.4); optional |
 | `decisions` | list of decisions recorded by this change (§5.4); optional |
 | `attributions` | list of later findings about the origin of content already present (§5.4); optional |
@@ -472,7 +472,10 @@ A `splice` names elements by element identity. `after` is the element identity
 start of the sequence; it may be a removed element, and it is omitted when
 nothing is inserted. `del` is a list of runs
 naming elements to remove, each of which MUST not already be removed; `old`
-is their content in sequence order. `ins` is a text, a byte string, a
+is their content in sequence order. `after` may name an element that
+this same `splice` removes: a writer replacing a stretch names the last
+element it removes, so that a boundary fixed to a removed element still
+lies before the new content. `ins` is a text, a byte string, a
 list or a count, matching the property; for a count, `old` and `ins` are
 the numbers of elements removed and inserted; its items become new elements directly after
 `after`. `forget` is a list of runs naming removed elements whose tombstones
@@ -491,7 +494,10 @@ The **laws of change** follow. They hold for every medium.
 
 - **[L1] The bytes are the evidence.** A writer MUST compute operations from
   the actual content before and after, never from an account of what was
-  changed.
+  changed, and the operations MUST carry only what differs: content that
+  is the same before and after is neither removed nor inserted. Changing
+  one word of a paragraph removes and inserts that word, or less where the
+  two share characters, and nothing else acquires a new origin.
 - **[L2] Anchored.** Every operation applies to the parent commit's state,
   and every `set` and `splice` that removes or replaces something MUST carry
   exactly what was there, as `old`, compared by value.
@@ -1342,9 +1348,12 @@ around it is edited, with no work by anyone (§4.3). By convention a block
 span begins just before its first element and ends just before the first
 element of whatever follows it, or at `end`; text typed at the end of a
 paragraph therefore joins that paragraph. An inline span chooses for
-itself whether text typed at its end joins it. Where a writer means
-otherwise — text typed at the very start of a paragraph — it moves the
-boundary in the same change, with a `set`.
+itself whether text typed at its end joins it. Text typed at the very
+start of a block belongs to that block: where a `splice` inserts at a
+place where block spans begin, removing nothing there, the writer moves,
+in the same change and each with a `set`, the start of every block span
+that began at that place and the end of every block span that ended
+there, to just before the first new element.
 
 Block spans do not partially overlap one another: any two are disjoint or
 nested. Blocks are separated by their spans, not by characters: `chars`
@@ -1961,6 +1970,8 @@ throwaway kernel on the packs above:
 | `provisional/composition.json` | `compose.ufx` composed at a stated width with a stated, synthetic measure of text: every row and its items; the rows on each page; the plain-text face (§7.7, §8.3) |
 | `provisional/staleness.json` | three pins made at the first commit of `history.ufx`, and whether each is current, stale or detached at each later commit (§4.4) |
 | `provisional/layers.json` | for four packs, the layer of every record: content, attribution, working history (§13.3) |
+| `provisional/edits.json` | for the two edited packs: who is attributed with each stretch around the edit, and where the blocks lie |
+| `provisional/envelope.json` | the web envelope as a function of its parts (§13.2): one fixed case with its exact result, and six cases that are refused |
 | `provisional/projections.json` | twelve projections of the packs, as text: `overview`, `object`, `text`, `history`, `why`, and outlines by `expand` (§10.1, §10.2, Appendix B) |
 
 `spike/QUERY-NOTES.md` and `spike/COMPOSITION-NOTES.md` list each place
@@ -1975,6 +1986,7 @@ where the text did not decide what the kernel should do, and what it did.
 | `vectors/published.ufx` | `history.ufx` as it is published (§13.3): a pack of 9437 bytes holding its content and attribution layers, its seal, and an `absent` frame saying that working history is withheld |
 | `vectors/pins.ufx` | a pack of 7886 bytes holding one commit: a text with an empty block and an inline span, an asset, a clock with a scale, and an object holding an anchor of every kind (§4.2 to §4.4, §5.2) |
 | `vectors/published-timeline.ufx`, `vectors/published-nested.ufx` | `timeline.ufx` and `nested.ufx` as they are published (§2.5): 3778 and 2557 bytes |
+| `vectors/edit-one-word.ufx`, `vectors/edit-paragraph-start.ufx` | `compose.ufx` after edits made through a kernel's gate: one word changed; text typed at the very start of a paragraph (§1.7 **L1**, §5.1) |
 | `vectors/module.ufx` | a pack of 3714 bytes holding a described module of two functions (§12.3) |
 | `vectors/compose.ufx` | a pack holding one text with every block role, a document face and a face of pages (§7.7, §8.3) |
 | `vectors/vectors.json` | every vector below, as hexadecimal |

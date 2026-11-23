@@ -1274,3 +1274,40 @@ joins the one before.
 
 None of these is fixed in the specification: by the owner's rule for the
 spike, findings stay in the spike's notes until a fix comes with a test.
+
+## 25. The envelope spike revised (owner's five refusals, 2026-11-23)
+
+The owner refused five things about the first envelope and they were
+changed (`spike/envelope/`, 144 checks passing in Chromium):
+
+1. *Everything the host ships counts as the binding.* It is now one
+   script of 175 lines and 9.6 KiB, within 600 and 16.
+2. *What the tools do is description, run by the kernel.* The tools
+   universe is the whole screen: a line of words with handlers and
+   formulas over presentation state, and a Portal onto its subject. The
+   kernel keeps the state, runs the handlers, tests hits, asks the host
+   for a place to type, and makes the file. The host draws, forwards raw
+   input, measures, inflates and delivers. A test fails if the host's
+   text holds any of twenty-one words, among them face, editing, export,
+   pack and universe.
+3. *An edit is reduced to its difference* (**L1**, now stated). One word
+   changed is one word attributed; two words apart are two splices in
+   one change.
+4. *Saving is a pure function of the page's parts* and a skeleton the
+   page carries as one of them (SPEC-TRAVEL §13.2, rewritten). The
+   serialized page is never read.
+5. *Other engines.* Not done: the download hosts were opened with the
+   owner's approval, and the installer was then refused by the session's
+   permission check. The test takes the engine as a parameter.
+
+Text typed at the very start of a paragraph now stays in it (§5.1).
+
+Of the 35 findings: 8 resolved by the revision, 4 fixed in behaviour,
+11 still needing a change of text with a vector, 12 not addressed
+(`spike/envelope/FINDINGS-STATUS.md`). Thirteen new ones came with the
+revision. The most serious: part of the tools' meaning now sits in the
+kernel — the status line, the naming of a saved file, the asking for a
+name — where rule **K6** says it should be description.
+
+The kernel with all this is 5 151 lines of its own and 96.0 KiB
+compressed, three quarters of the limit, with formulas barely begun.

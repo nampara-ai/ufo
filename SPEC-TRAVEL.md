@@ -56,39 +56,53 @@ name ends `.ufx.html`.
 
 The web envelope is a conforming HTML document, encoded in UTF-8, valid
 against the HTML Standard as it stood on the date of this specification
-(the conformance suite names the snapshot). It contains, in this order:
+(the conformance suite names the snapshot).
 
-1. The doctype, then a comment of at most 512 bytes — the **plain-text
-   head** — giving in plain words the title, the fact that this is a UFO,
-   the date of export, and one sentence on how to open it. It is UTF-8
-   text, with any run of hyphens in the title reduced to one.
-2. A `head` whose first element declares the character encoding, followed
-   by the title and a content security policy that permits only the
-   envelope's own scripts, identified by hash, and WebAssembly compilation,
-   and forbids all network access.
-3. A **static face**: the plain-text face (§8.3) of the primary face, as
-   escaped HTML text, up to a size the exporter chooses, followed by a plain
-   explanation of how to open the file with scripts enabled. This is what a
-   script-disabled previewer shows. The binding hides it once the player is
-   running.
-4. The pack, as the text of one or more consecutive `script` elements of
-   type `application/x-ufo-pack`, each holding at most 64 MiB of the pack
-   in standard base64 (RFC 4648 §4) with no line breaks; every element but
-   the last holds a whole number of 3-byte groups.
-5. The kernel, compressed with DEFLATE and then base64-encoded, as the text
-   of a `script` element of type `application/x-ufo-kernel`, labeled with
-   the hash of the uncompressed component.
-6. The binding, as a module script.
+**The envelope is a function of its parts.** A writer never copies a page,
+and never reads one back from a browser. It computes the envelope from
+ten parts, each a text:
 
-Other components the universe needs are records in the pack (**K4**).
+| Part | What it is |
+| --- | --- |
+| `title` | the title shown for the file |
+| `date` | the day of export, `YYYY-MM-DD`, in UTC |
+| `static` | the **static face**: the plain-text face (§8.3) of the primary face, up to a size the exporter chooses |
+| `style`, `script` | the page's style, and the binding: the only script |
+| `kernel`, `kernel-hash` | the kernel, compressed with DEFLATE and written in standard base64; and the SHA-256 of the uncompressed kernel, in hexadecimal |
+| `tools` | the tools universe (§9.6), a pack, in standard base64 |
+| `pack` | the universe: the pack, in standard base64 (RFC 4648 §4), with no line breaks |
+| `skeleton` | the fixed text of the page, with gaps |
 
-The fixed parts of this document — everything but the title, the static
-face, the pack and the kernel — are an **envelope template**: bytes with
-four gaps, in that order. The binding supplies it: in a web envelope, the
-fixed parts of the very page it is running in, the binding included;
-elsewhere, a copy the reader holds. To write an envelope the kernel fills
-the gaps. The kernel therefore contains no HTML, a binding contains no
-envelope-writing logic, and nothing travels twice.
+The envelope is the skeleton with each gap replaced, in one pass from the
+start; what is put in is never searched for gaps. A gap is written
+`{{name}}`.
+
+| Gap | Replaced by |
+| --- | --- |
+| `{{title}}`, `{{date}}`, `{{static}}` | the part, with `&`, `<`, `>` and `"` written `&amp;`, `&lt;`, `&gt;` and `&quot;` |
+| `{{style}}`, `{{script}}`, `{{kernel}}`, `{{kernel-hash}}`, `{{tools}}`, `{{pack}}`, `{{skeleton}}` | the part, unchanged |
+| `{{csp:script}}`, `{{csp:style}}` | `sha256-` and the standard base64 of the SHA-256 of the part's UTF-8 bytes |
+| `{{<}}` | the character `<` |
+
+The function refuses a gap that is not closed, a name not in this table,
+an absent part, and a part to be put in unchanged that holds `</script`
+or `<!--` in any letter case, or for `style` also `</style`.
+
+A skeleton places these, in this order: the doctype; a comment, the
+**plain-text head**, saying in plain words that this is a UFO file, when
+it was exported and how to open it; the character encoding; the title; a
+content security policy that permits only this page's own script and
+style, by the two hashes, and WebAssembly compilation, and forbids all
+network access; the static face, with a plain explanation of what the
+file is and what to do where only this text is seen; then each of
+`skeleton`, `pack`, `tools` and `kernel` as the text of a `script`
+element of a type that is not executed; and the binding. The envelope
+therefore carries its own skeleton, as a part, and a page obtains every
+part as the exact text of an element it carries. To save, it gives the
+kernel those parts with a new `pack`, `static` and `date`, and the kernel
+computes the next envelope. Nothing depends on how a browser writes a
+page back, and nothing travels twice. The kernel knows the four character
+escapes and the three sequences it refuses, and no other HTML.
 
 Finding a pack inside a file is the one thing the kernel knows about three
 foreign containers: a pair of delimiters in HTML text, a box in ISO media, a
@@ -477,7 +491,6 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 | --- | --- | --- | --- |
 | Content layer, attribution layer, working history | concept | the three sets of records, by reachability, that decide what leaves | 13.3 |
 | Envelope | concept | a file valid in a common format that carries a pack and the player | 13.2 |
-| Envelope template | part | the fixed page a web envelope is made from | 13.2 |
 | Grant | concept | a reader's record that a person allowed a capability | 14.3 |
 | Live | part | of an object: reachable from the universe object | 13.3 |
 | Mark | concept | the visible sign on a video or image envelope that leads back to the universe | 13.4 |
@@ -486,6 +499,7 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 | Principal | concept | a party that acts, identified by key, name or both | 14.1 |
 | Seal | concept | a signature over a root hash | 14.2 |
 | Sharing, publishing | concept | sending to collaborators, with working history; sending to outside readers, without it unless chosen | 13.3 |
+| Skeleton | part | the fixed text of a web envelope, with gaps; the envelope carries it as one of its parts | 13.2 |
 | Static face | concept | the text a web envelope shows where no script runs | 13.2 |
 | Travel form | concept | a pack in an envelope | 13.2 |
 | Working form | concept | a pack alone | 13.1 |
