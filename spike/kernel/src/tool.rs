@@ -366,10 +366,11 @@ pub struct Reader {
     field: Option<(i64, Id)>,    // or a value a Portal of the tools presents: the entry's number, and the Portal
     serial: i64,
     focus: Option<(usize, i64)>, // the node the host says has the focus, and the list it is in
+    picking: Option<V>,          // an `import` that waits for the person to choose a file
 }
 impl Reader {
     pub fn new(parts: V, args: Vec<(String, V)>) -> Reader {
-        Reader { parts, args, state: Vec::new(), w: 600.0, drawn: 0.0, lists: [Vec::new(), Vec::new()], high: [-1.0; 2], editable: false, through: None, shown: None, entry: None, field: None, serial: 0, focus: None }
+        Reader { parts, args, state: Vec::new(), w: 600.0, drawn: 0.0, lists: [Vec::new(), Vec::new()], high: [-1.0; 2], editable: false, through: None, shown: None, entry: None, field: None, serial: 0, focus: None, picking: None }
     }
 }
 fn effect(kind: &str, v: V) -> V {
@@ -478,7 +479,8 @@ fn boxed(list: &mut [V]) {
 /// Effects: `draw` `{on, list, w, h}`, one for each list that is not as the host last had it; `edit`
 /// `{id, at, s, font, size, weight}` to mount the editing surface, or null to unmount it; `show`
 /// `{on, at}`, a rectangle of a list to bring into view; `deliver` `{name, type, bytes}`, a file for
-/// the person. `own` is a tools universe the reader holds itself (K3); with none, the one the
+/// the person; `pick`, a file of the person's choosing asked for, which comes as the event
+/// `{file: {name, bytes}}` if they choose one. `own` is a tools universe the reader holds itself (K3); with none, the one the
 /// working universe carries is presented (9.6); with neither, the working universe, to read.
 pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
     let mut fx = Vec::new();
@@ -560,6 +562,8 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
         if let (false, Some(e), Some(h)) = (edits.is_empty(), e, h) {
             perform(rd, pk, &h, &[], Some((e, edits)), &mut fx);
         }
+    } else if let (Some(f), Some(m)) = (ev.get("file"), rd.picking.take()) {
+        perform(rd, pk, &m, &[(String::from("file"), f.clone())], None, &mut fx);
     } else {
         return V::L(fx);
     }
@@ -575,7 +579,8 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
 /// there is one: `{ok: true, …}`, or `{ok: false, why}`. The actions here are `export`, of the
 /// subject, and `propose`, of the change the event carries: what was done in the editing surface.
 fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut change: Option<(Entry, Vec<Edit>)>, fx: &mut Vec<V>) {
-    for h in if let V::L(l) = h { &l[..] } else { core::slice::from_ref(h) } {
+    let hs = if let V::L(l) = h { &l[..] } else { core::slice::from_ref(h) };
+    for (i, h) in hs.iter().enumerate() {
         let Some(m) = eval(h, &Env::new(&rd.state, &rd.args, event, pk)) else { return };
         let set = |state: &mut Vec<(String, V)>, name: &str, v: V| {
             state.retain(|e| e.0 != name);
@@ -593,6 +598,25 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
                     let r = write::edit(pk, e.o, e.lo, e.hi, "", Some(edits), who, crate::now(), &random)?;
                     Ok(vec![("change", t(&hex(r.get("change").and_then(|c| c.b()).unwrap_or(&[]))))])
                 }),
+                // 5.2: a file of the person's choosing, taken in as an asset. The first time, the host is asked for one
+                // (`pick`), and the action and what follows it in its handler wait; they are performed when the file comes,
+                // and not at all if none does. The kind of file is told from its content first and its name second, here,
+                // so that it is the same in every reader.
+                ("import", _) if rd.editable => match event.iter().find(|e| e.0 == "file") {
+                    None => {
+                        rd.picking = Some(V::L(hs[i..].to_vec()));
+                        fx.push(effect("pick", V::Null));
+                        return;
+                    }
+                    Some((_, f)) => text("who").ok_or("a change says who made it, and no name was given").and_then(|who| {
+                        let (data, name) = (f.get("bytes").and_then(|b| b.b()).ok_or("no file came")?, f.get("name").and_then(|n| n.s()).filter(|n| !n.is_empty()));
+                        let media = media(data, name.unwrap_or(""));
+                        let mut random = [0u8; 80];
+                        crate::random(&mut random);
+                        write::asset(pk, random[64..].try_into().unwrap_or([0; 16]), name, media, data, who, crate::now(), &random[..64])?;
+                        Ok(vec![("name", t(name.unwrap_or(""))), ("media", t(media)), ("bytes", V::Int(data.len() as i64))])
+                    }),
+                },
                 // 9.6: the newest change of the person using the reader that is not undone yet, undone
                 #[cfg(not(feature = "cut-decide"))]
                 ("undo", _) => text("who").ok_or("an undoing says who asked for it, and no name was given").and_then(|who| {
@@ -640,6 +664,21 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
             }
         }
     }
+}
+/// What kind of file this is (5.2): from its content first, and its name second.
+fn media(data: &[u8], name: &str) -> &'static str {
+    for (head, m) in [(&b"\x89PNG\r\n\x1a\n"[..], "image/png"), (b"\xff\xd8\xff", "image/jpeg"), (b"GIF8", "image/gif"), (b"%PDF-", "application/pdf")] {
+        if data.starts_with(head) {
+            return m;
+        }
+    }
+    let end = name.rsplit('.').next().unwrap_or("");
+    for (e, m) in [("txt", "text/plain"), ("csv", "text/csv"), ("json", "application/json"), ("svg", "image/svg+xml"), ("html", "text/html")] {
+        if end.eq_ignore_ascii_case(e) && end.len() < name.len() {
+            return m;
+        }
+    }
+    "application/octet-stream"
 }
 /// 10.3 `export`, of the subject, as a web envelope (TRAVEL 13.2): the parts this reader came in, with
 /// the subject's static face, its pack and today's date in place of those it came with. With its

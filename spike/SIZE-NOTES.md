@@ -540,3 +540,30 @@ Whole kernel, compressed, by `size.mjs`, each step against the one before.
 | The split in real files | 121 140 | |
 | 3c. Undo | 122 229 | about 1 090 |
 | 3d. Verifying seals: the bytes signed, the host's answer kept, the `verify` projection | 123 191 | 962 |
+| 3e. Adding an asset: making an object (`new`) and retiring one (`drop`) through the gate, the `import` action, the kind of a file from its content and name | 124 121 | 930 |
+
+After 3e, divided (`divide.mjs`): **base 119 335 bytes** compressed (116.5 KiB of
+128), printer 5 059, agent 3 717; the division costs 2 342. The host is 10 046
+bytes as shipped (of 16 384) in 286 lines (of 600): the file chooser added
+about 250 bytes. The tools universe is 14 102 bytes (of 24 576).
+
+What 3e found, and what it does not do:
+
+- A file that has been added and that nothing in the document names is not
+  live (SPEC 2.5), so it is working history: a copy with its history carries
+  it, a published copy does not. The tools say so in the line that reports the
+  adding. Placing an asset in the document, which makes it live, is not built.
+- Undoing the adding retires the object by a `drop`; its bytes stay in the
+  working history, as everything undone does.
+- The kind of file is told in the kernel, from the content first (four
+  beginnings: PNG, JPEG, GIF, PDF) and the name second (five endings), else
+  `application/octet-stream`. The host passes the name and the bytes and not
+  what its engine supposes the kind to be, so the same file is recorded the
+  same way by every reader. No difference between engines was observed here:
+  the test harness supplies the kind itself, so it could not show one.
+- A file input that is not in the page opens the chooser on a press, on Enter
+  and on Space in Chromium, Firefox and WebKit as tested here. Not tried on a
+  phone.
+- Exporting an asset's original bytes (SPEC 5.2 **X4**) is not built.
+- The independent reader, unmodified, replays the conservation of all four
+  commits of `vectors/asset.ufx`, and finds each file's exact bytes.

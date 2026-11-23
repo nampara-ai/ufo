@@ -193,7 +193,7 @@ const imports = {
 
 // ---- effects: what the kernel asks of the host after each input event ----
 const player = $('#ufo-player'), sheets = [...player.querySelectorAll('canvas')], entry = $('#ufo-entry'), area = $('#ufo-entry textarea');
-let shown = [], mounted = 0, width = 0, back = null, held = '', sel = null, comp = null;
+let shown = [], mounted = 0, width = 0, back = null, held = '', sel = null, comp = null, picker;
 const DO = {
   draw({ on, list, w, h }) {   // a display list, on one of the page's canvases, w by h CSS pixels at the device's own density
     const c = sheets[on], r = globalThis.devicePixelRatio || 1, g = c.getContext('2d');
@@ -220,6 +220,12 @@ const DO = {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' })); a.download = name;
     a.click();
+  },
+  pick() {   // a file of the person's choosing, asked for with the chooser this place has: its name and its bytes, and nothing this place supposes about them
+    const i = picker = document.createElement('input');
+    i.type = 'file';
+    i.onchange = async () => { const f = i.files[0]; if (f) send({ file: { name: f.name, bytes: new U8(await f.arrayBuffer()) } }); };
+    i.click();
   },
 };
 // One raw input event to the kernel; then whatever it asks for, done blindly. One at a time: an event that comes while

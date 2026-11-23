@@ -401,4 +401,45 @@ fs.writeFileSync(out('edited.ufx'), before);
     assert(h.some(l => l.endsWith('verdict=accept decided-by="Second Reader"')) && h.some(l => l.endsWith('verdict=reject decided-by="Second Reader"')), 'the decisions did not travel: ' + h.join(' / '));
     assert.deepStrictEqual(why(q, b.lo, b.hi), runsNow, 'a published copy says who first wrote what was put back, as the whole pack does'); say('published:', pub.length, 'bytes of', packNow.length, '; the decisions and the first author are there'); }
   say('decisions:', JSON.stringify({ accepted: x2.slice(0, 8), rejected: x1.slice(0, 8), by: 'Second Reader', pack: packNow.length })); }
+// ---- adding a file (SPEC 5.2): the tools ask the reader for a file of the person's; it is taken in as an asset, exactly; an undo retires it ----
+{ const u = await reader({ parts, name: 'compose.ufx.html', who: 'Fourth Hand', seed: 31 }), h0 = u.head(), was = Buffer.from(u.k.packBytes());
+  assert(!u.find('Add a file'), 'a file can be added before editing is on'); u.press('Edit'); assert(u.find('Add a file'), 'no word to add a file');
+  // a file whose content says what it is, whatever its name says; long enough to be kept in several parts
+  let seedBytes = Buffer.alloc(0), hh = Buffer.from('ufo-asset-vector'); while (seedBytes.length < 70000) { hh = crypto.createHash('sha256').update(hh).digest(); seedBytes = Buffer.concat([seedBytes, hh]); }
+  const picture = Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), seedBytes.subarray(0, 70000)]), notes = Buffer.from('Notes for the review.\nNothing here is shown in the document.\n');
+  u.press('Add a file'); assert.strictEqual(u.kinds(), 'pick', 'the reader was not asked for a file: ' + u.kinds()); assert.strictEqual(u.head().commit, h0.commit, 'something was written before a file came');
+  u.send({ file: { name: 'picture.dat', bytes: new Uint8Array(picture) } }); const a = u.head(); assert.strictEqual(a.height, h0.height + 1);
+  assert(/Added picture\.dat: image\/png, 70008 bytes, kept exactly as given, recorded as added by Fourth Hand\. Nothing in the document uses it yet: it stays with the working history, and a copy for readers does not carry it\. Not yet in a file\./.test(u.status()), u.status());
+  const hist = () => u.k.project({ name: 'history', full: true }).split('\n').filter(l => l.startsWith('change ')), idOf = l => /touched=\[o:([0-9a-f]{32})\]/.exec(l)[1];
+  assert(hist()[0].includes('actor="Fourth Hand"') && hist()[0].includes('ops=4'), hist()[0]); const A = idOf(hist()[0]), objA = u.k.project({ name: 'object', o: A });
+  say('\nan asset, as `object` gives it:'); for (const l of objA.split('\n')) say('  ' + l.slice(0, 200));
+  // a file with no word of its own in its content: its name says what it is. Then no file at all: nothing is written
+  u.press('Add a file'); u.send({ file: { name: 'notes.TXT', bytes: new Uint8Array(notes) } }); const B = idOf(hist()[0]), objB = u.k.project({ name: 'object', o: B }); assert(u.status().includes(`Added notes.TXT: text/plain, ${notes.length} bytes`), u.status());
+  { const held = Buffer.from(u.k.packBytes()); u.press('Add a file'); assert.strictEqual(u.kinds(), 'pick'); u.send({ view: [600, 800] }); assert(Buffer.compare(held, Buffer.from(u.k.packBytes())) === 0, 'written with no file');
+    u.press('Edit'); u.send({ file: { name: 'late.txt', bytes: new Uint8Array(notes) } }); assert(/Not added: this reader cannot do that\./.test(u.status()) && Buffer.compare(held, Buffer.from(u.k.packBytes())) === 0, 'a file that comes when editing is off: ' + u.status()); u.press('Edit'); }
+  // undo: the newest change of this person, the second file, is retired; the first is still there, and its bytes are in the pack once
+  const withBoth = Buffer.from(u.k.packBytes()); u.press('Changes'); u.press('Undo my last change'); assert(/Undone: your change/.test(u.status()), u.status()); const now = Buffer.from(u.k.packBytes()), top = hist()[0];
+  assert(top.includes('by=tool') && top.includes('ops=1') && idOf(top) === B, top); assert.strictEqual(u.k.project({ name: 'object', o: B }), null, 'the retired object is still in the state'); assert.strictEqual(u.k.project({ name: 'object', o: A }).split('\n').slice(1).join('\n'), objA.split('\n').slice(1).join('\n'), 'the other asset changed');
+  const count = (hay, needle) => { let n = 0, i = -1; while ((i = hay.indexOf(needle, i + 1)) >= 0) n++; return n; }; assert.strictEqual(count(now, picture.subarray(8, 2056)), 1, 'the file\'s bytes are not in the pack exactly once');
+  // Nothing in the document names the file yet, so it is not live (SPEC 2.5): it is working history. A copy with its history carries
+  // it; a published copy does not, and `leaving` counts its bytes with what stays behind
+  const pub = Buffer.from(u.k.published()), q = await kernel(); assert(await q.open(pub)); assert.strictEqual(count(pub, picture.subarray(8, 2056)), 0, 'a file nothing uses travels in a published copy'); assert.strictEqual(count(pub, notes), 0); assert.strictEqual(count(now, notes), 1);
+  assert(q.project({ name: 'object', o: A }) === null && q.project({ name: 'object', o: B }) === null); const L = u.k.layers(), L0 = (await (async () => { const z = await kernel(); await z.open(was); return z.layers(); })());
+  assert(L.history.bytes - L0.history.bytes > picture.length && L.content.bytes - L0.content.bytes < 2048, 'the file is not counted with the working history: ' + JSON.stringify([L0, L]));
+  // the blob each file is kept in, by the hash that names it (SPEC 1.4): the same bytes are the same blob wherever they are taken in. These two
+  // were read out of this pack by the independent reader, which also found that the bytes under each hash to the file's SHA-256
+  const BLOBS = ['2c89c13af7635c9775a8f2f9bfb82d47db32f2cecdb5f92a44cca94a418b9938', '2ec819f94d000648e49c0cc2f77a911703b5df57ced18f17b8503ca6616f8b2d'];
+  for (const b of BLOBS) assert(count(now, Buffer.from(b, 'hex')) >= 1, 'the pack names no blob ' + b);
+  fs.writeFileSync(new URL('vectors/asset.ufx', root), now);
+  const sha = b => crypto.createHash('sha256').update(b).digest('hex');
+  fs.writeFileSync(new URL('vectors/provisional/asset.json', root), JSON.stringify({ status: { status: 'provisional', note: "the author's kernel only" },
+    what: 'adding a file (SPEC 5.2, 1.7 `new` and `drop`): compose.ufx after two files are taken in as assets by one person, and the second undone at their asking',
+    pack: { file: 'asset.ufx', length: now.length, sha256: sha(now), root_hash: u.head().commit },
+    first: { object: A, name: 'picture.dat', media: 'image/png', told_from: 'its content: it begins with the eight bytes of a PNG file', length: picture.length, sha256: sha(picture), blob: BLOBS[0], bytes: 'the eight bytes 89 50 4e 47 0d 0a 1a 0a, then the first 70000 bytes of h1 h2 h3 …, where h0 is the ASCII text "ufo-asset-vector" and each h is the SHA-256 of the one before', in_the_state: true, object_projection: objA.split('\n') },
+    second: { object: B, name: 'notes.TXT', media: 'text/plain', told_from: 'its name: its content begins with nothing this reader knows', length: notes.length, sha256: sha(notes), blob: BLOBS[1], bytes_as_text: notes.toString(), in_the_state: false, object_projection_before_the_undo: objB.split('\n') },
+    history: hist().slice(0, 3),
+    published: { length: pub.length, sha256: sha(pub), holds_the_first_file: false, holds_the_second_file: false, why: 'nothing reachable from the universe object names either asset, so neither is live (SPEC 2.5): they are working history, and a published copy withholds that' },
+    layers: { before: L0, after: L },
+    refused: [{ what: 'no file comes after one is asked for', written: 'nothing' }, { what: 'a file comes when the document is not open for changes', says: 'this reader cannot do that', written: 'nothing' }] }, null, 1) + '\n');
+  void was; void withBoth; say('asset:', JSON.stringify({ first: A.slice(0, 8), second: B.slice(0, 8), pack: now.length, published: pub.length })); }
 say('\nOK');

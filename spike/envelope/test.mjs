@@ -13,7 +13,7 @@ import { start, commitsOf, layersOf } from '../binding/binding.mjs'; import { ke
 import { playwright, launch, executable, ENGINES } from './engines.mjs';
 const { devices } = playwright, here = p => fileURLToPath(new URL(p, import.meta.url)), out = here('../out/'), shots = here('../out/shots/');
 const arg = n => (i => i < 0 ? null : process.argv[i + 1])(process.argv.indexOf('--' + n)), engineName = arg('engine') || 'all';
-const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'components', 'seals', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
+const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'asset', 'components', 'seals', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
 const CONTEXTS = ['Node', 'desktop, file://', 'http origin', 'phone, larger', 'phone, smaller', 'scripts off', 'reader', 'validators'];
 if (![...ENGINES, 'all'].includes(engineName)) { console.error('--engine chromium|firefox|webkit'); process.exit(2); }
 
@@ -57,7 +57,7 @@ const must = (c, why) => { if (!c) throw Error(why); };
 const same = (a, b, why) => must(JSON.stringify(a) === JSON.stringify(b), `${why}: ${JSON.stringify(a)} is not ${JSON.stringify(b)}`);
 
 // ---- a kernel in Node, for what is computed independently of the page: the static face of a pack, its state, its nodes ----
-import { nodeKernel, ask, packOf } from './ask.mjs';
+import { nodeKernel, ask, packOf } from './ask.mjs'; import { createHash } from 'crypto';
 const inNode = async pack64 => { const k = await nodeKernel(); must(await k.open(new Uint8Array(Buffer.from(pack64, 'base64'))), 'the pack does not open in Node');
   return { html: k.sample({ as: 'static' }).html, text: k.sample({ as: 'text' }).text, head: k.commits()[0].commit, nodes: flat(tree(k.sample({ as: 'list', w: 600 }).list)), layers: k.layers(),
     leaving: history => k.project({ name: 'leaving', history }), history: k.project({ name: 'history', o: T }).split('\n').filter(l => l.startsWith('change ')) }; };
@@ -435,7 +435,8 @@ await check('host: of the look it writes exactly the place and size of a node\'s
   // the allow-list fails on what it must: each of these, put into the source, is found
   for (const bad of ["el.style.color = 'red'", "el.style['left'] = 0", "el.setAttribute('style', 'left:0')", "el.style.cssText = 'left:0'", "el.style.setProperty('left', 0)", "const s = el.style; s.left = 0", "document.createElement('style')", "sheet.insertRule('p{}')", "document.adoptedStyleSheets = []", "el.STYLE.left = 0", "Object.assign(el.style, { left: 0 })"])
     must(styleUses(bad).some(u => !u.ok) || OUTSIDE.some(r => r.test(bad)), 'the allow-list lets through: ' + bad);
-  same([...code.matchAll(/createElement\((?:'(\w+)')?/g)].map(m => m[1] || 'of a role'), ['of a role', 'canvas', 'a'], 'the elements it makes'); return said.join('; ') + '; 11 writes it must refuse, refused; it makes only the elements of roles, a canvas to measure with, and the link a file is handed over by'; });
+  same([...code.matchAll(/createElement\((?:'(\w+)')?/g)].map(m => m[1] || 'of a role'), ['of a role', 'canvas', 'a', 'input'], 'the elements it makes'); must(/picker = document\.createElement\('input'\)/.test(code) && !/append\w*\((i|picker)\b/.test(code), 'the file chooser\'s element is put in the page');
+  return said.join('; ') + '; 11 writes it must refuse, refused; it makes only the elements of roles, a canvas to measure with, the link a file is handed over by, and the element a file is chosen with, which is never put in the page'; });
 await check('host: the style part holds no rule that fetches, and the skeleton no style attribute, no handler attribute and no element that loads', () => { const css = fs.readFileSync(here('page.css'), 'utf8'), sk = fs.readFileSync(here('skeleton.html'), 'utf8');
   must(!/url\(|@import|@font-face|expression\(/i.test(css), 'the style fetches'); must(!/\sstyle\s*=|\son[a-z]+\s*=|<(img|iframe|object|embed|video|audio|source|base|form)\b|\ssrc\s*=/i.test(sk), 'the skeleton'); same([...sk.matchAll(/<link[^>]*>/g)].map(m => m[0]), ['<link rel="icon" href="data:,">'], 'links');
   must(!/x-ufo-tools|\{\{tools\}\}/.test(sk), 'the skeleton still has a place for a tools part'); const csp = /Content-Security-Policy" content="([^"]*)"/.exec(sk)[1]; must(/style-src '\{\{csp:style\}\}';/.test(csp) && !/unsafe-inline|unsafe-hashes|unsafe-eval'/.test(csp.replace("'wasm-unsafe-eval'", '')), 'the policy: ' + csp);
@@ -482,6 +483,30 @@ const decisions = async (open, press, { giveName, pressAt, one }) => check('deci
   await press(page, 'Undo my last change'); must((await status()).includes(flatten('Not undone: there is no change of yours here to undo')), 'a second undo: ' + await status());
   must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify([log.requests.length, log.errors, await page.evaluate(() => globalThis.__violations)])); await context.close(); return `${newest} accepted, ${second} rejected by ${who}; ${via.length} stretches put back, each still its first author's`;
 });
+// adding a file (SPEC 5.2): through the tools, with the chooser the browser has, by a press and by the keyboard; then undone
+const adding = async (open, press, { giveName }) => check('asset: through the tools, a file of the person\'s choosing is taken in exactly, and recorded as theirs, by a press and by the keyboard alone; choosing none writes nothing; an undo retires it', async () => {
+  const f = path.join(work, 'adding.ufx.html'); make(here('../../vectors/compose.ufx'), f); const { context, page, log } = await open(f, 'nobody'), who = 'Ada Adder', status = async () => flatten((await page.getByRole('status').allTextContents()).join(' '));
+  const want = JSON.parse(fs.readFileSync(here('../../vectors/provisional/asset.json'), 'utf8')), picture = (() => { let b = Buffer.alloc(0), h = Buffer.from('ufo-asset-vector'); while (b.length < 70000) { h = createHash('sha256').update(h).digest(); b = Buffer.concat([b, h]); } return Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), b.subarray(0, 70000)]); })();
+  must(createHash('sha256').update(picture).digest('hex') === want.first.sha256, 'the file is not the vector\'s'); const hist = async () => (await ask(page, { name: 'history', full: true })).split('\n').filter(l => l.startsWith('change '));
+  must(!(await d0.look(page)).all.includes('Add a file'), 'a file can be added before editing is on'); await giveName(page, who); const h0 = await hist();
+  // a press: the chooser opens; the file is given under a name and a kind that say something else, and its content decides
+  // (the test must be listening before the chooser is asked for, and says so to the browser by a message of its own: so each way of asking begins with a step that goes to the page and comes back)
+  const chosen = async (how, file, what) => { const [fc] = await Promise.all([page.waitForEvent('filechooser', { timeout: 5000 }).catch(() => null), how()]); must(fc, 'no chooser opened ' + what + '; the focus is on ' + await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 120))); if (file) await fc.setFiles(file); return fc; };
+  await chosen(() => press(page, 'Add a file'), { name: want.first.name, mimeType: 'text/plain', buffer: picture }, 'by a press'); await page.waitForFunction(() => /Added /.test(document.querySelector('[role=status]')?.textContent || ''), null, { timeout: 5000 });
+  must((await status()).includes(flatten(`Added ${want.first.name}: image/png, ${picture.length} bytes, kept exactly as given, recorded as added by ${who}.`)), 'the status: ' + await status());
+  let h = await hist(); must(h.length === h0.length + 1 && h[0].includes(`actor="${who}"`) && h[0].includes('ops=4'), 'the change: ' + h[0]); const A = /touched=\[o:([0-9a-f]{32})\]/.exec(h[0])[1];
+  const obj = (await ask(page, { name: 'object', o: A })).split('\n').slice(1), wantObj = want.first.object_projection.slice(1).map(l => l.replace(/(id=o:|r=r:|by=o:)[0-9a-f]+/g, '$1'));
+  must(JSON.stringify(obj.map(l => l.replace(/(id=o:|r=r:|by=o:)[0-9a-f]+/g, '$1'))) === JSON.stringify(wantObj), 'the asset: ' + obj.join(' / ')); const pack = Buffer.from(await packOf(page), 'base64'); must(pack.indexOf(picture.subarray(0, 2048)) >= 0 && pack.indexOf(Buffer.from(want.first.blob, 'hex')) >= 0, 'the file\'s bytes are not in the pack as they were given: no blob of the hash that names exactly those bytes');
+  // the keyboard alone: the word is reached and pressed with Enter; and a chooser that is closed with nothing chosen writes nothing
+  const word = page.getByRole('button', { name: 'Add a file' }); await chosen(async () => { await word.focus(); await page.keyboard.press('Enter'); }, { name: 'notes.TXT', mimeType: 'application/pdf', buffer: Buffer.from(want.second.bytes_as_text) }, 'by Enter');
+  await page.waitForFunction(() => /Added notes\.TXT/.test(document.querySelector('[role=status]')?.textContent || ''), null, { timeout: 5000 }); must((await status()).includes(flatten(`Added notes.TXT: text/plain, ${want.second.length} bytes`)), 'by the keyboard: ' + await status());
+  h = await hist(); must(h.length === h0.length + 2, 'the second file'); const B = /touched=\[o:([0-9a-f]{32})\]/.exec(h[0])[1]; await chosen(async () => { await word.focus(); await page.keyboard.press(' '); }, null, 'by Space'); await page.waitForTimeout(150); must((await hist()).length === h0.length + 2, 'written with no file chosen');
+  // undo: the second file is retired; the first stays
+  await press(page, 'Changes'); await press(page, 'Undo my last change'); h = await hist(); must((await status()).includes(flatten('Undone: your change')) && h.length === h0.length + 3 && h[0].includes('by=tool') && h[0].includes(`touched=[o:${B}]`), 'undo: ' + await status() + ' / ' + h[0]);
+  must(await ask(page, { name: 'object', o: B }) === null && await ask(page, { name: 'object', o: A }) !== null, 'what is in the state after the undo');
+  must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify([log.requests.length, log.errors, await page.evaluate(() => globalThis.__violations)])); await context.close();
+  return `${want.first.name}, ${picture.length} bytes, told to be image/png from its content though given as text/plain; notes.TXT by the keyboard, then undone`;
+});
 // components (SPEC 1.6; spike/SPLIT.md): a page runs the base, and beside it only what its file lists for that base and the kernel can verify
 const components = async (open) => {
   const made = (name, pack, ...flags) => { const f = path.join(work, name); make(here('../../vectors/' + pack), f, ...flags); return f; }, SAFE = /This file needs something this reader does not have: ufo\.code/;
@@ -514,7 +539,7 @@ const needy = async (open, press) => check('safeguard: a file that requires what
   const l = await d0.look(page); must(l.all.includes('Its captions are text.') && l.all.includes('ufo.time'), 'not drawn'); const head = (await headOf(page)).commit; await press(page, 'Edit'); await press(page, 'A film'); await page.keyboard.type('x'); await page.keyboard.press('Tab');
   must((await headOf(page)).commit === head, 'the file was changed'); must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet'); await context.close(); return JSON.stringify(line);
 });
-const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await f6(open, press); await bare(open, press); await needy(open, press); await decisions(open, press, h); await components(open); await sealing(open); } });
+const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await f6(open, press); await bare(open, press); await needy(open, press); await decisions(open, press, h); await adding(open, press, h); await components(open); await sealing(open); } });
 
 // ---- f: sent on. The saved file served from another origin; and the packs given to the independent reader ----
 let h = null;

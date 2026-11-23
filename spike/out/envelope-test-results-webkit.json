@@ -8,7 +8,7 @@
  "results": {
   "Node": {
    "kernel": "passed",
-   "host": "failed"
+   "host": "passed"
   },
   "desktop, file://": {
    "opened": "passed",
@@ -29,6 +29,7 @@
    "no tools": "passed",
    "safeguard": "passed",
    "decisions": "passed",
+   "asset": "passed",
    "components": "passed",
    "seals": "passed",
    "sent on": "passed"
@@ -96,10 +97,10 @@
   }
  },
  "host": {
-  "lines": 280,
-  "source_bytes": 19950,
-  "shipped_bytes": 9867,
-  "longest": 150,
+  "lines": 286,
+  "source_bytes": 20351,
+  "shipped_bytes": 10046,
+  "longest": 158,
   "minifier": "terser 5.51.4",
   "options": "--module --ecma 2020 --compress --mangle",
   "forbidden": [
@@ -124,6 +125,6 @@
    "state"
   ]
  },
- "total": 251,
- "failures": 1
+ "total": 252,
+ "failures": 0
 }

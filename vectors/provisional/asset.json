@@ -1,0 +1,177 @@
+{
+ "status": {
+  "status": "provisional",
+  "note": "the author's kernel only"
+ },
+ "what": "adding a file (SPEC 5.2, 1.7 `new` and `drop`): compose.ufx after two files are taken in as assets by one person, and the second undone at their asking",
+ "pack": {
+  "file": "asset.ufx",
+  "length": 87450,
+  "sha256": "71d3976ff5090673734505bc9ca542e28148224dde32a1f52a798e76e89c2cf3",
+  "root_hash": "4c87acc623e3ae08edf7efa7fbf5b2cb72a18a11036079ca246a7b968374e341"
+ },
+ "first": {
+  "object": "cff4193e6388add2f71c41668bb0d5fa",
+  "name": "picture.dat",
+  "media": "image/png",
+  "told_from": "its content: it begins with the eight bytes of a PNG file",
+  "length": 70008,
+  "sha256": "7a26294caf973d06bd1c9123e8c5104e5f94cc6e5b8c50e5c9b5d29ec73ba16c",
+  "blob": "2c89c13af7635c9775a8f2f9bfb82d47db32f2cecdb5f92a44cca94a418b9938",
+  "bytes": "the eight bytes 89 50 4e 47 0d 0a 1a 0a, then the first 70000 bytes of h1 h2 h3 …, where h0 is the ASCII text \"ufo-asset-vector\" and each h is the SHA-256 of the one before",
+  "in_the_state": true,
+  "object_projection": [
+   "object o:cff4193e @ commit=c:163d312d",
+   "object id=o:cff4193e type=ufo.asset rev=1 r=r:12008b08 by=o:8fb4d9fe",
+   "prop key=name value=\"picture.dat\"",
+   "prop key=bytes len=70008 kind=bytes",
+   "prop key=media value=\"image/png\"",
+   "end lines=4",
+   ""
+  ]
+ },
+ "second": {
+  "object": "34597ea3c8ed12375c81a6cbf0153a5f",
+  "name": "notes.TXT",
+  "media": "text/plain",
+  "told_from": "its name: its content begins with nothing this reader knows",
+  "length": 61,
+  "sha256": "5d520686d206742b26bccef7fbf93e8e61d6fd01578147a13f7e0bd63a074bba",
+  "blob": "2ec819f94d000648e49c0cc2f77a911703b5df57ced18f17b8503ca6616f8b2d",
+  "bytes_as_text": "Notes for the review.\nNothing here is shown in the document.\n",
+  "in_the_state": false,
+  "object_projection_before_the_undo": [
+   "object o:34597ea3 @ commit=c:03a5f807",
+   "object id=o:34597ea3 type=ufo.asset rev=1 r=r:d78587e6 by=o:f4193e63",
+   "prop key=name value=\"notes.TXT\"",
+   "prop key=bytes value={\"$bytes\":\"4e6f74657320666f7220746865207265766965772e0a4e6f7468696e6720686572652069732073686f776e20696e2074686520646f63756d656e742e0a\"}",
+   "prop key=media value=\"text/plain\"",
+   "end lines=4",
+   ""
+  ]
+ },
+ "history": [
+  "change id=o:597ea3c8ed12375c81a6cbf0153a5f84 commit=c:4c87acc623e3ae08edf7efa7fbf5b2cb72a18a11036079ca246a7b968374e341 time=1767355200000 actor=\"Fourth Hand\" basis=witnessed by=tool ops=1 touched=[o:34597ea3c8ed12375c81a6cbf0153a5f] verdict=none",
+  "change id=o:f4193e6388add2f71c41668bb0d5fa1f commit=c:03a5f8071c21d6f9c1206155ecff5a92458500513f5feaa4b44a6ad315d6d4f1 time=1767355200000 actor=\"Fourth Hand\" basis=witnessed by=person ops=4 touched=[o:34597ea3c8ed12375c81a6cbf0153a5f] verdict=none",
+  "change id=o:8fb4d9fe23486d92b7dc01264b7095ba commit=c:163d312da7f5cbdf3d1e0abf59804781b5a67113fe3e6a0a4f7433bdbc447e31 time=1767355200000 actor=\"Fourth Hand\" basis=witnessed by=person ops=4 touched=[o:cff4193e6388add2f71c41668bb0d5fa] verdict=none"
+ ],
+ "published": {
+  "length": 5759,
+  "sha256": "427c190fec33938b90fed2c8f8e231ae92d83d735aed350f4af9732c372fe4c3",
+  "holds_the_first_file": false,
+  "holds_the_second_file": false,
+  "why": "nothing reachable from the universe object names either asset, so neither is live (SPEC 2.5): they are working history, and a published copy withholds that"
+ },
+ "layers": {
+  "before": {
+   "lacks": {
+    "is": "lacks",
+    "history": false,
+    "blobs": 0,
+    "unread": 0,
+    "unread-bytes": 0
+   },
+   "content": {
+    "is": "layer",
+    "name": "content",
+    "included": true,
+    "objects": 4,
+    "bytes": 4181,
+    "actors": [],
+    "models": [],
+    "changes": 0,
+    "first": 0,
+    "last": 0
+   },
+   "attribution": {
+    "is": "layer",
+    "name": "attribution",
+    "included": true,
+    "objects": 1,
+    "bytes": 393,
+    "actors": [
+     "Test Author"
+    ],
+    "models": [],
+    "changes": 1,
+    "first": 1767225600000,
+    "last": 1767225600000
+   },
+   "history": {
+    "is": "layer",
+    "name": "history",
+    "included": true,
+    "objects": 0,
+    "bytes": 4254,
+    "actors": [
+     "Test Author"
+    ],
+    "models": [],
+    "changes": 1,
+    "first": 1767225600000,
+    "last": 1767225600000
+   }
+  },
+  "after": {
+   "lacks": {
+    "is": "lacks",
+    "history": false,
+    "blobs": 0,
+    "unread": 0,
+    "unread-bytes": 0
+   },
+   "content": {
+    "is": "layer",
+    "name": "content",
+    "included": true,
+    "objects": 4,
+    "bytes": 4389,
+    "actors": [],
+    "models": [],
+    "changes": 0,
+    "first": 0,
+    "last": 0
+   },
+   "attribution": {
+    "is": "layer",
+    "name": "attribution",
+    "included": true,
+    "objects": 1,
+    "bytes": 846,
+    "actors": [
+     "Test Author"
+    ],
+    "models": [],
+    "changes": 1,
+    "first": 1767225600000,
+    "last": 1767225600000
+   },
+   "history": {
+    "is": "layer",
+    "name": "history",
+    "included": true,
+    "objects": 4,
+    "bytes": 78275,
+    "actors": [
+     "Fourth Hand",
+     "Test Author"
+    ],
+    "models": [],
+    "changes": 4,
+    "first": 1767225600000,
+    "last": 1767355200000
+   }
+  }
+ },
+ "refused": [
+  {
+   "what": "no file comes after one is asked for",
+   "written": "nothing"
+  },
+  {
+   "what": "a file comes when the document is not open for changes",
+   "says": "this reader cannot do that",
+   "written": "nothing"
+  }
+ ]
+}
