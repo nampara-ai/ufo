@@ -1470,7 +1470,7 @@ the change that introduced the content:
 | Field | Value |
 | --- | --- |
 | `basis` | `witnessed`, `inferred` or `unknown` |
-| `by` | `person`, `model` or `tool`; absent when the basis is `unknown` or the content was copied |
+| `by` | `person`, `model` or `tool`: who made the change. Absent when the basis is `unknown`, or the content was copied from another universe |
 | `who` | for `person`: a principal (§14.1) |
 | `model` | for `model`: the model's identifier as its provider states it |
 | `prompt` | for `model`: a ref to the text object holding the prompt, or the conversation it was part of |
@@ -1478,7 +1478,7 @@ the change that introduced the content:
 | `tool` | for `tool`: name and version of the deterministic process |
 | `asked` | for `model` and `tool`: the principal at whose request it ran |
 | `copied` | an anchor to the region this content was copied from |
-| `sources` | written by the kernel for a copy within the same universe: for what this change inserted, in order, `[count, change]` naming the changes that first introduced it |
+| `sources` | written by the kernel where a change inserts again what the universe already held — a copy within it, or what a rejection puts back (**R9**): a list of `[count, change]` that accounts for the elements this change inserted, taken in the order of their numbers from 0, each entry covering the next `count` of them and naming the change that first introduced them. Elements past the end of the list are this change's own |
 | `method` | for `inferred`: the name of the method that established the origin, and its parameters |
 | `confidence` | for `inferred`, where the method yields one: a number from 0 to 1, or the method's own grade |
 | `parameters` | map: whatever else is needed to describe the contribution |
@@ -1575,7 +1575,10 @@ the commit that recorded it is covered by a seal.
 - **[R6]** A decision changes no origin and certifies no accuracy. Accepted
   content from a model remains content from a model.
 - **[R7]** The current decision about content is the latest decision in the
-  Chronicle whose `about` covers it. Earlier decisions remain.
+  Chronicle whose `about` covers it. A decision whose `about` is a ref to
+  a change is about that change, and the decision that stands about a
+  change is the latest about it. Latest is by the order of commits, never
+  by `time`. Earlier decisions remain.
 - **[R9] A decision is a change; rejecting undoes, whole or not at all.**
   A decision is recorded by a change of its own. Accepting a change
   records the decision and alters nothing else: its change has no
@@ -1591,16 +1594,23 @@ the commit that recorded it is covered by a seal.
   written, and the reader says why (**L4**).
 
 **Attribution** is the answer to "where did this come from", and it is read,
-never reconstructed (**L5**). For a region of a sequence, `why` returns, for
-each stretch of elements with one origin: the change, its origin with its
-basis, where it was copied from if it was, the evidence
-whose `claim` covers the run and the current decision. For any other
+never reconstructed (**L5**). The change an element is attributed to is
+the change that inserted it; or, where that change's `sources` covers
+the element, the change `sources` names for it, and the inserting change
+is then given beside it as the one that put it here. `sources` is read
+one step and no further: the kernel wrote the first introducer there. A
+stretch is a run of neighbouring elements for which both of those are
+the same. For a region of a sequence, `why` returns, for each stretch:
+the change it is attributed to, and that change's origin with its basis,
+`by` and who; the change that put it here, if another; where it was
+copied from if it was; the evidence whose `claim` covers the run; and
+the current decision. For any other
 property, it returns the same for the change named by `by` in the revision
 that last set it.
 
 - **[R8] Every byte has a known origin.** For every byte of content in a
   universe, `why` MUST return a change and its origin: for an element of a
-  sequence, by its element identity; for any other property value, by the revision that set it; for a
+  sequence, by its element identity, read through `sources` as above; for any other property value, by the revision that set it; for a
   byte of a blob, by the change that first referred to the blob; for a
   statement of a function, as for any element; for an implied byte of a
   printed module, "computed by the printer" from the description (**N4**).

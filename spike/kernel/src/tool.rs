@@ -594,6 +594,18 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
                     Ok(vec![("change", t(&hex(r.get("change").and_then(|c| c.b()).unwrap_or(&[]))))])
                 }),
                 // 5.4: a decision about a change, by the person using the reader. `about` is the change as a projection names it
+                // 7.6, in outline: a handler that proposes operations it writes itself. One `set`, of a value at a key path
+                // of an object: how a cell of a table is edited.
+                #[cfg(feature = "outline-data")]
+                ("propose", None) => text("who").ok_or("a change says who made it, and no name was given").and_then(|who| {
+                    let op = m.get("ops").and_then(|o| o.l().first()).filter(|o| o.get("op").and_then(|k| k.s()) == Some("set")).ok_or("this reader proposes one `set` from a handler")?;
+                    let id = op.get("obj").and_then(|o| o.tag(REF).unwrap_or(o).id()).ok_or("an operation names an object")?;
+                    let path: Vec<&str> = op.get("key").map(|k| k.l()).unwrap_or(&[]).iter().filter_map(|k| k.s()).collect();
+                    let mut random = [0u8; 64];
+                    crate::random(&mut random);
+                    let r = write::set(pk, id, &path, op.get("val").cloned(), &[], who, crate::now(), &random)?;
+                    Ok(vec![("change", t(&hex(r.get("change").and_then(|c| c.b()).unwrap_or(&[]))))])
+                }),
                 #[cfg(not(feature = "cut-decide"))]
                 ("decide", _) => text("who").ok_or("a decision says who made it, and no name was given").and_then(|who| {
                     let about = text("about").and_then(|s| crate::project::identity(pk, s)).ok_or("there is no such change")?;

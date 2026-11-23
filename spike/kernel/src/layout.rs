@@ -167,6 +167,8 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
     cx.chain.push((*uni, *id));
     let mut rows = match o.ty.as_str() {
         "ufo.text" => text_rows(cx, uni, &o, None, w).unwrap_or_else(|| label_row(cx, "(inconsistent text: not presented)", w)), // step 1
+        #[cfg(feature = "outline-grid")]
+        "ufo.group" if o.p.get("layout").and_then(|l| l.s()) == Some("grid") => grid(cx, uni, &o, w),
         "ufo.group" => {
             let gap = o.p.get("gap").and_then(|g| g.f()).unwrap_or(0.0);
             let mut rows = Vec::new();
@@ -1178,6 +1180,77 @@ pub fn html(list: &[V]) -> String {
 }
 /// The static face of a universe: the nodes of its primary face. Nothing is measured, so lines end
 /// only where the text ends them, and the result is the same on every host.
+/// What a group under `each` is presented for (7.3): each item of the list its formula gave; or, where `each`
+/// is a ref to a data object, each of its rows in the table's order, as a map from column key to value with the
+/// row's own key under `key`. With no `each`, once, for nothing. Where formulas have no values, not at all.
+#[cfg(feature = "outline-grid")]
+fn each_of(cx: &Ctx, uni: &H, o: &Obj) -> Vec<Option<V>> {
+    match (cx.env, o.p.get("each")) {
+        (_, None) => vec![None],
+        (Some(_), Some(V::L(l))) => l.iter().cloned().map(Some).collect(),
+        #[cfg(feature = "outline-data")]
+        (Some(_), Some(V::Tag(REF, id))) => {
+            let Some(d) = id.id().and_then(|i| cx.pk.object(uni, &i)) else { return Vec::new() };
+            let Some(V::M(rows)) = d.p.get("rows") else { return Vec::new() };
+            let keys: Vec<&str> = match d.p.get("sort") {
+                Some(V::L(order)) => order.iter().filter_map(|k| k.s()).collect(),
+                _ => rows.iter().map(|r| r.0.as_str()).collect(),
+            };
+            keys.iter().filter_map(|k| { let mut m = match rows.iter().find(|r| r.0 == *k)?.1.clone() { V::M(m) => m, _ => return None }; m.push((String::from("key"), t(k))); Some(Some(V::M(m))) }).collect()
+        }
+        _ => Vec::new(),
+    }
+}
+/// 7.7, a grid's tracks, in outline: a column is a length, `fit` (as wide as the longest line of its cells) or a
+/// fraction of what is left; a row is as tall as its tallest cell; the children, once for each item of `each`,
+/// fill the cells in order, row by row. Not here yet: `rows`, `row`, `col`, `span`, `align`, and the roles of a table.
+#[cfg(feature = "outline-grid")]
+fn grid(cx: &mut Ctx, uni: &H, o: &Obj, w: f64) -> Vec<Row> {
+    let gap = o.p.get("gap").and_then(|g| g.f()).unwrap_or(0.0);
+    let tracks: Vec<V> = o.p.get("cols").map(|c| c.l().to_vec()).filter(|c| !c.is_empty()).unwrap_or_else(|| vec![V::L(vec![V::Int(1), t("fr")])]);
+    let (n, name) = (tracks.len(), String::from(o.p.get("as").and_then(|a| a.s()).unwrap_or("")));
+    let kids: Vec<Id> = o.p.get("children").map(|c| c.l()).unwrap_or(&[]).iter().filter_map(|c| c.tag(REF)?.id()).collect();
+    let cells: Vec<(Option<V>, Id)> = each_of(cx, uni, o).into_iter().flat_map(|item| kids.iter().map(move |k| (item.clone(), *k))).collect();
+    // one cell composed at a width, with what `each` binds bound while it is
+    let cell = |cx: &mut Ctx, k: usize, cw: f64| -> Vec<Row> {
+        let bound = match (cx.env, &cells[k].0) { (Some(env), Some(v)) => { env.args.borrow_mut().push((name.clone(), v.clone())); true } _ => false };
+        let seat = cx.seat;
+        if cx.env.is_some() {
+            cx.seat = (seat.wrapping_mul(31).wrapping_add(k as u32 + 1)) & 0xf_ffff;
+            (cx.blocks, cx.nodes) = (cx.seat << 8, (cx.seat as i64) << 8);
+        }
+        let rows = compose(cx, uni, &cells[k].1, cw);
+        cx.seat = seat;
+        if let (true, Some(env)) = (bound, cx.env) { env.args.borrow_mut().pop(); }
+        rows
+    };
+    let fraction = |t: &V| t.l().first().and_then(|x| x.f());
+    let free = (w - tracks.iter().filter_map(|t| t.f()).sum::<f64>() - gap * (n - 1) as f64).max(0.0);
+    let mut widths: Vec<f64> = tracks.iter().map(|t| t.f().unwrap_or(0.0)).collect();
+    for c in (0..n).filter(|&c| tracks[c].s() == Some("fit")) {
+        for k in (c..cells.len()).step_by(n) {
+            // the width of its longest line, composed in the width the fixed columns leave
+            let longest = cell(cx, k, free).iter().flat_map(|r| r.items.iter()).filter(|i| i.l().first().and_then(|k| k.s()) == Some("text")).filter_map(|i| Some(i.l().get(1)?.get("x")?.f()? + i.l().get(1)?.get("adv")?.f()?)).fold(0.0, f64::max);
+            widths[c] = widths[c].max(longest);
+        }
+    }
+    let (left, parts) = ((free - (0..n).filter(|&c| tracks[c].s() == Some("fit")).map(|c| widths[c]).sum::<f64>()).max(0.0), tracks.iter().filter_map(fraction).sum::<f64>());
+    for c in 0..n {
+        if let Some(f) = fraction(&tracks[c]) { widths[c] = left * f / parts; }
+    }
+    let (mut items, mut y) = (Vec::new(), 0.0);
+    for r in (0..cells.len()).step_by(n) {
+        let (mut x, mut h) = (0.0, 0.0f64);
+        for c in 0..n.min(cells.len() - r) {
+            let rows = cell(cx, r + c, widths[c]);
+            h = h.max(stack(&rows, x, y, &mut items) - y);
+            x += widths[c] + gap;
+        }
+        y += h + gap;
+    }
+    cx.blocks += 1;
+    vec![Row { h: (y - gap).max(0.0), gap: 0.0, items, keep: false, block: cx.blocks, line: 0, lines: 1, path: Vec::new() }]
+}
 /// The safeguard (PLAYER K7): where the universe requires what this reader does not have, a face is not
 /// attempted. What is shown is one line, said by the reader, naming what is missing, and then the plain-text
 /// face (8.3) of the object. None where nothing is missing.

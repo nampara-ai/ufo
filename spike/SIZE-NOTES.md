@@ -502,3 +502,19 @@ for undo, verifying seals, adding an asset, and grid layout with the
 editing of data. `let` did not make the tools universe smaller as a pack
 (11 736 bytes against 11 625; its records 31 960 against 32 954): it
 makes each question asked once in a composition.
+
+## 3f in outline (2026-11-23)
+
+Written to be measured, behind the features `outline-grid` and
+`outline-data`, and not in the kernel as built.
+
+| | Whole kernel | Added |
+| --- | ---: | ---: |
+| As it stands | 120 382 | |
+| Grid layout: fixed, `fit` and fraction columns, rows as tall as their tallest cell, cells in order | 122 521 | 2 139 |
+| And data: a group under `each` over a data object's rows; one `set` proposed by a handler | 123 618 | 1 097 |
+
+Together 3 236 bytes. The outline leaves out the rows' own track sizes,
+`row`, `col`, `span` and `align`, the roles of a table, and what it takes
+for a file's own content to have formulas and handlers at all, which the
+kernel now gives only to the tools.

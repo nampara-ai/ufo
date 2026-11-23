@@ -202,8 +202,11 @@
    "note": "the author's kernel only. The published pack it names was read by the second independent reader, unmodified: working history 0, every missing record classed as withheld, nothing malformed"
   },
   "provisional/decisions.json": {
-   "status": "provisional",
-   "note": "the author's kernel wrote the pack. The second independent reader, unmodified, replayed the conservation of all five commits of decided.ufx on 2026-11-23, among them the change with no operations and the rejecting change: every one ok, nothing reported. It has not checked the attribution through `origin.sources`"
+   "status": "reproduced",
+   "by": [
+    "the second independent reader, in a fourth round on 2026-11-23: from the core text alone, with no expected values, it gave the same nine stretches for the whole text of decided.ufx as the kernel, among them the word a rejection put back, with its first author and the change that put it there; the same standing decisions; and conservation ok for all five commits"
+   ],
+   "note": "it listed sixteen places where the text did not decide; six that bore on the result were settled in section 5.4 afterwards"
   }
  },
  "note": "Both readers are instances of the model that wrote the specification. Two of them agreeing does not make a vector confirmed: that needs an implementation from a different model family, or a person."
