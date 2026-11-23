@@ -1,0 +1,76 @@
+
+== the kernel alone (Node)
+  [passed] kernel: roundtrip.mjs — 159 lines
+  [passed] kernel: more-edits.mjs — 25 lines
+
+== host code (the script as the page carries it)
+  [passed] host: one script: host.mjs, minified by a pinned tool with fixed options, the same bytes wherever the source lies; and the envelope carries exactly those bytes — terser 5.51.4, options --module --ecma 2020 --compress --mangle; 00c80f974836d018…  9551 bytes  (a); 00c80f974836d018…  9551 bytes  (b); 00c80f974836d018…  9551 bytes  (c)
+  [passed] host: within the budget of a binding: the source 600 lines with none over 160 characters, what is shipped 16 KiB — source: 275 lines that are not blank or comment (315 in all), 19234 bytes, longest line 150 characters; shipped: 9551 bytes
+  [passed] host: none of the forbidden knowledge, in the source or in what is shipped — not found, in code or comment, in any letter case, as a word or inside one: face, editing, export, pages, propose, splice, outerHTML, innerHTML, envelope, subject, tools, handler, commit, anchor, skeleton, universe, pack, formula, state, document (but as the DOM global `document.`; and `export` but as the WebAssembly member `.instance.exports`). The roles of the drawing contract (heading, paragraph, quote, code, button, item, link, input) are its to know
+  [passed] host: it never asks which engine it is in (no engine or browser name, no user-agent, vendor or platform string, no prefixed interface), in the source or in what is shipped — 11 patterns, none found in code or comment
+  [passed] host: of the look it writes exactly the place and size of a node's element (left, top, width, height of its `.style`), by an allow-list; it makes no script or other element a policy would have to allow, opens nothing as a page, fetches nothing — the source: 8 uses of the word, all allowed; what is shipped: 8 uses of the word, all allowed; 11 writes it must refuse, refused; it makes only the elements of roles, a canvas to measure with, and the link a file is handed over by
+  [passed] host: the style part holds no rule that fetches, and the skeleton no style attribute, no handler attribute and no element that loads — every byte the policy governs is a part whose hash the envelope function writes: one style, one script; style-src is that one hash, with no unsafe-inline and no unsafe-hashes; the one link is an icon that is an empty data: address, which img-src data: allows
+
+== desktop firefox, file://
+  [passed] opened: the file runs its own kernel under its policy — state f0a24ba527c89202; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
+  [passed] pure function: the file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 202026 characters, exported 2026-01-02
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 4 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] faces: the tools stay in view when the document is scrolled to its end — scrolled 2513px: the tools are at the top of the view, 830 of 900px wide, and work
+  [passed] node boxes: every node's element lies exactly over what is drawn for it (within a pixel), and the element at the middle of a drawn heading, paragraph or button is that node — 28 nodes, the worst 0.000 px off at a device scale of 2; found at their middles: {"button":6,"paragraph":8,"heading":2,"item":5,"quote":1,"code":1}
+  [passed] node boxes: the same after scrolling, in the pages face, and after the view is resized — scrolled 22; pages 32 nodes; narrower 32; document 28
+  [passed] node boxes: a pointer press on a node reaches the kernel as the press it is: the node over "Pages" takes the click, and the face changes
+  [passed] accessible: the canvases are hidden from it; the language is declared; the headings, with their levels and names — h1 "The Quarterly Review", h2 "Method"
+  [passed] accessible: the paragraphs in order, the list with its nested numbered items, the quote and the code — 7 paragraphs, 2 lists, 5 items; snapshot in out/aria-firefox.txt
+  [passed] accessible: the six tools are buttons that say how they stand, before and after Pages and Edit are pressed; the state is a status; the name is asked for by a labelled field — aria-current on the three that choose, aria-pressed on Edit and Save; the name is asked for by a field of the tools, named, and by the status
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: one word changed through the tools by selecting it and typing, as Ada Tester — the name was given through the field of the tools; the kernel and the host asked nothing
+      run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      run chars=[471,476] change=o:6a3190c1 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[476,537] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      work: [["ledger","books"]]
+  [passed] one word: why shows three runs, the word alone attributed to the new change, by=person, and the name — run chars=[471,476] change=o:6a3190c1 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[656,661] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      run chars=[661,667] change=o:a75a7729 basis=witnessed by=person who="Ada Tester" sealed=false
+      run chars=[667,673] change=o:7c7c7c7c basis=witnessed by=person who="Test Author" sealed=false
+      work: [["","Note: "],["set","spans.b11.at"],["set","spans.b12.at"]]
+  [passed] paragraph start: "Note: " typed a key at a time at the very start of a paragraph is attributed where it was typed and stays in the paragraph — b12 = [661,768], b11 = [537,661]; run chars=[661,667] change=o:a75a7729 basis=witnessed by=person who="Ada Tester" sealed=false
+  [passed] typed: a run of Backspace is one removal — [[" by accident",""]]
+  [passed] typed: a word copied and pasted elsewhere is one insertion, where it was pasted — [["","region"]]
+  [passed] typed: typed and deleted again, then the same letters typed over themselves: no change is made, and none is claimed — nothing written; Cancel writes nothing either
+  [passed] typed: a change the widget reports with no position (its text set, as a filled-in or dictated text is) falls back on the difference — [["trusted","known"]]
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":11748,"attribution":3068,"history":30175,"changes":7,"included":30175}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `leaving` for what it holds — compose-edited.ufx.html, 241879 bytes; content 11748, attribution 3068, history 30175 bytes
+  [passed] published: with "For readers" chosen the copy is smaller, at the same root hash, holds no record of working history and says so; the page still holds everything, and says that too — compose-published-2.ufx.html: 193371 bytes against 241879; pack 16620 against 53000; 11748 bytes of content and 3068 of attribution, 0 of history, 1 absent frame
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 241879 characters, exported 2026-11-23
+  [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
+  [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state 205b26f44c46e902
+  -- the saved file, edited and saved again
+  [passed] opened: the saved file runs its own kernel under its policy — state 205b26f44c46e902; default-src 'none'; script-src 'sha256-…' 'wasm-unsafe-eval'; style-src 'sha256-…'; img-src data:; base-uri 'none'; form-action 'none'
+  [passed] opened: nothing was fetched, nothing left the page, no policy violation, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
+  [passed] pure function: the saved file, read from disk, is envelope(parts) byte for byte, the parts being the text of its own elements — 241879 characters, exported 2026-11-23
+  [passed] faces: the document face is drawn, and the tools show it is on
+  [passed] faces: the pages face is drawn — 5 pages
+  [passed] faces: the plain-text face is drawn
+  [passed] faces: the tools stay in view when the document is scrolled to its end — scrolled 3345px: the tools are at the top of the view, 830 of 900px wide, and work
+  [passed] node boxes: every node's element lies exactly over what is drawn for it (within a pixel), and the element at the middle of a drawn heading, paragraph or button is that node — 28 nodes, the worst 0.000 px off at a device scale of 2; found at their middles: {"button":6,"paragraph":8,"heading":2,"item":5,"quote":1,"code":1}
+  [passed] edit: with editing off, a press on the document does nothing
+  [passed] edit: two words apart changed through the tools, as Ben Second: two splices in one change — chars=[549,554] and chars=[659,664] by Ben Second
+  [passed] edit: the new text shows in the document and plain-text faces, and nothing else changed
+  [passed] edit: nothing turns editing on but the tools, and the tools turn it off
+  [passed] what will leave: Save makes nothing yet: a named region shows the three layers, with the copy for readers chosen, and the choice changes what it says — {"content":11931,"attribution":3501,"history":34851,"changes":8,"included":34851}
+  [passed] saved: with "For people working on this" chosen, a new .ufx.html comes down, and the figures shown were those of the kernel's `leaving` for what it holds — compose-edited-2.ufx.html, 249447 bytes; content 11931, attribution 3501, history 34851 bytes
+  [passed] pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte — 249447 characters, exported 2026-11-23
+  [passed] policy: from opening, through every face, edit and the save: nothing fetched, nothing sent, no policy violation reported, nothing on the console — 0 seen by interception, 0 fetched by the page, 0 violations, 0 console messages
+  [passed] policy: and it is enforced (an inline script and a style put into the page do nothing, a fetch is refused; each is reported as a violation) — reported: script-src-elem, style-src-elem, connect-src
+  [passed] reopened: the saved file holds the same state and shows the edit in both faces; opening it fetched and sent nothing — state c06cc4c24f56c82a
+  -- the copy published for readers, reopened, edited and saved again
+  [passed] published: the copy reopens at the same state, in every face, and `why` still names who wrote each stretch — run chars=[475,480] change=o:6a3190c1 basis=witnessed by=person who="Ada Tester" sealed=false
+      change id=o:f8dd0a20 commit=c:205b26f4 time=1795468639640 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld verdict=none
+      change id=o:29caa1cb commit=c:5af522d1 time=1795468638688 actor="Ada Tester" basis=witnessed by=person ops=withheld touched=withheld verdict=none
+      change id=withheld commit=c:f53c128c time=withheld actor=withheld basis=unknown ops=withheld touched=withheld verdict=none
