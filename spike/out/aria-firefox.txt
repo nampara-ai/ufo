@@ -5,10 +5,10 @@
   - button "Edit"
   - button "Save"
 - status "State":
-  - paragraph: State c:b5ca26af, after 7 changes.
+  - paragraph: State c:856ec9d0, after 2 changes.
 - document "The document these tools work on":
   - heading "The Quarterly Review" [level=1]
-  - paragraph: Revenue grew in every region this quarter, and for the first time the growth came mostly from customers who had been with us for more than a year.region
+  - paragraph: Revenue grew in every region this quarter, and for the first time the growth came mostly from customers who had been with us for more than a year.
   - list:
     - listitem: • First point, short.
     - listitem:
@@ -17,12 +17,12 @@
         - listitem: 1. A numbered step.
         - listitem: 2. Another numbered step.
     - listitem: • Third point.
-  - blockquote: What gets measured gets managed, and what gets explained gets known.
+  - blockquote: What gets measured gets managed, and what gets explained gets trusted.
   - text: total = sum(rows) print(total)
   - heading "Method" [level=2]
-  - paragraph: Every figure in this section was taken from the books at the close of the quarter and has not been adjusted since.
+  - paragraph: Every figure in this section was taken from the ledger at the close of the quarter and has not been adjusted since.
   - paragraph: Where a number differs from the one reported last time, the difference is explained beside it and the earlier value is kept.
-  - paragraph: "Note: Nothing here is a forecast. The next section says what the team expects, and why, and how sure it is."
+  - paragraph: Nothing here is a forecast. The next section says what the team expects, and why, and how sure it is.
   - paragraph: "Readers who want the detail behind a line can open it: each row leads back to the entries it was summed from."
-  - paragraph: The appendix lists what was left out and the reason for each omission, so that nothing is absent.
+  - paragraph: The appendix lists what was left out and the reason for each omission, so that nothing is absent by accident.
   - paragraph: Corrections are welcome and are recorded with the name of whoever made them and the evidence they gave.
