@@ -94,6 +94,22 @@ only forwarded each item to a host call would be an empty layer.
   pressed, and nothing changes the file. A reader MUST NOT show an
   empty, broken or partly composed face in its place.
 
+- **[K8] One kernel, divided.** The kernel is built whole, once, and then
+  divided into a **base** and components. The base is what every file
+  needs to be opened, read in its faces, edited through its tools, saved
+  and sent on, and every file carries it. A component of the kernel holds
+  only functions of its own and uses the base's memory and functions: it
+  works with the base it was divided from, and with no other. A universe
+  lists the components it carries under `components` (§1.6), each with
+  the hash of its base. A component is named by the SHA-256 of its
+  bytes: a reader that holds one of that hash uses its own and does not
+  read the file's (**K3**). Otherwise the kernel reads it, checking every
+  record and the whole against that hash, and the binding puts it beside
+  the base and tells the kernel that it stands there. A binding learns
+  no role. A component that is not listed for this base, is absent, does
+  not verify or cannot be put beside the base is not there, and **K7**
+  says what is then shown.
+
 The kernel is itself a sandboxed component: it has no authority over the
 host except through the host interface.
 
@@ -768,11 +784,11 @@ Marked as in the core's glossary (§6.2): a **concept** is an idea a newcomer mu
 | Binding | concept | the host-specific code that connects the kernel to a host | 9.1 |
 | Capability | concept | a named authority beyond the base host functions, granted by the person | 9.3 |
 | Carried presenter | concept | a presenter that is a Compute-let on a surface | 9.1 |
-| Component | concept | a Compute-let the player relies on, carried by hash | 9.1 |
+| Component | concept | a part of the player carried by hash: a part of the kernel divided from its base, or a Compute-let | 9.1 |
 | Display list | concept | what the kernel composes for presenters to draw and play | 9.2 |
 | Drawing contract | concept | the frozen form of the display list and of input events | 9.2 |
 | Host interface | concept | the complete set of functions a sandboxed component may import | 9.3 |
-| Kernel | concept | the one program that reads, verifies and composes a universe | 9.1 |
+| Kernel | concept | the one program that reads, verifies and composes a universe: a base every file carries, and components carried where they are needed | 9.1 |
 | Light cone | name | outlines, with summaries attached to their parts: from the whole to exact bytes | 10.2 |
 | Onboard tools | name | the kernel's projections and actions, and the tools universe | 9.6 |
 | Outline | concept | what the kernel computes of any object: its parts, their sizes and kinds, who changed them and when | 10.2 |

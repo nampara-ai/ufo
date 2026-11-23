@@ -875,13 +875,15 @@ V["pins"]["digests"].append({"case": "three seconds of a timeline", "pack": "tim
     "followed": [{"id": _R1.hex(), "revision": TL["st"][_R1].hex()}], "digest": digest(salt(7108), _cov, [(_R1, TL["st"][_R1])]).hex()})
 
 # ---- 13b. a universe that requires what a reader may not have (PLAYER K7): the safeguard ----
-def needs_pack(feature="ufo.time", name="needs.ufx", lin=bytes([0x77]) * 16):
+def needs_pack(feature="ufo.time", name="needs.ufx", lin=bytes([0x77]) * 16, carried=None):
     pk = Pack(); NU, NT, NK, NF, NC = bytes(16), bytes([0x41]) * 16, bytes([0x42]) * 16, bytes([0x43]) * 16, bytes([0x4c]) * 16
     chars = "A film, described.Its captions are text."; e = lambda i: [NC, i, 0]
     spans = {"b0": {"at": anchor({"o": NT, "a": {"chars": ["s", e(0), e(18)]}}), "kind": "block", "role": "paragraph"},
              "b1": {"at": anchor({"o": NT, "a": {"chars": ["s", e(18), "end"]}}), "kind": "block", "role": "paragraph"}}
     feats = {"ufo.text": {"v": 1, "required": True}, feature: {"v": 1, "required": True}}
-    objs = [(NU, "ufo.universe", {"lineage": lin, "roots": {"primary": ref(NF)}, "faces": [ref(NF)], "features": feats}),
+    up = {"lineage": lin, "roots": {"primary": ref(NF)}, "faces": [ref(NF)], "features": feats}
+    if carried: up["components"] = {role: {"module": pk.outside("b", module), "for": base} for role, (module, base) in carried.items()}
+    objs = [(NU, "ufo.universe", up),
             (NT, "ufo.text", {"chars": chars, "spans": spans}), (NK, "ufo.clock", {"start": 0, "end": 10 * FL, "children": [ref(NT)]}),
             (NF, "ufo.face", {"of": ref(NK), "medium": "video"})]
     st = {}; ops = []
@@ -900,8 +902,17 @@ def needs_pack(feature="ufo.time", name="needs.ufx", lin=bytes([0x77]) * 16):
             "never": "an empty or broken screen; a face composed in part; anything pressable that would change the file"}}
 npk, nv = needs_pack()
 open(os.path.join(OUT, "needs.ufx"), "wb").write(npk.b); V["needs"] = nv
+# the same again, carrying a component for a kernel of a stated hash (section 1.6): the entry's shape, not any real kernel's part
+_module = bytes.fromhex(V["printer"]["printed_hex"]); _base = sha(b"ufo-test-base-kernel")
+npk3, nv3 = needs_pack("ufo.code", "listed.ufx", bytes([0x79]) * 16, carried={"ufo.printer": (_module, _base)})
+open(os.path.join(OUT, "listed.ufx"), "wb").write(npk3.b)
 npk2, nv2 = needs_pack("ufo.code", "needs-code.ufx", bytes([0x78]) * 16)
 open(os.path.join(OUT, "needs-code.ufx"), "wb").write(npk2.b)
+V["components"] = {"file": "listed.ufx", "length": nv3["length"], "root_hash": nv3["root_hash"],
+    "what": "needs-code.ufx again, its universe object carrying one component: under `components`, the role `ufo.printer` holds `{module, for}`. `module` is an indirect to a blob of the component's bytes; `for` is the SHA-256 of the base kernel it belongs to. The bytes here are the small module of the group `printer` and the hash is of no real kernel: the vector fixes the entry, not a component",
+    "for": _base.hex(), "listed": [{"role": "ufo.printer", "sha256": sha(_module).hex(), "length": len(_module), "bytes_hex": _module.hex()}],
+    "a_reader_whose_base_has_that_hash": "finds one component for it: its role, and the SHA-256 of its bytes, which names it wherever it is held; it reads the bytes only if it does not already hold a component of that hash",
+    "a_reader_whose_base_has_another_hash": "finds none for it, and is without `ufo.code`"}
 V["needs"]["the_same_requiring_ufo.code"] = {"file": "needs-code.ufx", "length": nv2["length"], "root_hash": nv2["root_hash"],
     "what": "the same universe, requiring `ufo.code` where the other requires `ufo.time`. A reader that has the printer component beside its base has `ufo.code` and attempts the face. One whose printer is absent, or does not verify against the hash that names it, or does not instantiate against its base, has not, and shows what the first pack shows, naming `ufo.code`"}
 

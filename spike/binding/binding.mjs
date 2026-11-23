@@ -93,6 +93,8 @@ export async function start(wasmBytes, measure, inflate, clock = {}, components 
     // inflate is not handed back, and its record is then unavailable.
     open: async pack => ex.open(give(pack), pack.length) === 1 && await pend() && load(),
     asked,
+    // what the universe lists for a kernel of that hash, with the bytes of each as the kernel reads and verifies them: for tests
+    listed(kernel) { const out = []; for (let i = 0; ; i++) { const q = { i, kernel }, c = call(ex.component, q); if (!c) return out; const b = encode(q), at = ex.component_bytes(give(b), b.length); out.push({ role: c.role, sha256: c.sha256, bytes: mem().slice(at, at + ex.out_len()) }); } },
     // the reader's own act: the tools presented with the working universe as their subject ({ parts, name, who })
     start: async q => { const b = encode(q); return ex.start(give(b), b.length) === 1 && await pend() && load(); },
     input: event => call(ex.input, event),          // one input event; gives the effects

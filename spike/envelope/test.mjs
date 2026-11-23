@@ -13,7 +13,7 @@ import { start, commitsOf, layersOf } from '../binding/binding.mjs'; import { ke
 import { playwright, launch, executable, ENGINES } from './engines.mjs';
 const { devices } = playwright, here = p => fileURLToPath(new URL(p, import.meta.url)), out = here('../out/'), shots = here('../out/shots/');
 const arg = n => (i => i < 0 ? null : process.argv[i + 1])(process.argv.indexOf('--' + n)), engineName = arg('engine') || 'all';
-const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
+const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'components', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
 const CONTEXTS = ['Node', 'desktop, file://', 'http origin', 'phone, larger', 'phone, smaller', 'scripts off', 'reader', 'validators'];
 if (![...ENGINES, 'all'].includes(engineName)) { console.error('--engine chromium|firefox|webkit'); process.exit(2); }
 
@@ -57,7 +57,7 @@ const must = (c, why) => { if (!c) throw Error(why); };
 const same = (a, b, why) => must(JSON.stringify(a) === JSON.stringify(b), `${why}: ${JSON.stringify(a)} is not ${JSON.stringify(b)}`);
 
 // ---- a kernel in Node, for what is computed independently of the page: the static face of a pack, its state, its nodes ----
-const nodeKernel = () => start(kernelWasm(), (piece, s) => ({ adv: [...s].length * piece.size / 2, asc: piece.size * 0.8, desc: piece.size * 0.2 }), b => zlib.inflateRawSync(b));
+import { nodeKernel, ask, packOf } from './ask.mjs';
 const inNode = async pack64 => { const k = await nodeKernel(); must(await k.open(new Uint8Array(Buffer.from(pack64, 'base64'))), 'the pack does not open in Node');
   return { html: k.sample({ as: 'static' }).html, text: k.sample({ as: 'text' }).text, head: k.commits()[0].commit, nodes: flat(tree(k.sample({ as: 'list', w: 600 }).list)), layers: k.layers(),
     leaving: history => k.project({ name: 'leaving', history }), history: k.project({ name: 'history', o: T }).split('\n').filter(l => l.startsWith('change ')) }; };
@@ -78,11 +78,11 @@ const look = page => page.evaluate(() => { const texts = [], lists = ufo.drawn()
       lit: !!(l[i + 1] && l[i + 1][0] === 'path' && l[i + 1][1].stroke && l[i + 1][1].d.length === 2) }); }); });
   const rings = lists.map(l => l.filter(i => i[0] === 'path' && i[1].stroke && i[1].d.length === 5 && !i[1].fill).length);
   return { texts, rings, pages: lists[1].filter(i => i[0] === 'push' && i[1].clip).length, all: texts.map(t => t.s).join(''), said: texts.filter(t => t.on === 0 && t.serif && !t.press).map(t => t.s).join('') }; });
-const headOf = async page => commitsOf(await page.evaluate(() => ufo.project({ name: 'history', full: true })))[0];
-const whyOf = (page, lo, hi) => page.evaluate(([o, lo, hi]) => ufo.project({ name: 'why', o, lo, hi }).split('\n').filter(l => l.startsWith('run ')), [T, lo, hi]);
-const workOf = async (page, change) => (await page.evaluate(o => JSON.parse(ufo.project({ name: 'object', o }).split('\n').find(l => l.startsWith('prop key=work')).slice(20)).ops, change)).map(o => o.op === 'splice' ? [o.old ?? '', o.ins ?? ''] : ['set', o.key.join('.')]);
-const charsOf = page => page.evaluate(o => { const s = ufo.project({ name: 'text', o }).split('\n')[1]; return JSON.parse(s.slice(s.indexOf(' s=') + 3)); }, T);
-const spansOf = async page => Object.fromEntries(Object.entries(JSON.parse((await page.evaluate(o => ufo.project({ name: 'object', o }), T)).split('\n').find(l => l.startsWith('prop key=spans')).slice(21))).map(([k, s]) => [k, /chars=\[(\d+),(\d+)\]/.exec(s.at.$anchor).slice(1).map(Number)]));
+const headOf = async page => commitsOf(await ask(page, { name: 'history', full: true }))[0];
+const whyOf = async (page, lo, hi) => (await ask(page, { name: 'why', o: T, lo, hi })).split('\n').filter(l => l.startsWith('run '));
+const workOf = async (page, change) => JSON.parse((await ask(page, { name: 'object', o: change })).split('\n').find(l => l.startsWith('prop key=work')).slice(20)).ops.map(o => o.op === 'splice' ? [o.old ?? '', o.ins ?? ''] : ['set', o.key.join('.')]);
+const charsOf = async page => { const s = (await ask(page, { name: 'text', o: T })).split('\n')[1]; return JSON.parse(s.slice(s.indexOf(' s=') + 3)); };
+const spansOf = async page => Object.fromEntries(Object.entries(JSON.parse((await ask(page, { name: 'object', o: T })).split('\n').find(l => l.startsWith('prop key=spans')).slice(21))).map(([k, s]) => [k, /chars=\[(\d+),(\d+)\]/.exec(s.at.$anchor).slice(1).map(Number)]));
 const inked = page => page.evaluate(() => { const c = document.querySelectorAll('#ufo-player canvas')[1], o = document.createElement('canvas'); o.width = c.width; o.height = Math.min(c.height, 4000); const g = o.getContext('2d', { willReadFrequently: true }); g.drawImage(c, 0, 0); const d = g.getImageData(0, 0, o.width, o.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] && d[i] + d[i + 1] + d[i + 2] < 384) n++; return n; });
 const focused = page => page.evaluate(() => { const a = document.activeElement; return { tag: a.localName, role: a.getAttribute('role'), label: a.getAttribute('aria-label'), text: (a.textContent || '').trim(), pressed: a.getAttribute('aria-pressed'), current: a.getAttribute('aria-current'), seen: a.matches(':focus-visible'), outline: getComputedStyle(a).outlineStyle }; });
 const flatten = s => s.replace(/\s+/g, '');
@@ -249,12 +249,12 @@ async function environment(name, browser, options, address, { touch = false, fir
       must(flatten((await look(page)).all).includes(flatten(one.sentence)), 'the edit is not shown'); for (const w of ['Pages', 'Text', 'Document']) { await press(page, w); const l = await look(page); must(l.texts.find(t => t.s === w).lit && await inked(page) > 500, 'the face ' + w); }
       same(await whyOf(page, ...one.region), one.why, 'why'); await pure(page, one.published); return one.why[1].trim(); });
     await check('published: `history` lists every change with its work said to be withheld (E11), and the panel says no working history is held', async () => {
-      const h = (await page.evaluate(o => ufo.project({ name: 'history', o }), T)).split('\n').filter(l => l.startsWith('change ')); for (const l of h.slice(0, 3)) console.log('      ' + l);
+      const h = (await ask(page, { name: 'history', o: T })).split('\n').filter(l => l.startsWith('change ')); for (const l of h.slice(0, 3)) console.log('      ' + l);
       must(h.length === (await headOf(page)).height + 1 && h.every(l => l.endsWith('ops=withheld touched=withheld verdict=none') && /^change id=(o:[0-9a-f]{8} commit=c:[0-9a-f]{8,} time=\d+ actor="|withheld commit=c:[0-9a-f]{8,} time=withheld actor=withheld basis=unknown )/.test(l)) && h.some(l => l.includes('actor="Ada Tester"')), 'history: ' + h.join(' / '));
       await press(page, 'Save'); const said = flatten(await page.getByRole('region', { name: 'What will leave' }).textContent()); must(said.includes(flatten('none is held here')), said); await press(page, 'Cancel'); return `${h.length} changes, each "ops=withheld touched=withheld"; ${h.filter(l => l.startsWith('change id=withheld')).length} of them (changes that left nothing in the text as it stands) withheld whole, and said to be`; });
     await check('published: it is edited again, a new change on top of withheld history, and saved again each way', async () => {
       const e = await edit(page, log, 'Cy Third', edits.second.para, replaceWord(edits.second.words[0])); same(e.ops, [edits.second.words[0]], 'the work');
-      const h = (await page.evaluate(o => ufo.project({ name: 'history', o }), T)).split('\n').filter(l => l.startsWith('change ')); must(h[0].includes('actor="Cy Third"') && /ops=1 touched=\[o:71717171\] verdict=none$/.test(h[0]) && h[1].endsWith('touched=withheld verdict=none'), 'history: ' + h.slice(0, 2).join(' / '));
+      const h = (await ask(page, { name: 'history', o: T })).split('\n').filter(l => l.startsWith('change ')); must(h[0].includes('actor="Cy Third"') && /ops=1 touched=\[o:71717171\] verdict=none$/.test(h[0]) && h[1].endsWith('touched=withheld verdict=none'), 'history: ' + h.slice(0, 2).join(' / '));
       const save = async (mode, name) => { await press(page, 'Save'); await choose(page, mode); const [d] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), press(page, 'Save this copy')]); must(d.suggestedFilename() === name, 'named ' + d.suggestedFilename()); const f = path.join(path.dirname(one.published), name); await d.saveAs(f); return f; };
       got.again = await save('For readers', nameOf(one.published, '-published', 0)); got.whole = await save('For people', nameOf(one.published, '-edited', 1)); got.head = e.head.commit;
       const a = await inNode(packIn(got.again)), w = await inNode(packIn(got.whole)); must(a.head === e.head.commit && w.head === e.head.commit && a.layers.history.bytes === 0 && a.layers.lacks.history === true && w.layers.history.bytes > 0, 'the two copies');
@@ -354,7 +354,7 @@ async function environment(name, browser, options, address, { touch = false, fir
       must(fr.absent === 1 && fr.kinds[4] === 1 && fr.kinds[5] === 1, 'its frames: ' + JSON.stringify(fr)); must(fs.statSync(done.published).size < fs.statSync(done.saved).size, 'not smaller');
       must(st.leaving(true).includes('layer name=history included=true objects=0 bytes=0') && st.leaving(true).includes('lacks history=true'), 'leaving, of the copy');
       const said = flatten(await page.getByRole('status').textContent()); must(said.includes(flatten(`Saved as ${name}`)) && said.includes(flatten('That copy is for readers: its working history was withheld. Everything is still held here')), 'the status: ' + said);
-      const mine = layersOf(await page.evaluate(() => ufo.project({ name: 'leaving' }))); must(mine.history.bytes === shown.history && (await headOf(page)).commit === done.head, 'E13: the page no longer holds its history');
+      const mine = layersOf(await ask(page, { name: 'leaving' })); must(mine.history.bytes === shown.history && (await headOf(page)).commit === done.head, 'E13: the page no longer holds its history');
       return `${name}: ${fs.statSync(done.published).size} bytes against ${fs.statSync(done.saved).size}; pack ${Buffer.from(pub, 'base64').length} against ${Buffer.from(packIn(done.saved), 'base64').length}; ${L.content.bytes} bytes of content and ${L.attribution.bytes} of attribution, 0 of history, 1 absent frame`;
     });
     await check('pure function: the file saved by the page is envelope(parts), computed in Node from the parts, byte for byte', async () => {
@@ -466,7 +466,7 @@ const D = 'desktop, file://', H = 'http origin';
 // decisions (SPEC 5.4, R9): in the file as it was saved with its edits, the newest change is accepted and the one before it rejected
 const decisions = async (open, press, { giveName, pressAt, one }) => check('decisions: through the tools, a change is accepted, which alters nothing, and another rejected, which undoes it; each is recorded with who decided', async () => {
   must(one.saved, 'nothing was saved to decide about'); const { context, page, log } = await open(one.saved, 'nobody'), who = 'Dee Cider', text = () => charsOf(page), status = async () => flatten((await page.getByRole('status').allTextContents()).join(' '));
-  const hist = async () => (await page.evaluate(() => ufo.project({ name: 'history' }))).split('\n').filter(l => l.startsWith('change ')), nth = async (word, k) => pressAt(page, (await look(page)).texts.filter(t => t.s.trim() === word)[k]);
+  const hist = async () => (await ask(page, { name: 'history' })).split('\n').filter(l => l.startsWith('change ')), nth = async (word, k) => pressAt(page, (await look(page)).texts.filter(t => t.s.trim() === word)[k]);
   const before = await text(), h0 = await hist(), [newest, second] = h0.map(l => /id=(o:[0-9a-f]+)/.exec(l)[1]); await press(page, 'Changes');
   const rows = async () => (await page.getByRole('region', { name: 'Changes' }).getByRole('paragraph').allTextContents()).filter(t => /, change o:/.test(t)); must((await rows()).length === h0.length && (await rows()).every(r => /not decided\.$/.test(r)), 'the changes are not listed: ' + (await rows()).join(' / '));
   await giveName(page, who); await press(page, 'Edit'); must((await rows()).length === h0.length, 'the panel closed');
@@ -475,10 +475,27 @@ const decisions = async (open, press, { giveName, pressAt, one }) => check('deci
   await nth('Reject', 2); h = await hist(); const after = await text(), line = h.find(l => l.includes(`id=${second} `));
   must(h.length === h0.length + 2 && line.endsWith(`verdict=reject decided-by="${who}"`) && after !== before, 'rejecting: ' + line);
   must((await status()).includes(flatten(`Recorded: change ${second} rejected by ${who}. What it did was undone.`)), 'the status: ' + await status());
-  const via = (await page.evaluate(o => ufo.project({ name: 'why', o }), T)).split('\n').filter(l => l.startsWith('run ') && l.includes('via=')); must(via.every(l => !l.includes(`who="${who}"`)), 'what was put back is given to the one who rejected: ' + via.join(' / '));
-  const held = await page.evaluate(() => ufo.project({ name: 'history', full: true })); await nth('Reject', 3); must((await status()).includes(flatten('Not recorded: what that change wrote has been edited since')) && await page.evaluate(() => ufo.project({ name: 'history', full: true })) === held, 'a second rejection: ' + await status());
+  const via = (await ask(page, { name: 'why', o: T })).split('\n').filter(l => l.startsWith('run ') && l.includes('via=')); must(via.every(l => !l.includes(`who="${who}"`)), 'what was put back is given to the one who rejected: ' + via.join(' / '));
+  const held = await ask(page, { name: 'history', full: true }); await nth('Reject', 3); must((await status()).includes(flatten('Not recorded: what that change wrote has been edited since')) && await ask(page, { name: 'history', full: true }) === held, 'a second rejection: ' + await status());
   must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify([log.requests.length, log.errors, await page.evaluate(() => globalThis.__violations)])); await context.close(); return `${newest} accepted, ${second} rejected by ${who}; ${via.length} stretches put back, each still its first author's`;
 });
+// components (SPEC 1.6; spike/SPLIT.md): a page runs the base, and beside it only what its file lists for that base and the kernel can verify
+const components = async (open) => {
+  const made = (name, pack, ...flags) => { const f = path.join(work, name); make(here('../../vectors/' + pack), f, ...flags); return f; }, SAFE = /This file needs something this reader does not have: ufo\.code/;
+  const status = async page => (await page.getByRole('status').allTextContents()).join(' '), quiet = async (page, log) => must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify(log.errors));
+  await check('components: a file that lists none runs on the base alone, and the agent\'s projections are not in the page; one that lists the agent has them, and they say what the whole kernel says', async () => {
+    const a = await open(made('plain.ufx.html', 'compose.ufx'), 'nobody'); must(await a.page.evaluate(() => ufo.project({ name: 'history' })) === null, 'a page with no component answers as an agent would'); await quiet(a.page, a.log); await a.context.close();
+    const b = await open(made('agent.ufx.html', 'compose.ufx', '--components', 'agent'), 'nobody'), mine = await b.page.evaluate(() => ufo.project({ name: 'why', o: '71'.repeat(16), lo: 0, hi: 60 }));
+    must(mine && mine === await ask(b.page, { name: 'why', o: T, lo: 0, hi: 60 }), 'the agent in the page: ' + String(mine).slice(0, 120)); await quiet(b.page, b.log); await b.context.close();
+    return `${fs.statSync(path.join(work, 'plain.ufx.html')).size} bytes with none; ${fs.statSync(path.join(work, 'agent.ufx.html')).size} with the agent`; });
+  await check('components: a file that requires what the printer provides, and lists the printer, is shown as itself', async () => {
+    const { context, page, log } = await open(made('code.ufx.html', 'needs-code.ufx', '--components', 'printer'), 'nobody'); must(!SAFE.test(await status(page)), 'the printer was not used: ' + await status(page)); await quiet(page, log); await context.close(); return 'no line of something missing'; });
+  await check('components: the same with one byte of the printer changed in the file: it does not verify, and the file opens to its plain text, saying what is missing', async () => {
+    const { context, page, log } = await open(made('damaged.ufx.html', 'needs-code.ufx', '--components', 'printer', '--damaged'), 'nobody'), said = await status(page); must(SAFE.test(said), 'not said: ' + said);
+    must((await page.getByRole('paragraph').allTextContents()).some(t => t.includes('Its captions are text.')), 'the text is not shown'); await quiet(page, log); await context.close(); return JSON.stringify(said.match(SAFE)[0]); });
+  await check('components: the same with the printer listed for another kernel: it is not this kernel\'s to use', async () => {
+    const { context, page, log } = await open(made('other.ufx.html', 'needs-code.ufx', '--components', 'printer', '--for-another-kernel'), 'nobody'); must(SAFE.test(await status(page)), 'not said: ' + await status(page)); await quiet(page, log); await context.close(); return 'its plain text, and what is missing'; });
+};
 // the safeguard (PLAYER K7): a file that requires what this reader does not have opens, says what is missing, and shows its text
 const needy = async (open, press) => check('safeguard: a file that requires what this reader does not have opens to its plain text, with one line saying what is missing; nothing is broken and nothing can change it', async () => {
   const f = path.join(work, 'needs.ufx.html'); make(here('../../vectors/needs.ufx'), f); const { context, page, log } = await open(f, 'nobody'), want = JSON.parse(fs.readFileSync(here('../../vectors/vectors.json'), 'utf8')).needs['a_reader_without_ufo.time'];
@@ -487,7 +504,7 @@ const needy = async (open, press) => check('safeguard: a file that requires what
   const l = await d0.look(page); must(l.all.includes('Its captions are text.') && l.all.includes('ufo.time'), 'not drawn'); const head = (await headOf(page)).commit; await press(page, 'Edit'); await press(page, 'A film'); await page.keyboard.type('x'); await page.keyboard.press('Tab');
   must((await headOf(page)).commit === head, 'the file was changed'); must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet'); await context.close(); return JSON.stringify(line);
 });
-const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await f6(open, press); await bare(open, press); await needy(open, press); await decisions(open, press, h); } });
+const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await f6(open, press); await bare(open, press); await needy(open, press); await decisions(open, press, h); await components(open); } });
 
 // ---- f: sent on. The saved file served from another origin; and the packs given to the independent reader ----
 let h = null;

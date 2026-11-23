@@ -298,8 +298,17 @@ async function boot() {
     if (o) ex.pending_put(i, give(o), o.length);
   }
   if (!ex.ready()) throw 0;
+  // What else of the kernel this file carries, for this kernel: each piece, read and checked by the kernel, is put beside it
+  // with what the kernel itself offers as its imports. One that is not there, or will not stand, is left out; the kernel is
+  // told which it has, and answers for the rest in its own words.
+  let have = 0; const mine = parts['kernel-hash'];
+  for (let i = 0, c; (c = got(call('component', { i, kernel: mine }))); i++) {
+    const at = call('component_bytes', { i, kernel: mine }), piece = mem().slice(at, at + ex.out_len());
+    if (piece.length && await WebAssembly.instantiate(piece, { 'ufo:base': ex }).then(() => 1, () => 0)) have |= c.bit;
+  }
+  ex.components(have);
   player.hidden = false; $('#ufo-static').hidden = true;
   view();
-  globalThis.ufo = { drawn: () => shown, project: q => got(call('project', q)) };   // for looking only: neither changes anything
+  globalThis.ufo = { drawn: () => shown, project: q => got(call('project', q)), raw: f => got(ex[f]()) };   // for looking only: none changes anything
 }
 boot().catch(() => { player.hidden = true; $('#ufo-static').hidden = false; $('#ufo-fail').hidden = false; });

@@ -385,7 +385,7 @@ and type `ufo.universe`. Its properties are:
 | --- | --- |
 | `lineage` | 16 random bytes fixed in the first commit; shared by every later state and every fork. Required; every other property here is optional |
 | `roots` | map from names to refs: the named entry points |
-| `components` | map from a role — `tools`, `renderer`, or a prefixed name — to an indirect holding the component's bytes, or an anchor naming a universe by its universe object (`o` of sixteen zero bytes, `u` the commit), that the universe carries for it (§9.6, §8.4) |
+| `components` | map from a role — `tools`, `renderer`, or a prefixed name — to an indirect holding the component's bytes; or an anchor naming a universe by its universe object (`o` of sixteen zero bytes, `u` the commit); or, for a part of the kernel (§9.1 **K8**), `{module, for}`: an indirect to a blob of the component's bytes, and the SHA-256 of the base kernel it belongs to. It is what the universe carries for that role (§9.6, §8.4) |
 | `faces` | list of refs to face objects (§8.2) |
 | `summaries` | map from an object's identity, in lowercase hexadecimal, to a list of refs to the summaries whose scope lies in that object (§10.2). The kernel keeps it as `derive` writes them |
 | `features` | map from feature name to `{v: integer, required: boolean}` |
@@ -1999,6 +1999,7 @@ where the text did not decide what the kernel should do, and what it did.
 | `vectors/published.ufx` | `history.ufx` as it is published (§13.3): a pack of 9541 bytes holding its content and attribution layers, its seal, and an `absent` frame saying that working history is withheld. A kernel that publishes `history.ufx` MUST produce these bytes, and likewise for the two below |
 | `vectors/pins.ufx` | a pack of 10245 bytes holding one commit: a text with an empty block and an inline span, an asset, a clock, an object holding an anchor of every kind, and an object whose sources are a pin for each case of the digest (§4.2 to §4.4, §5.2, §5.3) |
 | `vectors/decided.ufx` | `compose.ufx` after two edits, an acceptance and a rejection made through a kernel's gate (§5.4 **R9**) |
+| `vectors/listed.ufx` | `needs-code.ufx` carrying one component for a kernel of a stated hash; the group `components` says what a reader finds listed (§1.6, §9.1 **K8**) |
 | `vectors/needs.ufx`, `vectors/needs-code.ufx` | one universe twice, requiring a feature a reader may lack: `ufo.time`, and `ufo.code`. The group `needs` says what such a reader shows (§9.1 **K7**) |
 | `vectors/published-timeline.ufx`, `vectors/published-nested.ufx` | `timeline.ufx` and `nested.ufx` as they are published (§2.5): 3830 and 2557 bytes |
 | `vectors/edit-one-word.ufx`, `vectors/edit-paragraph-start.ufx` | `compose.ufx` after edits made through a kernel's gate: one word changed; text typed at the very start of a paragraph (§1.7 **L1**, §5.1) |

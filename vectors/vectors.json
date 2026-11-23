@@ -2387,6 +2387,23 @@
    "what": "the same universe, requiring `ufo.code` where the other requires `ufo.time`. A reader that has the printer component beside its base has `ufo.code` and attempts the face. One whose printer is absent, or does not verify against the hash that names it, or does not instantiate against its base, has not, and shows what the first pack shows, naming `ufo.code`"
   }
  },
+ "components": {
+  "file": "listed.ufx",
+  "length": 3897,
+  "root_hash": "8d2a53c8eb2190dd52a71d715753ba5663f1842f80fb0640d4eee9792bd0495e",
+  "what": "needs-code.ufx again, its universe object carrying one component: under `components`, the role `ufo.printer` holds `{module, for}`. `module` is an indirect to a blob of the component's bytes; `for` is the SHA-256 of the base kernel it belongs to. The bytes here are the small module of the group `printer` and the hash is of no real kernel: the vector fixes the entry, not a component",
+  "for": "ad81e8f97691802b65ed457a2880d964473c65c6e8153b912e6ad20a07c5fec8",
+  "listed": [
+   {
+    "role": "ufo.printer",
+    "sha256": "d5c4b88300519f6b655106df9d048ad9fba4c252d75c45cf1fb98ef17346ce5e",
+    "length": 119,
+    "bytes_hex": "0061736d01000000010c0260027f7f017f60017f017f03030200010504010101010606017f0141000b071903036164640000066d656d6f727902000673756d5f746f00010a31020700200020016a0b2701017f024003402000450d012001200010002101200041016b21000c000b0b2001240020010f0b"
+   }
+  ],
+  "a_reader_whose_base_has_that_hash": "finds one component for it: its role, and the SHA-256 of its bytes, which names it wherever it is held; it reads the bytes only if it does not already hold a component of that hash",
+  "a_reader_whose_base_has_another_hash": "finds none for it, and is without `ufo.code`"
+ },
  "published_timeline": {
   "made_from": "timeline.ufx",
   "file": "published-timeline.ufx",

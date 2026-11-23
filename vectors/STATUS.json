@@ -167,6 +167,14 @@
   "tools_pack": {
    "status": "provisional",
    "note": "an example for the envelope spike; belongs to the player part"
+  },
+  "components": {
+   "status": "provisional",
+   "note": "generator and the author's kernel agree on what is listed; no independent implementation has read it"
+  },
+  "needs": {
+   "status": "provisional",
+   "note": "the author's kernel, in Node and in three browser engines"
   }
  },
  "files": {

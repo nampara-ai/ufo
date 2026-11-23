@@ -5,7 +5,7 @@
 // each must fail in the engines the index says it fails in and pass in the others, or the index is wrong about that engine.
 // Entry 00 is the envelope itself, built by make.mjs and driven by the keyboard through an edit, a save and a reopening.
 import fs from 'fs'; import os from 'os'; import path from 'path'; import http from 'http'; import { execFileSync } from 'child_process'; import { fileURLToPath, pathToFileURL } from 'url';
-import { launch, executable, ENGINES } from './engines.mjs'; import { commitsOf } from '../binding/binding.mjs';
+import { launch, executable, ENGINES } from './engines.mjs'; import { commitsOf } from '../binding/binding.mjs'; import { ask } from './ask.mjs';
 const here = p => fileURLToPath(new URL(p, import.meta.url)), dir = here('../../vectors/quirks/'), out = here('../out/');
 execFileSync('node', [here('quirks-make.mjs')]);   // the pages carry hashes of their own text: written afresh, so that the corpus is what the generator says
 const index = JSON.parse(fs.readFileSync(dir + 'quirks.json', 'utf8')), only = (i => i < 0 ? null : process.argv[i + 1])(process.argv.indexOf('--engine'));
@@ -53,16 +53,16 @@ async function envelope(browser) {
   const to = async (want, k = 'Tab', most = 40) => { for (let i = 0; i < most && !(await at()).startsWith(want); i++) await key(p, k); if (!(await at()).startsWith(want)) w.push(`${want} was not reached: the focus is on ${await at()}`); };
   const typed = async s => { await key(p, 'Enter'); await p.locator('#ufo-entry').waitFor({ state: 'visible', timeout: 3000 }); await p.keyboard.type(s); await key(p, 'Tab'); await key(p, 'Enter'); await p.locator('#ufo-entry').waitFor({ state: 'hidden', timeout: 3000 }); };
   try {
-    const before = commitsOf(await p.evaluate(() => ufo.project({ name: 'history', full: true })))[0];
+    const before = commitsOf(await ask(p, { name: 'history', full: true }))[0];
     await key(p, 'Tab', 4); if (await at() !== 'button:Edit') w.push('four Tabs reach ' + await at()); await key(p, 'Enter');
     await to('textbox:'); await typed('Quirk Runner');   // who is making the changes: a field of the tools the file carries, not a dialog of the browser
-    await to('p:Readers who'); await typed('Quirk. '); const state = commitsOf(await p.evaluate(() => ufo.project({ name: 'history', full: true })))[0]; if (state.height !== before.height + 1) w.push('no change was made');
+    await to('p:Readers who'); await typed('Quirk. '); const state = commitsOf(await ask(p, { name: 'history', full: true }))[0]; if (state.height !== before.height + 1) w.push('no change was made');
     await to('button:Save', 'Shift+Tab'); await key(p, 'Enter'); await to('button:For people'); await key(p, 'Enter'); await to('button:Save this copy');   // what will leave is shown; the copy with its history is chosen
     await Promise.all([p.waitForEvent('download', { timeout: 10000 }), key(p, 'Enter')]); await p.waitForTimeout(600);
     Object.assign(a.seen, { result: 'pass', violations: await p.evaluate(() => globalThis.__violations), asked: hits.slice(a.seen.from), fetched: await p.evaluate(() => performance.getEntriesByType('resource').map(e => e.name)) });
     const d = a.seen.downloads[0]; w.push(...wrong(a.seen, 'http', { download: d && { name: 'compose-edited.ufx.html', text: fs.readFileSync(d.file, 'utf8') } }));
     if (d) { const saved = path.join(work, 'compose-edited.ufx.html'); fs.copyFileSync(d.file, saved); const b = await visit(browser, saved, 'http', { until: ready });
-      if (commitsOf(await b.page.evaluate(() => ufo.project({ name: 'history', full: true })))[0].commit !== state.commit) w.push('the saved file is not at the state the page had'); b.seen.result = 'pass'; w.push(...wrong(b.seen, 'http').map(x => 'reopened: ' + x)); await b.context.close(); }
+      if (commitsOf(await ask(b.page, { name: 'history', full: true }))[0].commit !== state.commit) w.push('the saved file is not at the state the page had'); b.seen.result = 'pass'; w.push(...wrong(b.seen, 'http').map(x => 'reopened: ' + x)); await b.context.close(); }
   } catch (e) { w.push(String(e).split('\n')[0].slice(0, 200)); }
   await a.context.close(); return w;
 }

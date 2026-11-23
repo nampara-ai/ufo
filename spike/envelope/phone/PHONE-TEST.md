@@ -23,8 +23,8 @@ Hosted address used below (a placeholder until the files are put there):
 
 ## What "working" looks like
 
-When the file's reader is running you see a row of five words at the top
-— **Document  Pages  Text  Edit  Save** — a line under them that begins
+When the file's reader is running you see a row of six words at the top
+— **Document  Pages  Text  Edit  Save  Changes** — a line under them that begins
 "State c:…", and the document drawn below. The words and the line stay at
 the top while the document scrolls. Everything is drawn by the reader in
 the file.
@@ -37,7 +37,7 @@ route cannot do steps 2 to 6.
 
 ## The six steps
 
-1. **Opened.** The five words, the "State c:…" line and the drawn document
+1. **Opened.** The six words, the "State c:…" line and the drawn document
    appear. (If you see the blue box instead, write "static face only".)
 2. **Two faces.** Tap **Pages**: the document appears as pages with grey
    between them. Tap **Text**: plain text. Tap **Document**: back. The word
@@ -78,6 +78,45 @@ route cannot do steps 2 to 6.
    Messages) and open it there. A computer's browser is the surest check:
    it should show your edit and the same State.
 
+## Accepting and rejecting a change
+
+This is a seventh thing to try, on any route where steps 1 to 4 worked.
+Use `compose-edited.ufx.html`, which already holds changes by "Ada
+Tester", or a file in which you have just made two edits yourself.
+
+1. Tap **Changes**. A panel opens under the words: "Changes, newest
+   first", then one line for each change, such as "Ada Tester, 2026-…
+   UTC, change o:…: not decided.", and under each line two words,
+   **Accept** and **Reject**.
+2. If no name has been given yet, the lines at the top say "To accept or
+   reject a change, first give your name: press the line below." Give it
+   as in step 3.
+3. Tap **Accept** under the first line. *Expectation:* the document does
+   not change; the lines at the top say "Recorded: change o:… accepted by
+   (your name). Not yet in a file."; a new line appears at the top of the
+   list for the decision itself, and the line you decided about now ends
+   "accepted by (your name)."
+4. Tap **Reject** under an older change that altered the text.
+   *Expectation:* what that change did is undone in the document; the
+   lines at the top say "Recorded: change o:… rejected by (your name).
+   What it did was undone."; its line ends "rejected by (your name)."
+5. Tap **Reject** under the same change again. *Expectation:* nothing
+   changes, and the lines at the top say "Not recorded: what that change
+   wrote has been edited since, so it cannot be undone whole (L4)."
+6. Save a copy (step 4 of the six) and reopen it: the decisions should
+   still be listed.
+
+| Step | Result (passed / failed / not attempted) | What I saw |
+| --- | --- | --- |
+| Changes opens; each change listed with Accept and Reject | | |
+| Accept: nothing in the document changes; recorded, with my name | | |
+| Reject: the change is undone in the document; recorded | | |
+| Reject again: refused, and said why | | |
+| After saving and reopening, the decisions are still listed | | |
+
+On a long list the panel may be taller than the screen: it scrolls
+within itself, as the Save panel does.
+
 On a small phone the panel of step 4 may be taller than the screen. The
 part held at the top then scrolls within itself: drag inside it to reach
 **Save this copy**. *Expectation:* this works; say if the panel's lower
@@ -85,7 +124,7 @@ part cannot be reached.
 
 ## With a keyboard (a computer, or a keyboard attached to a tablet)
 
-*Expectation:* Tab moves through the five words in order, each ringed in
+*Expectation:* Tab moves through the six words in order, each ringed in
 blue when it has the focus; Enter or Space presses the one in focus. With
 **Edit** on, Tab reaches the line for your name and then each paragraph;
 Enter opens the text box, in which you type; Tab moves to **Done**, Enter
@@ -103,10 +142,11 @@ had it.
 
 | Step, keyboard only | Result (passed / failed / not attempted) | What I saw |
 | --- | --- | --- |
-| Tab reaches Document, Pages, Text, Edit, Save, each ringed | | |
+| Tab reaches Document, Pages, Text, Edit, Save, Changes, each ringed | | |
 | Enter on Edit; Tab to the name line; Enter; type; Tab to Done; Enter | | |
 | Tab to a paragraph; Enter; type; Done; the focus returns to the paragraph | | |
 | Save: Enter; Tab to a choice, Enter; Tab to Save this copy, Enter: a download | | |
+| Changes: Enter; Tab to an Accept, Enter; Tab to a Reject, Enter; the status says what was recorded | | |
 
 ## Route 1: AirDrop from a Mac to the iPhone
 
@@ -138,7 +178,7 @@ browser (Chrome, Firefox, Edge, or any other), try each one that is listed.
 *Expectation:* Files shows a Quick Look preview, and Quick Look does not
 run scripts in a web page. You should therefore see the **static face**:
 the blue box, the title "The Quarterly Review", and the full text. If you
-see the five words and the drawn document instead, scripts ran — say so,
+see the six words and the drawn document instead, scripts ran — say so,
 it would be good news — and carry on with the steps.
 
 Then try the share button (the square with an arrow) in the preview and in
@@ -300,7 +340,7 @@ Android version: ________  Browser and version: ________
 ## Checking a saved file on a computer
 
 Open the file sent from the phone in any desktop browser. The line under
-the five words gives the State; it should begin as the one the phone
+the six words gives the State; it should begin as the one the phone
 showed after the edit. `node spike/envelope/test.mjs` does this check, and
 others, automatically for files saved by headless Chromium, Firefox and
 Playwright's WebKit; a file saved by Safari, or by any browser on a phone,
@@ -400,6 +440,22 @@ presses something else, that is the most useful thing to write down.
    button": double-tap. Should happen: the browser's download prompt; and
    from the status, "Saved as …".
 
+7. *Changes: accept one, reject one.* Find "Changes" and double-tap.
+   Should be heard: "Changes" as on, and a region "Changes" that can be
+   read through: "Changes, newest first", then for each change a line
+   such as "Ada Tester, 2026-… UTC, change o:…: not decided.", followed by
+   "Accept, button" and "Reject, button". With the rotor set to Form
+   Controls (iPhone) or with VO-Command-J (Mac) the buttons can be
+   stepped through; the line before a pair of buttons says which change
+   they are for. Double-tap an "Accept". Should be heard afterwards, from
+   the status: "Recorded: change o:… accepted by …. Not yet in a file."
+   Then double-tap a "Reject" under an older change. Should be heard:
+   "Recorded: change o:… rejected by …. What it did was undone." Read the
+   paragraph it had altered: the words should be as they were before that
+   change. *To notice:* whether it was clear, by ear alone, which change
+   each Accept and Reject belonged to; and whether the focus stayed
+   somewhere sensible after the list grew by a line.
+
 **Record what was heard and done.** One row a step, one column a device.
 In each cell: worked / failed / not attempted, and what was announced.
 
@@ -419,6 +475,11 @@ In each cell: worked / failed / not attempted, and what was announced.
 | 6 Save opened; the panel read through, with its figures | | |
 | 6 The two choices: which was announced as chosen; the other chosen | | |
 | 6 Save this copy: a download; the status spoken | | |
+| 7 Changes opened; each change read as a line, then Accept and Reject | | |
+| 7 It was clear by ear which change each button belonged to | | |
+| 7 Accept: the status spoken; the document as it was | | |
+| 7 Reject: the status spoken; the altered words back as they were | | |
+| 7 Where the focus was after the list grew | | |
 | VoiceOver turned off (which way) | | |
 
 Also worth trying, on the Mac, with VoiceOver off: the keyboard steps of

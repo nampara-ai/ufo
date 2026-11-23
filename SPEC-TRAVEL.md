@@ -68,7 +68,7 @@ nine parts, each a text:
 | `date` | the day of export, `YYYY-MM-DD`, in UTC |
 | `static-html` | the **static face**: the text of the primary face as headings, paragraphs, lists, quotations and code, written by the kernel from the same nodes a reader exposes (§9.2), with nothing measured, up to a size the exporter chooses. A skeleton may instead take `static`, the plain-text face (§8.3) |
 | `style`, `script` | the page's style, and the binding: the only script |
-| `kernel`, `kernel-hash` | the kernel, compressed with DEFLATE and written in standard base64; and the SHA-256 of the uncompressed kernel, in hexadecimal |
+| `kernel`, `kernel-hash` | the base of the kernel (§9.1 **K8**), compressed with DEFLATE and written in standard base64; and the SHA-256 of it uncompressed, in hexadecimal. The components a file needs travel in its pack |
 | `pack` | the universe: the pack, in standard base64 (RFC 4648 §4), with no line breaks. The tools universe travels inside it, nested (§9.6), and is no part of its own |
 | `skeleton` | the fixed text of the page, with gaps |
 
