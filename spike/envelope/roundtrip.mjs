@@ -3,7 +3,7 @@
 // two words apart, a removal, the file made by Save, and the things that must not happen (F6, refusals).
 // Build the kernel first (spike/README.md). Run from the repository root: node spike/envelope/roundtrip.mjs
 import fs from 'fs'; import crypto from 'crypto'; import zlib from 'zlib'; import assert from 'assert'; import { start } from '../binding/binding.mjs';
-import { fixedParts, kernelWasm, withTools } from './parts.mjs'; import { tree, flat, read } from './nodes.mjs'; import { envelope, fixedCase } from './envelope.mjs'; import { tools as toolsMade, hostile } from './mkpack.mjs';
+import { fixedParts, kernelWasm, withTools } from './parts.mjs'; import { tree, flat, read } from './nodes.mjs'; import { envelope, fixedCase } from './envelope.mjs'; import { tools as toolsMade, hostile, table as tableMade, TABLE, HOSTILE } from './mkpack.mjs';
 const root = new URL('../../', import.meta.url), out = f => new URL('spike/out/' + f, root);
 const file = f => new Uint8Array(fs.readFileSync(new URL(f, root)));
 const hex = b => Buffer.from(b).toString('hex'), say = (...a) => console.log(...a);
@@ -103,13 +103,53 @@ say('face text:', mono.length, 'lines of plain text, the first', JSON.stringify(
 assert.deepStrictEqual(toolsNow().slice(1, 4), ['button not-current press "Document"', 'button not-current press "Pages"', 'button current press "Text"']);
 r.press('Document'); assert.strictEqual(r.shown(), docText); assert.strictEqual(r.head().commit, head0.commit, 'changing face changes no byte');
 
-// ---- F6: nothing in a file can act, or take a subject ----
-{ const h = await reader({ parts: { ...parts, pack: Buffer.from(hostile().bytes).toString('base64') }, name: 'hostile.ufx.html', who: 'Reader Test' }); h.press('Edit'); h.press('Edit');
-  const before = JSON.stringify(h.list, (k, v) => v instanceof Uint8Array ? hex(v) : v), t = h.find('SAVE-ME');
-  assert(t && !t.press && !t.lit && !h.find('SWITCH-ME').press, 'a handler in the working universe gives its text nothing to press; its formula is not evaluated');
-  for (const w of ['SAVE-ME', 'SWITCH-ME']) { h.press(w); assert.strictEqual(h.kinds(), '', 'a press on ' + w + ' did: ' + h.kinds()); assert.strictEqual(JSON.stringify(h.list, (k, v) => v instanceof Uint8Array ? hex(v) : v), before); }
-  assert(h.find('NO-SUBJECT-HERE'), 'a Portal in the working universe whose `of` is arg("subject") shows its label: it was given no subject');
-  say('\nF6: in a working universe that carries handlers and a Portal onto arg("subject"): presses did nothing, the Portal shows its label'); }
+// ---- containment (PRESENTATION 7.6 F6, F8 to F11): what a file's own formulas and handlers can reach, and what they cannot ----
+{ const packMade = Buffer.from(hostile().bytes), h = await reader({ parts: { ...parts, pack: packMade.toString('base64') }, name: 'hostile.ufx.html', who: 'Reader Test' });
+  const lines = () => h.texts().filter(x => x.on === 1).map(x => x.s), has = s => lines().some(l => l === s), pack = () => Buffer.from(h.k.packBytes()), toolsNow = () => h.nodes(0).filter(n => n.role === 'button').map(n => `${n.current || n.pressed ? 'on' : 'off'} ${n.text}`).join(', ');
+  const asked = () => h.nodes(0).some(n => n.role === 'region' && n.label === 'A change the document asks for'), askedLines = () => h.texts().filter(x => x.on === 0 && x.s.startsWith('Set ')).map(x => x.s);
+  const hit = w => { const x = h.texts().find(x => x.on === 1 && x.s.trim().length > 2 && w.startsWith(x.s.trim())); assert(x, 'nothing drawn begins ' + w); return h.send({ press: [x.X + 4, x.Y - 4], on: 1 }); };   // a word may be broken at its hyphen
+  const out = []; const tried = (what, must, did) => { out.push({ attempt: what, must, here: did }); say('  ' + what + ': ' + did); };
+  say('\ncontainment: a file whose description tries to reach outside itself');
+  // formulas: evaluated, and each attempt to read outside is an error value, shown as the label
+  assert(HOSTILE.words.every(w => h.texts().filter(x => x.on === 1 && w.startsWith(x.s.trim()) && x.s.trim()).every(x => x.press && x.lit)), 'the formulas of the file are not evaluated, or its words cannot be pressed');
+  for (const [label, what, must] of [['NO-SUBJECT-HERE', 'a Portal whose `of` is arg("subject"), with a `with` that names a subject', 'no subject is given (F6): the label is shown'],
+    ['NO-ASKING-A-SUBJECT', 'a formula that asks a projection of arg("subject")', 'an error value (F8): the label is shown'], ['NO-SUCH-OPERATOR', 'a formula with an operator that is not one (`fetch`, of an address)', 'an error value (F4): the label is shown; nothing is fetched'],
+    ['TOO-HEAVY', 'a text doubled until it would weigh 2 097 153', 'an error value (F2): the label is shown'], ['NO-OTHER-UNIVERSE', 'get, by a ref to an identity that is an object of the reader\'s tools and not of this universe', 'an error value (F8): the label is shown'],
+    ['BOUND-SPENT', 'a formula that reads a value weighing 524 289 twenty-four times', 'an error value from where the composition has worked out 10 000 000 (F2): the label is shown'],
+    ['NOTHING-AFTER-THE-BOUND', 'a formula reached after the bound is spent', 'an error value (F2): the label is shown']]) { assert(has(label), 'not shown: ' + label + ' in ' + lines().join(' / ')); tried(what, must, 'the label ' + label); }
+  assert(has('OWN label=as it was made')); tried('get, by a ref to an object of its own universe', 'its value', 'OWN label=as it was made');
+  assert(/^State c:/.test(h.status()), 'the tools do not work beside a file that spends its bound: ' + h.status()); tried('the reader\'s tools, beside a file that spends its bound', 'they work: the bound is the file\'s composition\'s, not theirs', 'the status is shown');
+  // the tools' state is not the file's: the reader turns editing on and has a name; the file's formulas see neither
+  h.press('Edit'); assert(/recorded as made by Reader Test/.test(h.status()) && has('STATE who=nobody editing=off ran=nothing'), lines().find(l => l.startsWith('STATE')));
+  tried('state("who"), state("editing") while the reader is editing in the name of Reader Test', 'null: its presentation state is its own (F8)', 'STATE who=nobody editing=off ran=nothing');
+  // handlers: every action is refused; nothing is asked of the host, nothing is written, the tools' state is as it was
+  const before = pack(), tools0 = toolsNow();
+  for (const [w, what] of [['SAVE-ME', '{act: export, universe: arg("subject")}, on a span whose text has the identity of the tools\' Save bar and the key of its first word'], ['DECIDE-ME', '{act: decide, verdict: reject}'], ['UNDO-ME', '{act: undo}'],
+    ['IMPORT-ME', '{act: import}'], ['COMMIT-ME', '{act: propose, change: {ops}, verdict: approve}']]) {
+    hit(w); assert.strictEqual(h.kinds(), '', 'a press on ' + w + ' asked the host for: ' + h.kinds()); assert(Buffer.compare(before, pack()) === 0, w + ' wrote'); assert.strictEqual(toolsNow(), tools0); assert(!asked() && !/No file was made|Not |Recorded|Undone|Added/.test(h.status()), w + ': ' + h.status());
+    tried('pressed: ' + what, 'nothing: `act` is not for what a file presents (F9)', 'nothing asked of the host, nothing written, the tools as they were'); }
+  hit('SWITCH-ME'); assert(has('STATE who=Mallory editing=on ran=nothing'), lines().find(l => l.startsWith('STATE'))); assert.strictEqual(toolsNow(), tools0); assert(/recorded as made by Reader Test/.test(h.status()) && !asked() && Buffer.compare(before, pack()) === 0);
+  tried('pressed: {set: face}, {set: editing}, {set: who, to: Mallory}, {set: pending}', 'its own presentation state has those values; the tools\' has not (F8)', 'STATE who=Mallory editing=on; the tools: ' + tools0 + ', still in the name of Reader Test, nothing asked');
+  h.send({ view: [640, 800] }); assert(has('STATE who=Mallory editing=on ran=nothing')); tried('handlers for `load`, `time` and `view`', 'never performed: a handler runs on a person\'s input and on nothing else (F11)', 'ran=nothing, after the view changed too');
+  for (const [w, what, must] of [['REACH-ME', '{propose: [set, of an identity that is an object of the tools and not of this universe]}', 'nothing is asked: there is no such object in its universe (F9)'],
+    ['SPLICE-ME', '{propose: [splice into its own text]}', 'not written unless the person says so (F10)']]) { hit(w); assert(!asked() && h.kinds() === '' && Buffer.compare(before, pack()) === 0, w); tried('pressed: ' + what, must, 'nothing asked, nothing written' + (w === 'SPLICE-ME' ? ' (this reader hands on only a `set`)' : '')); }
+  // a proposal: the person is asked, in the tools; dismissed, nothing; applied where it cannot be applied whole, nothing; applied, it is theirs
+  hit('BOTH-ME'); assert(asked() && askedLines().length === 2 && Buffer.compare(before, pack()) === 0, 'two operations: ' + askedLines().join(' / ')); h.press('Apply');
+  assert(/Not changed: this reader applies a change that sets values of one object/.test(h.status()) && Buffer.compare(before, pack()) === 0, h.status()); h.press('Dismiss'); assert(!asked());
+  tried('pressed: {propose: [set of one object, set of another]}, and the person applies it', 'whole or not at all (L4)', 'asked; applied; refused whole by this reader, nothing written');
+  hit('HONEST-ME'); const line = askedLines(); assert.deepStrictEqual(line, ['Set label of o:93939393: from \u201cas it was made\u201d to \u201cchanged by the file\u201d.']); assert(Buffer.compare(before, pack()) === 0 && has('OWN label=as it was made'));
+  h.press('Dismiss'); assert(!asked() && Buffer.compare(before, pack()) === 0); tried('pressed: {propose: [set of a value of its own universe]}, and the person dismisses it', 'nothing is written (F10)', 'asked: ' + line[0] + ' Dismissed: nothing written');
+  hit('HONEST-ME'); h.press('Apply'); assert(!asked() && has('OWN label=changed by the file') && h.head().height === 1, h.status());
+  const top = h.k.project({ name: 'history' }).split('\n').find(l => l.startsWith('change ')), og = JSON.parse(h.k.project({ name: 'object', o: h.head().change }).split('\n').find(l => l.startsWith('prop key=origin')).slice(22));
+  assert(top.includes('actor="Reader Test"') && top.includes('ops=1') && top.endsWith('verdict=approve decided-by="Reader Test"'), top); assert(og.by === 'person' && og.who.name === 'Reader Test' && og.context.$ref === 'o:' + '90'.repeat(4), JSON.stringify(og));
+  tried('the same, and the person applies it', 'one change through the gate, by the person, recording their decision and what in the file asked (F10)', top.slice(0, 40) + '… ' + top.slice(top.indexOf('actor')) + '; origin.context ' + og.context.$ref);
+  fs.writeFileSync(new URL('vectors/contained.ufx', root), packMade);
+  fs.writeFileSync(new URL('vectors/provisional/containment.json', root), JSON.stringify({ status: { status: 'provisional', note: "the author's kernel only" },
+    what: 'containment (PRESENTATION 7.6 F6, F8 to F11; 7.3 F2, F4): a file whose own description tries each way out. `must` is what the rules require of every reader; `here` is what this kernel did',
+    pack: { file: 'contained.ufx', length: packMade.length, sha256: crypto.createHash('sha256').update(packMade).digest('hex'), root_hash: hex(hostile().root) },
+    reader: 'the reader\'s own tools (spike/envelope/tools.ufx) present the pack as their subject, in the name of Reader Test', attempts: out,
+    after: { height: h.head().height, history: top } }, null, 1) + '\n');
+  say('containment:', out.length, 'attempts, each as the rules require'); }
 
 // ---- editing is off: a press on the document does nothing. On: the reader asks who the person is, once ----
 r.press('Every figure'); assert.strictEqual(r.kinds(), '', 'a press on the document with editing off: ' + r.kinds());
@@ -442,4 +482,48 @@ fs.writeFileSync(out('edited.ufx'), before);
     layers: { before: L0, after: L },
     refused: [{ what: 'no file comes after one is asked for', written: 'nothing' }, { what: 'a file comes when the document is not open for changes', says: 'this reader cannot do that', written: 'nothing' }] }, null, 1) + '\n');
   void was; void withBoth; say('asset:', JSON.stringify({ first: A.slice(0, 8), second: B.slice(0, 8), pack: now.length, published: pub.length })); }
+// ---- a table (PRESENTATION 7.2, 7.3, 7.6): a data object in a grid, a total by formula, values changed through the document's own handlers ----
+{ const made = Buffer.from(tableMade().bytes), t = await reader({ parts: { ...parts, pack: made.toString('base64') }, name: 'table.ufx.html', who: 'Table Hand', seed: 41 });
+  const cells = () => t.texts().filter(x => x.on === 1).map(x => x.s), drawn = () => t.texts().filter(x => x.on === 1).map(x => [x.s, Math.round(x.X), Math.round(x.Y)]), pack = () => Buffer.from(t.k.packBytes());
+  const asked = () => t.texts().filter(x => x.on === 0 && x.s.startsWith('Set ')).map(x => x.s), at = s => { const x = t.texts().find(x => x.on === 1 && x.s === s); assert(x, 'not drawn: ' + s + ' in ' + cells().join(' | ')); return x; };
+  const hit = s => { const x = at(s); return t.send({ press: [x.X + 4, x.Y - 4], on: 1 }); }, type = (s, to) => { hit(s); const e = t.fx.find(e => e[0] === 'edit'); assert(e && e[1] && e[1].s === s, 'no text entry on ' + s + ': ' + t.kinds()); t.send({ edit: e[1].id, end: true, s: to }); };
+  const first = drawn(), tree0 = t.nodes(1).map(n => [n.depth, n.role, n.text || '', n.label || '']);
+  say('\ntable, as drawn:'); for (const x of first) say('  ', JSON.stringify(x));
+  // the grid: three columns in the proportions 2 : 1 : 1 of the width, a row a line; the same in the head and in the body
+  assert.deepStrictEqual(cells(), ['Costs', 'Press a figure to change it.', 'Item', 'Amount', 'Paid', 'Paper', '120.00', 'paid', 'Ink', '45.50', 'not paid', 'Postage', '30.00', 'not paid', 'Total: 195.50', 'Show the note']);
+  const xs = k => first.filter((_, i) => i >= 2 && i < 14 && (i - 2) % 3 === k).map(c => c[1]); assert(xs(0).every(x => x === xs(0)[0]) && xs(1).every(x => x === xs(1)[0]) && xs(2).every(x => x === xs(2)[0]) && xs(0)[0] < xs(1)[0] && xs(1)[0] < xs(2)[0], 'the columns: ' + JSON.stringify([xs(0), xs(1), xs(2)]));
+  assert(Math.abs((xs(1)[0] - xs(0)[0]) - 2 * (xs(2)[0] - xs(1)[0])) < 8, 'not 2 : 1 : 1'); const ys = first.slice(2, 14).map(c => c[2]); assert(ys[0] === ys[2] && ys[3] === ys[5] && ys[3] > ys[0] && ys[6] > ys[3] && ys[9] > ys[6], 'the rows');
+  // what it is, for whoever does not see it: a table, of groups of rows, of rows, of headers and cells
+  const roles = t.nodes(1).filter(n => ['table', 'rowgroup', 'row', 'columnheader', 'cell'].includes(n.role)).map(n => n.role); assert.deepStrictEqual(roles, ['table', 'rowgroup', 'row', 'columnheader', 'columnheader', 'columnheader', 'rowgroup', ...Array(3).fill(['row', 'cell', 'cell', 'cell']).flat()]);
+  // reading: the document's own state is its own, and changes no byte; a figure takes no text entry
+  hit('Show the note'); assert(cells().includes('Note: the figures are in euros.') && at('Show the note').lit && t.kinds() === '' && Buffer.compare(made, pack()) === 0, 'the note'); hit('Show the note'); assert(!cells().includes('Note: the figures are in euros.'));
+  hit('45.50'); assert(t.kinds() === '' && asked().length === 0, 'a figure takes text entry while the document is not open for changes');
+  // a press that proposes: the person is asked; not open for changes, it cannot be applied; dismissed, nothing
+  hit('not paid'); assert.deepStrictEqual(asked(), ['Set rows.r2.paid of o:b4b4b4b4: from no to yes.']); assert(Buffer.compare(made, pack()) === 0); t.press('Apply');
+  assert(/Not changed: the document is not open for changes, or nothing was proposed\./.test(t.status()) && Buffer.compare(made, pack()) === 0, t.status()); t.press('Dismiss'); assert(asked().length === 0 && Buffer.compare(made, pack()) === 0);
+  // open for changes, in a name: applied, it is that person's change, with their decision and what asked for it
+  t.press('Edit'); hit('not paid'); t.press('Apply'); assert(asked().length === 0 && cells().filter(c => c === 'paid').length === 2 && t.head().height === 1, cells().join(' | '));
+  const hist = () => t.k.project({ name: 'history' }).split('\n').filter(l => l.startsWith('change ')), prop = (o, k) => JSON.parse(t.k.project({ name: 'object', o }).split('\n').find(l => l.startsWith('prop key=' + k)).slice(16 + k.length));
+  const c1 = t.head().change, og = prop(c1, 'origin'); assert(hist()[0].includes('actor="Table Hand"') && hist()[0].includes('touched=[o:b4b4b4b4]') && hist()[0].endsWith('verdict=approve decided-by="Table Hand"'), hist()[0]);
+  assert(og.by === 'person' && og.who.name === 'Table Hand' && og.context.$ref === 'o:' + hex(TABLE.c3).slice(0, og.context.$ref.length - 2), JSON.stringify(og)); assert(/Changed, and recorded as change o:[0-9a-f]{8} by Table Hand\./.test(t.status()), t.status());
+  // a figure typed: the handler makes a number of it; what does not spell a number proposes nothing
+  type('45.50', '50'); assert.deepStrictEqual(asked(), ['Set rows.r2.amount of o:b4b4b4b4: from 45.5 to 50.']); t.press('Apply'); assert(cells().includes('50.00') && cells().includes('Total: 200.00'), cells().join(' | '));
+  for (const bad of ['fifty', '12.5.1', '1e3', '', '1234567890123456']) { const held = pack(); type('50.00', bad); assert(asked().length === 0 && Buffer.compare(held, pack()) === 0, 'proposed from ' + JSON.stringify(bad)); }
+  type('120.00', '-0.25'); assert.deepStrictEqual(asked(), ['Set rows.r1.amount of o:b4b4b4b4: from 120 to -0.25.']); t.press('Dismiss');
+  type('Ink', 'Ink, black'); assert.deepStrictEqual(asked(), ['Set rows.r2.item of o:b4b4b4b4: from “Ink” to “Ink, black”.']); t.press('Apply'); assert(cells().includes('Ink, black') && t.head().height === 3);
+  // undo: the newest change of this person, the name of the item, is set back
+  t.press('Changes'); t.press('Undo my last change'); assert(/Undone: your change/.test(t.status()) && cells().includes('Ink') && !cells().includes('Ink, black') && t.head().height === 4 && hist()[0].includes('by=tool'), t.status());
+  const now = pack(), data = t.k.project({ name: 'object', o: hex(TABLE.data) }).split('\n').find(l => l.startsWith('prop key=rows'));
+  fs.writeFileSync(new URL('vectors/table.ufx', root), made); fs.writeFileSync(new URL('vectors/table-edited.ufx', root), now);
+  const sha = b => crypto.createHash('sha256').update(b).digest('hex');
+  fs.writeFileSync(new URL('vectors/provisional/data.json', root), JSON.stringify({ status: { status: 'provisional', note: "the author's kernel only" },
+    what: 'a table (PRESENTATION 7.2 grid, 7.3 formulas and `each` over a data object, 7.6 handlers in a file): as presented at a width of 600 with every scalar value half its size wide, and after changes its own handlers proposed and a person applied',
+    pack: { file: 'table.ufx', length: made.length, sha256: sha(made), root_hash: hex(tableMade().root) },
+    presented: { texts: first.map(([s, x, y]) => ({ s, x, y })), nodes: tree0.map(([depth, role, text, label]) => ({ depth, role, ...(text ? { text } : {}), ...(label ? { label } : {}) })) },
+    formulas: { total: 'Total: 195.50', 'number of': { '50': 50, '-0.25': -0.25, 'fifty': 'an error value', '12.5.1': 'an error value', '1e3': 'an error value', '': 'an error value', '1234567890123456': 'an error value: more than fifteen digits' } },
+    proposed: [{ pressed: 'not paid, of the second row', asked: 'Set rows.r2.paid of o:b4b4b4b4: from no to yes.', applied: true }, { typed: '50 for 45.50', asked: 'Set rows.r2.amount of o:b4b4b4b4: from 45.5 to 50.', applied: true, total_then: 'Total: 200.00' },
+      { typed: '-0.25 for 120.00', asked: 'Set rows.r1.amount of o:b4b4b4b4: from 120 to -0.25.', applied: false }, { typed: 'Ink, black for Ink', asked: 'Set rows.r2.item of o:b4b4b4b4: from “Ink” to “Ink, black”.', applied: true, then: 'undone' }],
+    after: { file: 'table-edited.ufx', length: now.length, sha256: sha(now), root_hash: t.head().commit, rows: data, history: hist(), origin_of_the_first: og },
+    refused: [{ what: 'applying a proposal while the document is not open for changes', says: 'the document is not open for changes, or nothing was proposed', written: 'nothing' }] }, null, 1) + '\n');
+  say('table:', JSON.stringify({ changes: t.head().height, pack: now.length, rows: data.slice(0, 160) })); }
 say('\nOK');

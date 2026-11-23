@@ -107,7 +107,7 @@ function universe(pk, change, lineage, objects) {
 const f = formula, st = n => f('state', n), is = (a, b) => f('=', a, b), not = a => f('not', a), and = (a, b) => f('and', a, b), iff = (c, a, b) => f('if', c, a, b);
 const join = (...a) => f('concat', ...a), list = (...a) => f('list', ...a), get = (m, k) => f('get', m, k), nth = (l, i) => f('nth', l, i), num = n => f('format', n, '0'), len = x => f('len', x), plus = (a, b) => f('+', a, b);
 export function tools(compress = true) {
-  const pk = new Pack('ufo-spike-tools-salt', compress), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB, XA, XY, XQ, XJ, XD, XK, XZ, XI, XU, XX] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa].map(id);
+  const pk = new Pack('ufo-spike-tools-salt', compress), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB, XA, XY, XQ, XJ, XD, XK, XZ, XI, XU, XX, YA, YH, YE, YL, YB] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf].map(id);
   const S = f('arg', 'subject'), editing = is(st('editing'), true), named = not(is(st('who'), null)), share = is(st('share'), true), saving = is(st('panel'), 'save'), reviewing = is(st('panel'), 'changes'), lit = on => iff(on, 'underline', 'none');
   // what the kernel's projections say of the subject: `expand` of the whole, the changes newest first, and what a copy would carry
   // Each is asked once and named (`let`, 7.3), and read where it is wanted by its name.
@@ -190,9 +190,16 @@ export function tools(compress = true) {
   const tUndo = bar(XK, [['Undo my last change', [{ act: 'undo', who: st('who'), into: 'undone' }, { set: 'fresh', to: true }], {}]]);
   // adding a file (SPEC 5.2): the reader asks the person for one, and takes it in as an asset, by the person named
   const tAdd = bar(XU, [['Add a file', [{ act: 'import', who: st('who'), into: 'added' }, { set: 'fresh', to: true }], {}]]);
+  // what the document itself asks for (PRESENTATION 7.6 **F10**): a handler in the file proposed a change. Nothing is written until the
+  // person says so here, where the file cannot reach; then it is their change, recorded with their decision and with what asked for it
+  const pending = st('pending'), q = f('arg', 'q');
+  const tAsk = { chars: 'The document asks to change itself', spans: { b0: { ...block(YH, XC, next), weight: 700 } }, size: F(15), font: ['sans-serif'] }; next += tAsk.chars.length;
+  const tApply = bar(YB, [['Apply', [{ act: 'propose', change: pending, verdict: 'approve', who: st('who'), into: 'did' }, { set: 'pending', to: null }, { set: 'fresh', to: true }], {}], ['Dismiss', { set: 'pending', to: null }, {}]]);
+  const asked = iff(is(pending, null), list(), get(pending, 'lines'));
+  const askLine = join('Set ', get(q, 'key'), ' of ', get(q, 'obj'), ': from ', get(q, 'old'), ' to ', get(q, 'val'), '.');
   const root = universe(pk, XC, id(0x77), [
     [XF, 'ufo.face', { of: ref(XG), medium: 'document' }],
-    [XG, 'ufo.group', { children: [ref(XT), ref(XS), ref(XZ), ref(XN), ref(XX), ref(XV), ref(XA), ref(XR), ref(XP)] }],
+    [XG, 'ufo.group', { children: [ref(XT), ref(XS), ref(XZ), ref(XN), ref(XX), ref(YA), ref(XV), ref(XA), ref(XR), ref(XP)] }],
     [XT, 'ufo.text', { ...tBar, margin: [F(10), F(16), F(8), F(16)] }],
     [XS, 'ufo.group', { role: 'status', label: 'State', each: status, as: 'line', children: [ref(XL)], margin: side }],
     [XL, ...line()],
@@ -215,30 +222,89 @@ export function tools(compress = true) {
     [XK, 'ufo.text', tUndo],
     [XX, 'ufo.group', { visible: and(editing, named), children: [ref(XU)], margin: side }],
     [XU, 'ufo.text', tAdd],
+    [YA, 'ufo.group', { visible: not(is(pending, null)), role: 'region', label: 'A change the document asks for', lang: 'en', children: [ref(YH), ref(YE), ref(YB)], margin: side }],
+    [YH, 'ufo.text', tAsk],
+    [YE, 'ufo.group', { each: asked, as: 'q', children: [ref(YL)] }],
+    [YL, 'ufo.portal', { of: askLine }],
+    [YB, 'ufo.text', tApply],
     [XR, 'ufo.path', { d: [['M', F(0), F(0)], ['L', F(4000), F(0)]], stroke: grey, width: F(1), h: F(1) }],
     // the subject, in the face the state names. It takes text entry while `editing` is set and a name has been given; what is
     // done there is proposed as a change by that name, and the state then says that there is something not yet in a file
     [XP, 'ufo.portal', { of: S, face: st('face'), editable: and(editing, named), role: 'document', label: 'The document these tools work on',
-      on: { change: [{ act: 'propose', who: st('who'), into: 'did' }, { set: 'fresh', to: true }] } }],
+      on: { change: [{ act: 'propose', who: st('who'), into: 'did' }, { set: 'fresh', to: true }], propose: { set: 'pending', to: f('arg', 'proposal') } } }],
   ]);
   return { bytes: pk.b, root, words: words.map(w => w[0]) };
 }
 // ---- a fixture: a working universe that tries to act and to take a subject (F6). Nothing in it may do anything. ----
+// ---- a document with a table (PRESENTATION 7.2, 7.3, 7.6): a data object, presented by grids under `each`, with a total worked out
+// by a formula, values that take text entry, a value that a press changes, and a line that the document's own state shows ----
+export const TABLE = Object.fromEntries(['face', 'group', 'title', 'data', 'table', 'head', 'h1', 'h2', 'h3', 'body', 'c1', 'c2', 'c3', 'total', 'more', 'note', 'change'].map((k, i) => [k, id(0xb1 + i)]));
+export function table() {
+  const T = TABLE, pk = new Pack('ufo-spike-table-salt'), row = f('arg', 'row'), cell = k => get(row, k), at = k => list('rows', cell('key'), k), cols = [[2, 'fr'], [1, 'fr'], [1, 'fr']];
+  const set = (k, val) => ({ propose: [{ op: 'set', obj: ref(T.data), key: at(k), val }] }), amount = r => get(ref(T.data), list('rows', r, 'amount'));
+  let next = 0; const text = (o, chars, spans) => { const b = { chars, spans: spans(next) }; next += [...chars].length; return b; };
+  const title = text(T.title, 'CostsPress a figure to change it.', n => ({ h: { at: anchor({ o: T.title, a: { chars: ['s', [T.change, n, 0], [T.change, n + 4, 1]] } }), kind: 'block', role: 'heading', level: 1 },
+    p: { at: anchor({ o: T.title, a: { chars: ['s', [T.change, n + 5, 0], 'end'] } }), kind: 'block', role: 'paragraph' } }));
+  const more = text(T.more, 'Show the note', n => ({ b0: block(T.more, T.change, n), t0: { at: anchor({ o: T.more, a: { chars: ['s', [T.change, n, 0], 'end'] } }), kind: 'inline', role: 'button', weight: 700,
+    decoration: iff(is(st('note'), true), 'underline', 'none'), pressed: is(st('note'), true), on: { press: { set: 'note', to: not(is(st('note'), true)) } } } }));
+  const root = universe(pk, T.change, id(0x44), [
+    [T.face, 'ufo.face', { of: ref(T.group), medium: 'document' }],
+    [T.group, 'ufo.group', { children: [ref(T.title), ref(T.table), ref(T.total), ref(T.more), ref(T.note)], gap: F(8) }],
+    [T.title, 'ufo.text', title],
+    [T.data, 'ufo.data', { cols: { item: { label: 'Item', type: 'text', order: 0 }, amount: { label: 'Amount', type: 'number', order: 1 }, paid: { label: 'Paid', type: 'boolean', order: 2 } },
+      rows: { r1: { item: 'Paper', amount: 120, paid: true }, r2: { item: 'Ink', amount: F(45.5), paid: false }, r3: { item: 'Postage', amount: 30, paid: false } }, sort: ['r1', 'r2', 'r3'] }],
+    [T.table, 'ufo.group', { role: 'table', label: 'Costs', children: [ref(T.head), ref(T.body)] }],
+    [T.head, 'ufo.group', { layout: 'grid', role: 'rowgroup', cols, gap: F(6), children: [ref(T.h1), ref(T.h2), ref(T.h3)] }],
+    [T.h1, 'ufo.portal', { of: 'Item', role: 'columnheader' }], [T.h2, 'ufo.portal', { of: 'Amount', role: 'columnheader' }], [T.h3, 'ufo.portal', { of: 'Paid', role: 'columnheader' }],
+    [T.body, 'ufo.group', { layout: 'grid', role: 'rowgroup', cols, gap: F(6), each: ref(T.data), as: 'row', children: [ref(T.c1), ref(T.c2), ref(T.c3)] }],
+    [T.c1, 'ufo.portal', { of: cell('item'), role: 'cell', editable: true, on: { change: set('item', f('arg', 'text')) } }],
+    [T.c2, 'ufo.portal', { of: f('format', cell('amount'), '0.00'), role: 'cell', editable: true, on: { change: set('amount', f('number', f('arg', 'text'))) } }],
+    [T.c3, 'ufo.portal', { of: iff(cell('paid'), 'paid', 'not paid'), role: 'cell', on: { press: set('paid', not(cell('paid'))) } }],
+    [T.total, 'ufo.portal', { of: join('Total: ', f('format', plus(plus(amount('r1'), amount('r2')), amount('r3')), '0.00')), role: 'paragraph' }],
+    [T.more, 'ufo.text', more],
+    [T.note, 'ufo.portal', { of: iff(is(st('note'), true), 'Note: the figures are in euros.', ''), visible: is(st('note'), true), role: 'note' }],
+  ]);
+  return { bytes: pk.b, root };
+}
+
+// ---- a file that tries to reach outside itself (PRESENTATION 7.6 **F6**, **F8** to **F11**). Every attempt is in the description; the
+// vector vectors/provisional/containment.json says what each must come to ----
+export const HOSTILE = { words: ['SAVE-ME', 'SWITCH-ME', 'DECIDE-ME', 'UNDO-ME', 'IMPORT-ME', 'COMMIT-ME', 'REACH-ME', 'SPLICE-ME', 'BOTH-ME', 'HONEST-ME'] };
 export function hostile() {
-  const pk = new Pack('ufo-spike-hostile-salt'), [HF, HG, HT, HP, HC] = [0x92, 0x93, 0x91, 0x95, 0x9c].map(id);
-  const chars = 'SAVE-ME now, or SWITCH-ME to text.', spans = { b0: block(HT, HC) };
-  for (const [key, word, press] of [['x0', 'SAVE-ME', { act: 'export' }], ['x1', 'SWITCH-ME', { set: 'face', to: 'text' }]]) {
-    const i = chars.indexOf(word); spans[key] = { at: anchor({ o: HT, a: { chars: ['s', [HC, i, 0], [HC, i + word.length - 1, 1]] } }), kind: 'inline', role: 'button', weight: 700, on: { press }, decoration: formula('if', true, 'underline', 'none') };
-  }
+  // its text has the identity of the tools' Save bar, and a span with the key of that bar's first word: a press on it is still the file's
+  const pk = new Pack('ufo-spike-hostile-salt'), [HF, HG, HP, HC, HS, HA, HN, HB, HX, HD, HL, HO] = [0x92, 0x93, 0x95, 0x9c, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9d, 0x9e].map(id), HT = id(0x90);
+  const S = f('arg', 'subject'), own = { op: 'set', obj: ref(HG), key: 'label', val: 'changed by the file' };
+  const press = { 'SAVE-ME': { act: 'export', universe: S, history: true, name: 'taken.ufx.html' }, 'SWITCH-ME': [{ set: 'face', to: 'text' }, { set: 'editing', to: true }, { set: 'who', to: 'Mallory' }, { set: 'pending', to: { lines: [], ops: [] } }],
+    'DECIDE-ME': { act: 'decide', about: 'o:9c9c9c9c', verdict: 'reject', who: 'Mallory' }, 'UNDO-ME': { act: 'undo', who: 'Mallory' }, 'IMPORT-ME': { act: 'import', who: 'Mallory' },
+    'COMMIT-ME': { act: 'propose', change: { ops: [{ ...own, obj: HG, key: ['label'] }] }, who: 'Mallory', verdict: 'approve' },
+    'REACH-ME': { propose: [{ op: 'set', obj: ref(id(0x85)), key: 'editable', val: true }] }, 'SPLICE-ME': { propose: [{ op: 'splice', obj: ref(HT), key: 'chars', after: null, ins: 'HACKED ' }] },
+    'BOTH-ME': { propose: [own, { ...own, obj: ref(HP) }] }, 'HONEST-ME': { propose: [own] } };
+  const chars = HOSTILE.words.join(' now. ') + ' now.', spans = { b0: block(HT, HC) };
+  HOSTILE.words.forEach((word, k) => { const i = chars.indexOf(word);
+    spans[k ? 'x' + k : 't0'] = { at: anchor({ o: HT, a: { chars: ['s', [HC, i, 0], [HC, i + word.length - 1, 1]] } }), kind: 'inline', role: 'button', weight: 700, on: { press: press[word] }, decoration: formula('if', true, 'underline', 'none') }; });
+  // doubling: a text of eight scalar values, doubled eighteen times, would have 2 097 152
+  let twice = 'xxxxxxxx'; for (let k = 0; k < 18; k++) twice = f('let', 'a', twice, join(f('arg', 'a'), f('arg', 'a')));
+  // spending the bound: a text that weighs 524 289 is read twenty-four times, which is more than 10 000 000
+  let half = 'xxxxxxxx'; for (let k = 0; k < 16; k++) half = f('let', 'a', half, join(f('arg', 'a'), f('arg', 'a')));
+  const spend = f('let', 'h', half, f('list', ...Array.from({ length: 24 }, () => len(f('arg', 'h')))));
+  const line = (o, of, label) => [o, 'ufo.portal', { of, label }];
   const root = universe(pk, HC, id(0x66), [
     [HF, 'ufo.face', { of: ref(HG), medium: 'document' }],
-    [HG, 'ufo.group', { children: [ref(HT), ref(HP)] }],
+    [HG, 'ufo.group', { label: 'as it was made', children: [ref(HT), ref(HP), ref(HS), ref(HA), ref(HN), ref(HB), ref(HD), ref(HO), ref(HX), ref(HL)], on: { load: { set: 'ran', to: 'load' }, time: { set: 'ran', to: 'time' }, view: { set: 'ran', to: 'view' } } }],
     [HT, 'ufo.text', { chars, spans }],
-    [HP, 'ufo.portal', { of: formula('arg', 'subject'), with: { subject: ref(U) }, editable: true, label: 'NO-SUBJECT-HERE' }],
+    [HP, 'ufo.portal', { of: S, with: { subject: ref(U) }, editable: true, label: 'NO-SUBJECT-HERE' }],
+    line(HS, join('STATE who=', iff(is(st('who'), null), 'nobody', st('who')), ' editing=', iff(is(st('editing'), true), 'on', 'off'), ' ran=', iff(is(st('ran'), null), 'nothing', st('ran'))), 'STATE-FAILED'),
+    line(HA, join('ASK ', num(len(f('ask', 'history', S)))), 'NO-ASKING-A-SUBJECT'),
+    line(HN, join('NET ', f('fetch', 'https://example.invalid/')), 'NO-SUCH-OPERATOR'),
+    line(HB, join('BIG ', num(len(twice))), 'TOO-HEAVY'),
+    line(HD, join('OWN label=', get(ref(HG), 'label')), 'OWN-FAILED'),
+    line(HO, join('OTHER ', get(ref(id(0x85)), 'label')), 'NO-OTHER-UNIVERSE'),
+    line(HX, join('SPENT ', num(len(spend))), 'BOUND-SPENT'),
+    line(HL, join('AF', 'TER'), 'NOTHING-AFTER-THE-BOUND'),
   ]);
   return { bytes: pk.b, root };
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const here = p => fileURLToPath(new URL(p, import.meta.url)); fs.mkdirSync(here('../out/'), { recursive: true });
-  for (const [file, made] of [['tools.ufx', tools()], ['../out/hostile.ufx', hostile()]]) { fs.writeFileSync(here(file), made.bytes); console.log(file, made.bytes.length, 'bytes, root', made.root.toString('hex')); }
+  for (const [file, made] of [['tools.ufx', tools()], ['../out/hostile.ufx', hostile()], ['../out/table.ufx', table()]]) { fs.writeFileSync(here(file), made.bytes); console.log(file, made.bytes.length, 'bytes, root', made.root.toString('hex')); }
 }

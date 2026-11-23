@@ -19,19 +19,51 @@ use alloc::vec::Vec;
 use core::cell::{Cell, RefCell};
 
 pub const FORMULA: u64 = 55463;
-/// What formulas read while a tools universe is composed or one of its handlers runs.
+/// What formulas read while a universe is composed or one of its handlers runs: the reader's tools, which
+/// were handed a subject; or what a file presents, which has none (F6) and reaches nothing but its own
+/// universe and its own presentation state (F8).
 pub struct Env<'a> {
     pub state: &'a [(String, V)],          // the presentation state of this presentation (7.3)
     pub args: RefCell<Vec<(String, V)>>,   // named values, read with `arg`: what the reader handed over, what an `each` binds, what an event carries
     pub base: usize,                       // how many of them were there before anything was composed: the rest are what `each` has bound
     pub subject: Option<&'a Pack>,         // the universe the reader handed over (F6), read as `arg("subject")`
+    pub home: Option<&'a Pack>,            // what a file presents: the universe its formulas are in, which `get` reads by ref
+    pub content: &'a [(String, V)],        // for the tools: the presentation state of what the subject presents, which they keep and cannot read
     pub editable: Cell<bool>,              // set while composing: the Portal onto the subject is `editable` (7.6)
     pub through: Cell<Option<Id>>,         // and which Portal that is
     pub left: Cell<Option<bool>>,          // and whether `leaving` was asked of the subject, with or without its history (E12)
+    pub count: Cell<u32>,                  // F2: the weight worked out so far
+    pub depth: Cell<u32>,                  // and how many formulas deep this one is
+    seen: RefCell<Vec<(Id, V)>>,           // the objects `get` has read by ref, each read once
 }
 impl<'a> Env<'a> {
-    fn new(state: &'a [(String, V)], args: &[(String, V)], more: &[(String, V)], subject: &'a Pack) -> Env<'a> {
-        Env { state, args: RefCell::new(args.iter().chain(more).cloned().collect()), base: args.len() + more.len(), subject: Some(subject), editable: Cell::new(false), through: Cell::new(None), left: Cell::new(None) }
+    fn new(state: &'a [(String, V)], args: &[(String, V)], more: &[(String, V)], subject: Option<&'a Pack>, home: Option<&'a Pack>, content: &'a [(String, V)]) -> Env<'a> {
+        Env { state, args: RefCell::new(args.iter().chain(more).cloned().collect()), base: args.len() + more.len(), subject, home, content, editable: Cell::new(false), through: Cell::new(None), left: Cell::new(None),
+            count: Cell::new(0), depth: Cell::new(0), seen: RefCell::new(Vec::new()) }
+    }
+}
+/// F2: what one composition, or one handler, may work out, counted in the weight of the values its formulas
+/// give; how deep a formula may lie in formulas; and how heavy one value may be. The weight of a value is one,
+/// and the scalar values of a text or the bytes of a byte string, and the weights of the items of a list or
+/// the values of a map.
+const APPLICATIONS: u32 = 10_000_000;
+const DEEP: u32 = 64;
+const WEIGHT: usize = 1 << 20;
+fn weight(v: &V, left: &mut usize) -> bool {
+    let n = match v {
+        V::T(s) => 1 + s.chars().count(),
+        V::B(b) => 1 + b.len(),
+        _ => 1,
+    };
+    if n > *left {
+        return false;
+    }
+    *left -= n;
+    match v {
+        V::L(l) => l.iter().all(|x| weight(x, left)),
+        V::M(m) => m.iter().all(|(_, x)| weight(x, left)),
+        V::Tag(_, x) => weight(x, left),
+        _ => true,
     }
 }
 /// The subject, as a value inside the kernel. No file can spell it: a literal of this shape is an error value.
@@ -44,8 +76,8 @@ pub fn is_subject(v: &V) -> bool {
 /// A value, or a formula's value (7.3). None is the error value (F4). A list or a map that is not
 /// a formula may hold formulas (7.6: "any field may be a formula"), and has their values. Operators:
 /// `state`, `arg`, `=`, `not`, `and`, `or`, `if`, `+`, `list`, `nth`, `len`, `concat`, `slice`,
-/// `format`, `get` (of a map, by a key or a path of keys), `ask`, `let`; any other is an error value. The
-/// bound of F2 is not counted.
+/// `format`, `number`, `get` (of a map, or of an object of the formula's own universe by a ref, by a key or a
+/// path of keys), `ask`, `let`; any other is an error value.
 pub fn eval(v: &V, env: &Env) -> Option<V> {
     let Some(f) = v.tag(FORMULA) else {
         return match v {
@@ -55,6 +87,20 @@ pub fn eval(v: &V, env: &Env) -> Option<V> {
             _ => Some(v.clone()),
         };
     };
+    // F2: each application counts the weight of its value; past the bound, too deep or too heavy, an error value
+    let d = env.depth.get();
+    if env.count.get() >= APPLICATIONS || d >= DEEP {
+        return None;
+    }
+    env.depth.set(d + 1);
+    let out = apply(f, env);
+    env.depth.set(d);
+    let mut left = WEIGHT;
+    let out = out.filter(|v| weight(v, &mut left));
+    env.count.set(env.count.get().saturating_add((WEIGHT - left).max(1) as u32));
+    out
+}
+fn apply(f: &V, env: &Env) -> Option<V> {
     let arg = |i: usize| eval(f.l().get(i)?, env);
     let truth = |i: usize| if let V::Bool(b) = arg(i)? { Some(b) } else { None }; // F5: no coercion
     let all = || f.l()[1..].iter().map(|x| eval(x, env)).collect::<Option<Vec<V>>>();
@@ -111,6 +157,17 @@ pub fn eval(v: &V, env: &Env) -> Option<V> {
                 V::T(parts.iter().map(|p| p.s()).collect::<Option<Vec<&str>>>()?.concat())
             }
         }
+        // the number a text spells: digits, at most fifteen, with `-` before them or `.` among them or neither
+        "number" => {
+            let x = arg(1)?;
+            let (neg, body) = x.s()?.strip_prefix('-').map_or((false, x.s()?), |b| (true, b));
+            let (whole, frac) = body.split_once('.').unwrap_or((body, ""));
+            if whole.is_empty() || whole.len() + frac.len() > 15 || body.ends_with('.') || !whole.bytes().chain(frac.bytes()).all(|c| c.is_ascii_digit()) {
+                return None;
+            }
+            let m = whole.bytes().chain(frac.bytes()).fold(0i64, |m, c| m * 10 + (c - b'0') as i64) * if neg { -1 } else { 1 };
+            if frac.is_empty() { V::Int(m) } else { V::F(m as f64 / (0..frac.len()).fold(1.0, |p, _| p * 10.0)) }
+        }
         "slice" => {
             let (x, n) = (arg(1)?, |i: usize, len: usize| index(i).map(|k| k.clamp(0, len as i64) as usize));
             match &x {
@@ -129,9 +186,21 @@ pub fn eval(v: &V, env: &Env) -> Option<V> {
         "format" => V::T(format(arg(1)?.f()?, arg(2)?.s()?)?),
         "get" => {
             let (m, path) = (arg(1)?, arg(2)?);
-            match &path {
-                V::T(k) => m.get(k)?.clone(),
-                l => l.l().iter().try_fold(&m, |v, k| v.get(k.s()?))?.clone(),
+            let at = |m: &V| match &path {
+                V::T(k) => m.get(k).cloned(),
+                l => l.l().iter().try_fold(m, |v, k| v.get(k.s()?)).cloned(),
+            };
+            match m.tag(REF).and_then(|i| i.id()) {
+                // F8: an object of the universe the formula is in, and of no other; read once in a composition
+                Some(id) => {
+                    let mut seen = env.seen.borrow_mut();
+                    if seen.iter().all(|e| e.0 != id) {
+                        let o = env.home.and_then(|pk| pk.object(&pk.head, &id))?;
+                        seen.push((id, o.p));
+                    }
+                    at(&seen.iter().find(|e| e.0 == id)?.1)?
+                }
+                None => at(&m)?,
             }
         }
         "ask" => {
@@ -253,9 +322,11 @@ pub fn subject_rows(cx: &mut Ctx, env: &Env, portal: &Obj, w: f64) -> Option<Vec
     let editable = portal.p.get("editable") == Some(&V::Bool(true));
     env.editable.set(editable);
     env.through.set(Some(portal.id));
-    // What a file presents is given no `env`: no subject, no state, nothing to press (F6). Its
-    // blocks and nodes are numbered from far above those of the tools, so that no two are alike.
-    let mut sub = Ctx::new(pk, cx.measure, None);
+    // What a file presents has an environment of its own: no subject (F6), its own presentation state, and
+    // nothing of the tools' (F8). Its blocks and nodes are numbered from far above those of the tools, so
+    // that no two are alike.
+    let within = Env::new(env.content, &[], &[], None, Some(pk), &[]);
+    let mut sub = Ctx::new(pk, cx.measure, Some(&within));
     (sub.blocks, sub.nodes, sub.press) = (1 << 30, 1 << 30, editable && hint != Some("text"));
     let (mut items, pad) = (Vec::new(), 24.0);
     let id = first.p.get("of")?.tag(REF)?.id()?;
@@ -363,14 +434,15 @@ pub struct Reader {
     through: Option<Id>,         // the Portal the subject is presented through
     shown: Option<bool>,         // what was last presented asked what would leave, with or without history (E12)
     entry: Option<Entry>,        // a block of the subject, in the editing surface
-    field: Option<(i64, Id)>,    // or a value a Portal of the tools presents: the entry's number, and the Portal
+    field: Option<(i64, Id, Vec<(String, V)>, bool)>, // or a value a Portal presents: the entry's number, the Portal, what `each` had bound there, and whether it is of what the file presents
+    content: Vec<(String, V)>,   // the presentation state of what the subject presents: its own, and not the tools' (7.3)
     serial: i64,
     focus: Option<(usize, i64)>, // the node the host says has the focus, and the list it is in
     picking: Option<V>,          // an `import` that waits for the person to choose a file
 }
 impl Reader {
     pub fn new(parts: V, args: Vec<(String, V)>) -> Reader {
-        Reader { parts, args, state: Vec::new(), w: 600.0, drawn: 0.0, lists: [Vec::new(), Vec::new()], high: [-1.0; 2], editable: false, through: None, shown: None, entry: None, field: None, serial: 0, focus: None, picking: None }
+        Reader { parts, args, state: Vec::new(), w: 600.0, drawn: 0.0, lists: [Vec::new(), Vec::new()], high: [-1.0; 2], editable: false, through: None, shown: None, entry: None, field: None, serial: 0, focus: None, picking: None, content: Vec::new() }
     }
 }
 fn effect(kind: &str, v: V) -> V {
@@ -488,6 +560,8 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
     let object = |pk: &Pack, id: &Id| home.and_then(|h| own.unwrap_or(pk).object(&h, id));
     let num = |v: &V, i: usize| v.l().get(i).and_then(|x| x.f());
     let on = (ev.get("on").and_then(|n| n.i()) == Some(1)) as usize;
+    // what an `each` had bound where an item was composed, to be bound again while its handler runs
+    let bound = |it: &V| -> Vec<(String, V)> { match it.get("press").and_then(|p| p.l().get(2)) { Some(V::M(m)) => m.clone(), _ => Vec::new() } };
     if let Some(v) = ev.get("view") {
         rd.w = num(v, 0).unwrap_or(rd.w).max(160.0);
     } else if let Some(p) = ev.get("press") {
@@ -500,7 +574,9 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
             // press is performed; or, if it has none and takes text entry, the editing surface is put on its value.
             let it = rd.lists[on][i].l()[1].clone();
             let (id, key) = (it.get("press").and_then(|p| p.l().first()?.id()), it.get("press").and_then(|p| p.l().get(1)?.s()));
-            let o = id.and_then(|id| object(pk, &id));
+            // what a file presents says so in what it leaves to be pressed, and names things of its own universe (F9)
+            let within = it.get("press").map_or(false, |p| p.l().len() > 3);
+            let o = id.and_then(|id| if within { pk.object(&pk.head, &id) } else { object(pk, &id) });
             let holder = o.as_ref().and_then(|o| match key {
                 Some(k) => o.p.get("spans")?.get(k),
                 None => Some(&o.p),
@@ -508,12 +584,14 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
             match (holder.and_then(|h| h.get("on")?.get("press")).cloned(), it.get("value").and_then(|v| v.s()), id) {
                 (Some(h), _, _) => {
                     // what an `each` had bound where this was composed is bound again while its handler runs
-                    let bound: Vec<(String, V)> = match it.get("press").and_then(|p| p.l().get(2)) { Some(V::M(m)) => m.clone(), _ => Vec::new() };
-                    perform(rd, pk, &h, &bound, None, &mut fx)
+                    match (within, id) {
+                        (true, Some(id)) => handle(rd, own, pk, home, id, &h, &bound(&it), &mut fx),
+                        _ => perform(rd, pk, &h, &bound(&it), None, &mut fx),
+                    }
                 }
                 (None, Some(s), Some(id)) => {
                     if let Some((_, e)) = surface(rd, on, i, scale, s) {
-                        rd.field = Some((rd.serial, id));
+                        rd.field = Some((rd.serial, id, bound(&it), within));
                         fx.extend(e);
                     }
                 }
@@ -536,14 +614,19 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
         if let Some(b) = rd.focus.and_then(|(n, id)| bounds(&rd.lists[n], id)) {
             fx.push(effect("show", map(vec![("on", V::Int(on as i64)), ("at", V::L(vec![V::F(b[0]), V::F(b[1]), V::F(b[2] - b[0]), V::F(b[3] - b[1])]))])));
         }
-    } else if let Some((_, id)) = ev.get("edit").and_then(|n| rd.field.filter(|f| Some(f.0) == n.i())) {
+    } else if let Some((_, id, mut bound, within)) = ev.get("edit").and_then(|n| rd.field.clone().filter(|f| Some(f.0) == n.i())) {
         // text entry on a value: when the person is done, the `change` handler of what presents it is performed,
         // with the text as `arg("text")` (Appendix A: `change` is an `edit` event delivered to it)
         let Some(V::Bool(done)) = ev.get("end") else { return V::L(fx) };
         rd.field = None;
         fx.push(effect("edit", V::Null));
-        if let (true, Some(h)) = (*done, object(pk, &id).and_then(|o| o.p.get("on")?.get("change").cloned())) {
-            perform(rd, pk, &h, &[(String::from("text"), ev.get("s").cloned().unwrap_or(V::Null))], None, &mut fx);
+        let o = if within { pk.object(&pk.head, &id) } else { object(pk, &id) };
+        if let (true, Some(h)) = (*done, o.and_then(|o| o.p.get("on")?.get("change").cloned())) {
+            bound.push((String::from("text"), ev.get("s").cloned().unwrap_or(V::Null)));
+            match within {
+                true => handle(rd, own, pk, home, id, &h, &bound, &mut fx),
+                false => perform(rd, pk, &h, &bound, None, &mut fx),
+            }
         }
     } else if let Some(e) = ev.get("edit").and_then(|id| rd.entry.as_mut().filter(|e| Some(e.id) == id.i())) {
         let Some(V::Bool(done)) = ev.get("end") else {
@@ -581,7 +664,7 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
 fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut change: Option<(Entry, Vec<Edit>)>, fx: &mut Vec<V>) {
     let hs = if let V::L(l) = h { &l[..] } else { core::slice::from_ref(h) };
     for (i, h) in hs.iter().enumerate() {
-        let Some(m) = eval(h, &Env::new(&rd.state, &rd.args, event, pk)) else { return };
+        let Some(m) = eval(h, &Env::new(&rd.state, &rd.args, event, Some(pk), None, &[])) else { return };
         let set = |state: &mut Vec<(String, V)>, name: &str, v: V| {
             state.retain(|e| e.0 != name);
             state.push((String::from(name), v));
@@ -626,16 +709,13 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
                     Ok(vec![("about", t(&cat!("o:", hex(r.get("about").and_then(|c| c.b()).unwrap_or(&[])).get(..8).unwrap_or(""))))])
                 }),
                 // 5.4: a decision about a change, by the person using the reader. `about` is the change as a projection names it
-                // 7.6, in outline: a handler that proposes operations it writes itself. One `set`, of a value at a key path
-                // of an object: how a cell of a table is edited.
-                #[cfg(feature = "outline-data")]
+                // 10.3 `propose`, of a change the handler gives: operations, and what in the document asked for them. This
+                // is how the reader's tools commit what a file's own handler proposed, once the person has said so (F10)
                 ("propose", None) => text("who").ok_or("a change says who made it, and no name was given").and_then(|who| {
-                    let op = m.get("ops").and_then(|o| o.l().first()).filter(|o| o.get("op").and_then(|k| k.s()) == Some("set")).ok_or("this reader proposes one `set` from a handler")?;
-                    let id = op.get("obj").and_then(|o| o.tag(REF).unwrap_or(o).id()).ok_or("an operation names an object")?;
-                    let path: Vec<&str> = op.get("key").map(|k| k.l()).unwrap_or(&[]).iter().filter_map(|k| k.s()).collect();
+                    let c = m.get("change").filter(|c| rd.editable && c.get("ops").is_some()).ok_or("the document is not open for changes, or nothing was proposed")?;
                     let mut random = [0u8; 64];
                     crate::random(&mut random);
-                    let r = write::set(pk, id, &path, op.get("val").cloned(), &[], who, crate::now(), &random)?;
+                    let r = write::submit(pk, c.get("ops").map(|o| o.l()).unwrap_or(&[]), &[], c.get("by").and_then(|b| b.id()), text("verdict"), who, crate::now(), &random)?;
                     Ok(vec![("change", t(&hex(r.get("change").and_then(|c| c.b()).unwrap_or(&[]))))])
                 }),
                 #[cfg(not(feature = "cut-decide"))]
@@ -663,6 +743,45 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
                 return;
             }
         }
+    }
+}
+/// A handler of what a file presents, performed (F9, F10). It may do two things. `{set, to}` sets a value of
+/// its own presentation state. `{propose}` asks for operations on its own universe: nothing is written; each
+/// operation is stated against the state as it is, and the request is handed, as the event `propose`, to the
+/// Portal the reader presents the file through, whose handler decides. That ends the handler. Anything else
+/// (`act`, an operation that is not a `set` of a value of an object of this universe) ends it and does nothing.
+fn handle(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, home: Option<H>, by: Id, h: &V, event: &[(String, V)], fx: &mut Vec<V>) {
+    for h in if let V::L(l) = h { &l[..] } else { core::slice::from_ref(h) } {
+        let Some(m) = eval(h, &Env::new(&rd.content, event, &[], None, Some(pk), &[])) else { return };
+        if let Some(name) = m.get("set").and_then(|n| n.s()) {
+            rd.content.retain(|e| e.0 != name);
+            rd.content.push((String::from(name), m.get("to").cloned().unwrap_or(V::Null)));
+            continue;
+        }
+        let (mut ops, mut lines) = (Vec::new(), Vec::new());
+        for op in m.get("propose").map(|p| p.l()).unwrap_or(&[]) {
+            // one `set` of a value of an object of this universe, stated against the state as it is
+            let key = op.get("key").map(|k| if k.s().is_some() { vec![k.clone()] } else { k.l().to_vec() }).unwrap_or_default();
+            let stated = op.get("obj").and_then(|o| o.tag(REF).unwrap_or(o).id()).filter(|_| op.get("op").and_then(|k| k.s()) == Some("set")).and_then(|id| write::stated(pk, &id, &key, op.get("val")));
+            let Some(stated) = stated else { return };
+            // and in words, for the person who is to decide
+            let said = |k: &str| match stated.get(k) {
+                None | Some(V::Null) => String::from("nothing"),
+                Some(V::T(s)) => cat!("\u{201c}", s, "\u{201d}"),
+                Some(V::Bool(b)) => String::from(if *b { "yes" } else { "no" }),
+                Some(V::Int(i)) => cat!(*i),
+                Some(V::F(x)) => format(*x, "0.000000000").map_or(String::new(), |s| String::from(s.trim_end_matches('0').trim_end_matches('.'))),
+                Some(v) => cat!("a value of ", encode(v).len(), " bytes"),
+            };
+            let id = stated.get("obj").and_then(|o| o.b()).map(hex).unwrap_or_default();
+            lines.push(map(vec![("obj", t(&cat!("o:", id.get(..8).unwrap_or("")))), ("key", t(&key.iter().filter_map(|k| k.s()).collect::<Vec<_>>().join("."))), ("old", t(&said("old"))), ("val", t(&said("val")))]));
+            ops.push(stated);
+        }
+        if let (false, Some(ask)) = (ops.is_empty(), rd.through.and_then(|id| home.and_then(|h| own.unwrap_or(pk).object(&h, &id))).and_then(|o| o.p.get("on")?.get("propose").cloned())) {
+            let asked = map(vec![("ops", V::L(ops)), ("by", V::B(by.to_vec())), ("lines", V::L(lines))]);
+            perform(rd, pk, &ask, &[(String::from("proposal"), asked)], None, fx);
+        }
+        return;
     }
 }
 /// What kind of file this is (5.2): from its content first, and its name second.
@@ -730,7 +849,7 @@ fn present(rd: &mut Reader, own: Option<&Pack>, pk: &Pack, home: Option<H>) -> V
     let (mut lists, mut high) = ([Vec::new(), Vec::new()], [0.0; 2]);
     let (mut editable, mut through, mut shown) = (false, None, None);
     if let Some(home) = home {
-        let (tools, env) = (own.unwrap_or(pk), Env::new(&rd.state, &rd.args, &[], pk));
+        let (tools, env) = (own.unwrap_or(pk), Env::new(&rd.state, &rd.args, &[], Some(pk), None, &rd.content));
         let mut cx = Ctx::new(tools, &crate::host, Some(&env));
         cx.root = home;
         let rows = primary(tools, &home).map(|id| compose(&mut cx, &home, &id, rd.w)).unwrap_or_default();

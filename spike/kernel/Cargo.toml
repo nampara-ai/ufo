@@ -29,8 +29,6 @@ cut-layout = []
 cut-pack = []
 cut-values = []
 cut-alloc = [] # an allocator that never frees, in place of dlmalloc
-outline-grid = [] # 3f in outline, for measuring: grid layout (spike/SPLIT.md). Not exercised by the acceptance tests
-outline-data = ["outline-grid"] # 3f in outline, for measuring: a group under `each` over a data object, and a `set` proposed by a handler
 conformance = [] # adds the exports spike/tools/conformance.mjs calls
 
 [profile.release]

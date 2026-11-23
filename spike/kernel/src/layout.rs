@@ -167,18 +167,13 @@ pub fn compose(cx: &mut Ctx, uni: &H, id: &Id, w: f64) -> Vec<Row> {
     cx.chain.push((*uni, *id));
     let mut rows = match o.ty.as_str() {
         "ufo.text" => text_rows(cx, uni, &o, None, w).unwrap_or_else(|| label_row(cx, "(inconsistent text: not presented)", w)), // step 1
-        #[cfg(feature = "outline-grid")]
         "ufo.group" if o.p.get("layout").and_then(|l| l.s()) == Some("grid") => grid(cx, uni, &o, w),
         "ufo.group" => {
             let gap = o.p.get("gap").and_then(|g| g.f()).unwrap_or(0.0);
             let mut rows = Vec::new();
-            // 7.3, repetition: under `each` the child is a template, presented once for each item of the list the
-            // formula gave, with `arg` of the name in `as` bound to the item. Where formulas have no values, nothing.
-            let items: Vec<Option<V>> = match (cx.env, o.p.get("each")) {
-                (_, None) => vec![None],
-                (Some(_), Some(V::L(l))) => l.iter().cloned().map(Some).collect(),
-                _ => Vec::new(),
-            };
+            // 7.3, repetition: under `each` the child is a template, presented once for each item, with `arg` of the
+            // name in `as` bound to the item
+            let items = each_of(cx, uni, &o);
             let name = String::from(o.p.get("as").and_then(|a| a.s()).unwrap_or(""));
             for (j, item) in items.into_iter().enumerate() {
                 if let (Some(env), Some(v)) = (cx.env, &item) {
@@ -268,11 +263,13 @@ fn portal(cx: &mut Ctx, uni: &H, o: &Obj, w: f64) -> Vec<Row> {
         if matches!(of, V::T(_) | V::Null) {
             let s = of.s().unwrap_or("");
             let mut rows = if s.is_empty() { label_row(cx, &label, w) } else { own_rows(cx, s, &plain_style(), w, "paragraph") };
-            let field = o.p.get("editable") == Some(&V::Bool(true));
+            // a value in what a file presents takes text entry only while the reader has the file open for changes
+            let field = o.p.get("editable") == Some(&V::Bool(true)) && (env.home.is_none() || cx.press);
             if field || o.p.get("on").and_then(|h| h.get("press")).is_some() {
                 cx.own = true;
+                let names = names(cx, &o.id, V::Null);
                 for item in rows.iter_mut().flat_map(|r| r.items.iter_mut()) {
-                    more(item, "press", V::L(vec![V::B(o.id.to_vec())]));
+                    more(item, "press", names.clone());
                     if field {
                         more(item, "value", t(s));
                     }
@@ -372,14 +369,23 @@ fn restyle(st: &mut Style, v: &V) {
     word("direction", ["ltr", "rtl", "auto"], &mut st.dir);
     word("decoration", ["none", "underline", "strike"], &mut st.deco);
 }
-/// In a tools universe, a span with an `on` handler gives the characters under it what a press on them
-/// names: the text, and the span's key.
+/// What a press on an item names: the object, the key of a span of it or nothing, and what any `each` has bound
+/// here, so that a handler can read it when the press comes. What a file presents adds that it is the file's:
+/// a press on it is then never taken for one on the reader's tools, whatever identity it gives (F9).
+fn names(cx: &Ctx, id: &Id, key: V) -> V {
+    let mut v = vec![V::B(id.to_vec()), key, V::M(cx.env.map(|e| e.args.borrow()[e.base.min(e.args.borrow().len())..].to_vec()).unwrap_or_default())];
+    if cx.env.map_or(false, |e| e.home.is_some()) {
+        v.push(V::Bool(true));
+    }
+    V::L(v)
+}
+/// Where formulas have values, a span with an `on` handler gives the characters under it what a press on
+/// them names: the text, and the span's key.
 fn pressed(cx: &Ctx, st: &mut Style, s: &Span, id: &Id) -> bool {
     let on = cx.env.is_some() && s.v.get("on").is_some();
     if on {
         // with what any `each` has bound here, so that the handler can read it when the press comes
-        let bound = cx.env.map(|e| e.args.borrow()[e.base.min(e.args.borrow().len())..].to_vec()).unwrap_or_default();
-        st.press = V::L(vec![V::B(id.to_vec()), t(s.key), V::M(bound)]);
+        st.press = names(cx, id, t(s.key));
     }
     on
 }
@@ -1183,12 +1189,10 @@ pub fn html(list: &[V]) -> String {
 /// What a group under `each` is presented for (7.3): each item of the list its formula gave; or, where `each`
 /// is a ref to a data object, each of its rows in the table's order, as a map from column key to value with the
 /// row's own key under `key`. With no `each`, once, for nothing. Where formulas have no values, not at all.
-#[cfg(feature = "outline-grid")]
 fn each_of(cx: &Ctx, uni: &H, o: &Obj) -> Vec<Option<V>> {
     match (cx.env, o.p.get("each")) {
         (_, None) => vec![None],
         (Some(_), Some(V::L(l))) => l.iter().cloned().map(Some).collect(),
-        #[cfg(feature = "outline-data")]
         (Some(_), Some(V::Tag(REF, id))) => {
             let Some(d) = id.id().and_then(|i| cx.pk.object(uni, &i)) else { return Vec::new() };
             let Some(V::M(rows)) = d.p.get("rows") else { return Vec::new() };
@@ -1201,10 +1205,9 @@ fn each_of(cx: &Ctx, uni: &H, o: &Obj) -> Vec<Option<V>> {
         _ => Vec::new(),
     }
 }
-/// 7.7, a grid's tracks, in outline: a column is a length, `fit` (as wide as the longest line of its cells) or a
+/// 7.7, a grid's tracks: a column is a length, `fit` (as wide as the longest line of its cells) or a
 /// fraction of what is left; a row is as tall as its tallest cell; the children, once for each item of `each`,
 /// fill the cells in order, row by row. Not here yet: `rows`, `row`, `col`, `span`, `align`, and the roles of a table.
-#[cfg(feature = "outline-grid")]
 fn grid(cx: &mut Ctx, uni: &H, o: &Obj, w: f64) -> Vec<Row> {
     let gap = o.p.get("gap").and_then(|g| g.f()).unwrap_or(0.0);
     let tracks: Vec<V> = o.p.get("cols").map(|c| c.l().to_vec()).filter(|c| !c.is_empty()).unwrap_or_else(|| vec![V::L(vec![V::Int(1), t("fr")])]);
@@ -1238,11 +1241,16 @@ fn grid(cx: &mut Ctx, uni: &H, o: &Obj, w: f64) -> Vec<Row> {
     for c in 0..n {
         if let Some(f) = fraction(&tracks[c]) { widths[c] = left * f / parts; }
     }
+    // Appendix A, `role`: the rows of a grid that says it is a table, or a group of a table's rows, are nodes
+    let table = matches!(o.p.get("role").and_then(|r| r.s()), Some("table" | "rowgroup"));
     let (mut items, mut y) = (Vec::new(), 0.0);
     for r in (0..cells.len()).step_by(n) {
-        let (mut x, mut h) = (0.0, 0.0f64);
+        let (mut x, mut h, row) = (0.0, 0.0f64, node("row", cx.next(), Vec::new()));
         for c in 0..n.min(cells.len() - r) {
-            let rows = cell(cx, r + c, widths[c]);
+            let mut rows = cell(cx, r + c, widths[c]);
+            if table {
+                rows.iter_mut().for_each(|r| r.path.insert(0, row.clone()));
+            }
             h = h.max(stack(&rows, x, y, &mut items) - y);
             x += widths[c] + gap;
         }

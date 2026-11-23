@@ -416,8 +416,9 @@ pub unsafe extern "C" fn propose(p: *mut u8, n: usize) -> *const u8 {
     let q = taken(p, n);
     let r = match PACK.as_mut() {
         Some(pk) if q.get("key").is_none() => write::propose(pk, &q),
-        Some(pk) => match (q.get("o").and_then(|x| x.id()), q.get("key").map(|k| k.l().iter().filter_map(|k| k.s()).collect::<Vec<&str>>()), q.get("who").and_then(|x| x.s()), q.get("time").and_then(|x| x.i()), q.get("random").and_then(|x| x.b())) {
-            (Some(o), Some(key), Some(who), Some(time), Some(random)) => write::set(pk, o, &key, q.get("val").cloned(), q.get("with").and_then(|w| w.b()).unwrap_or(&[]), who, time as u64, random),
+        Some(pk) => match (q.get("o").and_then(|x| x.id()), q.get("key"), q.get("who").and_then(|x| x.s()), q.get("time").and_then(|x| x.i()), q.get("random").and_then(|x| x.b())) {
+            (Some(o), Some(key), Some(who), Some(time), Some(random)) => write::stated(pk, &o, key.l(), q.get("val")).ok_or("no such object in the current state (L4)")
+                .and_then(|op| write::submit(pk, &[op], q.get("with").and_then(|w| w.b()).unwrap_or(&[]), None, None, who, time as u64, random)),
             _ => Err("arguments: o (16 bytes), key (a list of texts), who (text), time, random (64 bytes)"),
         },
         None => Err("no pack is open"),

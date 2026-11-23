@@ -386,23 +386,39 @@ pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Optio
     set_in(&mut raw_seq, &["chars"], Some(v));
     finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: Some(&seq1), raw_p, raw_seq: Some(raw_seq), life: (true, true) }), ops, Vec::new(), Vec::new(), None, recs, who, time, random)
 }
-/// `set` (1.7) on one object, through the same gate: what lies at `path` in its properties becomes
-/// `val`, or with none is removed. `with` is a pack whose records are to lie in this one from the
-/// same commit on: a universe that the value names by an anchor is then nested here (1.8).
-pub fn set(pk: &mut Pack, id: Id, path: &[&str], val: Option<V>, with: &[u8], who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
-    let o = pk.object(&pk.head, &id).ok_or("no such object in the current state (L4)")?;
+/// A `set` (1.7) stated against the current state: what lies at the path `key` of an object's properties is to
+/// become `val`, or with none is to be removed; `old` is what is there now (L2). None if the object is not there.
+pub fn stated(pk: &Pack, id: &Id, key: &[V], val: Option<&V>) -> Option<V> {
+    let o = pk.object(&pk.head, id)?;
+    let mut op = vec![("op", t("set")), ("obj", bytes(id)), ("key", V::L(key.to_vec()))];
+    op.extend(key.iter().try_fold(&o.p, |v, k| v.get(k.s()?)).map(|old| ("old", old.clone())));
+    op.extend(val.cloned().map(|v| ("val", v)));
+    Some(map(op))
+}
+/// Operations given whole (10.3 `propose`), through the same gate: in this reader, `set`s of values of one
+/// object, each stating what was there (L2). `with` is a pack whose records are to lie in this one from the
+/// same commit on: a universe that a value names by an anchor is then nested here (1.8). `by` is what in the
+/// document asked for the operations, if something did (7.6 **F10**): the origin then names it, beside the
+/// person. With a `verdict`, the change records the person's decision about itself: that they were asked.
+pub fn submit(pk: &mut Pack, ops: &[V], with: &[u8], by: Option<Id>, verdict: Option<&str>, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+    let whole = "this reader applies a change that sets values of one object, not of a change, a sequence or a value kept outside its node";
+    let id = ops.first().and_then(|o| o.get("obj")).and_then(|i| i.id()).ok_or(whole)?;
+    let o = pk.object(&pk.head, &id).filter(|o| o.ty != "ufo.change").ok_or("what it would change is not in the current state (L4)")?;
     let raw = pk.node(&o.rev).ok_or("the revision cannot be read")?;
-    let (mut p1, mut raw_p) = (o.p.clone(), raw.get("p").cloned().ok_or("the revision has no properties")?);
-    if path.is_empty() || o.ty == "ufo.change" || o.seq.as_ref().map_or(false, |s| s.get(path[0]).is_some()) || raw_p.get(path[0]).map_or(false, |v| v.tag(INDIRECT).is_some()) {
-        return Err("not set by this spike: a change object, a sequence property, or a value kept outside its node");
+    let change: Id = random.get(..16).and_then(|r| r.try_into().ok()).ok_or("random: 64 bytes")?;
+    let none = V::M(Vec::new());
+    let mut raw_p = raw.get("p").cloned().ok_or("the revision has no properties")?;
+    for op in ops {
+        let path = op.get("key").map(|k| k.l()).unwrap_or(&[]).iter().map(|k| k.s()).collect::<Option<Vec<&str>>>().filter(|p| !p.is_empty() && op.get("op").and_then(|k| k.s()) == Some("set")).ok_or(whole)?;
+        if op.get("obj").and_then(|i| i.id()) != Some(id) || raw_p.get(path[0]).map_or(false, |v| v.tag(INDIRECT).is_some()) {
+            return Err(whole);
+        }
+        set_in(&mut raw_p, &path, op.get("val").cloned()).ok_or("the path passes through a value that is not a map")?;
     }
-    let mut op = vec![("op", t("set")), ("obj", bytes(&id)), ("key", V::L(path.iter().map(|k| t(k)).collect()))];
-    op.extend(path.iter().try_fold(&o.p, |v, k| v.get(k)).map(|old| ("old", old.clone())));
-    op.extend(val.clone().map(|v| ("val", v)));
-    set_in(&mut p1, path, val.clone()).ok_or("the path passes through a value that is not a map")?;
-    set_in(&mut raw_p, path, val).ok_or("the path passes through a value that is not a map")?;
+    let (_, p1, _) = replay(&id, &change, ops, true, &o.p, o.seq.as_ref().unwrap_or(&none)).ok_or("what it would change is not as the operations say it is (L2)")?;
+    let decisions = verdict.map(|v| map(vec![("about", V::Tag(REF, Box::new(bytes(&change)))), ("verdict", t(v)), ("who", map(vec![("name", t(who))]))])).into_iter().collect();
     let recs = if with.is_empty() { Vec::new() } else { Pack::scan(with.to_vec()).ok_or("what is to be carried in is not a pack")?.framed() };
-    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref(), raw_p, raw_seq: raw.get("seq").cloned(), life: (true, true) }), vec![map(op)], Vec::new(), Vec::new(), None, recs, who, time, random)
+    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref(), raw_p, raw_seq: raw.get("seq").cloned(), life: (true, true) }), ops.to_vec(), decisions, Vec::new(), by.map(|b| (false, b)), recs, who, time, random)
 }
 /// A file taken in as an asset (5.2), through the same gate: a new object, `id`, whose `bytes` are the file's
 /// exactly, kept outside the node in one blob that the operation and the state both name (1.7).
@@ -469,9 +485,9 @@ fn reverse(pk: &mut Pack, c: &Obj, about: Id, decisions: Vec<V>, undoes: Option<
             return Err(edited);
         }
         let back = vec![map(vec![("op", t("drop")), ("obj", bytes(&id))])];
-        return finish(pk, Some(New { o: &o, raw: &raw, p1: &o.p, seq1: None, raw_p: V::Null, raw_seq: None, life: (true, false) }), back, decisions, Vec::new(), undoes, Vec::new(), who, time, random);
+        return finish(pk, Some(New { o: &o, raw: &raw, p1: &o.p, seq1: None, raw_p: V::Null, raw_seq: None, life: (true, false) }), back, decisions, Vec::new(), undoes.map(|u| (true, u)), Vec::new(), who, time, random);
     }
-    let seq0 = o.seq.clone().ok_or("what that change edited is not a text")?;
+    let seq0 = o.seq.clone().unwrap_or(V::M(Vec::new()));
     let (mut back, mut number): (Vec<(V, Vec<V>)>, i64) = (Vec::new(), 0);
     for op in &ops {
         let key = op.get("key").cloned().ok_or("an operation with no key")?;
@@ -521,7 +537,7 @@ fn reverse(pk: &mut Pack, c: &Obj, about: Id, decisions: Vec<V>, undoes: Option<
     let change: Id = random.get(..16).and_then(|r| r.try_into().ok()).ok_or("random: 64 bytes")?;
     let (_, p1, seq1) = replay(&id, &change, &back, true, &o.p, &seq0).ok_or(edited)?;
     // as stored: a large text or sequence stays outside its node, as it was
-    let (mut raw_p, mut raw_seq, mut recs): (V, V, Recs) = (raw.get("p").cloned().ok_or("the revision has no properties")?, raw.get("seq").cloned().ok_or("seq")?, Vec::new());
+    let (mut raw_p, mut raw_seq, mut recs): (V, Option<V>, Recs) = (raw.get("p").cloned().ok_or("the revision has no properties")?, raw.get("seq").cloned(), Vec::new());
     for op in &back {
         match (op.get("op").and_then(|k| k.s()), op.get("key")) {
             (Some("set"), Some(V::L(path))) => {
@@ -532,13 +548,14 @@ fn reverse(pk: &mut Pack, c: &Obj, about: Id, decisions: Vec<V>, undoes: Option<
                 let (text, seq) = (p1.get(key).and_then(|c| c.s()).ok_or("text")?, seq1.get(key).cloned().ok_or("seq")?);
                 let v = held(&mut recs, raw_p.get(key), "t", text.as_bytes(), V::T(text.into()))?;
                 set_in(&mut raw_p, &[key.as_str()], Some(v));
+                let raw_seq = raw_seq.as_mut().ok_or("seq")?;
                 let v = held(&mut recs, raw_seq.get(key), "v", &encode(&seq), seq)?;
-                set_in(&mut raw_seq, &[key.as_str()], Some(v));
+                set_in(raw_seq, &[key.as_str()], Some(v));
             }
             _ => return Err("an operation with no key"),
         }
     }
-    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: Some(&seq1), raw_p, raw_seq: Some(raw_seq), life: (true, true) }), back, decisions, sources, undoes, recs, who, time, random)
+    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref().map(|_| &seq1), raw_p, raw_seq, life: (true, true) }), back, decisions, sources, undoes.map(|u| (true, u)), recs, who, time, random)
 }
 /// What every change through the gate comes to, whatever it does to its one object: the operations
 /// checked against the state meant, then the records written and read back. `p1` and `seq1` are
@@ -557,7 +574,7 @@ struct New<'a> {
 }
 /// Writes one change: the new revision of the object it edits, if it edits one; the change object, with its
 /// work, its origin and its decisions; the object map; the commit.
-fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sources: Vec<V>, undoes: Option<Id>, mut recs: Recs, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sources: Vec<V>, via: Option<(bool, Id)>, mut recs: Recs, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
     if pk.unread_tail != 0 {
         return Err("the pack was recovered after an interrupted write (2.3): this spike does not truncate it and append (P7)");
     }
@@ -618,8 +635,10 @@ fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sourc
     let mut cp = vec![("work", veiled), ("actor", map(vec![("who", whom.clone()), ("with", map(vec![("name", t("ufo-spike-kernel")), ("version", t("0.0.0"))]))])), ("time", V::Int(time as i64)),
         ("origin", map({
             // 9.6: an undo is the kernel's work at a person's asking: its origin is a tool, and names what it undoes
-            let mut og = match undoes {
-                Some(c) => vec![("basis", t("witnessed")), ("by", t("tool")), ("tool", map(vec![("name", t("undo"))])), ("asked", whom), ("context", V::Tag(REF, Box::new(bytes(&c))))],
+            // 7.6 F10: what a handler in the document proposed is the person's change, and says what proposed it
+            let mut og = match via {
+                Some((true, c)) => vec![("basis", t("witnessed")), ("by", t("tool")), ("tool", map(vec![("name", t("undo"))])), ("asked", whom), ("context", V::Tag(REF, Box::new(bytes(&c))))],
+                Some((false, o)) => vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom), ("context", V::Tag(REF, Box::new(bytes(&o))))],
                 None => vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom)],
             };
             if !sources.is_empty() {

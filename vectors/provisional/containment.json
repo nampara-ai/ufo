@@ -1,0 +1,130 @@
+{
+ "status": {
+  "status": "provisional",
+  "note": "the author's kernel only"
+ },
+ "what": "containment (PRESENTATION 7.6 F6, F8 to F11; 7.3 F2, F4): a file whose own description tries each way out. `must` is what the rules require of every reader; `here` is what this kernel did",
+ "pack": {
+  "file": "contained.ufx",
+  "length": 16588,
+  "sha256": "542909fb43b7a7b8978a1f325a5a86fcda3f5104fd6b2545acb4455390d20ca6",
+  "root_hash": "6f692f6eb5c5d2620c0f470dee476cc3743184e33a4541415fbfda4d63a08f71"
+ },
+ "reader": "the reader's own tools (spike/envelope/tools.ufx) present the pack as their subject, in the name of Reader Test",
+ "attempts": [
+  {
+   "attempt": "a Portal whose `of` is arg(\"subject\"), with a `with` that names a subject",
+   "must": "no subject is given (F6): the label is shown",
+   "here": "the label NO-SUBJECT-HERE"
+  },
+  {
+   "attempt": "a formula that asks a projection of arg(\"subject\")",
+   "must": "an error value (F8): the label is shown",
+   "here": "the label NO-ASKING-A-SUBJECT"
+  },
+  {
+   "attempt": "a formula with an operator that is not one (`fetch`, of an address)",
+   "must": "an error value (F4): the label is shown; nothing is fetched",
+   "here": "the label NO-SUCH-OPERATOR"
+  },
+  {
+   "attempt": "a text doubled until it would weigh 2 097 153",
+   "must": "an error value (F2): the label is shown",
+   "here": "the label TOO-HEAVY"
+  },
+  {
+   "attempt": "get, by a ref to an identity that is an object of the reader's tools and not of this universe",
+   "must": "an error value (F8): the label is shown",
+   "here": "the label NO-OTHER-UNIVERSE"
+  },
+  {
+   "attempt": "a formula that reads a value weighing 524 289 twenty-four times",
+   "must": "an error value from where the composition has worked out 10 000 000 (F2): the label is shown",
+   "here": "the label BOUND-SPENT"
+  },
+  {
+   "attempt": "a formula reached after the bound is spent",
+   "must": "an error value (F2): the label is shown",
+   "here": "the label NOTHING-AFTER-THE-BOUND"
+  },
+  {
+   "attempt": "get, by a ref to an object of its own universe",
+   "must": "its value",
+   "here": "OWN label=as it was made"
+  },
+  {
+   "attempt": "the reader's tools, beside a file that spends its bound",
+   "must": "they work: the bound is the file's composition's, not theirs",
+   "here": "the status is shown"
+  },
+  {
+   "attempt": "state(\"who\"), state(\"editing\") while the reader is editing in the name of Reader Test",
+   "must": "null: its presentation state is its own (F8)",
+   "here": "STATE who=nobody editing=off ran=nothing"
+  },
+  {
+   "attempt": "pressed: {act: export, universe: arg(\"subject\")}, on a span whose text has the identity of the tools' Save bar and the key of its first word",
+   "must": "nothing: `act` is not for what a file presents (F9)",
+   "here": "nothing asked of the host, nothing written, the tools as they were"
+  },
+  {
+   "attempt": "pressed: {act: decide, verdict: reject}",
+   "must": "nothing: `act` is not for what a file presents (F9)",
+   "here": "nothing asked of the host, nothing written, the tools as they were"
+  },
+  {
+   "attempt": "pressed: {act: undo}",
+   "must": "nothing: `act` is not for what a file presents (F9)",
+   "here": "nothing asked of the host, nothing written, the tools as they were"
+  },
+  {
+   "attempt": "pressed: {act: import}",
+   "must": "nothing: `act` is not for what a file presents (F9)",
+   "here": "nothing asked of the host, nothing written, the tools as they were"
+  },
+  {
+   "attempt": "pressed: {act: propose, change: {ops}, verdict: approve}",
+   "must": "nothing: `act` is not for what a file presents (F9)",
+   "here": "nothing asked of the host, nothing written, the tools as they were"
+  },
+  {
+   "attempt": "pressed: {set: face}, {set: editing}, {set: who, to: Mallory}, {set: pending}",
+   "must": "its own presentation state has those values; the tools' has not (F8)",
+   "here": "STATE who=Mallory editing=on; the tools: on Document, off Pages, off Text, on Edit, off Save, off Changes, off Add a file, still in the name of Reader Test, nothing asked"
+  },
+  {
+   "attempt": "handlers for `load`, `time` and `view`",
+   "must": "never performed: a handler runs on a person's input and on nothing else (F11)",
+   "here": "ran=nothing, after the view changed too"
+  },
+  {
+   "attempt": "pressed: {propose: [set, of an identity that is an object of the tools and not of this universe]}",
+   "must": "nothing is asked: there is no such object in its universe (F9)",
+   "here": "nothing asked, nothing written"
+  },
+  {
+   "attempt": "pressed: {propose: [splice into its own text]}",
+   "must": "not written unless the person says so (F10)",
+   "here": "nothing asked, nothing written (this reader hands on only a `set`)"
+  },
+  {
+   "attempt": "pressed: {propose: [set of one object, set of another]}, and the person applies it",
+   "must": "whole or not at all (L4)",
+   "here": "asked; applied; refused whole by this reader, nothing written"
+  },
+  {
+   "attempt": "pressed: {propose: [set of a value of its own universe]}, and the person dismisses it",
+   "must": "nothing is written (F10)",
+   "here": "asked: Set label of o:93939393: from “as it was made” to “changed by the file”. Dismissed: nothing written"
+  },
+  {
+   "attempt": "the same, and the person applies it",
+   "must": "one change through the gate, by the person, recording their decision and what in the file asked (F10)",
+   "here": "change id=o:d5fa1f44 commit=c:3510ebf0 t… actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\"; origin.context o:90909090"
+  }
+ ],
+ "after": {
+  "height": 1,
+  "history": "change id=o:d5fa1f44 commit=c:3510ebf0 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\""
+ }
+}
