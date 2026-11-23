@@ -1455,3 +1455,8 @@ The independent reader checked attribution through `origin.sources`
 from the core text alone, and gave the kernel's nine stretches for
 `decided.ufx`, the word a rejection put back among them. Six places it
 found undecided were settled in §5.4.
+
+*Noted by the owner, for later, no work now.* An installed reader may
+keep components by their hash, so that a reader holding one skips the
+embedded copy in the browser too. That is the reader ladder's job
+(§13.5), not a web page's.
