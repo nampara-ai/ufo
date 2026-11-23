@@ -107,7 +107,7 @@ function universe(pk, change, lineage, objects) {
 const f = formula, st = n => f('state', n), is = (a, b) => f('=', a, b), not = a => f('not', a), and = (a, b) => f('and', a, b), iff = (c, a, b) => f('if', c, a, b);
 const join = (...a) => f('concat', ...a), list = (...a) => f('list', ...a), get = (m, k) => f('get', m, k), nth = (l, i) => f('nth', l, i), num = n => f('format', n, '0'), len = x => f('len', x), plus = (a, b) => f('+', a, b);
 export function tools(compress = true) {
-  const pk = new Pack('ufo-spike-tools-salt', compress), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB, XA, XY, XQ, XJ, XD] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5].map(id);
+  const pk = new Pack('ufo-spike-tools-salt', compress), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB, XA, XY, XQ, XJ, XD, XK] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6].map(id);
   const S = f('arg', 'subject'), editing = is(st('editing'), true), named = not(is(st('who'), null)), share = is(st('share'), true), saving = is(st('panel'), 'save'), reviewing = is(st('panel'), 'changes'), lit = on => iff(on, 'underline', 'none');
   // what the kernel's projections say of the subject: `expand` of the whole, the changes newest first, and what a copy would carry
   // Each is asked once and named (`let`, 7.3), and read where it is wanted by its name.
@@ -121,7 +121,7 @@ export function tools(compress = true) {
   const marked = mark => iff(ends(stem, mark), join(stem, '-', num(plus(count, 2))), join(stem, mark, iff(is(count, 0), '', join('-', num(plus(count, 1))))));
   const saveAs = f('let', 'stem', f('let', 's', stem0, iff(is(named1('s'), ''), 'untitled', named1('s'))), join(iff(share, marked('-edited'), marked('-published')), '.ufx.html'));
   // the status: which state this is; how to begin; what was just recorded, or why not; what was saved, and what that copy lacks
-  const did = st('did'), out = st('out'), decided = st('decided');
+  const did = st('did'), out = st('out'), decided = st('decided'), undone = st('undone');
   const status = f('let', 'ov', nth(f('ask', 'expand', S), 0), join(
     list(join('State ', get(ov, 'commit'), ', after ', num(get(ov, 'changes')), ' changes.')),
     iff(and(editing, not(named)), list('To change the text, first give your name: press the line below.'), list()),
@@ -130,6 +130,8 @@ export function tools(compress = true) {
     iff(is(decided, null), list(), iff(get(decided, 'ok'),
       list(join('Recorded: change ', get(decided, 'about'), ' ', get(decided, 'verdict'), 'ed by ', st('who'), '.', iff(is(get(decided, 'verdict'), 'reject'), ' What it did was undone.', ''), ' Not yet in a file.')),
       list(join('Not recorded: ', get(decided, 'why'), '.')))),
+    // an undoing just made (PLAYER 9.6), or why it was not
+    iff(is(undone, null), list(), iff(get(undone, 'ok'), list(join('Undone: your change ', get(undone, 'about'), '. Not yet in a file.')), list(join('Not undone: ', get(undone, 'why'), '.')))),
     iff(and(editing, named), list(join('Changes will be recorded as made by ', st('who'), '. Press a paragraph to change it; press the name to change that.')), list()),
     iff(is(did, null), list(), iff(get(did, 'ok'),
       iff(is(st('fresh'), true), list(join('Changed, and recorded as change ', get(last, 'id'), ' by ', get(last, 'actor'), '. Not yet in a file.')), list()),
@@ -175,6 +177,8 @@ export function tools(compress = true) {
     join(get(c, 'actor'), ', ', when(get(c, 'time')), ' UTC, change ', get(c, 'id'), ': ', iff(is(get(c, 'verdict'), 'none'), 'not decided.', join(get(c, 'verdict'), 'ed by ', get(c, 'decided-by'), '.'))));
   const tChanges = { chars: 'Changes, newest first', spans: { b0: { ...block(XY, XC, next), weight: 700 } }, size: F(15), font: ['sans-serif'] }; next += tChanges.chars.length;
   const tDecide = bar(XD, [['Accept', decide('accept'), {}], ['Reject', decide('reject'), {}]]);
+  // undo (PLAYER 9.6): the newest change of the person named that is not undone yet
+  const tUndo = bar(XK, [['Undo my last change', [{ act: 'undo', who: st('who'), into: 'undone' }, { set: 'fresh', to: true }], {}]]);
   const root = universe(pk, XC, id(0x77), [
     [XF, 'ufo.face', { of: ref(XG), medium: 'document' }],
     [XG, 'ufo.group', { children: [ref(XT), ref(XS), ref(XN), ref(XV), ref(XA), ref(XR), ref(XP)] }],
@@ -190,11 +194,12 @@ export function tools(compress = true) {
     [XM, ...line()],
     [XO, 'ufo.text', tChoice],
     [XB, 'ufo.text', tSave],
-    [XA, 'ufo.group', { visible: reviewing, role: 'region', label: 'Changes', lang: 'en', children: [ref(XY), ref(XQ)], margin: side }],
+    [XA, 'ufo.group', { visible: reviewing, role: 'region', label: 'Changes', lang: 'en', children: [ref(XY), ref(XK), ref(XQ)], margin: side }],
     [XY, 'ufo.text', tChanges],
     [XQ, 'ufo.group', { each: f('ask', 'history', S), as: 'c', children: [ref(XJ), ref(XD)] }],
     [XJ, 'ufo.portal', { of: row }],
     [XD, 'ufo.text', tDecide],
+    [XK, 'ufo.text', tUndo],
     [XR, 'ufo.path', { d: [['M', F(0), F(0)], ['L', F(4000), F(0)]], stroke: grey, width: F(1), h: F(1) }],
     // the subject, in the face the state names. It takes text entry while `editing` is set and a name has been given; what is
     // done there is proposed as a change by that name, and the state then says that there is something not yet in a file

@@ -497,9 +497,13 @@ pointer motion is never a change. A change made by an agent or a tool is
 committed as it is proposed.
 
 **Undo** is a change like any other: the kernel builds the operations that
-reverse a stated earlier change of the same person, verified against the
-current state, and commits them with origin `tool` and the reversed change
-named in `origin.context`. If later edits make the reversal impossible it
+reverse an earlier change of the same person, as a rejection does
+(**R9**), and commits them with origin `tool`, the person in
+`origin.asked`, the reversed change named in `origin.context`, and
+`origin.sources` naming who first wrote what is put back. Asked with no
+change named, it takes the newest change of that person that has not
+been undone, passing over changes that were themselves an undoing and
+those that did nothing. If later edits make the reversal impossible it
 is refused (**L4**). History therefore shows both the act and its undoing.
 
 The tools universe counts toward the envelope weight of §11.1. It is
@@ -661,6 +665,7 @@ to outside agents as tools under the Model Context Protocol:
 | Action | Effect |
 | --- | --- |
 | `decide(change, verdict)` | record a decision about a change, as the act of the person using the reader; with `reject`, also undo the change in the same one, whole or not at all (§5.4 **R9**) |
+| `undo()` | undo the newest change of the person using the reader that is not yet undone, whole or not at all (§9.6) |
 | `propose(change)` | submit operations with origin, evidence and note; the kernel verifies and commits, or refuses whole and says why |
 | `try(change)` | everything `propose` would do short of committing: verify the change and, for a Compute-let, print the candidate and run its tests in a shadow (§12.6). It reports what `propose` would report, and changes nothing |
 | `call(computelet, export, arguments, from)` | run one exported function in a shadow instance started from a stated snapshot, and return its results. It changes nothing |

@@ -379,6 +379,23 @@ fs.writeFileSync(out('edited.ufx'), before);
       rule: 'what the rejected change inserted is removed; what it removed is put back after the last element it removed; `origin.sources` of the rejecting change names, run by run, the changes that first introduced what is put back, so that `why` gives the word to its first author, with `via` naming the change that put it back' },
     history: hist(), why_of_the_paragraph: { region: [b.lo, b.hi], runs: runsNow },
     refused: { what: 'rejecting the same change again', says: 'what that change wrote has been edited since, so it cannot be undone whole (L4)', written: 'nothing: the pack is byte for byte as it was' } }, null, 1) + '\n');
+  // undo (PLAYER 9.6): a third person edits, and undoes it; the undoing is a change by a tool at their asking, naming what it undid;
+  // a second undo finds nothing more of theirs
+  { const u = await reader({ parts: { ...parts, pack: Buffer.from(packNow).toString('base64') }, name: 'compose.ufx.html', who: 'Third Hand', seed: 23 }); u.press('Edit'); const was = chars(u.k);
+    edit(u, 'Revenue grew', s => s.replace('quarter', 'season')); const made = u.head().change; u.press('Edit'); assert(chars(u.k) !== was); u.press('Changes'); u.press('Undo my last change');
+    assert(chars(u.k) === was, 'not undone'); assert(new RegExp(`Undone: your change o:${made.slice(0, 8)}\\. Not yet in a file\\.`).test(u.status()), u.status());
+    const top = JSON.parse(u.k.project({ name: 'object', o: u.head().change }).split('\n').find(l => l.startsWith('prop key=origin')).slice(22));
+    assert(top.by === 'tool' && top.tool.name === 'undo' && top.asked.name === 'Third Hand' && top.context.$ref.slice(2) === made.slice(0, top.context.$ref.length - 2), JSON.stringify(top));
+    const bq = blockOf(u, 'Revenue grew'), put = why(u.k, bq.lo, bq.hi).find(l => l.includes('via=')); assert(put && put.includes('who="Test Author"'), 'the word put back is not its first author\'s: ' + put);
+    const held = Buffer.from(u.k.packBytes()); u.press('Undo my last change'); assert(/Not undone: there is no change of yours here to undo\./.test(u.status()) && Buffer.compare(held, Buffer.from(u.k.packBytes())) === 0, u.status());
+    fs.writeFileSync(new URL('vectors/undone.ufx', root), held);
+    fs.writeFileSync(new URL('vectors/provisional/undo.json', root), JSON.stringify({ status: { status: 'provisional', note: "the author's kernel only; the independent reader replays the conservation of every commit of the pack" },
+      what: 'undo (PLAYER 9.6): decided.ufx after one more edit by a third person, and that edit undone at their asking',
+      pack: { file: 'undone.ufx', length: held.length, sha256: crypto.createHash('sha256').update(held).digest('hex'), root_hash: u.head().commit },
+      edit: { change: made, by: 'Third Hand', replaced: 'quarter', with: 'season' }, undoing: { change: u.head().change, origin: top, text: 'as it was before the edit' },
+      why_of_the_paragraph: { region: [bq.lo, bq.hi], runs: why(u.k, bq.lo, bq.hi) }, history: u.k.project({ name: 'history' }).split('\n').filter(l => l.startsWith('change ')).slice(0, 3),
+      refused: { what: 'undoing again', says: 'there is no change of yours here to undo', written: 'nothing' } }, null, 1) + '\n');
+    say('undo:', JSON.stringify({ undid: made.slice(0, 8), by: 'Third Hand', origin: top.by, pack: held.length })); }
   // published, the decisions and the first author travel: they are attribution, not working history (SPEC 2.5)
   { const pub = d.k.published(), q = await kernel(); assert(await q.open(pub)); const h = q.project({ name: 'history' }).split('\n').filter(l => l.startsWith('change '));
     assert(h.some(l => l.endsWith('verdict=accept decided-by="Second Reader"')) && h.some(l => l.endsWith('verdict=reject decided-by="Second Reader"')), 'the decisions did not travel: ' + h.join(' / '));

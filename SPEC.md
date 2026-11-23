@@ -1983,6 +1983,7 @@ throwaway kernel on the packs above:
 | `provisional/envelope.json` | the web envelope as a function of its parts (§13.2): one fixed case with its exact result, and seven cases that are refused |
 | `provisional/leaving.json` | for `edit-one-word.ufx`: what `leaving` says would travel for each of the two defaults, and the published copy (§13.3 **E12**, Appendix B) |
 | `provisional/decisions.json` | for `decided.ufx`: two edits by one person, then by another the newer accepted and the older rejected; the history with the decision that stands about each change; `why` of the paragraph after the rejection; and a second rejection refused (§5.4 **R9**) |
+| `provisional/undo.json` | for `undone.ufx`: an edit, and its undoing at the person's asking: the origin of the undoing, `why` of the paragraph, and a second undo refused (§9.6) |
 | `provisional/roles.json` | the accessible nodes of `compose.ufx` and of a tools line, as a display list carries them: what a host must expose (§9.2) |
 | `quirks/` | the corpus of differences between browser engines: one small page for each, with the naive construction beside it, and `quirks.json` saying what each engine does and the rule that prevents it (§13.2 **E21** to **E25**, §9.3 **H9** to **H11**) |
 | `provisional/projections.json` | eleven projections of the packs, as text: `object`, `text`, `history`, `why`, and outlines by `expand` (§10.1, §10.2, Appendix B) |
@@ -2000,6 +2001,7 @@ where the text did not decide what the kernel should do, and what it did.
 | `vectors/pins.ufx` | a pack of 10245 bytes holding one commit: a text with an empty block and an inline span, an asset, a clock, an object holding an anchor of every kind, and an object whose sources are a pin for each case of the digest (§4.2 to §4.4, §5.2, §5.3) |
 | `vectors/decided.ufx` | `compose.ufx` after two edits, an acceptance and a rejection made through a kernel's gate (§5.4 **R9**) |
 | `vectors/listed.ufx` | `needs-code.ufx` carrying one component for a kernel of a stated hash; the group `components` says what a reader finds listed (§1.6, §9.1 **K8**) |
+| `vectors/undone.ufx` | `decided.ufx` after one more edit and its undoing (§9.6) |
 | `vectors/needs.ufx`, `vectors/needs-code.ufx` | one universe twice, requiring a feature a reader may lack: `ufo.time`, and `ufo.code`. The group `needs` says what such a reader shows (§9.1 **K7**) |
 | `vectors/published-timeline.ufx`, `vectors/published-nested.ufx` | `timeline.ufx` and `nested.ufx` as they are published (§2.5): 3830 and 2557 bytes |
 | `vectors/edit-one-word.ufx`, `vectors/edit-paragraph-start.ufx` | `compose.ufx` after edits made through a kernel's gate: one word changed; text typed at the very start of a paragraph (§1.7 **L1**, §5.1) |

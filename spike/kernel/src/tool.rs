@@ -593,6 +593,14 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
                     let r = write::edit(pk, e.o, e.lo, e.hi, "", Some(edits), who, crate::now(), &random)?;
                     Ok(vec![("change", t(&hex(r.get("change").and_then(|c| c.b()).unwrap_or(&[]))))])
                 }),
+                // 9.6: the newest change of the person using the reader that is not undone yet, undone
+                #[cfg(not(feature = "cut-decide"))]
+                ("undo", _) => text("who").ok_or("an undoing says who asked for it, and no name was given").and_then(|who| {
+                    let mut random = [0u8; 64];
+                    crate::random(&mut random);
+                    let r = write::undo(pk, who, crate::now(), &random)?;
+                    Ok(vec![("about", t(&cat!("o:", hex(r.get("about").and_then(|c| c.b()).unwrap_or(&[])).get(..8).unwrap_or(""))))])
+                }),
                 // 5.4: a decision about a change, by the person using the reader. `about` is the change as a projection names it
                 // 7.6, in outline: a handler that proposes operations it writes itself. One `set`, of a value at a key path
                 // of an object: how a cell of a table is edited.

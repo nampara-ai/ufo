@@ -1,5 +1,5 @@
 printer
-f2o
+f2p
 f38
 f5o
 f5p
@@ -11,12 +11,12 @@ f9u
 f9w
 f9y
 fe
-ff9
-ffa
-ffb
-ffc
-ffd
-ffe
+ff3
+ff4
+ff5
+ff6
+ff7
+ff8
 
 agent
 f56
@@ -24,10 +24,10 @@ f57
 f59
 f7o
 f7r
-fhh
 fhi
-fhl
+fhj
 fhm
-fhx
-fhz
-fi2
+fhn
+fhy
+fi0
+fi3

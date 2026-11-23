@@ -464,7 +464,7 @@ const bare = async (open, press) => check('no tools: a file whose pack carries n
 const d0 = { look };
 const D = 'desktop, file://', H = 'http origin';
 // decisions (SPEC 5.4, R9): in the file as it was saved with its edits, the newest change is accepted and the one before it rejected
-const decisions = async (open, press, { giveName, pressAt, one }) => check('decisions: through the tools, a change is accepted, which alters nothing, and another rejected, which undoes it; each is recorded with who decided', async () => {
+const decisions = async (open, press, { giveName, pressAt, one }) => check('decisions: through the tools, a change is accepted, which alters nothing, and another rejected, which undoes it; each is recorded with who decided; then the rejection is undone', async () => {
   must(one.saved, 'nothing was saved to decide about'); const { context, page, log } = await open(one.saved, 'nobody'), who = 'Dee Cider', text = () => charsOf(page), status = async () => flatten((await page.getByRole('status').allTextContents()).join(' '));
   const hist = async () => (await ask(page, { name: 'history' })).split('\n').filter(l => l.startsWith('change ')), nth = async (word, k) => pressAt(page, (await look(page)).texts.filter(t => t.s.trim() === word)[k]);
   const before = await text(), h0 = await hist(), [newest, second] = h0.map(l => /id=(o:[0-9a-f]+)/.exec(l)[1]); await press(page, 'Changes');
@@ -477,6 +477,9 @@ const decisions = async (open, press, { giveName, pressAt, one }) => check('deci
   must((await status()).includes(flatten(`Recorded: change ${second} rejected by ${who}. What it did was undone.`)), 'the status: ' + await status());
   const via = (await ask(page, { name: 'why', o: T })).split('\n').filter(l => l.startsWith('run ') && l.includes('via=')); must(via.every(l => !l.includes(`who="${who}"`)), 'what was put back is given to the one who rejected: ' + via.join(' / '));
   const held = await ask(page, { name: 'history', full: true }); await nth('Reject', 3); must((await status()).includes(flatten('Not recorded: what that change wrote has been edited since')) && await ask(page, { name: 'history', full: true }) === held, 'a second rejection: ' + await status());
+  // undo (PLAYER 9.6): the decider's own newest change that did something, the rejection, is undone; then there is nothing more of theirs
+  await press(page, 'Undo my last change'); h = await hist(); must((await status()).includes(flatten('Undone: your change')) && await text() === before && h.length === h0.length + 3 && h[0].includes('by=tool'), 'undo: ' + await status() + ' / ' + h[0]);
+  await press(page, 'Undo my last change'); must((await status()).includes(flatten('Not undone: there is no change of yours here to undo')), 'a second undo: ' + await status());
   must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify([log.requests.length, log.errors, await page.evaluate(() => globalThis.__violations)])); await context.close(); return `${newest} accepted, ${second} rejected by ${who}; ${via.length} stretches put back, each still its first author's`;
 });
 // components (SPEC 1.6; spike/SPLIT.md): a page runs the base, and beside it only what its file lists for that base and the kernel can verify

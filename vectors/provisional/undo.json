@@ -1,0 +1,73 @@
+{
+ "status": {
+  "status": "provisional",
+  "note": "the author's kernel only; the independent reader replays the conservation of every commit of the pack"
+ },
+ "what": "undo (PLAYER 9.6): decided.ufx after one more edit by a third person, and that edit undone at their asking",
+ "pack": {
+  "file": "undone.ufx",
+  "length": 41261,
+  "sha256": "410c2027546200aea522f5c7727ecb73286b3576c7ffafbc1d6a82168fb825dc",
+  "root_hash": "5b4e28d87b5649a61bd5bbc6a2fd7af061343920095ddeab91bca1653c1e9c52"
+ },
+ "edit": {
+  "change": "87acd1f61b40658aafd4f91e43688db2",
+  "by": "Third Hand",
+  "replaced": "quarter",
+  "with": "season"
+ },
+ "undoing": {
+  "change": "ec11365b80a5caef14395e83a8cdf217",
+  "origin": {
+   "by": "tool",
+   "tool": {
+    "name": "undo"
+   },
+   "asked": {
+    "name": "Third Hand"
+   },
+   "basis": "witnessed",
+   "context": {
+    "$ref": "o:87acd1f6"
+   },
+   "sources": [
+    [
+     1,
+     {
+      "$bytes": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c"
+     }
+    ],
+    [
+     5,
+     {
+      "$bytes": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c"
+     }
+    ]
+   ]
+  },
+  "text": "as it was before the edit"
+ },
+ "why_of_the_paragraph": {
+  "region": [
+   20,
+   166
+  ],
+  "runs": [
+   "run chars=[20,54] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",
+   "run chars=[54,59] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" via=o:ec11365b sealed=false",
+   "run chars=[59,60] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",
+   "run chars=[60,61] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" via=o:ec11365b sealed=false",
+   "run chars=[61,166] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false"
+  ]
+ },
+ "history": [
+  "change id=o:ec11365b commit=c:5b4e28d8 time=1767355200000 actor=\"Third Hand\" basis=witnessed by=tool ops=2 touched=[o:71717171] verdict=none",
+  "change id=o:87acd1f6 commit=c:6daabc35 time=1767355200000 actor=\"Third Hand\" basis=witnessed by=person ops=2 touched=[o:71717171] verdict=none",
+  "change id=o:eb10355a commit=c:ced84b11 time=1767355200000 actor=\"Second Reader\" basis=witnessed by=person ops=1 touched=[o:71717171] verdict=none"
+ ],
+ "refused": {
+  "what": "undoing again",
+  "says": "there is no change of yours here to undo",
+  "written": "nothing"
+ }
+}

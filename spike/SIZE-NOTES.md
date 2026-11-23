@@ -530,3 +530,12 @@ kernel now gives only to the tools.
 
 The one-paragraph envelope is 191 748 bytes with the base and the tools
 (`SPLIT.md` section 9).
+
+## The base's remaining work, continued (2026-11-23)
+
+Whole kernel, compressed, by `size.mjs`, each step against the one before.
+
+| | Whole kernel | Added |
+| --- | ---: | ---: |
+| The split in real files | 121 140 | |
+| 3c. Undo | 122 229 | about 1 090 |

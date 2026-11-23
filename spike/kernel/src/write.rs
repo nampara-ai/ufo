@@ -374,7 +374,7 @@ pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Optio
     set_in(&mut raw_p, &["chars"], Some(v));
     let v = held(&mut recs, raw_seq.get("chars"), "v", &encode(&new_seq), new_seq)?;
     set_in(&mut raw_seq, &["chars"], Some(v));
-    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: Some(&seq1), raw_p, raw_seq: Some(raw_seq) }), ops, Vec::new(), Vec::new(), recs, who, time, random)
+    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: Some(&seq1), raw_p, raw_seq: Some(raw_seq) }), ops, Vec::new(), Vec::new(), None, recs, who, time, random)
 }
 /// `set` (1.7) on one object, through the same gate: what lies at `path` in its properties becomes
 /// `val`, or with none is removed. `with` is a pack whose records are to lie in this one from the
@@ -392,7 +392,7 @@ pub fn set(pk: &mut Pack, id: Id, path: &[&str], val: Option<V>, with: &[u8], wh
     set_in(&mut p1, path, val.clone()).ok_or("the path passes through a value that is not a map")?;
     set_in(&mut raw_p, path, val).ok_or("the path passes through a value that is not a map")?;
     let recs = if with.is_empty() { Vec::new() } else { Pack::scan(with.to_vec()).ok_or("what is to be carried in is not a pack")?.framed() };
-    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref(), raw_p, raw_seq: raw.get("seq").cloned() }), vec![map(op)], Vec::new(), Vec::new(), recs, who, time, random)
+    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref(), raw_p, raw_seq: raw.get("seq").cloned() }), vec![map(op)], Vec::new(), Vec::new(), None, recs, who, time, random)
 }
 /// A decision about a contribution (5.4), recorded as a change of its own. `accept` records the decision and
 /// alters nothing else (R6). `reject` also undoes what the contribution did: what it inserted is removed, what
@@ -404,8 +404,35 @@ pub fn decide(pk: &mut Pack, about: Id, verdict: &str, who: &str, time: u64, ran
     let c = pk.object(&pk.head, &about).filter(|c| c.ty == "ufo.change").ok_or("there is no such change in the current state")?;
     let decision = map(vec![("about", V::Tag(REF, Box::new(bytes(&about)))), ("verdict", t(verdict)), ("who", map(vec![("name", t(who))]))]);
     if verdict != "reject" {
-        return finish(pk, None, Vec::new(), vec![decision], Vec::new(), Vec::new(), who, time, random);
+        return finish(pk, None, Vec::new(), vec![decision], Vec::new(), None, Vec::new(), who, time, random);
     }
+    reverse(pk, &c, about, vec![decision], None, who, time, random)
+}
+/// Undo (9.6): the newest change of this person that has not been undone is undone, whole or not at all, by a
+/// change whose origin is a tool and which names it. Changes that were themselves an undoing are passed over,
+/// with those they undid; so is one that did nothing to undo.
+#[cfg(not(feature = "cut-decide"))]
+pub fn undo(pk: &mut Pack, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+    let (mut undone, mut found): (Vec<Id>, Option<(Id, Obj)>) = (Vec::new(), None);
+    for (_, n) in crate::query::chain(pk) {
+        let Some(c) = n.get("change").and_then(|c| c.hash()).and_then(|c| pk.node(&c)).and_then(|c| c.get("id")?.id()).and_then(|i| pk.object(&pk.head, &i)) else { continue };
+        if c.p.get("actor").and_then(|a| a.get("who")).and_then(|w| w.get("name")).and_then(|n| n.s()) != Some(who) {
+            continue;
+        }
+        let og = c.p.get("origin");
+        if let Some(was) = og.filter(|o| o.get("by").and_then(|b| b.s()) == Some("tool")).and_then(|o| o.get("context")).and_then(|x| x.tag(REF)).and_then(|x| x.id()) {
+            undone.push(was);
+        } else if !undone.contains(&c.id) && c.p.get("work").and_then(|w| w.get("ops")).map_or(true, |o| !o.l().is_empty()) {
+            found = Some((c.id, c));
+            break;
+        }
+    }
+    let (about, c) = found.ok_or("there is no change of yours here to undo")?;
+    reverse(pk, &c, about, Vec::new(), Some(about), who, time, random).map(|r| map(vec![("about", bytes(&about)), ("change", r.get("change").cloned().unwrap_or(V::Null))]))
+}
+/// What a change did, undone by a new change (R9, 9.6): written with the decisions given, or as an undoing.
+#[cfg(not(feature = "cut-decide"))]
+fn reverse(pk: &mut Pack, c: &Obj, about: Id, decisions: Vec<V>, undoes: Option<Id>, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
     let ops = c.p.get("work").filter(|w| w.tag(INDIRECT).is_none()).and_then(|w| w.get("ops")).map(|o| o.l().to_vec()).ok_or("what that change did was withheld from this copy, so it cannot be undone here")?;
     let id = ops.first().and_then(|o| o.get("obj")).and_then(|i| i.id()).ok_or("that change did nothing that can be undone")?;
     if ops.iter().any(|o| o.get("obj").and_then(|i| i.id()) != Some(id)) {
@@ -481,7 +508,7 @@ pub fn decide(pk: &mut Pack, about: Id, verdict: &str, who: &str, time: u64, ran
             _ => return Err("an operation with no key"),
         }
     }
-    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: Some(&seq1), raw_p, raw_seq: Some(raw_seq) }), back, vec![decision], sources, recs, who, time, random)
+    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: Some(&seq1), raw_p, raw_seq: Some(raw_seq) }), back, decisions, sources, undoes, recs, who, time, random)
 }
 /// What every change through the gate comes to, whatever it does to its one object: the operations
 /// checked against the state meant, then the records written and read back. `p1` and `seq1` are
@@ -499,7 +526,7 @@ struct New<'a> {
 }
 /// Writes one change: the new revision of the object it edits, if it edits one; the change object, with its
 /// work, its origin and its decisions; the object map; the commit.
-fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sources: Vec<V>, mut recs: Recs, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sources: Vec<V>, undoes: Option<Id>, mut recs: Recs, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
     if pk.unread_tail != 0 {
         return Err("the pack was recovered after an interrupted write (2.3): this spike does not truncate it and append (P7)");
     }
@@ -550,7 +577,11 @@ fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sourc
     // none", and a removal introduces nothing; but then nothing would say a person made it.
     let mut cp = vec![("work", veiled), ("actor", map(vec![("who", whom.clone()), ("with", map(vec![("name", t("ufo-spike-kernel")), ("version", t("0.0.0"))]))])), ("time", V::Int(time as i64)),
         ("origin", map({
-            let mut og = vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom)];
+            // 9.6: an undo is the kernel's work at a person's asking: its origin is a tool, and names what it undoes
+            let mut og = match undoes {
+                Some(c) => vec![("basis", t("witnessed")), ("by", t("tool")), ("tool", map(vec![("name", t("undo"))])), ("asked", whom), ("context", V::Tag(REF, Box::new(bytes(&c))))],
+                None => vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom)],
+            };
             if !sources.is_empty() {
                 og.push(("sources", V::L(sources))); // 5.4: who first introduced what this change puts back
             }
