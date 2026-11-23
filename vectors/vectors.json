@@ -196,11 +196,15 @@
    },
    "quirks/quirks.json": {
     "status": "provisional",
-    "note": "six entries, run in three engines by the author's test; no independent implementation has been put through it"
+    "note": "seven entries, run in three engines by the author's test; no independent implementation has been put through it"
    },
    "provisional/leaving.json": {
     "status": "provisional",
     "note": "the author's kernel only. The published pack it names was read by the second independent reader, unmodified: working history 0, every missing record classed as withheld, nothing malformed"
+   },
+   "provisional/decisions.json": {
+    "status": "provisional",
+    "note": "the author's kernel wrote the pack. The second independent reader, unmodified, replayed the conservation of all five commits of decided.ufx on 2026-11-23, among them the change with no operations and the rejecting change: every one ok, nothing reported. It has not checked the attribution through `origin.sources`"
    }
   },
   "note": "Both readers are instances of the model that wrote the specification. Two of them agreeing does not make a vector confirmed: that needs an implementation from a different model family, or a person."

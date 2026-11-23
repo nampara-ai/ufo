@@ -105,7 +105,7 @@ by no vector.
 | --- | --- | --- | --- |
 | The object: identity, type, history, provenance | §1.3–§1.6 | An independent reader built from the core document alone, expected values withheld: all eight packs opened, every record verified, 231 nodes re-encoded byte for byte | **Tested** in its current form |
 | The view: any object inside any other through a Portal | §7.8, §7.7 | A Portal to a text in a nested universe, composed in line with the surrounding document | **Tested in miniature**, for one Portal presenting text |
-| The memory: an append-only Chronicle with origin, evidence, decision | §1.7, §5.4 | The independent reader replayed every change of every pack to exactly the committed state, and caught each of 16 corruptions it injected | **Tested** for conservation in its current form; **specified, untested** for evidence, decisions, findings and `why` |
+| The memory: an append-only Chronicle with origin, evidence, decision | §1.7, §5.4 | The independent reader replayed every change of every pack to exactly the committed state, and caught each of 16 corruptions it injected | **Tested** for conservation in its current form. **Tested in miniature** for decisions: accepting and rejecting through the tools in three engines, with the rejection's undoing replayed by the independent reader (`decided.ufx`). **Specified, untested** for evidence and findings |
 | The attention: the light cone | §10.2 | See row 8 | **Tested in miniature** |
 | The membrane | §14.4, §13.3 | Nothing | **Specified, untested**; the layers of what travels have no vector, and no published copy has been built or read |
 
