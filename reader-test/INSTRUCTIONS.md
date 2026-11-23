@@ -54,8 +54,11 @@ alone it should:
    find in any property against its object, at every commit: sequence,
    continuous and keyed regions; extents.
 6. Compute the digest of a pin as §4.4 defines it: a function that takes
-   an object, an optional region and a salt. You have no expected values
-   yet; just implement it.
+   an object, an optional region and a salt. Three packs hold objects
+   whose `from.sources` are pins (§5.3). For each such object, at every
+   commit where it is present, say of each pin whether it is current,
+   stale or detached. A pin your digest calls current is one whose stored
+   digest you reproduced.
 7. Timelines (§4.5): for a clock whose `t` is a count, resolve its plays
    and, for a given position, say which plays are present and at what
    time.

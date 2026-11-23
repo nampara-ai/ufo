@@ -16,7 +16,7 @@ assert.deepStrictEqual(Buffer.from(toolsMade().bytes), Buffer.from(file('spike/e
 // Two ways a reader comes by its tools. Here, mostly: the working pack is compose.ufx as it stands, which carries none, and the reader
 // holds a tools universe of its own (K3), so that the packs written below are compose.ufx and the edits, and nothing else. Further
 // down, and in the page: the tools universe is nested in the working pack, under `components.tools`, and the reader has none of its own.
-const TOOLS = file('spike/envelope/tools.ufx'), parts = fixedParts(file('vectors/compose.ufx'), { title: 'The Quarterly Review' });
+const TOOLS = toolsMade(false).bytes, parts = fixedParts(file('vectors/compose.ufx'), { title: 'The Quarterly Review' });
 
 // ---- a reader: a kernel, the last list it drew, and presses by the place of a word ----
 async function reader({ who, own = true, seed = 0, ...q }) {
@@ -35,7 +35,7 @@ async function reader({ who, own = true, seed = 0, ...q }) {
   r.fx1 = kind => (r.fx.find(e => e[0] === kind) || [])[1];
   r.nodes = on => flat(tree(r.lists[on]));
   r.shown = () => r.texts().map(t => t.s).join('');
-  r.head = () => k.query({ q: 'commits' })[0];
+  r.head = () => k.commits()[0];
   r.said = () => r.nodes(0).filter(n => n.depth === 1 && r.nodes(0)[0] && n.role === 'paragraph').map(n => n.text).join(' ');   // the lines of the tools that are not buttons: the status, and the panel
   r.status = () => { const ns = r.nodes(0), i = ns.findIndex(n => n.role === 'status'); return i < 0 ? '' : ns.slice(i + 1).filter((n, j, a) => a.slice(0, j + 1).every(m => m.depth > ns[i].depth)).map(n => n.text).join(' '); };
   // who is making the changes: the field the tools show while editing is on, given a text through the editing surface
@@ -45,9 +45,9 @@ async function reader({ who, own = true, seed = 0, ...q }) {
   return r;
 }
 const T = '71'.repeat(16);
-const chars = k => { const s = k.query({ q: 'project', name: 'text', o: T }).split('\n')[1]; return JSON.parse(s.slice(s.indexOf(' s=') + 3)); };
-const why = (k, lo, hi) => k.query({ q: 'project', name: 'why', o: T, lo, hi }).split('\n').filter(l => l.startsWith('run '));
-const work = (k, change) => JSON.parse(k.query({ q: 'project', name: 'object', o: change }).split('\n').find(l => l.startsWith('prop key=work')).slice('prop key=work value='.length)).ops;
+const chars = k => { const s = k.project({ name: 'text', o: T }).split('\n')[1]; return JSON.parse(s.slice(s.indexOf(' s=') + 3)); };
+const why = (k, lo, hi) => k.project({ name: 'why', o: T, lo, hi }).split('\n').filter(l => l.startsWith('run '));
+const work = (k, change) => JSON.parse(k.project({ name: 'object', o: change }).split('\n').find(l => l.startsWith('prop key=work')).slice('prop key=work value='.length)).ops;
 const blockOf = (r, starts) => r.k.blockAt({ tag: 55462, v: r.find(starts).src.v });
 // an edit made the way a person makes it: press a block, the host's editing surface is mounted, it reports the new text
 // Here the host reports nothing of where: only the whole text when the person is done. The kernel falls back on the difference.
@@ -228,7 +228,7 @@ fs.writeFileSync(out('edited-two-words.ufx'), r.k.packBytes());
 
 // ---- a removal made by a person carries an origin ----
 edit(r, 'The appendix', s => s.replace(' by accident', ''));
-const hist = r.k.query({ q: 'project', name: 'history', o: T }).split('\n'); say('\na removal alone:', hist[1]);
+const hist = r.k.project({ name: 'history', o: T }).split('\n'); say('\na removal alone:', hist[1]);
 assert(hist[1].includes('basis=witnessed') && hist[1].includes('by=person') && hist[1].includes('ops=1'));
 assert(!work(r.k, r.head().change)[0].ins);
 // the same text reported back: nothing is written
@@ -237,7 +237,7 @@ const n = r.head().height; edit(r, 'The appendix', s => s); assert.strictEqual(r
 r.press('Edit'); assert(!r.find('Edit').lit); r.press('The appendix'); assert.strictEqual(r.kinds(), '', 'editing is off again');
 
 // ---- Save: a panel that shows what will leave (E12), a choice between the two defaults of E9, then the handler acts `export` ----
-const figures = k => { const L = k.query({ q: 'layers' }); return { content: L.content.bytes_in_frames, attribution: L.attribution.bytes_in_frames, history: L.working_history.bytes_in_frames }; };
+const figures = k => { const L = k.layers(); return { content: L.content.bytes, attribution: L.attribution.bytes, history: L.history.bytes }; };
 const panel = r => r.nodes(0).filter((n, i, a) => a.slice(0, i).some(m => m.role === 'region' && m.depth < n.depth)).map(n => n.text).join(' | ');
 const choice = r => Object.fromEntries(r.nodes(0).filter(n => n.role === 'button' && 'current' in n && n.text.startsWith('For ')).map(n => [n.text, n.current]));
 r.press('Save'); assert.strictEqual(r.kinds(), '', 'Save shows what will leave before anything is made: ' + r.kinds());
@@ -270,15 +270,15 @@ for (const [name, whole, next] of [['compose-edited.ufx.html', true, 'compose-ed
 { const nested = await withTools(file('vectors/compose.ufx')), again = await withTools(file('vectors/compose.ufx')); assert.deepStrictEqual(Buffer.from(nested), Buffer.from(again), 'nesting the tools is reproducible');
   assert.deepStrictEqual(Buffer.from(nested.slice(0, file('vectors/compose.ufx').length)), Buffer.from(file('vectors/compose.ufx')), 'the tools were nested by an append (P4)');
   const p2 = { ...parts, pack: Buffer.from(nested).toString('base64') }, n = await reader({ parts: p2, name: 'compose.ufx.html', own: false, who: 'Nested Reader' });
-  const ov = n.k.query({ q: 'project', name: 'expand' }).split('\n'), comp = ov.find(l => l.startsWith('component ')); say('\nthe tools nested in the pack:', comp, '; the change that nested them:', n.k.query({ q: 'project', name: 'history' }).split('\n')[1]);
+  const ov = n.k.project({ name: 'expand' }).split('\n'), comp = ov.find(l => l.startsWith('component ')); say('\nthe tools nested in the pack:', comp, '; the change that nested them:', n.k.project({ name: 'history' }).split('\n')[1]);
   const toolsRoot = toolsMade().root.toString('hex'); assert(comp === `component role=tools hash=c:${toolsRoot.slice(0, 8)} status=current`, comp);
   const work0 = work(n.k, n.head().change); assert.deepStrictEqual(work0.map(o => [o.op, o.key.join('.'), Object.keys(o.val)[0]]), [['set', 'components.tools', '$anchor']], 'one `set`, of components.tools, to an anchor'); say('its work:', JSON.stringify(work0));
   assert.deepStrictEqual(toolsNow.call(null).slice(0, 6), n.nodes(0).slice(0, 6).map(x => `${how(x)} ${JSON.stringify(x.label ?? x.text)}`).map((l, i) => i === 4 ? l : l), 'the same tools, from inside the pack');
   assert(n.texts().filter(t => t.on === 1).every(t => !('press' in t)), 'nothing of the subject carries press');
-  const L0 = n.k.query({ q: 'layers' }); assert.strictEqual(L0.missing_from_content_or_attribution, 0); assert(L0.content.hashes.includes(toolsRoot) === false && L0.attribution.hashes.includes(toolsRoot), 'the tools universe\'s commit is in the attribution layer, as every commit is; its objects are content');
+  const L0 = n.k.layers(); assert.strictEqual(L0.lacks.history, false, 'nothing of its history is missing');
   const b = blockOf(n, 'Every figure'); n.press('Edit'); edit(n, 'Every figure', s => s.replace('ledger', 'books')); const head = n.head(), f = figures(n.k), why0 = why(n.k, b.lo, b.lo + 60);
   // the projection, both ways, as the panel reads it
-  for (const history of [true, false]) { const text = n.k.query({ q: 'project', name: 'leaving', history }); say(text.trimEnd().split('\n').map(l => '   ' + l).join('\n'));
+  for (const history of [true, false]) { const text = n.k.project({ name: 'leaving', history }); say(text.trimEnd().split('\n').map(l => '   ' + l).join('\n'));
     const [c, a, h, lacks] = text.split('\n').slice(1); assert(c.includes(`name=content included=true`) && c.includes(`bytes=${f.content} `) && a.includes(`name=attribution included=true`) && a.includes(`bytes=${f.attribution} `) && a.includes('"Nested Reader"') && h.includes(`name=history included=${history} `) && h.includes(`bytes=${f.history} `) && lacks === `lacks history=${!history} blobs=0`, text); }
   n.press('Save'); assert(panel(n).includes(`withheld. Its ${f.history} bytes stay here`)); n.press('Save this copy'); const pub = n.fx1('deliver'), pubPage = Buffer.from(pub.bytes).toString('utf8'), pubPack = n.k.published();
   assert.strictEqual(pub.name, 'compose-published.ufx.html'); assert(/That copy is for readers: its working history was withheld\. Everything is still held here/.test(n.status()) && /Not yet in a file/.test(n.status()), 'E13: the page says what the copy lacks, and that it still holds everything: ' + n.status());
@@ -287,20 +287,20 @@ for (const [name, whole, next] of [['compose-edited.ufx.html', true, 'compose-ed
   assert.strictEqual(whole.name, 'compose-edited-2.ufx.html'); assert(whole.bytes.length > pub.bytes.length); say('whole:', whole.bytes.length, 'bytes (pack', wholePack.length + '); published:', pub.bytes.length, 'bytes (pack', pubPack.length + ')');
   fs.writeFileSync(out('nested-whole.ufx'), wholePack); fs.writeFileSync(out('nested-published.ufx'), pubPack);
   // the published copy, opened: the same state, the same faces and `why`; its history is there, and says that the work was withheld
-  const q = await reader({ parts: { ...p2, pack: Buffer.from(pubPack).toString('base64') }, name: pub.name, own: false, who: 'Later Reader', seed: 7 }), LP = q.k.query({ q: 'layers' });
-  assert.strictEqual(q.head().commit, head.commit, 'the same root hash'); assert.deepStrictEqual([LP.working_history.records, LP.missing_from_content_or_attribution, LP.content.bytes_in_frames, LP.attribution.bytes_in_frames], [0, 0, f.content, f.attribution], 'it holds the two layers whole and nothing of the third');
+  const q = await reader({ parts: { ...p2, pack: Buffer.from(pubPack).toString('base64') }, name: pub.name, own: false, who: 'Later Reader', seed: 7 }), LP = q.k.layers();
+  assert.strictEqual(q.head().commit, head.commit, 'the same root hash'); assert.deepStrictEqual([LP.history.bytes, LP.lacks.history, LP.content.bytes, LP.attribution.bytes], [0, true, f.content, f.attribution], 'it holds the two layers whole and nothing of the third');
   assert.strictEqual(q.texts().filter(t => t.on === 1).map(t => t.s).join(''), n.texts().filter(t => t.on === 1).map(t => t.s).join('')); assert.deepStrictEqual(why(q.k, b.lo, b.lo + 60), why0, '`why` names who wrote each stretch, as before');
   for (const w of ['Pages', 'Text', 'Document']) { q.press(w); assert(q.find(w).lit && q.texts().filter(t => t.on === 1).length > 10, 'the face ' + w); }
-  const hist = q.k.query({ q: 'project', name: 'history', o: T }).split('\n'); say('history of the text, in the published copy:'); for (const l of hist.slice(0, -1)) say('   ' + l);
+  const hist = q.k.project({ name: 'history', o: T }).split('\n'); say('history of the text, in the published copy:'); for (const l of hist.slice(0, -1)) say('   ' + l);
   assert(hist.length === 6 && hist.slice(1, 4).every(l => l.startsWith('change id=o:') && l.endsWith('ops=withheld touched=withheld')) && hist[1].includes('actor="Nested Reader"'), 'every change is there, with its actor, and its work is said to be withheld');
-  assert(q.k.query({ q: 'project', name: 'leaving', history: true }).includes('layer name=history included=true objects=0 bytes=0 actors=[] models=[] changes=0 first=0 last=0\nlacks history=true'), 'and `leaving` says a copy of it lacks history whatever is chosen');
+  assert(q.k.project({ name: 'leaving', history: true }).includes('layer name=history included=true objects=0 bytes=0 actors=[] models=[] changes=0 first=0 last=0\nlacks history=true'), 'and `leaving` says a copy of it lacks history whatever is chosen');
   q.press('Save'); assert(panel(q).includes('none is held here'), panel(q)); q.press('Cancel');
   // edited again: a new change on top of history that is withheld; saved again, both ways
-  q.press('Edit'); edit(q, 'Readers who', s => s.replace('detail', 'sums')); assert.strictEqual(q.head().height, head.height + 1, q.status()); const h2 = q.k.query({ q: 'project', name: 'history', o: T }).split('\n');
+  q.press('Edit'); edit(q, 'Readers who', s => s.replace('detail', 'sums')); assert.strictEqual(q.head().height, head.height + 1, q.status()); const h2 = q.k.project({ name: 'history', o: T }).split('\n');
   assert(h2[1].includes('actor="Later Reader"') && h2[1].endsWith('ops=1 touched=[o:71717171]') && h2[2].endsWith('ops=withheld touched=withheld'), 'the new change shows its work; the ones before it are still withheld'); say('after an edit of the published copy:'); for (const l of h2.slice(1, 3)) say('   ' + l);
   q.press('Save'); assert(panel(q).includes('withheld. Its ')); q.press('Save this copy'); const pub2 = q.fx1('deliver'); assert.strictEqual(pub2.name, 'compose-published-2.ufx.html'); const pp2 = q.k.published();
   q.press('Save'); q.press('For people'); q.press('Save this copy'); assert.strictEqual(q.fx1('deliver').name, 'compose-published-edited-2.ufx.html'); fs.writeFileSync(out('nested-published-edited.ufx'), q.k.packBytes()); fs.writeFileSync(out('nested-published-edited-published.ufx'), pp2);
-  const z = await reader({ parts: { ...p2, pack: Buffer.from(pp2).toString('base64') }, name: 'z', own: false }); assert.strictEqual(z.head().commit, q.head().commit); assert.strictEqual(z.k.query({ q: 'layers' }).working_history.records, 0);
+  const z = await reader({ parts: { ...p2, pack: Buffer.from(pp2).toString('base64') }, name: 'z', own: false }); assert.strictEqual(z.head().commit, q.head().commit); assert.strictEqual(z.k.layers().history.bytes, 0);
   say('the published copy: same state, faces, why; history says withheld; edited and saved again both ways');
   // a pack that carries no tools, in a reader that has none: it is shown to be read, and nothing can be pressed
   const bare = await reader({ parts, name: 'bare', own: false }); assert(/carries no tools/.test(bare.nodes(0)[0].text) && bare.nodes(0)[0].role === 'status' && bare.find('The Quarterly') && bare.texts().every(t => !t.press), 'no tools: the reader says so, and shows the document');
@@ -322,7 +322,7 @@ const r2 = await reader({ parts: parts2, name: made.name, who: 'Second Reader' }
 assert.strictEqual(r2.head().commit, r.head().commit, 'the file holds the state the reader had'); assert.strictEqual(r2.texts().filter(t => t.on === 1).map(t => t.s).join(''), r.texts().filter(t => t.on === 1).map(t => t.s).join(''));
 assert.deepStrictEqual(why(r2.k, b10.lo, b10.lo + 40), why(r.k, b10.lo, b10.lo + 40));
 assert.deepStrictEqual(Buffer.from(pack.slice(0, file('vectors/compose.ufx').length)), Buffer.from(file('vectors/compose.ufx')), 'the pack was only appended to (P4)');
-const layers = r2.k.query({ q: 'layers' }); assert.strictEqual(layers.missing_from_content_or_attribution, 0);
+const layers = r2.k.layers(); assert.strictEqual(layers.lacks.history, false);
 r2.press('Save'); r2.press('For people'); r2.press('Save this copy'); assert.strictEqual(r2.fx1('deliver').name, 'compose-edited-2.ufx.html');
 assert.strictEqual(Buffer.from(r2.fx1('deliver').bytes).toString('utf8'), page, 'saved again with nothing changed, on the same day: the same file, byte for byte');
 say('\na fresh kernel started from the parts of the file made: head', r2.head().commit.slice(0, 16), 'height', r2.head().height, '; the same text and why; saved again, the same bytes');

@@ -15,27 +15,6 @@ pub fn hex(b: &[u8]) -> String {
     }
     s
 }
-fn unhex(s: &str) -> Option<Vec<u8>> {
-    let b = s.as_bytes();
-    let d = |c: u8| (c as char).to_digit(16).map(|x| x as u8);
-    (0..b.len() / 2).map(|i| Some(d(b[2 * i])? << 4 | d(b[2 * i + 1])?)).collect()
-}
-fn arg_id(q: &V, k: &str) -> Option<Id> {
-    unhex(q.get(k)?.s()?)?.try_into().ok()
-}
-fn arg_commit(pk: &Pack, q: &V) -> H {
-    q.get("commit").and_then(|c| c.s()).and_then(unhex).and_then(|b| b.try_into().ok()).unwrap_or(pk.head)
-}
-/// A boundary as the harness writes it: "start", "end", or [change hex, number, side].
-fn arg_boundary(b: &V) -> Option<V> {
-    if b.s().is_some() {
-        return Some(b.clone());
-    }
-    let l = b.l();
-    Some(V::L(vec![V::B(unhex(l.first()?.s()?)?), l.get(1)?.clone(), l.get(2)?.clone()]))
-}
-
-// ---- the chain of commits, and the objects of one ----
 pub fn chain(pk: &Pack) -> Vec<(H, V)> {
     let (mut out, mut at) = (Vec::new(), Some(pk.head));
     while let Some(h) = at {
@@ -109,111 +88,22 @@ fn covered_runs(rs: &[Run], lo: u64, hi: u64) -> Vec<Run> {
     }
     out
 }
-fn span_or_detached(r: Option<(u64, u64)>) -> V {
-    match r {
-        Some((a, b)) => V::L(vec![V::Int(a as i64), V::Int(b as i64)]),
-        None => t("detached"),
-    }
-}
-
-// ---- 4.5: a timeline ----
-fn timeline(pk: &Pack, q: &V) -> Option<V> {
-    let commit = arg_commit(pk, q);
-    let k = pk.object(&commit, &arg_id(q, "clock")?)?;
-    let rs = runs(k.seq.as_ref()?.get("t")?);
-    let reg_of = |a: &V| -> Option<V> { Some(a.tag(ANCHOR)?.get("a")?.get("t")?.clone()) };
-    let mut anchors = Vec::new();
-    if let Some(m) = arg_id(q, "marks").and_then(|i| pk.object(&commit, &i)) {
-        if let Some(V::M(m)) = m.p.get("marks") {
-            for (key, a) in m {
-                anchors.push((key.clone(), span_or_detached(reg_of(a).and_then(|r| region(&rs, &r)))));
-            }
-        }
-    }
-    let plays: Vec<(String, V)> = match k.p.get("plays") {
-        Some(V::M(m)) => m.clone(),
-        _ => Vec::new(),
-    };
-    let mut resolved = Vec::new();
-    for (key, pl) in &plays {
-        resolved.push((key.clone(), span_or_detached(pl.get("at").and_then(reg_of).and_then(|r| region(&rs, &r)))));
-    }
-    let mut playing = Vec::new();
-    for p in q.get("positions").map(|p| p.l()).unwrap_or(&[]) {
-        let p = p.i()? as u64;
-        let (c, n) = element_at(&rs, p)?;
-        let mut now = Vec::new();
-        for (key, pl) in &plays {
-            let Some(reg) = pl.get("at").and_then(reg_of) else { continue };
-            let Some((lo, hi)) = region(&rs, &reg) else { continue };
-            if p < lo || p >= hi {
-                continue;
-            }
-            // the first element the region covers, from its start boundary
-            if reg.l().get(1)?.s().is_some() { continue; }
-            let b = reg.l().get(1)?.l();
-            let (c0, n0) = (b.first()?.id()?, b.get(1)?.i()? as u64 + b.get(2)?.i()? as u64);
-            if c == c0 {
-                now.push((key.clone(), V::Int(pl.get("offset").and_then(|o| o.i()).unwrap_or(0) + n as i64 - n0 as i64)));
-            }
-        }
-        playing.push(map(vec![("position", V::Int(p as i64)), ("element", V::L(vec![t(&hex(&c)), V::Int(n as i64)])), ("plays", V::M(now))]));
-    }
-    Some(map(vec![("t", k.p.get("t")?.clone()), ("live", V::Int(rs.iter().filter(|r| r.live).map(|r| r.count).sum::<u64>() as i64)),
-        ("anchors", V::M(anchors)), ("plays_resolve_to", V::M(resolved)), ("playing_at", V::L(playing))]))
-}
-
 // ---- 4.2, 4.3: continuous and keyed regions ----
 /// A continuous region, clipped to the extent where the extent is known.
 /// Returns (the interval or None if detached, whether it was clipped against a known extent).
-fn extent(pk: &Pack, _commit: &H, o: &Obj, ax: &str, reg: &V) -> (Option<(f64, f64)>, bool) {
+pub fn extent(o: &Obj, ax: &str, reg: &V) -> (Option<(f64, f64)>, bool) {
     let (Some(lo), Some(hi)) = (reg.l().get(1).and_then(|x| x.f()), reg.l().get(2).and_then(|x| x.f())) else { return (None, true) };
     let e = match (o.ty.as_str(), ax) {
         ("ufo.clock", "t") => match (o.p.get("start").and_then(|x| x.f()), o.p.get("end").and_then(|x| x.f())) { (Some(a), Some(b)) => Some((a, b)), _ => None },
         ("ufo.asset", "bytes") => o.p.get("bytes").and_then(|b| b.b()).map(|b| (0.0, b.len() as f64)),
         _ => None,
     };
-    let _ = pk;
     match e {
         None => (Some((lo, hi)), false),
         Some((a, b)) if hi < a || lo > b => (None, true),
         Some((a, b)) => (Some((lo.max(a), hi.min(b))), true),
     }
 }
-/// Every anchor in an object's `marks`, resolved against the commit.
-fn resolve_marks(pk: &Pack, q: &V) -> Option<V> {
-    let commit = arg_commit(pk, q);
-    let m = pk.object(&commit, &arg_id(q, "marks")?)?;
-    let V::M(marks) = m.p.get("marks")? else { return None };
-    let num = |x: f64, ints: bool| if ints { V::Int(x as i64) } else { V::F(x) };
-    let mut out = Vec::new();
-    for (name, a) in marks {
-        let a = a.tag(ANCHOR)?;
-        let Some(o) = a.get("o").and_then(|i| i.id()).and_then(|i| pk.object(&commit, &i)) else { out.push((name.clone(), t("detached"))); continue };
-        let Some(V::M(axes)) = a.get("a") else { out.push((name.clone(), t("the whole object"))); continue };
-        let (ax, reg) = axes.first()?;
-        let r = match reg.l().first().and_then(|k| k.s()) {
-            Some("s") => span_or_detached(o.seq.as_ref().and_then(|s| s.get(ax)).map(runs).and_then(|rs| region(&rs, reg))),
-            Some("c") => {
-                let ints = matches!(reg.l().get(1), Some(V::Int(_)));
-                match extent(pk, &commit, &o, ax, reg) {
-                    (None, _) => t("detached"),
-                    (Some((lo, hi)), true) => V::L(vec![num(lo, ints), num(hi, ints)]),
-                    (Some((lo, hi)), false) => map(vec![("unclipped", V::L(vec![num(lo, ints), num(hi, ints)]))]),
-                }
-            }
-            Some("k") => {
-                let present: Vec<V> = reg.l()[1..].iter().filter(|k| match o.p.get(ax) { Some(V::M(m)) => m.iter().any(|(x, _)| Some(x.as_str()) == k.s()), _ => false }).cloned().collect();
-                if present.is_empty() { t("detached") } else { V::L(present) }
-            }
-            _ => t("detached"),
-        };
-        out.push((name.clone(), r));
-    }
-    Some(V::M(out))
-}
-
-// ---- 4.4: the digest of a pin ----
 fn anchors_in<'a>(v: &'a V, out: &mut Vec<&'a V>) {
     match v {
         V::Tag(ANCHOR, a) => out.push(a),
@@ -246,7 +136,7 @@ pub fn digest(pk: &Pack, commit: &H, id: &Id, axis: Option<(&str, &V)>, salt: &[
             p
         }
         Some((ax, reg)) if reg.l().first().and_then(|k| k.s()) == Some("c") => {
-            extent(pk, commit, &o, ax, reg).0?;
+            extent(&o, ax, reg).0?;
             let mut p = o.p.clone();
             if let V::M(m) = &mut p { m.retain(|(k, _)| k != "snapshot"); }
             V::M(vec![(String::from(ax), p)])
@@ -310,24 +200,6 @@ pub fn digest(pk: &Pack, commit: &H, id: &Id, axis: Option<(&str, &V)>, salt: &[
     for (i, h) in &followed { parts.push(i); parts.push(h); }
     Some((sha256(&parts), covered, followed))
 }
-fn digest_q(pk: &Pack, q: &V) -> Option<V> {
-    let commit = arg_commit(pk, q);
-    let id = arg_id(q, "o")?;
-    let salt = unhex(q.get("salt")?.s()?)?;
-    let reg = match q.get("axis") {
-        Some(ax) if q.get("low").is_some() => Some((ax.s()?, V::L(vec![t("c"), q.get("low")?.clone(), q.get("high")?.clone()]))),
-        Some(ax) if q.get("keys").is_some() => { let mut l = vec![t("k")]; l.extend(q.get("keys")?.l().iter().cloned()); Some((ax.s()?, V::L(l))) }
-        Some(ax) => Some((ax.s()?, V::L(vec![t("s"), arg_boundary(q.get("a")?)?, arg_boundary(q.get("b")?)?]))),
-        None => None,
-    };
-    match digest(pk, &commit, &id, reg.as_ref().map(|(a, r)| (*a, r)), &salt) {
-        Some((d, covered, followed)) => Some(map(vec![("digest", t(&hex(&d))), ("covered_value_hex", t(&hex(&encode(&covered)))),
-            ("followed", V::L(followed.iter().map(|(i, h)| map(vec![("id", t(&hex(i))), ("revision", t(&hex(h)))])).collect()))])),
-        None => Some(map(vec![("digest", t("detached"))])),
-    }
-}
-
-// ---- 13.3: the three layers of what travels ----
 fn blob_records(pk: &Pack, h: &H, out: &mut Set<H>) {
     if !out.insert(*h) { return; }
     let Some(n) = pk.node(h) else { return };
@@ -436,39 +308,7 @@ pub fn split(pk: &Pack) -> (Set<H>, Set<H>, Vec<(H, Id)>, Vec<(H, Id)>) {
     let attribution: Set<H> = Map(attribution.0.into_iter().filter(|h| !content.contains(&h.0)).collect());
     (content, attribution, attributing, live)
 }
-fn layers(pk: &Pack) -> Option<V> {
-    let (content, attribution, attributing, _) = split(pk);
-    let mut attributing: Vec<Id> = attributing.into_iter().map(|a| a.1).collect();
-    let (all, seals) = pk.frames();
-    let mut present: Set<H> = Set::new();
-    present.extend(all.iter().map(|(_, h, _)| *h));
-    let size = |set: &Set<H>| all.iter().filter(|(_, h, _)| set.contains(h)).map(|(_, _, n)| *n).sum::<usize>();
-    let history: Set<H> = Map(present.0.iter().filter(|h| !content.contains(&h.0) && !attribution.contains(&h.0)).cloned().collect());
-    let list = |set: &Set<H>| V::L(set.keys().map(|h| t(&hex(h))).collect());
-    let layer = |set: &Set<H>| map(vec![("records", V::Int(set.0.len() as i64)), ("bytes_in_frames", V::Int(size(set) as i64)), ("hashes", list(set))]);
-    crate::small::sort(attributing.as_mut_slice());
-    Some(map(vec![("content", layer(&content)), ("attribution", layer(&attribution)), ("working_history", layer(&history)),
-        ("seal_frames", V::Int(seals.len() as i64)), ("attributing_changes", V::L(attributing.iter().map(|c| t(&hex(c))).collect())),
-        ("missing_from_content_or_attribution", V::Int(content.keys().chain(attribution.keys()).filter(|h| !present.contains(*h)).count() as i64))]))
-}
-/// 13.3, E9: the pack as it is published: its content and attribution layers and nothing else of its records.
 pub fn published(pk: &Pack) -> Option<Vec<u8>> {
     let (content, attribution, _, _) = split(pk);
     pk.published(&|h| content.contains(h) || attribution.contains(h))
-}
-
-pub fn query(pk: &Pack, q: &V) -> Option<V> {
-    match q.get("q")?.s()? {
-        "commits" => Some(V::L(chain(pk).iter().map(|(h, n)| {
-            let change = n.get("change").and_then(|c| c.hash()).and_then(|c| pk.node(&c)).and_then(|c| c.get("id")?.id());
-            map(vec![("commit", t(&hex(h))), ("height", n.get("height").cloned().unwrap_or(V::Null)), ("change", change.map_or(V::Null, |c| t(&hex(&c))))])
-        }).collect())),
-        "timeline" => timeline(pk, q),
-        "digest" => digest_q(pk, q),
-        "resolve" => resolve_marks(pk, q),
-        "layers" => layers(pk),
-        #[cfg(not(feature = "cut-project"))]
-        "project" => crate::project::project(pk, q),
-        _ => None,
-    }
 }

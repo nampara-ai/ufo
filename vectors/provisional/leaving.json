@@ -11,43 +11,6 @@
   "sha256": "54fd827f9f7b2ea1f716332e3e9106f661c9c2d635b1d3fdaf968de98d59653f",
   "root_hash": "07964126cb8f3b6902cfbbfe4ab1deb4c9b186758d99376d0d8ad5146caf35c3"
  },
- "layers": {
-  "content": {
-   "hashes": [
-    "08ee1c5563580a3d9ecb58f0d8e0e3c4df8af5955a3b175adc499a4dfb787919",
-    "3fdf1b91ba6cedfcdf344f119473691a224c7b9fe81fe5bc6ffcbe4840b1fdd7",
-    "5781cd9f60c128a4acc49230bb7af5791312c6268ccd313f1a651cabcd8c5401",
-    "85e9e2ee93a563a5261005994544bfc1cc47aa540928170e0fbf5f23c16411c1",
-    "c754f83484a6f57ee5dc486ebfe76edd81bf49ad64f649635aa0a864a0ee7212"
-   ],
-   "records": 5,
-   "bytes_in_frames": 4338
-  },
-  "attribution": {
-   "hashes": [
-    "07964126cb8f3b6902cfbbfe4ab1deb4c9b186758d99376d0d8ad5146caf35c3",
-    "092acf577819a704d5106c685ec0315f76a87d30ec3b79658b722c3d9ec448c7",
-    "1742eaea667f5066bdbd359b6312fe2088209c898dcb8e7c6837cc9eaf324a5f",
-    "3180c6875a6d9df9a5355504829d887333c2941575eb178c3919d16879bfeef2"
-   ],
-   "records": 4,
-   "bytes_in_frames": 828
-  },
-  "working_history": {
-   "hashes": [
-    "1eb636d36ceea432908992d80665108f8cd87fffdf8cdbe73edff9323f3b3e50",
-    "246bda1009118fcc65dbb761fc694f78f00b2f8d69db3e559074b7958fbc57f4",
-    "47081daac4b124aec6db5bdb456bda8ad88486dbb67543b0ecd26b2807112504",
-    "5784af4d9eae5a5e63ae5180977ad050f076b20c63fc34bc1d91bd33a971a001",
-    "62854a0ba3be5d528a3fbb853573e9c3f753c0941766a0b94c7c5fd951d48a44",
-    "b7cb3da604696da94a4474a1814d31ce06371246c4a6002b26a11c02c059b2ea",
-    "bc553c25589273f6bdcac8f13c801e11e59a7c70863eb1b3651749efefb57458",
-    "f936303cad894fb69c2463b997e36f697a1268ac18815e6c1ad2b7a5486dc382"
-   ],
-   "records": 8,
-   "bytes_in_frames": 8207
-  }
- },
  "leaving": {
   "for people working on this (history: true)": [
    "leaving history=true @ commit=c:07964126",
@@ -86,23 +49,6 @@
    "index",
    "head"
   ],
-  "records": {
-   "content": [
-    "08ee1c5563580a3d9ecb58f0d8e0e3c4df8af5955a3b175adc499a4dfb787919",
-    "3fdf1b91ba6cedfcdf344f119473691a224c7b9fe81fe5bc6ffcbe4840b1fdd7",
-    "5781cd9f60c128a4acc49230bb7af5791312c6268ccd313f1a651cabcd8c5401",
-    "85e9e2ee93a563a5261005994544bfc1cc47aa540928170e0fbf5f23c16411c1",
-    "c754f83484a6f57ee5dc486ebfe76edd81bf49ad64f649635aa0a864a0ee7212"
-   ],
-   "attribution": [
-    "07964126cb8f3b6902cfbbfe4ab1deb4c9b186758d99376d0d8ad5146caf35c3",
-    "092acf577819a704d5106c685ec0315f76a87d30ec3b79658b722c3d9ec448c7",
-    "1742eaea667f5066bdbd359b6312fe2088209c898dcb8e7c6837cc9eaf324a5f",
-    "3180c6875a6d9df9a5355504829d887333c2941575eb178c3919d16879bfeef2"
-   ],
-   "working_history": []
-  },
-  "missing_from_content_or_attribution": 0,
   "leaving_of_the_copy": [
    "leaving history=true @ commit=c:07964126",
    "layer name=content included=true objects=4 bytes=4338 actors=[] models=[] changes=0 first=0 last=0",
@@ -124,14 +70,14 @@
    "why_is_as_from_the_whole_pack": true,
    "history": [
     "history o:71717171 @ commit=c:07964126",
-    "change id=o:7095badf time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=withheld touched=withheld",
-    "change id=o:7c7c7c7c time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=withheld touched=withheld",
+    "change id=o:7095badf commit=c:07964126 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=withheld touched=withheld",
+    "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=withheld touched=withheld",
     "end lines=2"
    ],
    "history_from_the_whole_pack": [
     "history o:71717171 @ commit=c:07964126",
-    "change id=o:7095badf time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:71717171]",
-    "change id=o:7c7c7c7c time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=15 touched=[o:00000000,o:71717171,o:72727272,o:73737373]",
+    "change id=o:7095badf commit=c:07964126 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:71717171]",
+    "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=15 touched=[o:00000000,o:71717171,o:72727272,o:73737373]",
     "end lines=2"
    ],
    "note": "Where a change's work is withheld, `history` cannot say what the change touched: it lists the change, with `ops` and `touched` given as `withheld` (E11). Appendix B does not say this; it is this kernel's reading"

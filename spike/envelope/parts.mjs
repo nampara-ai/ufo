@@ -21,7 +21,7 @@ export const shipped = (source = here('host.mjs')) => execFileSync(here('../tool
 // is drawn from them.
 export async function withTools(pack, { tools = fs.readFileSync(here('tools.ufx')), time = Date.UTC(2026, 0, 2), who = 'UFO spike' } = {}) {
   const open = async b => { const k = await start(kernelWasm(), () => ({ adv: 0, asc: 0, desc: 0 }), z => zlib.inflateRawSync(z)); if (!await k.open(new Uint8Array(b))) throw Error('not a pack'); return k; };
-  const k = await open(pack), commit = (await open(tools)).query({ q: 'commits' })[0].commit, zero = new Uint8Array(16);
+  const k = await open(pack), commit = (await open(tools)).commits()[0].commit, zero = new Uint8Array(16);
   const made = k.propose({ o: zero, key: ['components', 'tools'], val: { tag: 55462, v: { o: zero, u: Uint8Array.from(Buffer.from(commit, 'hex')) } }, with: new Uint8Array(tools), who, time,
     random: new Uint8Array(crypto.createHash('sha512').update('ufo-spike-nest').update(pack).update(tools).digest()) });
   if (made.refused) throw Error('the tools were not nested: ' + made.refused);

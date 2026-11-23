@@ -2,12 +2,12 @@
 // compose-vectors.mjs and writes vectors/provisional/roles.json: the nodes an accessibility tree is to be built from
 // (SPEC-PLAYER 9.2: `role`, `label`, `level`), as the kernel's display lists carry them and as a host must expose them.
 // Build the kernel first (see README.md). Run: node spike/roles-vectors.mjs
-import fs from 'fs'; import crypto from 'crypto'; import zlib from 'zlib'; import { start } from './binding/binding.mjs'; import { tree } from './envelope/nodes.mjs';
+import fs from 'fs'; import crypto from 'crypto'; import zlib from 'zlib'; import { start } from './binding/binding.mjs'; import { tree } from './envelope/nodes.mjs'; import { tools as toolsMade } from './envelope/mkpack.mjs';
 const root = new URL('../', import.meta.url), file = f => new Uint8Array(fs.readFileSync(new URL(f, root)));
 const wasm = fs.readFileSync(new URL('spike/kernel/target/wasm32-unknown-unknown/release/ufo_spike_kernel.wasm', root));
 const factor = piece => piece.font.includes('monospace') ? 0.6 : piece.weight >= 700 ? 0.55 : 0.5;
 const measure = (piece, s) => ({ adv: [...s].length * piece.size * factor(piece), asc: 0.8 * piece.size, desc: 0.2 * piece.size });
-const pack = file('vectors/compose.ufx'), tools = file('spike/envelope/tools.ufx'), width = 480, sha = b => crypto.createHash('sha256').update(b).digest('hex');
+const pack = file('vectors/compose.ufx'), tools = toolsMade(false).bytes, width = 480, sha = b => crypto.createHash('sha256').update(b).digest('hex');
 // the document face of compose.ufx, composed at the width, its rows stacked from the top left
 const k = await start(wasm, measure, b => zlib.inflateRawSync(b)); if (!await k.open(pack)) throw new Error('compose.ufx does not open');
 const document_face = tree(k.sample({ as: 'list', w: width }).list);

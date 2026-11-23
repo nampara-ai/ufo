@@ -3,7 +3,7 @@
 // object map, the commit, an index and a head (SPEC 1.2 to 1.7, 2.1 to 2.4). The byte layout follows
 // tools/vectors/generate.py (class Pack, revision, commit, object_map), read and copied here, not imported.
 //   node spike/envelope/mkpack.mjs      writes spike/envelope/tools.ufx and spike/out/hostile.ufx
-import fs from 'fs'; import crypto from 'crypto'; import { fileURLToPath } from 'url';
+import fs from 'fs'; import crypto from 'crypto'; import zlib from 'zlib'; import { fileURLToPath } from 'url';
 const sha = (...b) => { const h = crypto.createHash('sha256'); for (const x of b) h.update(x); return h.digest(); };
 const cat = (...b) => Buffer.concat(b.map(x => Buffer.from(x)));
 
@@ -44,6 +44,8 @@ export function enc(v) {
 // ---- frames (2.1) and blobs (1.4) ----
 const leb = n => { const out = []; do { out.push(n & 0x7f | (n > 0x7f ? 0x80 : 0)); n = Math.floor(n / 128); } while (n); return Buffer.from(out); };
 const frame = (kind, payload) => cat([kind, 0], leb(payload.length), payload);
+// codec 1 (2.1): the record's length, then the record as a raw DEFLATE stream. The project's build tooling writes it; the kernel only reads it, through the host's inflate
+const squeezed = (kind, payload) => { const z = cat(leb(payload.length), zlib.deflateRawSync(payload, { level: 9 })); return cat([kind, 1], leb(z.length), z); };
 const GEAR = Array.from({ length: 256 }, (_, i) => sha('ufo-gear-1', Buffer.from([i])).readBigUInt64LE(0));
 function chunks(data) {   // the gear rule: a chunk ends where it is 2 048 bytes or more and the top 13 bits of the hash are 0, or at 65 536
   const out = []; let start = 0, h = 0n;
@@ -56,9 +58,10 @@ function chunks(data) {   // the gear rule: a chunk ends where it is 2 048 bytes
 }
 
 export class Pack {
-  constructor(saltLabel) { this.b = Buffer.from('\x89UFO\r\n\x1a\n', 'latin1'); this.off = new Map(); this.n = 0; this.saltLabel = saltLabel; }
+  constructor(saltLabel, compress = false) { this.b = Buffer.from('\x89UFO\r\n\x1a\n', 'latin1'); this.off = new Map(); this.n = 0; this.saltLabel = saltLabel; this.compress = compress; }
   salt() { const n = Buffer.alloc(4); n.writeUInt32LE(this.n++); return sha(this.saltLabel, n).subarray(0, 16); }
-  put(kind, rec) { const h = sha(Buffer.from([kind]), rec), k = h.toString('hex'); if (!this.off.has(k)) { this.off.set(k, this.b.length); this.b = cat(this.b, frame(kind, rec)); } return h; }
+  // a record is compressed where that is asked for and makes its frame smaller; never a commit, which a head must be checked against before anything is inflated
+  put(kind, rec, plain = false) { const h = sha(Buffer.from([kind]), rec), k = h.toString('hex'); if (!this.off.has(k)) { this.off.set(k, this.b.length); const f = frame(kind, rec), z = this.compress && !plain ? squeezed(kind, rec) : f; this.b = cat(this.b, z.length < f.length ? z : f); } return h; }
   node(v) { return this.put(2, enc(v)); }
   blob(data) {   // chunks, then their tree; for the small blobs written here one group is always enough
     let parts = chunks(data).map(c => [c.length, this.put(1, c)]);
@@ -74,7 +77,7 @@ export class Pack {
     state.push([change, hC]); state.sort((a, b) => Buffer.compare(a[0], b[0]));
     if (state.length > 32) throw Error('an object map of more than one node: not written by this script');
     const hM = this.node({ k: 'map', e: state });
-    const hK = this.node({ k: 'commit', v: 1, parents: [], objects: hM, change: hC, height: 0 });
+    const hK = this.put(2, enc({ k: 'commit', v: 1, parents: [], objects: hM, change: hC, height: 0 }), true);
     // 2.4: the index, every record by hash; 2.3: the head
     const ents = [...this.off].sort((a, b) => (a[0] < b[0] ? -1 : 1)), at = this.b.length, u64 = n => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(n)); return b; };
     this.b = cat(this.b, frame(4, cat(u64(ents.length), u64(0), u64(at), ...ents.flatMap(([h, o]) => [Buffer.from(h, 'hex'), u64(o)]))));
@@ -99,8 +102,8 @@ function universe(pk, change, lineage, objects) {
 // or `act`. Text that is computed is a list of lines under `each`, each presented by a Portal whose `of` is `arg` (7.8).
 const f = formula, st = n => f('state', n), is = (a, b) => f('=', a, b), not = a => f('not', a), and = (a, b) => f('and', a, b), iff = (c, a, b) => f('if', c, a, b);
 const join = (...a) => f('concat', ...a), list = (...a) => f('list', ...a), get = (m, k) => f('get', m, k), nth = (l, i) => f('nth', l, i), num = n => f('format', n, '0'), len = x => f('len', x), plus = (a, b) => f('+', a, b);
-export function tools() {
-  const pk = new Pack('ufo-spike-tools-salt'), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90].map(id);
+export function tools(compress = true) {
+  const pk = new Pack('ufo-spike-tools-salt', compress), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90].map(id);
   const S = f('arg', 'subject'), editing = is(st('editing'), true), named = not(is(st('who'), null)), share = is(st('share'), true), saving = is(st('panel'), 'save'), lit = on => iff(on, 'underline', 'none');
   // what the kernel's projections say of the subject: `expand` of the whole, the changes newest first, and what a copy would carry
   const ov = nth(f('ask', 'expand', S), 0), last = nth(f('ask', 'history', S), 0), leaving = f('ask', 'leaving', S, { history: share }), [content, credit, history] = [0, 1, 2].map(i => nth(leaving, i));

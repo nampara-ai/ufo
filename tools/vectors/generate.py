@@ -272,6 +272,12 @@ def commit(pk, state, change_id, ops, note, public, parent, height, sl):
 U, T, F = bytes(16), bytes([0xa1]) * 16, bytes([0xfa]) * 16
 C1, C2, C3 = (bytes([c]) * 16 for c in (0xc1, 0xc2, 0xc3))
 A, K = bytes([0xaa]) * 16, bytes([0xcc]) * 16
+PIN1, PIN3 = bytes([0xd1]) * 16, bytes([0xd3]) * 16      # two objects that hold pins as their sources (sections 4.4, 5.3)
+def digest(sl, covered, followed): return sha(sl + enc(covered) + b"".join(i + h for i, h in sorted(followed)))
+def pin(o, region, rev, sl, covered, followed):
+    m = {"o": o, "r": rev, "s": sl, "d": digest(sl, covered, followed)}
+    if region is not None: m["a"] = region
+    return anchor(m)
 who = {"name": "Test Author"}; actor = {"who": who, "with": {"name": "ufo-vectors", "version": "0.5"}}
 lineage = bytes([0x11]) * 16
 # a block span: begins just before its first element, ends at the end of the sequence (section 8.1)
@@ -334,6 +340,15 @@ hF2 = revision(pk, F, "ufo.face", 2, C2, 2002, {"of": ref(T), "medium": "text"},
 hA = revision(pk, A, "ufo.asset", 1, C2, 2003, {"bytes": ASSET, "media": "text/plain"})
 hK2o = revision(pk, K, "ufo.clock", 1, C2, 2004, {"start": 0, "end": 10 * FL})
 st = dict(state); st.update({T: hT2, F: hF2, A: hA, K: hK2o})
+# an object whose sources are three pins made at the first commit: to "Hello, ", to "universe", and to the face whole
+_sp = {"spans": {"p1": SPAN}}
+from1 = {"how": "example", "by": ref(C2), "sources": [
+    pin(T, {"chars": ["s", [C1, 0, 0], [C1, 6, 1]]}, g["text"], salt(4001), {"chars": ["Hello, ", _sp]}, []),
+    pin(T, {"chars": ["s", [C1, 7, 0], [C1, 14, 1]]}, g["text"], salt(4001), {"chars": ["universe", _sp]}, []),
+    pin(F, None, g["face"], salt(4002), {"of": ref(T), "medium": "document"}, [(T, g["text"])])]}
+assert [x.v["d"].hex()[:8] for x in from1["sources"]] == ["610c8b3d", "ca3c6e46", "c9b94638"], "the digests the first commit gave before these pins were stored"
+st[PIN1] = revision(pk, PIN1, "org.example.derived", 1, C2, 2050, {"label": "pinned at the first commit", "from": from1})
+ops += [{"op": "new", "obj": PIN1, "type": "org.example.derived"}, {"op": "set", "obj": PIN1, "key": "label", "val": "pinned at the first commit"}, {"op": "set", "obj": PIN1, "key": "from", "val": from1}]
 for n_, (i, n) in enumerate(items):
     props = {"n": n}
     if n_ == 0: props["long"] = pk.outside("t", LONG)     # stored outside the node
@@ -355,6 +370,12 @@ seq3 = seq2 + [[C3, 0, 1], [C3, 1, 1, False]]
 hT3 = revision(pk, T, "ufo.text", 3, C3, 3001, {"chars": t2, "spans": {"p1": SPAN}}, prev=hT2, seq={"chars": seq3})
 hK3o = revision(pk, K, "ufo.clock", 2, C3, 3002, {"start": 0, "end": 8 * FL}, prev=hK2o)
 st = dict(state2); st.update({T: hT3, K: hK3o}); del st[A]
+# an object whose sources are two pins made at this commit: to "Hello, " and to the face whole (the group `digests`)
+from3 = {"how": "example", "by": ref(C3), "sources": [
+    pin(T, {"chars": ["s", [C1, 0, 0], [C1, 6, 1]]}, hT3, salt(4001), {"chars": ["Hello, ", _sp]}, []),
+    pin(F, None, hF2, salt(4002), {"of": ref(T), "medium": "text"}, [(T, hT3)])]}
+st[PIN3] = revision(pk, PIN3, "org.example.derived", 1, C3, 3050, {"label": "pinned at the last commit", "from": from3})
+ops += [{"op": "new", "obj": PIN3, "type": "org.example.derived"}, {"op": "set", "obj": PIN3, "key": "label", "val": "pinned at the last commit"}, {"op": "set", "obj": PIN3, "key": "from", "val": from3}]
 pub = {"actor": actor, "time": 1767232800000, "origin": {"basis": "witnessed", "by": "person", "who": who},
        "decisions": [{"about": ref(C2), "verdict": "accept", "who": who}]}
 state3, hC3, hM3, hK3 = commit(pk, st, C3, ops, None, pub, hK2, 2, 3003)
@@ -363,6 +384,11 @@ open(os.path.join(OUT, "history.ufx"), "wb").write(pk.b); hist_pk = pk
 def seqj(q): return [[r[0].hex()] + r[1:] for r in q]
 def B(c, n, side): return [c.hex(), n, side]
 V["history_pack"] = {"file": "history.ufx", "length": len(pk.b), "sha256_of_file": sha(bytes(pk.b)).hex(),
+    "pinned": {"what": "two objects whose `from.sources` are pins (sections 4.4, 5.3), and the state of each pin at each commit where the object is present. A pin is current where its digest, computed again, is the one it holds",
+               "made_at_the_first_commit": {"object": PIN1.hex(), "pins": ["the text, from before element (c1, 0) to after (c1, 6): 'Hello, '", "the text, from before (c1, 7) to after (c1, 14): 'universe'", "the face, whole"],
+                    "states": {"height 1": ["current", "detached", "stale"], "height 2": ["current", "detached", "stale"]},
+                    "why": ["'Hello, ' is never edited, and its one span still touches it", "the word is replaced at the second commit: every element the region covered is removed", "the face's medium is set at the second commit, and the text it refers to changes at the second and third"]},
+               "made_at_the_last_commit": {"object": PIN3.hex(), "pins": ["the text, the same region", "the face, whole"], "states": {"height 2": ["current", "current"]}, "digests": "those of the group `digests`"}},
     "commits": [
         {"height": 0, "root_hash": g["root"].hex(), "object_map_root": g["map"].hex(), "objects": 4, "pack_length_at_first_head": len1,
          "text": "Hello, universe.", "span_p1_resolves_to": [0, 16], "seq": seqj([[C1, 0, 16]])},
@@ -553,7 +579,6 @@ V["instrumentation"] = [
      "behaviour": "spin(3) consumes 2 + 3*6 = 20; with ufo:fuel = 19 it traps out of fuel on entering the third iteration"}]
 
 # ---- 8b. digests of pins (section 4.4), at the last commit of history.ufx ----
-def digest(sl, covered, followed): return sha(sl + enc(covered) + b"".join(i + h for i, h in sorted(followed)))
 cov_text = {"chars": ["Hello, ", {"spans": {"p1": SPAN}}]}
 cov_face = {"of": ref(T), "medium": "text"}
 V["digests"] = [
@@ -636,6 +661,7 @@ V["published"] = {"file": "published.ufx", "length": len(pubpk.b), "root_hash": 
 # ---- 10. a timeline: time edited as a sequence (section 4.5) ----
 def timeline_pack():
     pk = Pack(); TU, TK, R1, R2, CAP, NOTE = bytes(16), bytes([0xe1]) * 16, bytes([0xe2]) * 16, bytes([0xe3]) * 16, bytes([0xe4]) * 16, bytes([0xe5]) * 16
+    TD = bytes([0xe6]) * 16
     D1, D2, D3, D4 = (bytes([c]) * 16 for c in (0xd4, 0xd5, 0xd6, 0xd7)); lin = bytes([0x44]) * 16; S = FL
     def reg(a, b): return anchor({"o": TK, "a": {"t": ["s", a, b]}})
     plays = {"a": {"at": reg([D1, 0, 0], [D1, 6 * S - 1, 1]), "of": ref(R1)},
@@ -679,6 +705,11 @@ def timeline_pack():
     seq4 = [[D1, 0, 3 * S], [D1, 3 * S, 2 * S, False], [D1, 5 * S, 1 * S], [D1, 6 * S, 1 * S, False], [D3, 0, 1 * S], [D1, 7 * S, 3 * S]]
     h3 = st[TK]; st = dict(st); st[TK] = clock(4, D4, 5031, 8 * S, seq4, prev=h3)
     ops = [{"op": "splice", "obj": TK, "key": "t", "del": [[D1, 6 * S, 1 * S]], "old": 1 * S}]
+    # an object whose source is a pin, made at this commit, to the first three seconds of the timeline
+    cov = {"t": [[[D1, 0, 3 * S]], {"plays": {"a": plays["a"]}}]}
+    fromt = {"how": "example", "by": ref(D4), "sources": [pin(TK, {"t": ["s", [D1, 0, 0], [D1, 3 * S - 1, 1]]}, st[TK], salt(7108), cov, [(R1, st[R1])])]}
+    st[TD] = revision(pk, TD, "org.example.derived", 1, D4, 5033, {"label": "pinned", "from": fromt})
+    ops += [{"op": "new", "obj": TD, "type": "org.example.derived"}, {"op": "set", "obj": TD, "key": "label", "val": "pinned"}, {"op": "set", "obj": TD, "key": "from", "val": fromt}]
     st, _, _, k4 = commit(pk, st, D4, ops, "The start of the second take cut.", pub(1767236400000), k3, 3, 5032); pk.index(); pk.head(k4)
     def element_at(seq, p):
         for r in seq:
@@ -708,7 +739,7 @@ def timeline_pack():
             "plays_resolve_to": {m: resolve(seq, pl["at"].v["a"]["t"][1], pl["at"].v["a"]["t"][2]) for m, pl in sorted(plays.items())},
             "playing_at": [{"position": p, "element": [element_at(seq, p)[0].hex(), element_at(seq, p)[1]], "plays": playing(seq, p)} for p in samples]})
     TL.update(st=st, commits=[k1, k2, k3, k4], live=[TU, TK, R1, R2, CAP], changes=[D1, D3, D4], pk=pk)
-    return pk, {"file": "timeline.ufx", "length": len(pk.b), "flicks_per_second": S, "clock": TK.hex(),
+    return pk, {"file": "timeline.ufx", "length": len(pk.b), "flicks_per_second": S, "clock": TK.hex(), "marks_object": NOTE.hex(), "pinned_object": TD.hex(),
         "what": "a clock whose t is a count: ten seconds inserted by one change; then two seconds cut from the middle; then one second inserted by another change; then the first second of play b cut. Positions and times are in flicks",
         "plays": {"a": "seconds 0 to 6 as first inserted, playing the first take from its time 0", "b": "from second 6 to the end, playing the second take from its time 2 s", "c": "second 7, a caption"},
         "anchors": {"m1": "second 4: cut in commit 2, so detached from then on", "m2": "second 8: moves two seconds earlier after the cut, and one later after the insertion", "m3": "seconds 1 to 5: shortened by the cut"},
@@ -772,7 +803,7 @@ open(os.path.join(OUT, "compose.ufx"), "wb").write(cpk.b); V["compose_pack"] = c
 
 # ---- 13. regions of every kind, and the digest's cases (sections 4.2 to 4.4, 5.2) ----
 def pins_pack():
-    pk = Pack(); PU, PT, PX, PY, PZ, PA, PK, K1, K2, PM = (bytes([c]) * 16 for c in (0, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99)); PC = bytes([0x9c]) * 16
+    pk = Pack(); PU, PT, PX, PY, PZ, PA, PK, K1, K2, PM = (bytes([c]) * 16 for c in (0, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99)); PC = bytes([0x9c]) * 16; PD = bytes([0x9d]) * 16
     lin = bytes([0x66]) * 16; S = FL; chars = "Alpha.Beta gamma.Delta."
     def reg(a, b): return anchor({"o": PT, "a": {"chars": ["s", a, b]}})
     e = lambda i, side=0: [PC, i, side]
@@ -801,13 +832,15 @@ def pins_pack():
         ops.append({"op": "new", "obj": i, "type": ty})
         for k2_, v in p.items():
             ops.append({"op": "splice", "obj": i, "key": k2_, "after": None, "ins": v} if (i == PT and k2_ == "chars") else {"op": "set", "obj": i, "key": k2_, "val": v})
-    st, _, _, k = commit(pk, st, PC, ops, None, {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 7050)
-    pk.index(); pk.head(k)
     hx = lambda i: i.hex()
     resolves = {"bytes_mid": [3, 7], "bytes_clip": [10, 16], "bytes_out": "detached", "bytes_end": [16, 16],
                 "t_in": [4 * S, 6 * S], "t_clip": [2 * S, 4 * S], "t_touch": [8 * S, 8 * S], "t_out": "detached",
                 "unknown": {"unclipped": [1.5, 2.5]}, "keys": ["b0", "i0"], "kids": ["b"], "point": [6, 6], "whole": "the whole object"}
+    held = []     # each case's pin, stored as a source of the object PD
     def dg(name, why, sl, covered, followed, **pin):
+        bd = lambda x: x if isinstance(x, str) else [bytes.fromhex(x[0]), x[1], x[2]]
+        region = {pin["axis"]: ["s", bd(pin["a"]), bd(pin["b"])] if "a" in pin else ["c", pin["low"], pin["high"]] if "low" in pin else ["k"] + pin["keys"]} if "axis" in pin else None
+        held.append(globals()["pin"](bytes.fromhex(pin["o"]), region, st[bytes.fromhex(pin["o"])], salt(sl), covered, [(i, st[i]) for i in followed]))
         return dict(pin, case=name, why=why, salt=salt(sl).hex(), covered_value_hex=enc(covered).hex(),
                     followed=[{"id": i.hex(), "revision": st[i].hex()} for i in sorted(followed)], digest=digest(salt(sl), covered, [(i, st[i]) for i in followed]).hex())
     tk = {k_: v for k_, v in spans.items() if k_ in ("b0", "b2", "i0")}
@@ -820,7 +853,12 @@ def pins_pack():
         dg("keys", "the entries of the keys that are present, and nothing for the key that is not", 7105, {"spans": {"b0": spans["b0"]}}, [], o=hx(PT), axis="spans", keys=["b0", "nope"]),
         dg("a continuous region", "the covered value is the object's properties whole; both children are followed, whatever their intervals", 7106, {"t": kp}, [K1, K2], o=hx(PK), axis="t", low=4 * S, high=6 * S),
         dg("an asset's bytes", "continuous: the covered value is the asset's properties, with the bytes themselves", 7107, {"bytes": {"bytes": data, "media": "text/plain"}}, [], o=hx(PA), axis="bytes", low=3, high=7)]
-    return pk, k, st, {"file": "pins.ufx", "length": len(pk.b), "root_hash": k.hex(), "marks_object": PM.hex(), "flicks_per_second": S,
+    fromp = {"how": "example", "by": ref(PC), "sources": held}
+    st[PD] = revision(pk, PD, "org.example.derived", 1, PC, 7040, {"label": "pinned", "from": fromp})
+    ops += [{"op": "new", "obj": PD, "type": "org.example.derived"}, {"op": "set", "obj": PD, "key": "label", "val": "pinned"}, {"op": "set", "obj": PD, "key": "from", "val": fromp}]
+    st, _, _, k = commit(pk, st, PC, ops, None, {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 7050)
+    pk.index(); pk.head(k)
+    return pk, k, st, {"file": "pins.ufx", "length": len(pk.b), "root_hash": k.hex(), "marks_object": PM.hex(), "pinned_object": PD.hex(), "flicks_per_second": S,
         "what": "one commit holding a text with an empty block and an inline span, three small objects that refer to one another, an asset of sixteen bytes, a clock from second 2 to second 8, and an object whose `marks` holds an anchor of every kind",
         "extents": "the asset's bytes: [0, 16]. The clock's t: [start, end] = [2 s, 8 s]. The object named by `unknown` is of a type this document does not define, so its axis w has no known extent",
         "anchors_resolve_to": resolves, "digests": cases}

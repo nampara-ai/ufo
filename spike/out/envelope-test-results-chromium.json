@@ -93,8 +93,8 @@
  },
  "host": {
   "lines": 267,
-  "source_bytes": 18170,
-  "shipped_bytes": 9188,
+  "source_bytes": 18174,
+  "shipped_bytes": 9192,
   "longest": 144,
   "minifier": "terser 5.51.4",
   "options": "--module --ecma 2020 --compress --mangle",

@@ -8,8 +8,8 @@ const measure = (piece, s) => ({ adv: [...s].length * piece.size * 0.5, asc: 0.8
 const kernel = () => start(wasm, measure, b => zlib.inflateRawSync(b));
 const hex = b => Buffer.from(b).toString('hex'), T = '71'.repeat(16), o = Uint8Array.from(Buffer.from(T, 'hex'));
 const k = await kernel(); assert(await k.open(new Uint8Array(fs.readFileSync(new URL('vectors/compose.ufx', root)))));
-const chars = () => { const s = k.query({ q: 'project', name: 'text', o: T }).split('\n')[1]; return [...JSON.parse(s.slice(s.indexOf(' s=') + 3))]; };
-const spans = () => k.query({ q: 'project', name: 'object', o: T }).split('\n').filter(l => l.startsWith('prop key=spans'))[0];
+const chars = () => { const s = k.project({ name: 'text', o: T }).split('\n')[1]; return [...JSON.parse(s.slice(s.indexOf(' s=') + 3))]; };
+const spans = () => k.project({ name: 'object', o: T }).split('\n').filter(l => l.startsWith('prop key=spans'))[0];
 const block = at => { const rows = k.sample({ as: 'rows', w: 480 }).detail; for (const r of rows) for (const [kind, i] of r.items) if (kind === 'text' && i.src) { const b = k.blockAt(i.src); if (b.lo <= at && at < b.hi) return b; } };
 let n = 0, model = chars();
 const edit = (what, lo, hi, ins, check) => {
@@ -18,7 +18,7 @@ const edit = (what, lo, hi, ins, check) => {
   assert(!r.refused, what + ': ' + r.refused);
   model = [...model.slice(0, lo), ...ins, ...model.slice(hi)];
   assert.deepStrictEqual(chars(), model, what);
-  const why = k.query({ q: 'project', name: 'why', o: T, lo, hi: lo + [...ins].length });
+  const why = k.project({ name: 'why', o: T, lo, hi: lo + [...ins].length });
   // only the difference is written (L1): what `why` gives the new change is exactly what the operations inserted, and never more than `ins`
   const mine = why.split('\n').filter(l => l.startsWith('run ') && l.includes('change=o:' + hex(r.change).slice(0, 8))).map(l => /chars=\[(\d+),(\d+)\]/.exec(l)).reduce((n, m) => n + (m[2] - m[1]), 0);
   const put = r.ops.filter(o => o.op === 'splice').reduce((n, o) => n + [...(o.ins || '')].length, 0), took = r.ops.filter(o => o.op === 'splice').reduce((n, o) => n + [...(o.old || '')].length, 0);
@@ -44,7 +44,7 @@ edit('the removal of what three changes inserted', 0, 6, '');
 const refused = k.propose({ o, lo: 0, hi: model.length + 1, ins: 'x', who: 'Reader Test', time: 0, random: new Uint8Array(64) }); assert(refused.refused);
 const saved = k.packBytes(); fs.writeFileSync(new URL('spike/out/edited-many.ufx', root), saved);
 const k2 = await kernel(); assert(await k2.open(saved));
-assert.strictEqual(k2.query({ q: 'commits' }).length, n + 1); assert.strictEqual(k2.sample({ as: 'text' }).text, k.sample({ as: 'text' }).text);
-assert.strictEqual(k2.query({ q: 'layers' }).missing_from_content_or_attribution, 0);
-console.log(n, 'edits; spike/out/edited-many.ufx', saved.length, 'bytes; reopened in a fresh kernel with', k2.query({ q: 'commits' }).length, 'commits and the same text');
-console.log(k2.query({ q: 'project', name: 'history', o: T }));
+assert.strictEqual(k2.commits().length, n + 1); assert.strictEqual(k2.sample({ as: 'text' }).text, k.sample({ as: 'text' }).text);
+assert.strictEqual(k2.layers().lacks.history, false);
+console.log(n, 'edits; spike/out/edited-many.ufx', saved.length, 'bytes; reopened in a fresh kernel with', k2.commits().length, 'commits and the same text');
+console.log(k2.project({ name: 'history', o: T }));

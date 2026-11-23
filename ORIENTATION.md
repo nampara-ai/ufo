@@ -1361,3 +1361,41 @@ Its formulas repeat whole sub-expressions because a formula cannot name
 a value and use it twice, and its records are stored uncompressed;
 compressed whole it is 4.9 KiB. The outline of a universe lists its
 other objects one by one, where §10.2 says grouped by type.
+
+## 27. One of everything, and the kernel as a base and components (2026-11-23)
+
+The owner's decisions after the simplification pass: one sequence
+resolver; no second door beside the projections; then the design of the
+kernel as a base and components, which is the founding design and not an
+escape route; the tools universe compressed by the build tooling; named
+values in formulas after review.
+
+*One resolver.* Boundaries are resolved by runs everywhere. It cost 209
+bytes.
+
+*One door.* The kernel's `query` is gone. What the vector harness asked
+through it is now what anyone may ask: a projection writes every anchor
+as it resolves, on each kind of axis; `why` of a derived object gives the
+state of each of its sources; `expand` of a stretch of a timeline gives
+what plays in it; a `change` record names its commit; `full` writes
+hashes whole. So that digests could be checked this way, three vector
+packs now hold real pins, as the sources of derived objects, where
+before no pack held one. A published pack is compared byte for byte with
+what the kernel publishes. Two kernel-made vector files, of layers and of
+staleness, are retired: the packs and `vectors.json` now say the same.
+The kernel fell by 3 469 bytes.
+
+*Found on the way.* The kernel carried a frame of unknown kind into a
+published copy and the generator did not. The text now says it is not
+carried (**E10**).
+
+*The tools universe* is written with compressed frames: 9 139 bytes as a
+pack against 26 392, and 16 157 added to the file that carries it
+against 33 410; the budget is 24 KiB. The kernel copies frames it cannot
+read, taking each hash from the nested pack's own index, and holds no
+compressor.
+
+*The split* is designed and measured in `spike/SPLIT.md`, and not built.
+The base is 102.8 KiB compressed, 80% of the limit. A component that
+shares the base's code costs what it adds (the printer 5.0 KB); one that
+carries its own copies costs six times that (31.7 KB).

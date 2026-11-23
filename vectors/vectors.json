@@ -769,8 +769,50 @@
  },
  "history_pack": {
   "file": "history.ufx",
-  "length": 27649,
-  "sha256_of_file": "defe1a4dbebbbb2c30b62cc1a1cb19957043ae17a247b534c982e15bf955c157",
+  "length": 30192,
+  "sha256_of_file": "95af3e96530266d1b9b6fce89f5d53051434d915705346ec5a8bbc6565ab77c2",
+  "pinned": {
+   "what": "two objects whose `from.sources` are pins (sections 4.4, 5.3), and the state of each pin at each commit where the object is present. A pin is current where its digest, computed again, is the one it holds",
+   "made_at_the_first_commit": {
+    "object": "d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+    "pins": [
+     "the text, from before element (c1, 0) to after (c1, 6): 'Hello, '",
+     "the text, from before (c1, 7) to after (c1, 14): 'universe'",
+     "the face, whole"
+    ],
+    "states": {
+     "height 1": [
+      "current",
+      "detached",
+      "stale"
+     ],
+     "height 2": [
+      "current",
+      "detached",
+      "stale"
+     ]
+    },
+    "why": [
+     "'Hello, ' is never edited, and its one span still touches it",
+     "the word is replaced at the second commit: every element the region covered is removed",
+     "the face's medium is set at the second commit, and the text it refers to changes at the second and third"
+    ]
+   },
+   "made_at_the_last_commit": {
+    "object": "d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3",
+    "pins": [
+     "the text, the same region",
+     "the face, whole"
+    ],
+    "states": {
+     "height 2": [
+      "current",
+      "current"
+     ]
+    },
+    "digests": "those of the group `digests`"
+   }
+  },
   "commits": [
    {
     "height": 0,
@@ -793,10 +835,10 @@
    },
    {
     "height": 1,
-    "root_hash": "b381835e7f449509e8f44c95e07ebbd618a79442bd8b07e8ee15afaec90b9837",
-    "object_map_root": "7dda3124d1040d4c65a4c4f05df9d10399dc304e7a5580e365654b688ada64ee",
-    "objects": 47,
-    "pack_length_at_first_head": 23398,
+    "root_hash": "d421f379374bea217830cf58b230133e01fe98cad9443440154f4421437f8baa",
+    "object_map_root": "f2c9d78c0aee11b182457c15ffa146d98286c91bdbcde80391daa52936a23399",
+    "objects": 48,
+    "pack_length_at_first_head": 24784,
     "text": "Hello, world.",
     "span_p1_resolves_to": [
      0,
@@ -826,15 +868,15 @@
      ]
     ],
     "text_revision": "7e76a8e54d4e31fe42c190e38846d3b1d998ce395216ff3a6a438f35ee46e7eb",
-    "change_revision": "682b91dc71ec077aa21d103b637008a6469a5c359d652ffb178794382b42619d",
+    "change_revision": "fc69ed90c8397b331724fcc198ef7c82b231901ce8d8bb63c95766806fffdeed",
     "note": "its object map has an interior node; one node frame and three chunk frames use codec 1; two properties are kept outside their nodes: the asset's bytes and one item's long"
    },
    {
     "height": 2,
-    "root_hash": "dc47050bc643c94005a4653cca968819a6644cc4f9c337a4d447337e9d3e1806",
-    "object_map_root": "539c05a69e232312856f5f7b8861fc4461379276077bbbabd1411cd7b9a1564a",
-    "objects": 47,
-    "pack_length_at_first_head": 27649,
+    "root_hash": "70c8641585bfdd2c1301c2fbe5fc98fdc4f932bb849052ad793482476fda46fa",
+    "object_map_root": "c93a4ca77b31f29e51742db8708fe95c1155d80eeda01b1f577abc2585e89c56",
+    "objects": 49,
+    "pack_length_at_first_head": 30192,
     "text": "Hello, world.!",
     "span_p1_resolves_to": [
      0,
@@ -875,7 +917,7 @@
      ]
     ],
     "text_revision": "02b143b2518280592db89b7e60982af677203013eb7564a826bf698c36b7023f",
-    "change_revision": "55f3f01aa0602c19da2d2d6d9a16250d45ca46434a9e70d3b81dbfd4fcad1cc1",
+    "change_revision": "54f47d8276f7a238b4ae85c57a63e3031906b35123c3b6085282dca58ba0bb66",
     "note": "the asset is dropped: absent from this map, present in the previous one"
    }
   ],
@@ -900,12 +942,12 @@
    "note": "the asset's bytes property is an indirect of kind b to this blob; the same blob is named from the operation that set it, inside the change's work"
   },
   "seal": {
-   "commit": "b381835e7f449509e8f44c95e07ebbd618a79442bd8b07e8ee15afaec90b9837",
+   "commit": "d421f379374bea217830cf58b230133e01fe98cad9443440154f4421437f8baa",
    "key": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
    "time": 1767229260000,
    "name": "Test Author",
-   "signature": "7799554d406ffdfd457e0cde980b62033315279521feb5ca5d2f0aebbd15b5fc088ea6d46d29a154d7f7f0e57d42146ea6a47e7bf2cdf9099684bae8bcc50806",
-   "signed_bytes_hex": "75666f2d7365616c2d3122683094388d1ac9235a16d605a9b4ae9af417e18cec1c6e3970b5f1ef25c200",
+   "signature": "22e528b7edaad761af5a113054aeffc67d530714e3a7b91a19fde4067b05917bf88748ae8372ad920964f4f1dbdca154bca50502ecc76482625bb1ca9cd1380f",
+   "signed_bytes_hex": "75666f2d7365616c2d31bf62f77f8ee49c62ea3fcfc36a166a77d733337897a7a94f99c8fe7bee9fa3cc",
    "secret_key_note": "RFC 8032 section 7.1, test 1"
   },
   "heads": "four head frames: after commit 1, after commit 2, after the seal (naming commit 2 again), after commit 3; each gives the offset of the one before",
@@ -913,20 +955,20 @@
   "unknown_frame": "kind 0x7f at offset 2599",
   "recovery": [
    {
-    "truncate_to": 27648,
-    "state": "b381835e7f449509e8f44c95e07ebbd618a79442bd8b07e8ee15afaec90b9837",
-    "bytes_after_head": 3984,
+    "truncate_to": 30191,
+    "state": "d421f379374bea217830cf58b230133e01fe98cad9443440154f4421437f8baa",
+    "bytes_after_head": 5141,
     "writer": "no valid head in the tail: truncate"
    },
    {
-    "truncate_to": 23664,
-    "state": "b381835e7f449509e8f44c95e07ebbd618a79442bd8b07e8ee15afaec90b9837",
+    "truncate_to": 25050,
+    "state": "d421f379374bea217830cf58b230133e01fe98cad9443440154f4421437f8baa",
     "bytes_after_head": 0,
     "writer": "valid by step 1"
    },
    {
-    "truncate_to": 23663,
-    "state": "b381835e7f449509e8f44c95e07ebbd618a79442bd8b07e8ee15afaec90b9837",
+    "truncate_to": 25049,
+    "state": "d421f379374bea217830cf58b230133e01fe98cad9443440154f4421437f8baa",
     "bytes_after_head": 265,
     "writer": "the seal's head is torn: truncate; the seal frame is lost"
    },
@@ -1603,8 +1645,8 @@
  },
  "published": {
   "file": "published.ufx",
-  "length": 9437,
-  "root_hash": "dc47050bc643c94005a4653cca968819a6644cc4f9c337a4d447337e9d3e1806",
+  "length": 9541,
+  "root_hash": "70c8641585bfdd2c1301c2fbe5fc98fdc4f932bb849052ad793482476fda46fa",
   "made_from": "history.ufx",
   "what": "history.ufx as it is published: the content and attribution layers, the seal, and an absent frame saying that working history is withheld. Working history is every other record of history.ufx",
   "content": [
@@ -1614,13 +1656,14 @@
    "0a54119daa8f4b755a2d56aa0af74fb2e60fe34207e65d87ed4aa3030724503b",
    "0d51db45eda1c7f34e6c32a4c1d5181c65f047909dd3eb4564e2fdf43bedfb51",
    "113d08afe6f83f63a15d2aa34cbad82f96ce8410364f4d5c10f1a4a8bbfc9bbe",
+   "155060693c26dc605659b1b3643370cca621b84064cfe1cf201394737ccffbb9",
    "1af6bf9ac456148aa064d995c9b27c6200c30e3db3c0ac5ed5bbb7e5f432b4c6",
    "20950d44e4eb4f178f480e006487ccdb04d616be9f822e1dd122a5da2221c370",
    "2a18f2b8ee6f778274b182ae9271220d0be974ebe8401af4eadf466ec12e46b9",
    "2fc3351a3eae4b2b6c4f980506c3782b4b7216534390f7b83ae9bc74ad7b3c4e",
    "33a8644985da103b0b0d158d341c61a7617270ae364c1f09bf1d962beff52039",
+   "4703aef9b41ed3576dcba2900ff45275284dd4a57a8da4926b1eb7c2aa14e67e",
    "48383920e2f530d57c47efdad3e46f11fae5b87be1c8bf066178b97401eedb42",
-   "539c05a69e232312856f5f7b8861fc4461379276077bbbabd1411cd7b9a1564a",
    "5a3ac09e6ae5b614aa1486ba6ffe2a119b2022209661ab4382d26632088b1a22",
    "5deb12910a1afe079147eb320da8792334da5cf680f025d5be6c4461535c166c",
    "5e7400168931700e9accba62000949fcc8f2d01c54e0ffe4d89b6361a439a84a",
@@ -1635,17 +1678,17 @@
    "8f7f9f290927ea904cabfaed0ba93dca23cb0d16826c946f7698a3c170c9d20d",
    "9229327045ccdd311189e9a3454f0d4d60e7a8877777f10077b37cbc71d44b00",
    "9446a753ca32b81c4cefe9eaae1875470b8c50deb24d34799f0b7894112a745b",
+   "994bb1930dabed70696f1df49a60e186e955fb39381aa0fe81ea0d855e5a3f9e",
    "9a9b53eb0b81a134af53481a51d8bddc157d68d04579bd6e7192f4ce0b8e4b77",
    "a11c67caf7f9af8b24ae1f61a35429c8c0577c997bba3a8edbbd554ab73fa0cb",
-   "a2312ce8075de6a9d102d47a8e0c525587ce75a148f70b7f63ec11b86d544e22",
+   "a57e09bd06dfae90fc51c8419c908fb7e74bcb2ab4b2a51ff7c78613a5057329",
    "a5c6cf801498c830f89f3bfa3308a3ab4a02b9b9be751fa7ff86b8df79c7e4e9",
    "a8493c9a2e7f08c96d357d911067b3f7c01ce143a8eb0ad3cc6c173bd79811f9",
    "ab3dc4d303d6808513b2b29632421770da1740296a3468d69203f2cfbe0dea22",
    "af0ee0ecee42b8127fa98307c3875d22d276ed2aa442fc6a870d5cb11b250491",
-   "b118e07fe235c17b2ff7e2faaf9ae37dc2c479d6b699dc79190060eb62030fd5",
    "b4134c668bd06ec97360495125766eaff7530c4b7c8b8344d91e48378cc8f471",
-   "bd6af3f00cc96647a7f435af6fb44d872b9542e5f1e9b85f3c05b3bba375a35e",
    "c6177814b531a5bdeafc68f5b15f28786af6f6c53189190e10aa77e330a0eee8",
+   "c93a4ca77b31f29e51742db8708fe95c1155d80eeda01b1f577abc2585e89c56",
    "cc263036991125ad54298d44015376746ab124f6d08d24b26616a1a835744523",
    "d0a1b840cecfae0967dce6def0aaf908832405386569f5e6fb4156c4c959e83c",
    "d3b1c8e9519bf33f990adcace7f779ec3e1defa879ffee73f7516a7bc769aa87",
@@ -1654,24 +1697,23 @@
    "e29b6a6152cf7a1bf5467cb1ca807253af1b23a84b16f8da8eac409d3438cd67",
    "eb7ae772e0489d029041084d9643426f3761012f724303929e414373723eb3b2",
    "eca50b456c21005b0714026b5e01abef14eab285069b9720f5296005482c82ea",
-   "f5d6d439cb53f2b1f707f395b32bfa317111f0ebf7a193242a68a7b60cdae427",
    "f5eda37e46c395a260225969712638abeef562050cd0f7edf0f736f81779d7a7",
    "f6750a8e8a6c836f363cf9e65753b9b9d1afe5af687a51bb2bcfbfefa09a3ddc",
    "fc52db864a2b0238ba4edf159f27caa4fbdb66d04d339c2258f30460228c849c"
   ],
   "attribution": [
    "45630c7e7ba371ec27e79d0cb07e12a0290e56e9cd2d0dc49ebaebb37f6ad418",
-   "55f3f01aa0602c19da2d2d6d9a16250d45ca46434a9e70d3b81dbfd4fcad1cc1",
-   "682b91dc71ec077aa21d103b637008a6469a5c359d652ffb178794382b42619d",
+   "54f47d8276f7a238b4ae85c57a63e3031906b35123c3b6085282dca58ba0bb66",
+   "70c8641585bfdd2c1301c2fbe5fc98fdc4f932bb849052ad793482476fda46fa",
    "804ec174f46f773d36c1fe7318c999ff21c338b735cb4e5068224725b9cce8bf",
-   "b381835e7f449509e8f44c95e07ebbd618a79442bd8b07e8ee15afaec90b9837",
-   "dc47050bc643c94005a4653cca968819a6644cc4f9c337a4d447337e9d3e1806"
+   "d421f379374bea217830cf58b230133e01fe98cad9443440154f4421437f8baa",
+   "fc69ed90c8397b331724fcc198ef7c82b231901ce8d8bb63c95766806fffdeed"
   ],
-  "working_history_records": 67,
+  "working_history_records": 70,
   "content_is": "the nodes of the current object map, and the current revisions of the universe object, the face and the text. The clock and the forty items are not reachable from the universe object, so they are not live",
   "attribution_is": "the three commit nodes and the three change objects. Each change's work, and the opening of its veil, are working history",
   "a_reader_of_published.ufx": {
-   "state": "dc47050bc643c94005a4653cca968819a6644cc4f9c337a4d447337e9d3e1806",
+   "state": "70c8641585bfdd2c1301c2fbe5fc98fdc4f932bb849052ad793482476fda46fa",
    "plain_text_face": "Hello, world.!\n",
    "span_p1_resolves_to": [
     0,
@@ -1683,9 +1725,11 @@
  },
  "timeline": {
   "file": "timeline.ufx",
-  "length": 11695,
+  "length": 12482,
   "flicks_per_second": 705600000,
   "clock": "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
+  "marks_object": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+  "pinned_object": "e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6",
   "what": "a clock whose t is a count: ten seconds inserted by one change; then two seconds cut from the middle; then one second inserted by another change; then the first second of play b cut. Positions and times are in flicks",
   "plays": {
    "a": "seconds 0 to 6 as first inserted, playing the first take from its time 0",
@@ -1930,7 +1974,7 @@
     ]
    },
    {
-    "commit": "43649a094b329c0f8d7c29c4ee36109378ab444ff070ce6c22e50509c88fbaa4",
+    "commit": "c9525c8b62b298b4509ee7aee7333c4a71dc7cb3b5511428b1156c6e245676e8",
     "t": 5644800000,
     "seq": [
      [
@@ -2116,9 +2160,10 @@
  },
  "pins": {
   "file": "pins.ufx",
-  "length": 7813,
-  "root_hash": "97fee807af838e4dad90954afd949339eff64f65ec4359ad4be1cff766494cb5",
+  "length": 10245,
+  "root_hash": "3a4344dec25d6119d81d483731dc13c712eec0b197da9cc1aeb523ed2c678aeb",
   "marks_object": "99999999999999999999999999999999",
+  "pinned_object": "9d9d9d9d9d9d9d9d9d9d9d9d9d9d9d9d",
   "flicks_per_second": 705600000,
   "what": "one commit holding a text with an empty block and an inline span, three small objects that refer to one another, an asset of sixteen bytes, a clock from second 2 to second 8, and an object whose `marks` holds an anchor of every kind",
   "extents": "the asset's bytes: [0, 16]. The clock's t: [start, end] = [2 s, 8 s]. The object named by `unknown` is of a type this document does not define, so its axis w has no known extent",
@@ -2321,26 +2366,26 @@
  "published_timeline": {
   "made_from": "timeline.ufx",
   "file": "published-timeline.ufx",
-  "length": 3778,
-  "root_hash": "43649a094b329c0f8d7c29c4ee36109378ab444ff070ce6c22e50509c88fbaa4",
+  "length": 3830,
+  "root_hash": "c9525c8b62b298b4509ee7aee7333c4a71dc7cb3b5511428b1156c6e245676e8",
   "content": [
    "04691c662e578f872ad165a3b85fa09defeb7d8fa14fd719bf0090eb4c5ec75d",
+   "16232a7f251edecc4ace23b50b4bb261ebb3de3044296f2ed3e8127ef2237662",
    "29240c6b113044c0fbe6bd73e1b8253e55c55b3fd7b589a3cfe9b2f7b6621235",
-   "42369cca999a4416092e1865e39684573de4352c0d65a59d2a2baf15f8f6eaf4",
    "6179453f2d667062ef420f25bd4be314eba4ab7db9f440ba2085ffe9b93d4635",
    "c8c0057d2a2748c4f96d275aeb8eafbf249ce3ad40669b7988bbe91c75d37cb3",
    "cd0f4955e7f2cfe2ec23c21feffed7273029c9118ebe740ee0643d34ad9779ed"
   ],
   "attribution": [
-   "032be0a5c110db1d6e3f87564c8c084f9a6dfcfaa7c52430728fc6fde88fa2b1",
    "42a101a235cf2dac723d1d3a6049f124c1847c81f1300ecb62c13e2b79e63855",
-   "43649a094b329c0f8d7c29c4ee36109378ab444ff070ce6c22e50509c88fbaa4",
    "65a822e4a78070624105ae84af9ef8af74936461841508d80ea05b95bf0f14b9",
+   "69e2c8531244d8316a6c61183fdfc3dff9bab41b9187977c6241b067265dbdd2",
    "6e17e33622b38441f0276abeadf07a809be6f92b75cb45500c14f03ebed05cc0",
    "8461548d0e901d2b63f12ca31f4f25a5ff11d42daa2caaec630cf3de6097794f",
-   "9f0486e7a87cf210e0bfbfe0978b0cb7ad65559832389813a857cbb9f0e339b4"
+   "9f0486e7a87cf210e0bfbfe0978b0cb7ad65559832389813a857cbb9f0e339b4",
+   "c9525c8b62b298b4509ee7aee7333c4a71dc7cb3b5511428b1156c6e245676e8"
   ],
-  "working_history_records": 20,
+  "working_history_records": 21,
   "content_is": "the current object map; the universe object, the clock, the two takes and the caption. The object holding the marks is not reachable from the universe object and is not live",
   "attribution_is": "the four commits; the changes d4, d6 and d7, which the clock's current revision names in `by` or in a run of `seq`. The change d5 only removed elements, so nothing present names it: it is working history, and its revision is withheld although its commit names it",
   "a_reader_of_the_published_copy": {

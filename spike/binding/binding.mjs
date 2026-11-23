@@ -75,7 +75,10 @@ export async function start(wasmBytes, measure, inflate, clock = {}) {
     input: event => call(ex.input, event),          // one input event; gives the effects
     envelope: parts => call(ex.envelope, parts),    // the web envelope of its parts: { text } or { refused }
     print: id => { const p = ex.print(give(id)); return mem().slice(p, p + ex.out_len()); },
-    query: q => { const b = encode(q); const p = ex.query(give(b), b.length); return decode(mem().slice(p, p + ex.out_len())); },
+    // a projection, as the text of Appendix B; the three below it read that text and ask nothing else of the kernel
+    project: q => { const b = encode(q); const p = ex.project(give(b), b.length); return decode(mem().slice(p, p + ex.out_len())); },
+    commits() { return commitsOf(this.project({ name: 'history', full: true })); },
+    layers(history = true) { return layersOf(this.project({ name: 'leaving', history })); },
     sample: params => { const q = encode(params); const p = ex.sample(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); },
     // for the envelope spike (spike/envelope/PLAN.md): each takes and gives values, and does nothing else
     openTools: pack => ex.open_tools(give(pack), pack.length) === 1,
@@ -124,3 +127,16 @@ export function textAt(list, x, y, want = () => true, slop = 10) {
   for (const [it, x0, y0, x1, y1] of boxes(list)) { if (!want(it)) continue; const dy = Math.max(y0 - y, 0, y - y1), dx = Math.max(x0 - x, 0, x - x1); if (dy <= slop && dy * 1e4 + dx < d) { d = dy * 1e4 + dx; best = it; } }
   return best;
 }
+
+// ---- reading a projection's text (SPEC-PLAYER Appendix B), for tests: the records, each a map from `is` and from each field's name ----
+export function records(text) {
+  const value = v => { try { return JSON.parse(v); } catch { return v[0] === '[' ? (v.length > 2 ? v.slice(1, -1).split(',') : []) : v; } };
+  return String(text).split('\n').slice(1, -2).map(line => { const toks = []; let cur = '', quoted = false, esc = false;
+    for (const ch of line) { if (esc) esc = false; else if (ch === '\\' && quoted) esc = true; else if (ch === '"') quoted = !quoted; if (ch === ' ' && !quoted) { toks.push(cur); cur = ''; } else cur += ch; }
+    toks.push(cur); const r = { is: toks[0] }; for (const t of toks.slice(1)) { const i = t.indexOf('='); r[t.slice(0, i)] = value(t.slice(i + 1)); } return r; });
+}
+const bare = x => String(x).replace(/^[a-z]:/, '');
+// the commits of a universe, newest first, from `history` asked with `full`: { commit, change, height }
+export function commitsOf(text) { const rs = records(text).filter(r => r.is === 'change'); return rs.map((r, i) => ({ commit: bare(r.commit), change: r.id === 'withheld' ? null : bare(r.id), height: rs.length - 1 - i })); }
+// what `leaving` says of each layer: { content, attribution, history: { included, objects, bytes, changes, ... }, lacks }
+export function layersOf(text) { const rs = records(text), out = { lacks: rs.find(r => r.is === 'lacks') }; for (const r of rs.filter(r => r.is === 'layer')) out[r.name] = r; return out; }

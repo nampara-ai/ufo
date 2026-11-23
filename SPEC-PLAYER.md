@@ -518,6 +518,7 @@ needs no model.
 | --- | --- |
 | a universe | its roots and faces; the universes it nests or links to; its other objects, grouped by type |
 | a group, clock or surface | its children, in order |
+| a timeline, or a stretch of one | what plays in it (§4.5): each play that covers some of the stretch, anchored to what it plays at the times of its own that fall there, labeled by its key, its size the time it covers |
 | a Portal | what it presents, followed into the universe it is in |
 | a text, or a region of one | its sections: of the heading levels within it, the shallowest that has two or more headings, each section running to the next heading of that level or above. Where there are no headings, its blocks |
 | a data object | its tables and columns, and its rows in ranges |
@@ -788,11 +789,11 @@ detectable.
 
 | Value | Written as |
 | --- | --- |
-| object identity | `o:` and the shortest prefix of its lowercase hexadecimal, of at least 8 digits, that is unique among object identities in the universe |
+| object identity | `o:` and the shortest prefix of its lowercase hexadecimal, of at least 8 digits, that is unique among object identities in the universe; whole, like every hash, where the projection is asked with `full` |
 | hash | the same rule among hashes of its kind, with `r:` for a revision, `c:` for a commit, `b:` for a blob |
 | element | the object identity of the change that inserted it, a dot, and its number: `o:d2c417e9.12` |
 | region | `axis=[low,high]` for sequence and continuous axes, `axis=[key,key]` for keyed ones; several axes are several fields |
-| anchor | `o:…` then, if any, its regions, then `r:…`, with `/` between them: `o:3f9a12c4/chars=[1042,1187]/r:a81f3320` |
+| anchor | `o:…` then, if any, its regions, then `r:…`, with `/` between them: `o:3f9a12c4/chars=[1042,1187]/r:a81f3320`. Each region is written as it resolves at the commit (§4.3): `axis=detached` where it is detached; `axis=unclipped[low,high]` where the extent is not known; on a keyed axis the keys that are present. Of an object that has been dropped: `o:…/detached` |
 | integer, float | decimal; floats with the fewest digits that round-trip |
 | time | milliseconds as an integer; clock times in flicks with the suffix `f` |
 | text | a JSON string (RFC 8259) |
@@ -834,7 +835,7 @@ passed back, exactly as written, as an argument to another projection.
 | `face` | `id` `kind` (`sampled`, `carried`, `transmuted`) `status` `medium` `label` |
 | `lacks` | `history` (boolean) `blobs` (count) |
 | `part` | `at` (an anchor) `type` `label` (its label, heading or name, or the first 60 characters of a block) `size` `changed` (time) `by` `basis` [`parts` (count)] [`derived` (status)] [`summary` (the text of its line) `summary-status`] |
-| `source` | `at` (an anchor) `status` |
+| `source` | `at` (an anchor: a pin of `from.sources`, as it resolves now) `status` (`current`, `stale` or `detached`, §4.4) |
 | `made` | `how` `change` `basis` [`by`] [`model`] [`tool`] [`asked`] [`prompt` (its text, or `withheld`)] [`parameters`] |
 | `object` | `id` `type` `rev` (number) `r` (revision hash) `by` |
 | `prop` | `key` then `value`, or `len` and `kind` when large |
@@ -848,7 +849,7 @@ passed back, exactly as written, as an argument to another projection.
 | `text` | `at` (an anchor) `chars` (count) `s` |
 | `region` | `at` (an anchor) |
 | `hit` | `at` (an anchor) `type` `s` (up to 80 characters around the match) |
-| `change` | `id` `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of object identities) [`note`] |
+| `change` | `id` `commit` (the commit it made) `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of object identities) [`note`] |
 | `op` | `op` `obj` [`key`] [`after`] [`del`] then `old` and `new`, each a value; where the change's `work` is withheld, one record `op withheld` |
 | `check` | `rule` (a label of this document) `scope` `result` (`pass`, `fail`, `skipped`) [`reason`] |
 | `layer` | `name` (`content`, `attribution`, `history`) `included` (boolean) `objects` (count) `bytes` `actors` (list) `models` (list) `changes` (count) `first` `last` (times) |

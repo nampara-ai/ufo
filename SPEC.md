@@ -1956,8 +1956,6 @@ throwaway kernel on the packs above:
 | File | Contents |
 | --- | --- |
 | `provisional/composition.json` | `compose.ufx` composed at a stated width with a stated, synthetic measure of text: every row and its items; the rows on each page; the plain-text face (§7.7, §8.3) |
-| `provisional/staleness.json` | three pins made at the first commit of `history.ufx`, and whether each is current, stale or detached at each later commit (§4.4) |
-| `provisional/layers.json` | for four packs, the layer of every record: content, attribution, working history (§13.3) |
 | `provisional/edits.json` | for the two edited packs: who is attributed with each stretch around the edit, and where the blocks lie |
 | `provisional/envelope.json` | the web envelope as a function of its parts (§13.2): one fixed case with its exact result, and seven cases that are refused |
 | `provisional/leaving.json` | for `edit-one-word.ufx`: what `leaving` says would travel for each of the two defaults, and the published copy (§13.3 **E12**, Appendix B) |
@@ -1971,12 +1969,12 @@ where the text did not decide what the kernel should do, and what it did.
 | File | Contents |
 | --- | --- |
 | `vectors/minimal.ufx` | a whole pack of 2599 bytes holding one commit: a universe object, a text reading "Hello, universe." with one paragraph span, a face, and the change that made them, with an index and a head |
-| `vectors/history.ufx` | a pack of 27649 bytes holding three commits, built to exercise what the first does not (below) |
+| `vectors/history.ufx` | a pack of 30192 bytes holding three commits, built to exercise what the first does not (below) |
 | `vectors/nested.ufx`, `vectors/linked.ufx` | one universe twice, of 4031 and 2391 bytes: with the records of a second universe that its Portal names, and without them (§1.8). The root hash is the same |
-| `vectors/timeline.ufx` | a pack of 11695 bytes holding four commits of one timeline (§4.5): ten seconds of time with three plays; two seconds cut from the middle; one second inserted; the start of a play cut |
-| `vectors/published.ufx` | `history.ufx` as it is published (§13.3): a pack of 9437 bytes holding its content and attribution layers, its seal, and an `absent` frame saying that working history is withheld |
-| `vectors/pins.ufx` | a pack of 7813 bytes holding one commit: a text with an empty block and an inline span, an asset, a clock, and an object holding an anchor of every kind (§4.2 to §4.4, §5.2) |
-| `vectors/published-timeline.ufx`, `vectors/published-nested.ufx` | `timeline.ufx` and `nested.ufx` as they are published (§2.5): 3778 and 2557 bytes |
+| `vectors/timeline.ufx` | a pack of 12482 bytes holding four commits of one timeline (§4.5): ten seconds of time with three plays; two seconds cut from the middle; one second inserted; the start of a play cut. Its last commit adds an object whose source is a pin to three seconds of it |
+| `vectors/published.ufx` | `history.ufx` as it is published (§13.3): a pack of 9541 bytes holding its content and attribution layers, its seal, and an `absent` frame saying that working history is withheld. A kernel that publishes `history.ufx` MUST produce these bytes, and likewise for the two below |
+| `vectors/pins.ufx` | a pack of 10245 bytes holding one commit: a text with an empty block and an inline span, an asset, a clock, an object holding an anchor of every kind, and an object whose sources are a pin for each case of the digest (§4.2 to §4.4, §5.2, §5.3) |
+| `vectors/published-timeline.ufx`, `vectors/published-nested.ufx` | `timeline.ufx` and `nested.ufx` as they are published (§2.5): 3830 and 2557 bytes |
 | `vectors/edit-one-word.ufx`, `vectors/edit-paragraph-start.ufx` | `compose.ufx` after edits made through a kernel's gate: one word changed; text typed at the very start of a paragraph (§1.7 **L1**, §5.1) |
 | `vectors/edit-positioned.ufx` | `compose.ufx` after text was typed in front of a word it shares letters with, reported by position (§9.3 **H8**) |
 | `vectors/edit-one-word-published.ufx` | `edit-one-word.ufx` as it is published: 5650 bytes against 14667, the same root hash (§2.5, §13.3) |
@@ -1987,13 +1985,14 @@ where the text did not decide what the kernel should do, and what it did.
 `history.ufx` extends the first pack. Its second commit, by a model,
 replaces a word in the text (a `splice` that removes eight elements and
 inserts five), replaces a property (a `set` with `old`), adds an asset
-whose bytes are a blob, a clock, and forty small objects, so that the
+whose bytes are a blob, a clock, forty small objects, and an object whose
+sources are three pins made at the first commit, so that the
 object map gains an interior node; one node frame and three chunk frames are
 compressed, and two properties are kept outside their nodes. A frame of unknown
 kind precedes it and a seal follows it, with its own head. Its third
 commit, by a person, appends a character, inserts and removes another,
-shortens the clock, drops the asset and records a
-decision. The file ends with a chain of two indexes and four heads.
+shortens the clock, drops the asset, records a
+decision, and adds an object whose sources are two pins made then. The file ends with a chain of two indexes and four heads.
 
 | Group | What is fixed |
 | --- | --- |
@@ -2005,7 +2004,7 @@ decision. The file ends with a chain of two indexes and four heads.
 | `value_kept_outside` | a value, the blob that holds it, the indirect that names it, and the veiled form with its salt and opening (§1.4) |
 | `object_maps` | hashes of the root nodes of maps with 1, 32, 33 and 9 000 entries: a leaf, the largest leaf, the smallest interior node, and three levels |
 | `minimal_pack` | every record of `minimal.ufx` with its offset and hash; the index; the head; the root hash. Removing its last byte leaves no valid head |
-| `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its `seq`, and what its span resolves to; the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; ten anchors resolved at the last commit, on sequence and continuous axes, including a replaced word, a point at a removed element, clipping, and a dropped object |
+| `history_pack` | for each of the three commits: root hash, object-map root, number of objects, the text, its `seq`, and what its span resolves to; under `pinned`, the state — current, stale or detached — of each stored pin at each commit, which `why` must report (§4.4, §5.3); the blob; the seal with the exact bytes signed; four truncations of the file with the state each recovers to; ten anchors resolved at the last commit, on sequence and continuous axes, including a replaced word, a point at a removed element, clipping, and a dropped object |
 | `resolve_sequence` | a sequence with removed elements, and nine regions resolved against it (§4.3) |
 | `merge_readiness` | two writers diverging from one text, with insertions at the same place, inside their own earlier insertions and after an element the other removes; the order of elements and the text, identical whichever writer's operations are taken first (§1.10) |
 | `digests` | two pins at the last commit of `history.ufx`, each with its salt, its covered value as bytes, the objects followed and the digest (§4.4): a passage of the text with the span that touches it, and the face object, whose ref to the text is followed |
@@ -2024,7 +2023,7 @@ Three values, for a first check without opening the files:
 | --- | --- |
 | Hash of the chunk `abc` | `1e18834c426d00e57788444cb3ccd62c771b420c095bb0c4e040a8c122c4570d` |
 | Root hash of `minimal.ufx` | `804ec174f46f773d36c1fe7318c999ff21c338b735cb4e5068224725b9cce8bf` |
-| Root hash of `history.ufx` | `dc47050bc643c94005a4653cca968819a6644cc4f9c337a4d447337e9d3e1806` |
+| Root hash of `history.ufx` | `70c8641585bfdd2c1301c2fbe5fc98fdc4f932bb849052ad793482476fda46fa` |
 
 How far these have been checked. For version 0.8 two independent readers
 were written from this document alone, one after the other, each with

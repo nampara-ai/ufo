@@ -391,7 +391,7 @@ pub fn set(pk: &mut Pack, id: Id, path: &[&str], val: Option<V>, with: &[u8], wh
     op.extend(val.clone().map(|v| ("val", v)));
     set_in(&mut p1, path, val.clone()).ok_or("the path passes through a value that is not a map")?;
     set_in(&mut raw_p, path, val).ok_or("the path passes through a value that is not a map")?;
-    let recs = if with.is_empty() { Vec::new() } else { Pack::scan(with.to_vec()).and_then(Pack::open).ok_or("what is to be nested is not a pack")?.records() };
+    let recs = if with.is_empty() { Vec::new() } else { Pack::scan(with.to_vec()).and_then(Pack::open).ok_or("what is to be nested is not a pack")?.framed() };
     finish(pk, &o, &raw, vec![map(op)], &p1, o.seq.as_ref(), raw_p, raw.get("seq").cloned(), recs, who, time, random)
 }
 /// What every change through the gate comes to, whatever it does to its one object: the operations

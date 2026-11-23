@@ -295,6 +295,6 @@ async function boot() {
   if (!ex.ready()) throw 0;
   player.hidden = false; $('#ufo-static').hidden = true;
   view();
-  globalThis.ufo = { drawn: () => shown, query: q => got(call('query', q)) };   // for looking only: neither changes anything
+  globalThis.ufo = { drawn: () => shown, project: q => got(call('project', q)) };   // for looking only: neither changes anything
 }
 boot().catch(() => { player.hidden = true; $('#ufo-static').hidden = false; $('#ufo-fail').hidden = false; });

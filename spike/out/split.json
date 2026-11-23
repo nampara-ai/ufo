@@ -1,0 +1,44 @@
+{
+ "whole": {
+  "cargo": 281480,
+  "opt": 242208,
+  "deflate": 113440,
+  "out": "/home/user/ufo/spike/tools/../kernel/target/split-whole/wasm32-unknown-unknown/release/ufo_spike_kernel.opt.wasm"
+ },
+ "noPrint": {
+  "cargo": 268914,
+  "opt": 231540,
+  "deflate": 108393,
+  "out": "/home/user/ufo/spike/tools/../kernel/target/split-noprint/wasm32-unknown-unknown/release/ufo_spike_kernel.opt.wasm"
+ },
+ "noAgent": {
+  "cargo": 272898,
+  "opt": 235061,
+  "deflate": 110390,
+  "out": "/home/user/ufo/spike/tools/../kernel/target/split-noagent/wasm32-unknown-unknown/release/ufo_spike_kernel.opt.wasm"
+ },
+ "base": {
+  "cargo": 260342,
+  "opt": 224289,
+  "deflate": 105266,
+  "out": "/home/user/ufo/spike/tools/../kernel/target/split-base/wasm32-unknown-unknown/release/ufo_spike_kernel.opt.wasm"
+ },
+ "printer": {
+  "cargo": 69749,
+  "opt": 65101,
+  "deflate": 31723,
+  "out": "/home/user/ufo/spike/tools/../kernel/target/split-whole/wasm32-unknown-unknown/release/ufo_spike_kernel.printer.opt.wasm"
+ },
+ "agent": {
+  "cargo": 115344,
+  "opt": 107063,
+  "deflate": 50142,
+  "out": "/home/user/ufo/spike/tools/../kernel/target/split-whole/wasm32-unknown-unknown/release/ufo_spike_kernel.agent.opt.wasm"
+ },
+ "opening": {
+  "cargo": 58754,
+  "opt": 54825,
+  "deflate": 26731,
+  "out": "/home/user/ufo/spike/tools/../kernel/target/split-whole/wasm32-unknown-unknown/release/ufo_spike_kernel.open.opt.wasm"
+ }
+}

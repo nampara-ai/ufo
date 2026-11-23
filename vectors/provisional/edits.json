@@ -12,13 +12,13 @@
    "what": "compose.ufx after one edit through the gate: in the paragraph that now lies at positions 423 to 537 (half-open), the word \"ledger\" became \"books\". Exactly the five new characters are attributed to the new change; what stands before and after keeps its first attribution",
    "commits": [
     {
-     "change": "7095badf04294e7398bde2072c51769b",
      "commit": "07964126cb8f3b6902cfbbfe4ab1deb4c9b186758d99376d0d8ad5146caf35c3",
+     "change": "7095badf04294e7398bde2072c51769b",
      "height": 1
     },
     {
-     "change": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c",
      "commit": "092acf577819a704d5106c685ec0315f76a87d30ec3b79658b722c3d9ec448c7",
+     "change": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c",
      "height": 0
     }
    ],
@@ -58,28 +58,28 @@
    "what": "a later state of the same pack, five commits in all. The change at height 2 typed \"Truly, \" at the very start of the paragraph beginning \"Nothing here is a forecast\"; the change at height 4, the last, typed \"Now: \" at the very start of the text. The change at height 2 holds the splice and two sets that move the boundary between the two block spans to before the first new element, so the new text lies in the paragraph it was typed in",
    "commits": [
     {
-     "change": "9fc4e90e33587da2c7ec11365b80a5ca",
      "commit": "78e414e3082fbcc2a71cb8ed79932b8e7314e9510e464f26378deaea5180ccad",
+     "change": "9fc4e90e33587da2c7ec11365b80a5ca",
      "height": 4
     },
     {
-     "change": "3a5f84a9cef3183d6287acd1f61b4065",
      "commit": "1dbdd321a63814a20d4bfb87fddacd1630f2a0778fdb62f93e741b9b61611690",
+     "change": "3a5f84a9cef3183d6287acd1f61b4065",
      "height": 3
     },
     {
-     "change": "d5fa1f44698eb3d8fd22476c91b6db00",
      "commit": "bae409da172fd7b2017c7cc3c02a72405f7d5add8c73a2ad1aec4dbbd26d1168",
+     "change": "d5fa1f44698eb3d8fd22476c91b6db00",
      "height": 2
     },
     {
-     "change": "7095badf04294e7398bde2072c51769b",
      "commit": "07964126cb8f3b6902cfbbfe4ab1deb4c9b186758d99376d0d8ad5146caf35c3",
+     "change": "7095badf04294e7398bde2072c51769b",
      "height": 1
     },
     {
-     "change": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c",
      "commit": "092acf577819a704d5106c685ec0315f76a87d30ec3b79658b722c3d9ec448c7",
+     "change": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c",
      "height": 0
     }
    ],
@@ -120,13 +120,13 @@
    "what": "compose.ufx after one edit through the gate, made from positioned reports: with the editing surface on the paragraph that began \"Nothing here is a forecast\" (positions 662 to 763, half-open), the six characters of \"Note: \" were typed one at a time at its very start. A comparison of the paragraph before and after cannot say where they went (\"Note: \" before \"Nothing\" reads the same as \"e: Not\" after \"Not\"); the positions can. Exactly the six characters typed are attributed to the new change, at the start of the paragraph, and the two sets move the boundary between the two block spans so that they lie in the paragraph they were typed in",
    "commits": [
     {
-     "change": "7095badf04294e7398bde2072c51769b",
      "commit": "a4a5e8c2173b395f3d4ffaa26db2d5a274eab29102e6d8825fbeadea73c7ad88",
+     "change": "7095badf04294e7398bde2072c51769b",
      "height": 1
     },
     {
-     "change": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c",
      "commit": "092acf577819a704d5106c685ec0315f76a87d30ec3b79658b722c3d9ec448c7",
+     "change": "7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c",
      "height": 0
     }
    ],

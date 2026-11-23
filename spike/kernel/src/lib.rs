@@ -136,12 +136,12 @@ fn print_module(_: &Pack, _: &H, _: &Id) -> Option<Vec<u8>> {
 }
 #[cfg(not(feature = "cut-print"))]
 use print::print as print_module;
-#[cfg(feature = "cut-query")]
+#[cfg(feature = "cut-project")]
 fn answer(_: &Pack, _: &V) -> Option<V> {
     None
 }
-#[cfg(not(feature = "cut-query"))]
-use query::query as answer;
+#[cfg(not(feature = "cut-project"))]
+use project::project as answer;
 
 static mut PACK: Option<Pack> = None; // the open pack
 static mut SCANNED: Option<Pack> = None; // a pack given to `open`, until `ready`
@@ -276,9 +276,9 @@ pub unsafe extern "C" fn print(p: *const u8) -> *const u8 {
     OUT = PACK.as_ref().and_then(|pk| print_module(pk, &pk.head, &id)).unwrap_or_default();
     OUT.as_ptr()
 }
-/// Answers a query, an encoded map with `q` naming it. Null if it cannot be answered.
+/// A projection (Appendix B), as its text: an encoded map with `name` and its arguments. Null if it has no answer.
 #[no_mangle]
-pub unsafe extern "C" fn query(p: *mut u8, n: usize) -> *const u8 {
+pub unsafe extern "C" fn project(p: *mut u8, n: usize) -> *const u8 {
     let q = decode(&Vec::from_raw_parts(p, n, n.max(1))).unwrap_or(V::Null);
     OUT = encode(&PACK.as_ref().and_then(|pk| answer(pk, &q)).unwrap_or(V::Null));
     OUT.as_ptr()

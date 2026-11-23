@@ -236,6 +236,12 @@ receiving decides the default.
   element identities and `origin.sources` never point into withheld
   records (§5.4). It cannot run the conservation check on a change whose
   `work` is withheld, and says so (**L3**).
+  A copy for outside readers is written as a pack of its own: each record
+  that travels, once, in the order and the frame it had; the seals; one
+  `absent` frame; one index; one head. A frame of a kind its writer does
+  not know is not carried into it, since what leaves is what can be
+  shown (**E12**). A frame is carried as it stands, so that a compressed
+  record stays compressed and a writer needs no compressor.
 - **[E11] Withheld is not missing.** A reader MUST present a withheld record
   as withheld by the sender — "prompt withheld" — and never as damaged,
   absent by accident, or nonexistent.

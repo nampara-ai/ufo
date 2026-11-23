@@ -11,7 +11,7 @@ const title0 = flag('title'), toolsPath = flag('tools'), date = flag('date') || 
 const [packPath, outPath] = args; if (!outPath) { console.error('usage: make.mjs <pack> <out.ufx.html> [--title T] [--tools tools.ufx] [--bare] [--date YYYY-MM-DD] [--pack out.ufx]'); process.exit(2); }
 const open = async pack => { const k = await start(kernelWasm(), (piece, s) => ({ adv: [...s].length * piece.size / 2, asc: piece.size * 0.8, desc: piece.size * 0.2 }), b => zlib.inflateRawSync(b)); if (!await k.open(pack)) throw Error('the pack does not open'); return k; };
 let pack = new Uint8Array(fs.readFileSync(packPath)), k = await open(pack);
-const carries = /^component role=tools /m.test(k.query({ q: 'project', name: 'expand' }));
+const carries = /^component role=tools /m.test(k.project({ name: 'expand' }));
 if (!bare && !carries) { pack = await withTools(pack, { time: Date.parse(date), ...(toolsPath ? { tools: fs.readFileSync(toolsPath) } : {}) }); k = await open(pack); }
 if (packOut) fs.writeFileSync(packOut, pack);
 // the static face: the nodes of the primary face as markup, from the kernel. The title, unless given: the first line of the plain-text face

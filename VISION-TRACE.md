@@ -115,7 +115,7 @@ by no vector.
 | --- | --- | --- | --- |
 | Anchors, resolved without history | §4.2, §4.3 | Two independent readers of the current form. The second, from the revised text, resolved an anchor of every kind in `pins.ufx`: sequence, continuous inside, clipped, touching and outside an extent, of unknown extent, keyed, a point | **Tested.** Two differently written boundaries with nothing between them are detached by the letter of the rule, which both readers followed and both questioned |
 | Time that is edited: a timeline | §4.5, §1.7 | `timeline.ufx`, four commits: a cut from the middle, an insertion, the start of a play cut. Generator, kernel and two independent readers agree on every value | **Tested** for resolution. Nothing has played |
-| Pins and staleness | §4.4 | Ten digests and three pins across three commits, on which generator, kernel and the second independent reader agree | **Tested** for what the vectors reach. The second reader listed eleven small choices in the rule that no vector reaches |
+| Pins and staleness | §4.4 | Thirteen pins stored in three vector packs as the sources of derived objects; their states at each commit, read through `why`, on which generator, kernel and the second independent reader agree | **Tested** for what the vectors reach. The second reader listed eleven small choices in the rule that no vector reaches |
 | Projections for agents | §10.1, Appendix B | Twelve projections of real packs as text, from the kernel | **Tested in miniature.** No model has read them |
 
 ## Faces

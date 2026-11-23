@@ -431,17 +431,31 @@ impl Pack {
 // ---- a copy that withholds (2.5, TRAVEL 13.3) ----
 impl Pack {
     /// Every record held, decoded, in the order of the pack: for nesting this pack's universe in another (1.8).
-    pub fn records(&self) -> Vec<(u8, Vec<u8>)> {
-        let (mut out, mut off) = (Vec::new(), 8);
-        while let Some(f) = self.frame(off).filter(|_| off < self.d.len() - self.unread_tail) {
-            out.extend(self.record_at(off));
-            off = f.next;
+    /// Every record of the pack as it is framed, each after the hash the pack's own indexes give it (written
+    /// here as kind 0): for carrying records into another pack without reading them. A record that is
+    /// compressed is carried compressed; whoever reads it later checks it against its hash, as always.
+    pub fn framed(&self) -> Vec<(u8, Vec<u8>)> {
+        let mut ents: Vec<(H, usize)> = self.after.0.clone();
+        let (mut at, mut hops) = (self.index, 0);
+        while at != 0 && hops < 64 {
+            let Some(f) = self.frame(at).filter(|f| f.kind == 4 && f.len >= 24) else { break };
+            let p = &self.d[f.start..f.next];
+            for i in 0..le(&p[..8]).min((p.len() - 24) / 40) {
+                ents.push((p[24 + 40 * i..56 + 40 * i].try_into().unwrap_or([0; 32]), le(&p[56 + 40 * i..64 + 40 * i])));
+            }
+            at = le(&p[8..16]);
+            hops += 1;
         }
-        out
+        ents.iter().filter_map(|(h, off)| {
+            let f = self.frame(*off).filter(|f| f.kind == 1 || f.kind == 2)?;
+            let mut b = h.to_vec();
+            b.extend(&self.d[*off..f.next]);
+            Some((0, b))
+        }).collect()
     }
     /// A new pack of the records `keep` says, each once, in the order and the frames they have here
-    /// (E10: withholding removes records and nothing else); then the seal frames and the frames of
-    /// kinds not known (P1); an `absent` frame saying that history is withheld, with whatever an
+    /// (E10: withholding removes records and nothing else); then the seal frames (a frame of a kind
+    /// not known is not carried out); an `absent` frame saying that history is withheld, with whatever an
     /// `absent` frame here already said; one index of everything; and a head naming the same commit.
     pub fn published(&self, keep: &dyn Fn(&H) -> bool) -> Option<Vec<u8>> {
         let (mut d, mut ents, mut later, mut absent) = (SIG.to_vec(), Map::new(), Vec::<u8>::new(), Vec::new());
@@ -460,7 +474,8 @@ impl Pack {
                     Some(V::M(m)) => m,
                     _ => absent,
                 },
-                _ => later.extend(&self.d[off..f.next]),
+                3 => later.extend(&self.d[off..f.next]),
+                _ => {} // a frame of a kind this kernel does not know is not carried out: what leaves is what can be shown (E12)
             }
             off = f.next;
         }
@@ -521,11 +536,13 @@ impl Pack {
         self.reopen();
     }
     fn write(&mut self, recs: &[(u8, Vec<u8>)], commit: &H) -> Option<()> {
+        let mut wrote: Vec<(usize, H)> = Vec::new(); // what is appended here, by offset: a frame carried as it stood is not read
         for (kind, bytes) in recs {
-            let h = sha256(&[&[*kind], bytes]);
-            if self.record(*kind, &h).is_none() {
-                self.after.entry(h, self.d.len());
-                frame_into(&mut self.d, *kind, bytes);
+            let (h, off): (H, usize) = (if *kind == 0 { bytes.get(..32)?.try_into().ok()? } else { sha256(&[&[*kind], bytes]) }, self.d.len());
+            if self.find(&h).is_none() {
+                self.after.entry(h, off);
+                wrote.push((off, h));
+                if *kind == 0 { self.d.extend(&bytes[32..]) } else { frame_into(&mut self.d, *kind, bytes) }
             }
         }
         let commit_at = self.find(commit)?;
@@ -544,7 +561,7 @@ impl Pack {
         while off < at {
             let f = self.frame(off)?;
             if f.kind == 1 || f.kind == 2 {
-                ents.push((self.hash_at(off)?, off)); // a record that cannot be read would be hidden: refuse
+                ents.push((wrote.iter().find(|w| w.0 == off).map(|w| w.1).or_else(|| self.hash_at(off))?, off)); // a record that cannot be read, and was not carried in just now, would be hidden: refuse
             }
             off = f.next;
         }

@@ -467,3 +467,17 @@ A trial that put the five questions of the vector harness behind a build
 feature showed that nothing else in the kernel yet calls the timeline,
 the continuous extent or the digest: they are reached only by the
 harness. They are parts of the format and stay counted.
+
+## One of everything (2026-11-23)
+
+| | After `wasm-opt -Oz` | Raw DEFLATE |
+| --- | ---: | ---: |
+| After the simplification pass | 248 575 | 116 026 |
+| One sequence resolver (runs; the element-by-element one removed) | 248 597 | 116 235 |
+| No second door: `query` removed; anchors of every kind, pin states and what plays at a moment are answered by projections | 240 826 | 112 766 |
+| Frames carried as they stand into another pack (for the tools, compressed by the build tooling) | 242 143 | 113 359 |
+| The text of a projection made only where text is asked for | 242 208 | 113 440 |
+
+One resolver cost 209 bytes. Removing the second door saved 3 469 while
+adding three things the projections lacked. The kernel as a base and
+components is measured in `SPLIT.md`.

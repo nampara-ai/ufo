@@ -47,6 +47,7 @@ struct Cx<'a> {
     revs: Map<Id, H>,
     chain: Vec<(H, V)>,
     recs: Vec<V>,
+    full: bool,
 }
 fn json(s: &str) -> String {
     let mut o = String::from("\"");
@@ -64,8 +65,11 @@ fn json(s: &str) -> String {
     o.push('"');
     o
 }
-fn prefix(h: &[u8], others: &mut dyn Iterator<Item = &[u8]>) -> String {
+fn prefix(h: &[u8], others: &mut dyn Iterator<Item = &[u8]>, whole: bool) -> String {
     let full = hex(h);
+    if whole {
+        return full;
+    }
     let all: Vec<String> = others.filter(|o| *o != h).map(hex).collect();
     let mut n = 8;
     while n < full.len() && all.iter().any(|o| o[..n] == full[..n]) {
@@ -75,13 +79,13 @@ fn prefix(h: &[u8], others: &mut dyn Iterator<Item = &[u8]>) -> String {
 }
 impl<'a> Cx<'a> {
     fn o(&self, id: &Id) -> String {
-        cat!("o:", prefix(id, &mut self.revs.keys().map(|k| &k[..])))
+        cat!("o:", prefix(id, &mut self.revs.keys().map(|k| &k[..]), self.full))
     }
     fn r(&self, h: &H) -> String {
-        cat!("r:", prefix(h, &mut self.revs.0.iter().map(|e| &e.1[..])))
+        cat!("r:", prefix(h, &mut self.revs.0.iter().map(|e| &e.1[..]), self.full))
     }
     fn c(&self, h: &H) -> String {
-        cat!("c:", prefix(h, &mut self.chain.iter().map(|k| &k.0[..])))
+        cat!("c:", prefix(h, &mut self.chain.iter().map(|k| &k.0[..]), self.full))
     }
     fn obj(&self, id: &Id) -> Option<Obj> {
         self.pk.object(&self.commit, id)
@@ -103,20 +107,38 @@ impl<'a> Cx<'a> {
             V::Tag(n, x) => cat!("{\"$tag", n, "\":", self.jv(x), "}"),
         }
     }
-    /// An anchor as projections write one: the identity, its regions as positions, the revision.
+    /// An anchor as projections write one, resolved against the commit (4.3): the identity; each region as it
+    /// resolves, or `detached`; the revision. A sequence region is two positions; a continuous one is clipped to
+    /// the extent, or marked `unclipped` where the extent is not known; a keyed one is the keys that are present.
     fn anchor(&self, a: &V) -> String {
         let Some(id) = a.get("o").and_then(|o| o.id()) else { return String::new() };
         let mut s = self.o(&id);
-        let o = self.obj(&id);
-        if let (Some(V::M(axes)), Some(o)) = (a.get("a"), &o) {
+        let Some(o) = self.obj(&id) else { s.push_str("/detached"); return s };
+        if let Some(V::M(axes)) = a.get("a") {
             for (ax, reg) in axes {
-                match o.seq.as_ref().and_then(|q| q.get(ax)).map(|q| runs(q)).and_then(|rs| region(&rs, reg)) {
-                    Some((lo, hi)) => put!(s; "/", ax, "=[", lo, ",", hi, "]"),
-                    None => put!(s; "/", ax, "=detached"),
+                put!(s; "/", ax, "=");
+                let l = reg.l();
+                match l.first().and_then(|k| k.s()) {
+                    Some("s") => match o.seq.as_ref().and_then(|q| q.get(ax)).map(|q| runs(q)).and_then(|rs| region(&rs, reg)) {
+                        Some((lo, hi)) => put!(s; "[", lo, ",", hi, "]"),
+                        None => s.push_str("detached"),
+                    },
+                    Some("c") => match extent(&o, ax, reg) {
+                        (None, _) => s.push_str("detached"),
+                        (Some((lo, hi)), clipped) => {
+                            let num = |x: f64| if matches!(l.get(1), Some(V::Int(_))) { V::Int(x as i64) } else { V::F(x) };
+                            put!(s; if clipped { "" } else { "unclipped" }, "[", self.jv(&num(lo)), ",", self.jv(&num(hi)), "]");
+                        }
+                    },
+                    _ => {
+                        let present: Vec<&str> = l.iter().skip(1).filter_map(|k| k.s()).filter(|k| o.p.get(ax).map_or(false, |m| m.get(k).is_some())).collect();
+                        if present.is_empty() { s.push_str("detached") } else { put!(s; "[", present.join(","), "]") }
+                    }
                 }
             }
         }
-        if let Some(o) = &o { s.push('/'); s.push_str(&self.r(&o.rev)); }
+        s.push('/');
+        s.push_str(&self.r(&o.rev));
         s
     }
     /// An anchor to an object at its revision, with a region of positions on one axis if one is given: one value, written with no space.
@@ -254,22 +276,41 @@ fn runs_of(cx: &mut Cx, axis: &str, rs: &[Run], lo: u64, hi: u64) {
 }
 fn why(cx: &mut Cx, id: &Id, lo: Option<u64>, hi: Option<u64>) -> Option<()> {
     let o = cx.obj(id)?;
-    let rs = runs(o.seq.as_ref()?.get("chars")?);
-    let n: u64 = rs.iter().filter(|r| r.live).map(|r| r.count).sum();
-    let (lo, hi) = (lo.unwrap_or(0), hi.unwrap_or(n).min(n));
-    let r = R::new("region").f("at", cx.at(&o, Some(("chars", lo, hi))));
-    cx.push(r);
-    runs_of(cx, "chars", &rs, lo, hi);
-    // decisions about the changes that wrote the region
-    let ids: Vec<Id> = cx.revs.keys().cloned().collect();
-    for c in ids {
-        let Some(p) = cx.change(&c) else { continue };
-        for d in p.get("decisions").map(|d| d.l()).unwrap_or(&[]) {
-            let Some(about) = d.get("about").and_then(|a| a.tag(REF)).and_then(|a| a.id()) else { continue };
-            if !covered(&rs, lo, hi).contains(&about) { continue; }
-            let r = R::new("decision").f("about", w(cx.o(&about))).f("verdict", w(d.get("verdict").and_then(|v| v.s()).unwrap_or(""))).f("who", d.get("who").map_or(V::Null, Cx::name)).f("change", w(cx.o(&c))).f("time", V::Int(cx.time(&c)));
+    let rs = o.seq.as_ref().and_then(|q| q.get("chars")).map(runs);
+    match &rs {
+        Some(rs) => {
+            let n: u64 = rs.iter().filter(|r| r.live).map(|r| r.count).sum();
+            let (lo, hi) = (lo.unwrap_or(0), hi.unwrap_or(n).min(n));
+            let r = R::new("region").f("at", cx.at(&o, Some(("chars", lo, hi))));
+            cx.push(r);
+            runs_of(cx, "chars", rs, lo, hi);
+            // decisions about the changes that wrote the region
+            let ids: Vec<Id> = cx.revs.keys().cloned().collect();
+            for c in ids {
+                let Some(p) = cx.change(&c) else { continue };
+                for d in p.get("decisions").map(|d| d.l()).unwrap_or(&[]) {
+                    let Some(about) = d.get("about").and_then(|a| a.tag(REF)).and_then(|a| a.id()) else { continue };
+                    if !covered(rs, lo, hi).contains(&about) { continue; }
+                    let r = R::new("decision").f("about", w(cx.o(&about))).f("verdict", w(d.get("verdict").and_then(|v| v.s()).unwrap_or(""))).f("who", d.get("who").map_or(V::Null, Cx::name)).f("change", w(cx.o(&c))).f("time", V::Int(cx.time(&c)));
+                    cx.push(r);
+                }
+            }
+        }
+        None => { let r = R::new("region").f("at", cx.at(&o, None)); cx.push(r); }
+    }
+    // of a derived object (5.3): each source, a pin, with its state now (4.4); and how it was made
+    if let Some(from) = o.p.get("from") {
+        for pin in from.get("sources").map(|x| x.l()).unwrap_or(&[]) {
+            let Some(a) = pin.tag(ANCHOR) else { continue };
+            let axis = match a.get("a") { Some(V::M(m)) => m.first().map(|(k, r)| (k.as_str(), r)), _ => None };
+            let now = a.get("o").and_then(|i| i.id()).zip(a.get("s").and_then(|x| x.b())).and_then(|(i, salt)| digest(cx.pk, &cx.commit, &i, axis, salt));
+            let status = match now { None => "detached", Some((d, _, _)) if a.get("d").and_then(|x| x.hash()) == Some(d) => "current", _ => "stale" };
+            let r = R::new("source").f("at", w(cx.anchor(a))).f("status", w(status));
             cx.push(r);
         }
+        let mut r = R::new("made").f("how", w(from.get("how").and_then(|h| h.s()).unwrap_or("")));
+        if let Some(by) = from.get("by").and_then(|b| b.tag(REF)).and_then(|b| b.id()) { r = r.more(cx.origin(&by)); }
+        cx.push(r);
     }
     Some(())
 }
@@ -287,10 +328,10 @@ fn covered(rs: &[Run], lo: u64, hi: u64) -> Vec<Id> {
 /// missing). So is a change whose own revision is withheld, of which the commit says only that it was.
 fn history(cx: &mut Cx, id: Option<&Id>) -> Option<()> {
     let chain = cx.chain.clone();
-    for (_, n) in &chain {
+    for (h, n) in &chain {
         let Some(cid) = n.get("change").and_then(|c| c.hash()).and_then(|c| cx.pk.node(&c)).and_then(|n| n.get("id").and_then(|i| i.id())) else {
             let wh = || w("withheld");
-            cx.push(R::new("change").f("id", wh()).f("time", wh()).f("actor", wh()).f("basis", w("unknown")).f("ops", wh()).f("touched", wh()));
+            cx.push(R::new("change").f("id", wh()).f("commit", w(cx.c(h))).f("time", wh()).f("actor", wh()).f("basis", w("unknown")).f("ops", wh()).f("touched", wh()));
             continue;
         };
         let Some(p) = cx.change(&cid) else { continue };
@@ -301,7 +342,7 @@ fn history(cx: &mut Cx, id: Option<&Id>) -> Option<()> {
         touched.dedup();
         if held && id.map_or(false, |id| !touched.contains(id)) { continue; }
         let og = p.get("origin");
-        let mut r = R::new("change").f("id", w(cx.o(&cid))).f("time", V::Int(cx.time(&cid))).f("actor", p.get("actor").and_then(|a| a.get("who")).map_or(V::Null, Cx::name))
+        let mut r = R::new("change").f("id", w(cx.o(&cid))).f("commit", w(cx.c(h))).f("time", V::Int(cx.time(&cid))).f("actor", p.get("actor").and_then(|a| a.get("who")).map_or(V::Null, Cx::name))
             .f("basis", w(og.and_then(|o| o.get("basis")).and_then(|b| b.s()).unwrap_or("unknown"))).opt("by", og.and_then(|o| o.get("by")).and_then(|b| b.s()).map(w));
         r = if held {
             r.f("ops", int(ops.len())).f("touched", V::L(touched.iter().map(|i| w(cx.o(i))).collect()))
@@ -420,6 +461,28 @@ fn expand_text(cx: &mut Cx, o: &Obj, lo: u64, hi: u64) -> Option<()> {
     }
     Some(())
 }
+/// 10.2: the outline of a stretch of a timeline (4.5): what plays in it. One part for each play that covers
+/// some of positions lo..hi (or the one position, where they are the same), anchored to what it plays at the
+/// times of its own that fall there: its `offset`, and the count on from the play's first element. Only
+/// elements inserted by the change that inserted that first element are the play's own (T3).
+fn expand_clock(cx: &mut Cx, o: &Obj, lo: u64, hi: u64) -> Option<()> {
+    let rs = runs(o.seq.as_ref()?.get("t")?);
+    let Some(V::M(plays)) = o.p.get("plays") else { return Some(()) };
+    for (key, pl) in plays {
+        let Some(reg) = pl.get("at").and_then(|a| a.tag(ANCHOR)).and_then(|a| a.get("a")).and_then(|a| a.get("t")) else { continue };
+        let (Some((a, b)), Some(first)) = (region(&rs, reg), reg.l().get(1).filter(|b| b.s().is_none()).map(|b| b.l())) else { continue };
+        let (from, to) = (a.max(lo), b.min(hi.max(lo + 1)));
+        if from >= to { continue; }
+        let (Some(c0), Some(n0)) = (first.first().and_then(|x| x.id()), first.get(1).and_then(|x| x.i()).zip(first.get(2).and_then(|x| x.i())).map(|(n, side)| n + side)) else { continue };
+        let own = |p: u64| element_at(&rs, p).filter(|e| e.0 == c0).map(|e| pl.get("offset").and_then(|o| o.i()).unwrap_or(0) + e.1 as i64 - n0);
+        let (Some(t0), Some(t1)) = (own(from), own(to - 1)) else { continue };
+        let Some(child) = pl.get("of").and_then(|x| x.tag(REF)).and_then(|x| x.id()).and_then(|i| cx.obj(&i)) else { continue };
+        let at = cat!(cx.o(&child.id), "/t=[", t0, ",", if hi > lo { t1 + 1 } else { t1 }, "]/", cx.r(&child.rev));
+        let r = part(cx, w(at), &child.ty, key, (to - from) as usize, Some(child.by), None);
+        cx.push(r);
+    }
+    Some(())
+}
 fn label_of(o: &Obj) -> String {
     for k in ["label", "name"] {
         if let Some(s) = o.p.get(k).and_then(|x| x.s()) { return s.into(); }
@@ -499,10 +562,12 @@ fn expand_universe(cx: &mut Cx) -> Option<()> {
     universe_parts(cx)
 }
 
-/// The records of a projection, and its header. `q` names it and gives its arguments.
-fn run(pk: &Pack, q: &V) -> Option<(String, Vec<V>)> {
+/// The records of a projection, in the context they were made in, and its header line. `q` names the
+/// projection and gives its arguments. The base of the kernel needs four of them, for the tools: `expand`
+/// of the universe, `history`, `why` and `leaving`. The others, and the text of any of them, are for agents.
+fn run<'a>(pk: &'a Pack, q: &V) -> Option<(Cx<'a>, String)> {
     let commit: H = q.get("commit").and_then(|c| c.s()).and_then(|s| crate::query::chain(pk).iter().map(|c| c.0).find(|h| hex(h) == s)).unwrap_or(pk.head);
-    let mut cx = Cx { pk, commit, revs: rev_map(pk, &commit), chain: chain(pk), recs: Vec::new() };
+    let mut cx = Cx { pk, commit, revs: rev_map(pk, &commit), chain: chain(pk), recs: Vec::new(), full: q.get("full") == Some(&V::Bool(true)) };
     let name = q.get("name")?.s()?;
     let id: Option<Id> = q.get("o").and_then(|o| o.s()).and_then(|s| cx.revs.keys().find(|k| hex(&k[..]) == s).cloned());
     let (lo, hi) = (q.get("lo").and_then(|x| x.i()).map(|x| x as u64), q.get("hi").and_then(|x| x.i()).map(|x| x as u64));
@@ -513,36 +578,49 @@ fn run(pk: &Pack, q: &V) -> Option<(String, Vec<V>)> {
     }
     if let Some(i) = &id {
         args = cat!(" ", cx.o(i));
-        if let (Some(a), Some(b)) = (lo, hi) { put!(args; "/chars=[", a, ",", b, "]"); }
+        if let (Some(a), Some(b)) = (lo, hi) { put!(args; "/", q.get("axis").and_then(|a| a.s()).unwrap_or("chars"), "=[", a, ",", b, "]"); }
     }
     match (name, &id) {
-        ("text", Some(i)) => text(&mut cx, i)?,
-        ("object", Some(i)) => object(&mut cx, i)?,
         ("history", i) => history(&mut cx, i.as_ref())?,
         ("leaving", _) => leaving(&mut cx, whole)?,
         ("why", Some(i)) => why(&mut cx, i, lo, hi)?,
         ("expand", None) => expand_universe(&mut cx)?,
+        #[cfg(not(feature = "cut-agent"))]
+        ("text", Some(i)) => text(&mut cx, i)?,
+        #[cfg(not(feature = "cut-agent"))]
+        ("object", Some(i)) => object(&mut cx, i)?,
+        #[cfg(not(feature = "cut-agent"))]
         ("expand", Some(i)) => {
             let o = cx.obj(i)?;
-            if o.ty == "ufo.text" { expand_text(&mut cx, &o, lo.unwrap_or(0), hi.unwrap_or(u64::MAX))? } else { return None }
+            match o.ty.as_str() {
+                "ufo.text" => expand_text(&mut cx, &o, lo.unwrap_or(0), hi.unwrap_or(u64::MAX))?,
+                "ufo.clock" => expand_clock(&mut cx, &o, lo.unwrap_or(0), hi.unwrap_or(u64::MAX))?,
+                _ => return None,
+            }
         }
         _ => return None,
     }
-    let mut head = cat!(name, args, " @ commit=", cx.c(&commit), "\n");
+    let head = cat!(name, args, " @ commit=", cx.c(&commit), "\n");
+    Some((cx, head))
+}
+/// A projection as the text an agent reads (Appendix B): the one spelling of its records.
+#[cfg(not(feature = "cut-agent"))]
+pub fn project(pk: &Pack, q: &V) -> Option<V> {
+    let (cx, mut s) = run(pk, q)?;
     for r in &cx.recs {
         let V::M(fields) = r else { continue };
         for (i, (k, v)) in fields.iter().enumerate() {
-            if i > 0 { put!(head; " ", k, "="); }
-            head.push_str(&cx.jv(v));
+            if i > 0 { put!(s; " ", k, "="); }
+            s.push_str(&cx.jv(v));
         }
-        head.push('\n');
+        s.push('\n');
     }
-    put!(head; "end lines=", cx.recs.len(), "\n");
-    Some((head, cx.recs))
+    put!(s; "end lines=", cx.recs.len(), "\n");
+    Some(V::T(s))
 }
-/// A projection as the text an agent reads (Appendix B).
-pub fn project(pk: &Pack, q: &V) -> Option<V> {
-    run(pk, q).map(|x| V::T(x.0))
+#[cfg(feature = "cut-agent")]
+pub fn project(_: &Pack, _: &V) -> Option<V> {
+    None
 }
 /// A projection as `ask` gives it to a formula (7.3): the records themselves, a word being a text.
 pub fn records(pk: &Pack, q: &V) -> Option<V> {
@@ -554,5 +632,5 @@ pub fn records(pk: &Pack, q: &V) -> Option<V> {
             v => v,
         }
     }
-    run(pk, q).map(|x| plain(V::L(x.1)))
+    run(pk, q).map(|x| plain(V::L(x.0.recs)))
 }
