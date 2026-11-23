@@ -4,7 +4,7 @@
 // Also the text of a web envelope's pack element read back (SPEC-TRAVEL 13.2).
 use crate::diff::{diff, Edit};
 use crate::pack::*;
-use crate::query::{hex, objects, runs, Run};
+use crate::query::{hex, objects};
 use crate::value::*;
 use alloc::boxed::Box;
 use alloc::string::String;
@@ -115,7 +115,11 @@ fn replay(id: &Id, change: &Id, ops: &[V], p: &V, seq: &V) -> Option<(V, V)> {
                 // every element, with its content if it is not removed
                 let mut content = p.get(key)?.s()?.chars();
                 let mut els: Vec<(Id, u64, Option<char>)> = Vec::new();
-                for e in elements(seq.get(key)?)? {
+                let rs = runs(seq.get(key)?);
+                if rs.len() != seq.get(key)?.l().len() {
+                    return None; // a run that is not one
+                }
+                for e in expand(&rs) {
                     els.push((e.c, e.n, if e.live { Some(content.next()?) } else { None }));
                 }
                 if content.next().is_some() {
@@ -244,7 +248,8 @@ pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Optio
     let (Some(seqs), Some(text)) = (o.seq.as_ref(), o.p.get("chars").and_then(|c| c.s())) else { return Err("the text has no characters") };
     let chars: Vec<char> = text.chars().collect();
     let seq0 = seqs.get("chars").ok_or("`chars` is not a sequence property")?;
-    let (old_runs, els0) = (runs(seq0), elements(seq0).ok_or("inconsistent `seq` (X1)")?);
+    let old_runs = runs(seq0);
+    let els0 = expand(&old_runs);
     let live: Vec<usize> = (0..els0.len()).filter(|&i| els0[i].live).collect(); // where each position is in the sequence
     if old_runs.len() != seq0.l().len() || live.len() != chars.len() {
         return Err("`seq` does not account for the characters: the text is inconsistent and is not edited (X1)");
@@ -321,12 +326,12 @@ pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Optio
     // would by its own boundary begin or end after the new text, so its boundary is moved to just
     // before the first new element.
     let at_start = hi > lo && edits[0].lo == lo && edits[0].hi == lo;
-    let els1 = elements(&new_seq).ok_or("seq")?;
+    let new_runs = runs(&new_seq);
     if let Some(V::M(spans)) = o.p.get("spans") {
         for (key, s) in spans {
             let Some(r) = s.get("at").and_then(|a| a.tag(ANCHOR)).filter(|a| a.get("o").and_then(|o| o.id()) == Some(id)).and_then(|a| a.get("a")).and_then(|a| a.get("chars")).map(|r| r.l()).filter(|r| r.len() == 3) else { continue };
-            let at = |els: &[El]| (boundary(els, &r[1]), boundary(els, &r[2]));
-            let ((a0, b0), (a1, b1)) = (at(&els0), at(&els1));
+            let ends = |rs: &[Run]| (place(rs, &r[1]), place(rs, &r[2]));
+            let ((a0, b0), (a1, b1)) = (ends(&old_runs), ends(&new_runs));
             let (mut r2, first) = (r.to_vec(), V::L(vec![bytes(&change), V::Int(0), V::Int(0)]));
             let inline = s.get("kind").and_then(|k| k.s()) == Some("inline");
             let lost = inline && a0 < b0 && a0.is_some() && !(a1 < b1 && a1.is_some());

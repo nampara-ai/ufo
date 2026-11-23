@@ -387,8 +387,8 @@ fn expand_text(cx: &mut Cx, o: &Obj, lo: u64, hi: u64) -> Option<()> {
     use crate::layout::{blocks, level, plain_text, spans};
     let chars: Vec<char> = o.p.get("chars")?.s()?.chars().collect();
     let seq = o.seq.as_ref()?.get("chars")?;
-    let (rs, els) = (runs(seq), elements(seq)?);
-    let sp = spans(o, &els);
+    let rs = runs(seq);
+    let sp = spans(o, &rs);
     let all = blocks(&sp, 0, chars.len());
     let role = |i: usize| all[i].span.map(|k| sp[k].role).filter(|r| !r.is_empty()).unwrap_or("paragraph");
     let lev = |i: usize| all[i].span.map_or(1, |k| level(&sp[k]));

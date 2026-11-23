@@ -340,40 +340,71 @@ pub struct Obj {
     pub by: Id,
 }
 
-// ---- sequences (1.7) and regions on them (4.3) ----
+// ---- sequences (1.7) and regions on them (4.3): the one resolver, by runs, for sequences of any length ----
+#[derive(Clone)]
+pub struct Run {
+    pub c: Id,
+    pub first: u64,
+    pub count: u64,
+    pub live: bool,
+}
+pub fn runs(seq: &V) -> Vec<Run> {
+    seq.l().iter().filter_map(|r| {
+        let r = r.l();
+        Some(Run { c: r.first()?.id()?, first: r.get(1)?.i()? as u64, count: r.get(2)?.i()? as u64, live: r.len() == 3 })
+    }).collect()
+}
+pub fn bpos(rs: &[Run], b: &V) -> Option<u64> {
+    match b.s() {
+        Some("start") => return Some(0),
+        Some("end") => return Some(rs.iter().filter(|r| r.live).map(|r| r.count).sum()),
+        _ => {}
+    }
+    let l = b.l();
+    let (c, n, side) = (l.first()?.id()?, l.get(1)?.i()? as u64, l.get(2)?.i()? as u64);
+    let mut p = 0;
+    for r in rs {
+        if r.c == c && r.first <= n && n < r.first + r.count {
+            return Some(p + if r.live { n - r.first + side } else { 0 });
+        }
+        if r.live {
+            p += r.count;
+        }
+    }
+    None
+}
+/// A1: None where the region is detached.
+pub fn region(rs: &[Run], reg: &V) -> Option<(u64, u64)> {
+    let l = reg.l();
+    let (a, b) = (l.get(1)?, l.get(2)?);
+    let (pa, pb) = (bpos(rs, a)?, bpos(rs, b)?);
+    if pa >= pb && a != b {
+        return None;
+    }
+    Some((pa, pb))
+}
+pub fn element_at(rs: &[Run], mut p: u64) -> Option<(Id, u64)> {
+    for r in rs.iter().filter(|r| r.live) {
+        if p < r.count {
+            return Some((r.c, r.first + p));
+        }
+        p -= r.count;
+    }
+    None
+}
+/// One element of a sequence: who inserted it, its number, whether it is still there.
 pub struct El {
     pub c: Id,
     pub n: u64,
     pub live: bool,
 }
-pub fn elements(runs: &V) -> Option<Vec<El>> {
-    let mut out = Vec::new();
-    for r in runs.l() {
-        let r = r.l();
-        let (c, first, count) = (r.first()?.id()?, r.get(1)?.i()? as u64, r.get(2)?.i()? as u64);
-        for k in 0..count {
-            out.push(El { c, n: first + k, live: r.len() == 3 });
-        }
-    }
-    Some(out)
+/// The elements of runs one by one, for a sequence short enough to hold so: a text being composed or edited.
+pub fn expand(rs: &[Run]) -> Vec<El> {
+    rs.iter().flat_map(|r| (0..r.count).map(move |k| El { c: r.c, n: r.first + k, live: r.live })).collect()
 }
-/// The position, counted in live elements, of a boundary; None if its element is not in the sequence.
-pub fn boundary(els: &[El], b: &V) -> Option<usize> {
-    match b.s() {
-        Some("start") => return Some(0),
-        Some("end") => return Some(els.iter().filter(|e| e.live).count()),
-        _ => {}
-    }
-    let l = b.l();
-    let (c, n, side) = (l.first()?.id()?, l.get(1)?.i()? as u64, l.get(2)?.i()?);
-    let mut pos = 0;
-    for e in els {
-        if e.c == c && e.n == n {
-            return Some(pos + if side == 1 && e.live { 1 } else { 0 });
-        }
-        pos += e.live as usize;
-    }
-    None
+/// The position of a boundary as an index: `bpos`, for a sequence held in memory.
+pub fn place(rs: &[Run], b: &V) -> Option<usize> {
+    bpos(rs, b).map(|p| p as usize)
 }
 
 // ---- every frame, for queries that must account for the whole pack ----

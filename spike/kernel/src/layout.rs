@@ -324,7 +324,7 @@ pub struct Span<'a> {
     v: &'a V,
 }
 /// Step 2: the spans that resolve, in key order.
-pub fn spans<'a>(o: &'a Obj, els: &[El]) -> Vec<Span<'a>> {
+pub fn spans<'a>(o: &'a Obj, rs: &[Run]) -> Vec<Span<'a>> {
     let mut out = Vec::new();
     if let Some(V::M(m)) = o.p.get("spans") {
         for (key, v) in m {
@@ -333,7 +333,7 @@ pub fn spans<'a>(o: &'a Obj, els: &[El]) -> Vec<Span<'a>> {
             if r.len() != 3 {
                 continue;
             }
-            let (Some(a), Some(b)) = (boundary(els, &r[1]), boundary(els, &r[2])) else { continue }; // detached: takes no part
+            let (Some(a), Some(b)) = (place(rs, &r[1]), place(rs, &r[2])) else { continue }; // detached: takes no part
             let block = v.get("kind").and_then(|k| k.s()) == Some("block");
             if a < b || (block && a == b) {
                 out.push(Span { a, b, block, role: v.get("role").and_then(|r| r.s()).unwrap_or(""), key, v });
@@ -504,15 +504,15 @@ fn child_of(s: &Span) -> Option<Id> {
 /// A text, or a region of one, as rows: the steps of 7.7.
 fn text_rows(cx: &mut Ctx, uni: &H, o: &Obj, region: Option<&V>, w: f64) -> Option<Vec<Row>> {
     let chars: Vec<char> = o.p.get("chars")?.s()?.chars().collect();
-    let els = elements(o.seq.as_ref()?.get("chars")?)?;
-    let live: Vec<&El> = els.iter().filter(|e| e.live).collect();
+    let rs = runs(o.seq.as_ref()?.get("chars")?);
+    let live: Vec<El> = expand(&rs).into_iter().filter(|e| e.live).collect();
     if live.len() != chars.len() {
         return None; // X1
     }
-    let sp = spans(o, &els);
+    let sp = spans(o, &rs);
     let inl = inline(&sp);
     let (ra, rb) = match region {
-        Some(r) if r.l().len() == 3 => (boundary(&els, &r.l()[1])?, boundary(&els, &r.l()[2])?),
+        Some(r) if r.l().len() == 3 => (place(&rs, &r.l()[1])?, place(&rs, &r.l()[2])?),
         _ => (0, chars.len()),
     };
     let mut text = plain_style();
@@ -742,7 +742,7 @@ fn width(pieces: &[Piece], s: usize, q: usize) -> f64 {
     pieces.iter().filter(|p| p.a < q && p.b > s).map(|p| p.adv[q.min(p.b) - p.a] - p.adv[s.max(p.a) - p.a]).sum()
 }
 /// Step 6. Returns the rows, the first row's baseline, and whether its line runs right to left.
-fn lines(cx: &mut Ctx, g: &Seg, styles: &[Style], bst: &Style, code: bool, w: f64, from: Option<(&H, &Id, &[&El])>) -> (Vec<Row>, f64, bool) {
+fn lines(cx: &mut Ctx, g: &Seg, styles: &[Style], bst: &Style, code: bool, w: f64, from: Option<(&H, &Id, &[El])>) -> (Vec<Row>, f64, bool) {
     let (cs, n) = (&g.cs, g.cs.len());
     // levels, one paragraph of UAX #9 at a time
     let (mut lv, mut para) = (Vec::new(), Vec::new());
@@ -868,7 +868,7 @@ fn lines(cx: &mut Ctx, g: &Seg, styles: &[Style], bst: &Style, code: bool, w: f6
                     stack(&compose(cx, uni, &cid, bw), x, base - bh, &mut items);
                 }
                 _ => {
-                    let anchor = from.map(|(uni, id, live)| src(cx, uni, id, Some((live[g.pos[a]], live[g.pos[b - 1]]))));
+                    let anchor = from.map(|(uni, id, live)| src(cx, uni, id, Some((&live[g.pos[a]], &live[g.pos[b - 1]]))));
                     if st.node != V::Null {
                         items.push(V::L(vec![t("push"), st.node.clone()]));
                     }
@@ -1031,12 +1031,12 @@ pub fn plain(pk: &Pack, uni: &H, id: &Id, out: &mut String, depth: u32) {
 }
 /// The plain-text face of a text or of a region of it; with `at`, of blocks `at.0` up to `at.1` of the whole text only.
 pub fn plain_text(pk: &Pack, uni: &H, o: &Obj, region: Option<&V>, at: Option<(usize, usize)>, out: &mut String, depth: u32) {
-    let (Some(chars), Some(els)) = (o.p.get("chars").and_then(|c| c.s()), o.seq.as_ref().and_then(|s| s.get("chars")).and_then(elements)) else { return };
+    let (Some(chars), Some(rs)) = (o.p.get("chars").and_then(|c| c.s()), o.seq.as_ref().and_then(|s| s.get("chars")).map(runs)) else { return };
     let chars: Vec<char> = chars.chars().collect();
-    let sp = spans(o, &els);
+    let sp = spans(o, &rs);
     let inl = inline(&sp);
     let (ra, rb) = match region.map(|r| r.l()) {
-        Some(r) if r.len() == 3 => (boundary(&els, &r[1]).unwrap_or(0), boundary(&els, &r[2]).unwrap_or(0)),
+        Some(r) if r.len() == 3 => (place(&rs, &r[1]).unwrap_or(0), place(&rs, &r[2]).unwrap_or(0)),
         _ => (0, chars.len()),
     };
     let bl = blocks(&sp, ra, rb.min(chars.len()));
@@ -1101,12 +1101,12 @@ pub fn block_at(pk: &Pack, src: &V) -> Option<V> {
     }
     let o = pk.object(&pk.head, &id)?;
     let chars: Vec<char> = o.p.get("chars")?.s()?.chars().collect();
-    let els = elements(o.seq.as_ref()?.get("chars")?)?;
-    if els.iter().filter(|e| e.live).count() != chars.len() {
+    let rs = runs(o.seq.as_ref()?.get("chars")?);
+    if place(&rs, &t("end")) != Some(chars.len()) {
         return None; // X1
     }
-    let p = boundary(&els, a.get("a")?.get("chars")?.l().get(1)?)?;
-    let sp = spans(&o, &els);
+    let p = place(&rs, a.get("a")?.get("chars")?.l().get(1)?)?;
+    let sp = spans(&o, &rs);
     let b = blocks(&sp, 0, chars.len()).into_iter().find(|b| b.a <= p && p < b.b)?;
     Some(map(vec![("o", V::B(id.to_vec())), ("key", b.span.map_or(V::Null, |k| t(sp[k].key))), ("lo", V::Int(b.a as i64)), ("hi", V::Int(b.b as i64)), ("text", V::T(chars[b.a..b.b].iter().collect()))]))
 }

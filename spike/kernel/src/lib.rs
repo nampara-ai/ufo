@@ -95,7 +95,7 @@ unsafe fn keep_pack(q: &V) -> Option<V> {
             let o = pk.object(&h, &id)?;
             V::L(vec![o.p, o.seq?, V::B(o.rev.to_vec()), V::B(o.by.to_vec()), V::T(o.ty)])
         }
-        5 => V::Int(boundary(&elements(q)?, q)? as i64),
+        5 => V::Int(bpos(&runs(q), q)? as i64),
         _ => {
             let (a, b) = pk.frames();
             V::Int((a.len() + b.len() + pk.unread_tail) as i64)

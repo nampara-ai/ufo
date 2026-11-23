@@ -97,58 +97,6 @@ fn map_nodes(pk: &Pack, commit: &H) -> Vec<H> {
     nodes
 }
 
-// ---- sequences by runs (1.7) and regions on them (4.3), for sequences of any length ----
-#[derive(Clone)]
-pub struct Run {
-    pub c: Id,
-    pub first: u64,
-    pub count: u64,
-    pub live: bool,
-}
-pub fn runs(seq: &V) -> Vec<Run> {
-    seq.l().iter().filter_map(|r| {
-        let r = r.l();
-        Some(Run { c: r.first()?.id()?, first: r.get(1)?.i()? as u64, count: r.get(2)?.i()? as u64, live: r.len() == 3 })
-    }).collect()
-}
-pub fn bpos(rs: &[Run], b: &V) -> Option<u64> {
-    match b.s() {
-        Some("start") => return Some(0),
-        Some("end") => return Some(rs.iter().filter(|r| r.live).map(|r| r.count).sum()),
-        _ => {}
-    }
-    let l = b.l();
-    let (c, n, side) = (l.first()?.id()?, l.get(1)?.i()? as u64, l.get(2)?.i()? as u64);
-    let mut p = 0;
-    for r in rs {
-        if r.c == c && r.first <= n && n < r.first + r.count {
-            return Some(p + if r.live { n - r.first + side } else { 0 });
-        }
-        if r.live {
-            p += r.count;
-        }
-    }
-    None
-}
-/// A1: None where the region is detached.
-pub fn region(rs: &[Run], reg: &V) -> Option<(u64, u64)> {
-    let l = reg.l();
-    let (a, b) = (l.get(1)?, l.get(2)?);
-    let (pa, pb) = (bpos(rs, a)?, bpos(rs, b)?);
-    if pa >= pb && a != b {
-        return None;
-    }
-    Some((pa, pb))
-}
-pub fn element_at(rs: &[Run], mut p: u64) -> Option<(Id, u64)> {
-    for r in rs.iter().filter(|r| r.live) {
-        if p < r.count {
-            return Some((r.c, r.first + p));
-        }
-        p -= r.count;
-    }
-    None
-}
 /// The live runs a region covers, each cut to it.
 fn covered_runs(rs: &[Run], lo: u64, hi: u64) -> Vec<Run> {
     let (mut out, mut p) = (Vec::new(), 0);
