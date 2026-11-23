@@ -10,7 +10,7 @@
    "results": {
     "Node": {
      "kernel": "passed",
-     "host": "passed"
+     "host": "failed"
     },
     "desktop, file://": {
      "opened": "passed",
@@ -32,6 +32,7 @@
      "safeguard": "passed",
      "decisions": "passed",
      "components": "passed",
+     "seals": "passed",
      "sent on": "passed"
     },
     "http origin": {
@@ -97,9 +98,9 @@
     }
    },
    "host": {
-    "lines": 276,
-    "source_bytes": 19481,
-    "shipped_bytes": 9644,
+    "lines": 280,
+    "source_bytes": 19950,
+    "shipped_bytes": 9867,
     "longest": 150,
     "minifier": "terser 5.51.4",
     "options": "--module --ecma 2020 --compress --mangle",
@@ -125,8 +126,8 @@
      "state"
     ]
    },
-   "total": 250,
-   "failures": 0
+   "total": 251,
+   "failures": 1
   },
   "firefox": {
    "engine": "firefox",
@@ -138,7 +139,7 @@
    "results": {
     "Node": {
      "kernel": "passed",
-     "host": "passed"
+     "host": "failed"
     },
     "desktop, file://": {
      "opened": "passed",
@@ -160,6 +161,7 @@
      "safeguard": "passed",
      "decisions": "passed",
      "components": "passed",
+     "seals": "passed",
      "sent on": "passed"
     },
     "http origin": {
@@ -225,9 +227,9 @@
     }
    },
    "host": {
-    "lines": 276,
-    "source_bytes": 19481,
-    "shipped_bytes": 9644,
+    "lines": 280,
+    "source_bytes": 19950,
+    "shipped_bytes": 9867,
     "longest": 150,
     "minifier": "terser 5.51.4",
     "options": "--module --ecma 2020 --compress --mangle",
@@ -253,8 +255,8 @@
      "state"
     ]
    },
-   "total": 250,
-   "failures": 0
+   "total": 251,
+   "failures": 1
   },
   "webkit": {
    "engine": "webkit",
@@ -266,7 +268,7 @@
    "results": {
     "Node": {
      "kernel": "passed",
-     "host": "passed"
+     "host": "failed"
     },
     "desktop, file://": {
      "opened": "passed",
@@ -288,6 +290,7 @@
      "safeguard": "passed",
      "decisions": "passed",
      "components": "passed",
+     "seals": "passed",
      "sent on": "passed"
     },
     "http origin": {
@@ -353,9 +356,9 @@
     }
    },
    "host": {
-    "lines": 276,
-    "source_bytes": 19481,
-    "shipped_bytes": 9644,
+    "lines": 280,
+    "source_bytes": 19950,
+    "shipped_bytes": 9867,
     "longest": 150,
     "minifier": "terser 5.51.4",
     "options": "--module --ecma 2020 --compress --mangle",
@@ -381,8 +384,8 @@
      "state"
     ]
    },
-   "total": 250,
-   "failures": 0
+   "total": 251,
+   "failures": 1
   }
  },
  "quirks": {
@@ -509,7 +512,7 @@
     "engine": "firefox",
     "fails": true,
     "as_recorded": true,
-    "how": "http: fail: policy violation: img-src http://127.0.0.1:36907/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:36907/favic; http: violations: img-src http://127.0.0.1:36907/favicon.ico"
+    "how": "http: fail: policy violation: img-src http://127.0.0.1:41415/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:41415/favic; http: violations: img-src http://127.0.0.1:41415/favicon.ico"
    },
    {
     "file": "01-no-icon-request.naive2.html",

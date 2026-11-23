@@ -650,6 +650,13 @@ def layers_of_history():
     return content, attribution, history, pub
 content, attribution, whist, pubpk = layers_of_history()
 open(os.path.join(OUT, "published.ufx"), "wb").write(pubpk.b)
+# ---- 12b. seals (section 14.2): the one in history.ufx, and the same pack with one bit of its signature changed ----
+_bad = bytearray(hist_pk.b); _at = bytes(hist_pk.b).index(sig); _bad[_at + 63] ^= 1
+open(os.path.join(OUT, "bad-seal.ufx"), "wb").write(_bad)
+V["seals"] = {"what": "what a reader that can check an Ed25519 signature finds of each seal, and what one that cannot says",
+    "history.ufx": {"signed_bytes_hex": (b"ufo-seal-1" + sha(enc(signed))).hex(), "key": key.hex(), "signature": sig.hex(), "status": "valid", "sealed_commit": hK2.hex(), "commits_since": 1},
+    "bad-seal.ufx": {"what": "history.ufx with the last bit of the seal's signature changed, and nothing else", "length": len(_bad), "status": "invalid"},
+    "a_reader_that_cannot_check": {"status": "unchecked"}}
 V["published"] = {"file": "published.ufx", "length": len(pubpk.b), "root_hash": hK3.hex(), "made_from": "history.ufx",
     "left_out": {"frames_of_unknown_kind": 1, "bytes": len(frame(0x7f, b"a frame of unknown kind: skipped and preserved")),
                  "what": "history.ufx holds one frame of a kind no reader knows. A copy for outside readers does not carry it, and `leaving` says so before the copy is made: `unread` and `unread-bytes` of its `lacks` record (TRAVEL E10, E12)"},

@@ -309,6 +309,12 @@ async function boot() {
     if (piece.length && await WebAssembly.instantiate(piece, { 'ufo:base': ex }).then(() => 1, () => 0)) have |= c.bit;
   }
   ex.components(have);
+  // Each seal the kernel holds is checked with what is here to check it with. Where there is nothing, the kernel is told
+  // nothing, and says of the seal that it was not checked.
+  for (let i = 0, s; (s = got(call('seal', { i }))); i++) try {
+    const key = await crypto.subtle.importKey('raw', s.key, { name: 'Ed25519' }, false, ['verify']);
+    ex.seal_checked(i, await crypto.subtle.verify({ name: 'Ed25519' }, key, s.signature, s.message) ? 1 : 0);
+  } catch { }
   player.hidden = false; $('#ufo-static').hidden = true;
   view();
   globalThis.ufo = { drawn: () => shown, project: q => got(call('project', q)), raw: f => got(ex[f]()) };   // for looking only: none changes anything

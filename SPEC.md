@@ -1984,6 +1984,7 @@ throwaway kernel on the packs above:
 | `provisional/leaving.json` | for `edit-one-word.ufx`: what `leaving` says would travel for each of the two defaults, and the published copy (§13.3 **E12**, Appendix B) |
 | `provisional/decisions.json` | for `decided.ufx`: two edits by one person, then by another the newer accepted and the older rejected; the history with the decision that stands about each change; `why` of the paragraph after the rejection; and a second rejection refused (§5.4 **R9**) |
 | `provisional/undo.json` | for `undone.ufx`: an edit, and its undoing at the person's asking: the origin of the undoing, `why` of the paragraph, and a second undo refused (§9.6) |
+| `vectors/bad-seal.ufx`, group `seals` | `history.ufx` with one bit of its seal's signature changed; the bytes that were signed, and what a reader that can check a signature finds of each pack, and one that cannot (§14.2; §9.3 `verify`) |
 | `provisional/roles.json` | the accessible nodes of `compose.ufx` and of a tools line, as a display list carries them: what a host must expose (§9.2) |
 | `quirks/` | the corpus of differences between browser engines: one small page for each, with the naive construction beside it, and `quirks.json` saying what each engine does and the rule that prevents it (§13.2 **E21** to **E25**, §9.3 **H9** to **H11**) |
 | `provisional/projections.json` | eleven projections of the packs, as text: `object`, `text`, `history`, `why`, and outlines by `expand` (§10.1, §10.2, Appendix B) |

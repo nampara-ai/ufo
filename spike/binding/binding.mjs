@@ -67,6 +67,11 @@ export async function start(wasmBytes, measure, inflate, clock = {}, components 
   // is absent or fails either way is simply not there, and the kernel is told which stand beside it (PLAYER K7).
   const hex = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
   const beside = async bytes => { try { await WebAssembly.instantiate(bytes, { 'ufo:base': ex }); return true; } catch { return false; } };
+  // The `verify` capability (PLAYER 9.3): each seal the pack holds is checked with the platform's own Ed25519, and the kernel told
+  // what was found. Where the platform has none (or `clock.verify` is false, for tests), nothing is told, and the seal is unchecked.
+  const seals = async () => { for (let i = 0; clock.verify !== false; i++) { const s = call(ex.seal, { i }); if (!s) break;
+      try { const key = await crypto.subtle.importKey('raw', s.key, { name: 'Ed25519' }, false, ['verify']); ex.seal_checked(i, await crypto.subtle.verify({ name: 'Ed25519' }, key, s.signature, s.message) ? 1 : 0); } catch { } }
+    return true; };
   const asked = [];   // the components whose embedded copy was read, by role: for tests
   if (!components) ex.components(-1);
   else if (!components.listed) { let mask = 0; for (const [name, c] of Object.entries(components)) { if (!c) continue; const bytes = c.bytes || c;
@@ -91,12 +96,14 @@ export async function start(wasmBytes, measure, inflate, clock = {}, components 
     // Two phases, because a browser inflates only asynchronously and a wasm import cannot wait: the kernel lists the
     // compressed payloads it holds, the host inflates them, and `ready` finishes opening. A payload that does not
     // inflate is not handed back, and its record is then unavailable.
-    open: async pack => ex.open(give(pack), pack.length) === 1 && await pend() && load(),
+    open: async pack => ex.open(give(pack), pack.length) === 1 && await pend() && await load() && seals(),
+    // what the kernel would have checked of each seal: for tests
+    seals() { const out = []; for (let i = 0; ; i++) { const s = call(ex.seal, { i }); if (!s) return out; out.push(s); } },
     asked,
     // what the universe lists for a kernel of that hash, with the bytes of each as the kernel reads and verifies them: for tests
     listed(kernel) { const out = []; for (let i = 0; ; i++) { const q = { i, kernel }, c = call(ex.component, q); if (!c) return out; const b = encode(q), at = ex.component_bytes(give(b), b.length); out.push({ role: c.role, sha256: c.sha256, bytes: mem().slice(at, at + ex.out_len()) }); } },
     // the reader's own act: the tools presented with the working universe as their subject ({ parts, name, who })
-    start: async q => { const b = encode(q); return ex.start(give(b), b.length) === 1 && await pend() && load(); },
+    start: async q => { const b = encode(q); return ex.start(give(b), b.length) === 1 && await pend() && await load() && seals(); },
     input: event => call(ex.input, event),          // one input event; gives the effects
     envelope: parts => call(ex.envelope, parts),    // the web envelope of its parts: { text } or { refused }
     print: id => { const p = ex.print(give(id)); return mem().slice(p, p + ex.out_len()); },

@@ -107,7 +107,7 @@ function universe(pk, change, lineage, objects) {
 const f = formula, st = n => f('state', n), is = (a, b) => f('=', a, b), not = a => f('not', a), and = (a, b) => f('and', a, b), iff = (c, a, b) => f('if', c, a, b);
 const join = (...a) => f('concat', ...a), list = (...a) => f('list', ...a), get = (m, k) => f('get', m, k), nth = (l, i) => f('nth', l, i), num = n => f('format', n, '0'), len = x => f('len', x), plus = (a, b) => f('+', a, b);
 export function tools(compress = true) {
-  const pk = new Pack('ufo-spike-tools-salt', compress), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB, XA, XY, XQ, XJ, XD, XK] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6].map(id);
+  const pk = new Pack('ufo-spike-tools-salt', compress), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB, XA, XY, XQ, XJ, XD, XK, XZ, XI] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8].map(id);
   const S = f('arg', 'subject'), editing = is(st('editing'), true), named = not(is(st('who'), null)), share = is(st('share'), true), saving = is(st('panel'), 'save'), reviewing = is(st('panel'), 'changes'), lit = on => iff(on, 'underline', 'none');
   // what the kernel's projections say of the subject: `expand` of the whole, the changes newest first, and what a copy would carry
   // Each is asked once and named (`let`, 7.3), and read where it is wanted by its name.
@@ -167,6 +167,10 @@ export function tools(compress = true) {
   const choice = [['For people working on this', { set: 'share', to: true }, { current: share }, share], ['For readers', { set: 'share', to: false }, { current: not(share) }, not(share)]];
   // Save: the export, with the choice made and the name; then, if it was not refused, what the status is to say of it, and the panel closes
   const save = [{ act: 'export', universe: S, history: share, name: saveAs, into: 'out' }, { set: 'outshare', to: share }, { set: 'n', to: plus(count, 1) }, { set: 'fresh', to: iff(share, false, st('fresh')) }, { set: 'panel', to: null }];
+  // the seals (TRAVEL 14.2): what checking each signature found, in words; a seal that was not or could not be checked is never said to be good
+  const z = f('arg', 'z'), signer = iff(is(get(z, 'name'), ''), 'a key that gives no name', get(z, 'name'));
+  const sealLine = iff(is(get(z, 'status'), 'valid'), join('Sealed by ', signer, ' at state ', get(z, 'commit'), ': the signature is good.', iff(is(get(z, 'behind'), 0), ' Nothing has changed since.', ' The file has changed since.')),
+    iff(is(get(z, 'status'), 'invalid'), join('A seal in the name of ', signer, ' is here, and its signature is NOT good. Do not rely on it.'), join('A seal in the name of ', signer, ' is here. This reader could not check it.')));
   const grey = [F(0.8), F(0.8), F(0.8), F(1)], side = [F(0), F(16), F(6), F(16)], line = X => ['ufo.portal', { of: f('arg', 'line') }];
   const tBar = bar(XT, words, { role: 'toolbar', label: 'Tools', lang: 'en' }), tHead = { chars: 'What will leave, if you save a copy', spans: { b0: { ...block(XH, XC, next), weight: 700 } }, size: F(15), font: ['sans-serif'] };
   next += tHead.chars.length; const tChoice = bar(XO, choice), tSave = bar(XB, [['Save this copy', save, {}], ['Cancel', { set: 'panel', to: null }, {}]]);
@@ -181,10 +185,12 @@ export function tools(compress = true) {
   const tUndo = bar(XK, [['Undo my last change', [{ act: 'undo', who: st('who'), into: 'undone' }, { set: 'fresh', to: true }], {}]]);
   const root = universe(pk, XC, id(0x77), [
     [XF, 'ufo.face', { of: ref(XG), medium: 'document' }],
-    [XG, 'ufo.group', { children: [ref(XT), ref(XS), ref(XN), ref(XV), ref(XA), ref(XR), ref(XP)] }],
+    [XG, 'ufo.group', { children: [ref(XT), ref(XS), ref(XZ), ref(XN), ref(XV), ref(XA), ref(XR), ref(XP)] }],
     [XT, 'ufo.text', { ...tBar, margin: [F(10), F(16), F(8), F(16)] }],
     [XS, 'ufo.group', { role: 'status', label: 'State', each: status, as: 'line', children: [ref(XL)], margin: side }],
     [XL, ...line()],
+    [XZ, 'ufo.group', { role: 'status', label: 'Seals', each: f('ask', 'verify', S), as: 'z', children: [ref(XI)], margin: side }],
+    [XI, 'ufo.portal', { of: sealLine }],
     // who is making the changes: a value of the presentation state, shown while editing is on, which takes text entry (7.6)
     [XN, 'ufo.group', { visible: f('or', editing, reviewing), each: list(st('who')), as: 'who', children: [ref(XW)], margin: side }],
     [XW, 'ufo.portal', { of: f('arg', 'who'), role: 'input', label: 'Your name, to record with the changes you make', editable: true, on: { change: { set: 'who', to: iff(is(f('arg', 'text'), ''), null, f('arg', 'text')) } } }],

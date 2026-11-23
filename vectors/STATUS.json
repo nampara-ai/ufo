@@ -175,6 +175,10 @@
   "needs": {
    "status": "provisional",
    "note": "the author's kernel, in Node and in three browser engines"
+  },
+  "seals": {
+   "status": "provisional",
+   "note": "generator and the author's kernel agree on the bytes signed; the signature is checked by Node's and by three browser engines' own Ed25519"
   }
  },
  "files": {

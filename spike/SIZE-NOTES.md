@@ -539,3 +539,4 @@ Whole kernel, compressed, by `size.mjs`, each step against the one before.
 | --- | ---: | ---: |
 | The split in real files | 121 140 | |
 | 3c. Undo | 122 229 | about 1 090 |
+| 3d. Verifying seals: the bytes signed, the host's answer kept, the `verify` projection | 123 191 | 962 |

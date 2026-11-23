@@ -176,6 +176,10 @@
    "needs": {
     "status": "provisional",
     "note": "the author's kernel, in Node and in three browser engines"
+   },
+   "seals": {
+    "status": "provisional",
+    "note": "generator and the author's kernel agree on the bytes signed; the signature is checked by Node's and by three browser engines' own Ed25519"
    }
   },
   "files": {
@@ -1652,6 +1656,25 @@
   "linked.ufx": "whole. The same universe, with the same root hash; the commit the anchor names is not in the file, so the other universe is linked. The Portal's target is unavailable and the reader shows its label (O4). Nothing is malformed.",
   "plain_text_face_of_nested.ufx": "A note from another universe:\n> Nested.",
   "plain_text_face_of_linked.ufx": "A note from another universe (ufo:1543719d1c533f5e2aa1814296e851987957542f9c390584813bf4d4be4bc79c)"
+ },
+ "seals": {
+  "what": "what a reader that can check an Ed25519 signature finds of each seal, and what one that cannot says",
+  "history.ufx": {
+   "signed_bytes_hex": "75666f2d7365616c2d31bf62f77f8ee49c62ea3fcfc36a166a77d733337897a7a94f99c8fe7bee9fa3cc",
+   "key": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+   "signature": "22e528b7edaad761af5a113054aeffc67d530714e3a7b91a19fde4067b05917bf88748ae8372ad920964f4f1dbdca154bca50502ecc76482625bb1ca9cd1380f",
+   "status": "valid",
+   "sealed_commit": "d421f379374bea217830cf58b230133e01fe98cad9443440154f4421437f8baa",
+   "commits_since": 1
+  },
+  "bad-seal.ufx": {
+   "what": "history.ufx with the last bit of the seal's signature changed, and nothing else",
+   "length": 30192,
+   "status": "invalid"
+  },
+  "a_reader_that_cannot_check": {
+   "status": "unchecked"
+  }
  },
  "published": {
   "file": "published.ufx",

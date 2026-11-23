@@ -13,7 +13,7 @@ import { start, commitsOf, layersOf } from '../binding/binding.mjs'; import { ke
 import { playwright, launch, executable, ENGINES } from './engines.mjs';
 const { devices } = playwright, here = p => fileURLToPath(new URL(p, import.meta.url)), out = here('../out/'), shots = here('../out/shots/');
 const arg = n => (i => i < 0 ? null : process.argv[i + 1])(process.argv.indexOf('--' + n)), engineName = arg('engine') || 'all';
-const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'components', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
+const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'components', 'seals', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
 const CONTEXTS = ['Node', 'desktop, file://', 'http origin', 'phone, larger', 'phone, smaller', 'scripts off', 'reader', 'validators'];
 if (![...ENGINES, 'all'].includes(engineName)) { console.error('--engine chromium|firefox|webkit'); process.exit(2); }
 
@@ -499,6 +499,13 @@ const components = async (open) => {
   await check('components: the same with the printer listed for another kernel: it is not this kernel\'s to use', async () => {
     const { context, page, log } = await open(made('other.ufx.html', 'needs-code.ufx', '--components', 'printer', '--for-another-kernel'), 'nobody'); must(SAFE.test(await status(page)), 'not said: ' + await status(page)); await quiet(page, log); await context.close(); return 'its plain text, and what is missing'; });
 };
+// seals (TRAVEL 14.2; PLAYER 9.3 `verify`): the page checks each signature with what the browser has, and the tools say what was found
+const sealing = async (open) => check('seals: a file whose seal is good says who sealed it and that the signature is good; the same file with one bit of the signature changed says that it is not', async () => {
+  const one = async pack => { const f = path.join(work, pack + '.html'); make(here('../../vectors/' + pack), f); const { context, page, log } = await open(f, 'nobody'), said = (await page.getByRole('status').allTextContents()).join(' ');
+    must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify(log.errors)); await context.close(); return said; };
+  const good = await one('history.ufx'), bad = await one('bad-seal.ufx');
+  must(/Sealed by Test Author at state c:[0-9a-f]{8}: the signature is good\. The file has changed since\./.test(good), 'the good seal: ' + good); must(/A seal in the name of Test Author is here, and its signature is NOT good\. Do not rely on it\./.test(bad), 'the bad seal: ' + bad);
+  return JSON.stringify(good.match(/Sealed by[^.]*\.[^.]*\./)[0]); });
 // the safeguard (PLAYER K7): a file that requires what this reader does not have opens, says what is missing, and shows its text
 const needy = async (open, press) => check('safeguard: a file that requires what this reader does not have opens to its plain text, with one line saying what is missing; nothing is broken and nothing can change it', async () => {
   const f = path.join(work, 'needs.ufx.html'); make(here('../../vectors/needs.ufx'), f); const { context, page, log } = await open(f, 'nobody'), want = JSON.parse(fs.readFileSync(here('../../vectors/vectors.json'), 'utf8')).needs['a_reader_without_ufo.time'];
@@ -507,7 +514,7 @@ const needy = async (open, press) => check('safeguard: a file that requires what
   const l = await d0.look(page); must(l.all.includes('Its captions are text.') && l.all.includes('ufo.time'), 'not drawn'); const head = (await headOf(page)).commit; await press(page, 'Edit'); await press(page, 'A film'); await page.keyboard.type('x'); await page.keyboard.press('Tab');
   must((await headOf(page)).commit === head, 'the file was changed'); must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet'); await context.close(); return JSON.stringify(line);
 });
-const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await f6(open, press); await bare(open, press); await needy(open, press); await decisions(open, press, h); await components(open); } });
+const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await f6(open, press); await bare(open, press); await needy(open, press); await decisions(open, press, h); await components(open); await sealing(open); } });
 
 // ---- f: sent on. The saved file served from another origin; and the packs given to the independent reader ----
 let h = null;

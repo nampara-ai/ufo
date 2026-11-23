@@ -432,10 +432,27 @@ fn leaving(cx: &mut Cx, history: bool) -> Option<()> {
     seals(cx);
     Some(())
 }
+/// A seal (14.2) as its frame holds it, and the bytes that were signed: the ten bytes `ufo-seal-1`, then the
+/// SHA-256 of the encoding of the seal without its signature.
+pub fn seal_at(pk: &Pack, i: usize) -> Option<(V, Vec<u8>)> {
+    let s = decode(pk.frames().1.get(i)?)?;
+    let V::M(m) = &s else { return None };
+    let unsigned = V::M(m.iter().filter(|e| e.0 != "signature").cloned().collect());
+    let mut message = b"ufo-seal-1".to_vec();
+    message.extend(sha256(&[&encode(&unsigned)]));
+    Some((s, message))
+}
+/// `seal` records. The status of each is what the host found when it was asked to check the signature:
+/// `valid`, `invalid`, or `unchecked` where it could not (H2: a capability's stated result when it is absent).
+/// `behind` is how many commits have been made since the one it seals, or -1 where that commit is not in the chain.
 fn seals(cx: &mut Cx) {
-    for s in cx.pk.frames().1.iter().filter_map(|s| decode(s)) {
-        let r = R::new("seal").f("commit", w(s.get("commit").and_then(|c| c.hash()).map(|c| cx.c(&c)).unwrap_or_default())).f("key", w(s.get("key").and_then(|k| k.b()).map(hex).unwrap_or_default())).f("status", w("unchecked"))
-            .opt("name", s.get("name").and_then(|n| n.s()).map(t)).opt("time", s.get("time").and_then(|t| t.i()).map(V::Int));
+    for i in 0.. {
+        let Some((s, _)) = seal_at(cx.pk, i) else { break };
+        let commit = s.get("commit").and_then(|c| c.hash());
+        let behind = commit.and_then(|c| cx.chain.iter().position(|e| e.0 == c));
+        let r = R::new("seal").f("commit", w(commit.map(|c| cx.c(&c)).unwrap_or_default())).f("key", w(s.get("key").and_then(|k| k.b()).map(hex).unwrap_or_default()))
+            .f("status", w(match crate::sealed(i) { Some(true) => "valid", Some(false) => "invalid", None => "unchecked" })).f("name", t(s.get("name").and_then(|n| n.s()).unwrap_or("")))
+            .opt("time", s.get("time").and_then(|t| t.i()).map(V::Int)).f("behind", behind.map_or(V::Int(-1), int));
         cx.push(r);
     }
 }
@@ -642,6 +659,7 @@ fn run<'a>(pk: &'a Pack, q: &V) -> Option<(Cx<'a>, String)> {
         ("leaving", _) => leaving(&mut cx, whole)?,
         ("why", Some(i)) => why(&mut cx, i, lo, hi)?,
         ("expand", None) => expand_universe(&mut cx)?,
+        ("verify", _) => seals(&mut cx), // 10.1, in part: the seals, each as the host found it
         #[cfg(not(feature = "cut-agent"))]
         ("text", Some(i)) if crate::held(AGENT) => text(&mut cx, i)?,
         #[cfg(not(feature = "cut-agent"))]

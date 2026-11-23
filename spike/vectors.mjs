@@ -84,6 +84,13 @@ for (const [P, text] of [[V.published, 'a1'.repeat(16)], [V.published_timeline, 
   check('needs: the plain-text face itself', k.sample({ as: 'text' }).text, E.plain_text_face);
   check('needs: the static face says the same', [k.sample({ as: 'static' }).html.includes('ufo.time'), k.sample({ as: 'static' }).html.includes('Its captions are text.')], [true, true]);
   console.log(nodes.map(n => `${n.role}: ${n.text}`).join('\n')); }
+// ---- seals (section 14.2): the bytes that were signed, and what checking the signature finds ----
+{ const S = V.seals, good = await open('history.ufx'), bad = await open('bad-seal.ufx'), hexOf = b => Buffer.from(b).toString('hex'), seal = k => rec(k, { name: 'verify' }).find(r => r.is === 'seal');
+  check('seal: the bytes signed, the key and the signature', good.seals().map(s => [hexOf(s.message), hexOf(s.key), hexOf(s.signature)]), [[S['history.ufx'].signed_bytes_hex, S['history.ufx'].key, S['history.ufx'].signature]]);
+  check('seal: checked, and good', [seal(good).status, bare(seal(good).commit), seal(good).behind], [S['history.ufx'].status, S['history.ufx'].sealed_commit, S['history.ufx'].commits_since]);
+  check('seal: one bit of the signature changed', seal(bad).status, S['bad-seal.ufx'].status);
+  const blind = await start(wasm, noMeasure, b => zlib.inflateRawSync(b), { verify: false }); await blind.open(new Uint8Array(bytes('history.ufx')));
+  check('seal: a reader that cannot check says so', seal(blind).status, S.a_reader_that_cannot_check.status); }
 // ---- components (section 1.6): what a universe carries for a kernel of a stated hash ----
 { const C = V.components, k = await open(C.file);
   check('components: listed for the kernel of that hash', k.listed(C.for).map(c => ({ role: c.role, sha256: c.sha256, length: c.bytes.length, bytes_hex: Buffer.from(c.bytes).toString('hex') })), C.listed);

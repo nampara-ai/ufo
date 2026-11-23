@@ -163,6 +163,26 @@ pub fn held(which: u32) -> bool {
 pub unsafe extern "C" fn components(mask: u32) {
     HELD = mask;
 }
+/// What the host found of each seal's signature (the `verify` capability, 9.3): by the seal's place among the
+/// seal frames. Nothing is here until the host has been asked and has answered.
+static mut SEALED: Vec<Option<bool>> = Vec::new();
+pub fn sealed(i: usize) -> Option<bool> {
+    unsafe { SEALED.get(i).copied().flatten() }
+}
+/// `{i}`: the i-th seal the pack holds, as what the host is to check: `{key, message, signature}`; null past the last.
+#[no_mangle]
+pub unsafe extern "C" fn seal(p: *mut u8, n: usize) -> *const u8 {
+    let q = taken(p, n);
+    given(PACK.as_ref().and_then(|pk| project::seal_at(pk, q.get("i")?.i()? as usize)).map(|(s, message)| map(vec![("key", s.get("key").cloned().unwrap_or(V::Null)), ("message", V::B(message)), ("signature", s.get("signature").cloned().unwrap_or(V::Null))])))
+}
+/// The host's answer for the i-th seal: 1 if the signature is the key's over those bytes, 0 if it is not.
+#[no_mangle]
+pub unsafe extern "C" fn seal_checked(i: usize, good: i32) {
+    if SEALED.len() <= i {
+        SEALED.resize(i + 1, None);
+    }
+    SEALED[i] = Some(good == 1);
+}
 /// The roles of the components this kernel can be divided into, and the bit of each.
 const ROLES: [(&str, u32); 2] = [("ufo.printer", PRINTER), ("ufo.agent", AGENT)];
 /// The i-th component the universe carries for this kernel (1.6; spike/SPLIT.md): an entry of the universe
@@ -208,6 +228,7 @@ pub extern "C" fn alloc(n: usize) -> *mut u8 {
 #[no_mangle]
 pub unsafe extern "C" fn open(p: *mut u8, n: usize) -> i32 {
     PACK = None;
+    SEALED = Vec::new();
     SCANNED = scan_pack(Vec::from_raw_parts(p, n, n.max(1)));
     match pending() {
         0 => ready(),

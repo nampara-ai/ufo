@@ -862,7 +862,7 @@ passed back, exactly as written, as an argument to another projection.
 | `why` | anchor | `region`; then for each part of it: `run` or `value`; `copied`*; `finding`*; `evidence`*; `decision`?; and of a derived object `source`*; `made` |
 | `diff` | two commits or revisions | `op`* |
 | `expand` | anchor, or none | `part`*; before them, with no anchor: `universe`; `seal`*; `feature`*; `component`*; `face`*; `lacks`? |
-| `verify` | commit | `check`*; `issue`* |
+| `verify` | commit | `seal`*; `check`*; `issue`* |
 | `leaving` | the parameters of an export | `layer`, three; `lacks`; `seal`* |
 | `sample` | face, parameters | as text: `text`; as a display list: `item`* |
 | `unit` | object identity of a function | `unit`; `stmt`* |
@@ -870,7 +870,7 @@ passed back, exactly as written, as an argument to another projection.
 | Record | Fields |
 | --- | --- |
 | `universe` | `lineage` `commit` `height` `objects` (count) `types` (a map from each type to the count of its objects) `changes` (count) `first` `last` (times) `actors` (list) |
-| `seal` | `commit` `key` `status` (`valid`, `invalid`, `unchecked`) [`name`] [`time`] |
+| `seal` | `commit` `key` `status` (`valid`, `invalid`, or `unchecked` where the reader could not check the signature) `name` (empty where the seal gives none) [`time`] `behind` (the number of commits made since the one it seals; −1 where that commit is not in the chain) |
 | `feature` | `name` `v` `required` `supported` |
 | `component` | `role` `hash` `status` |
 | `face` | `id` `kind` (`sampled`, `carried`, `transmuted`) `status` `medium` `label` |
