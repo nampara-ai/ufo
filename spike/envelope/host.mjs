@@ -172,7 +172,9 @@ function measure({ piece, at }) {   // the advance of a piece up to each offset,
   const adv = at.map(o => ruler.measureText(cps.slice(0, o).join('')).width);
   return { adv, asc: m.fontBoundingBoxAscent, desc: m.fontBoundingBoxDescent };
 }
-const inflate = async b => new U8(await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+// Read piece by piece here, so that bytes which do not inflate fail as an answer and nowhere else (vectors/quirks 07).
+const inflate = async b => { const r = new Blob([b]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader(), got = [];
+  for (;;) { const { done, value } = await r.read(); if (done) return new U8(await new Blob(got).arrayBuffer()); got.push(value); } };
 let ex;
 const mem = () => new U8(ex.memory.buffer);
 const give = b => { const p = ex.alloc(b.length); mem().set(b, p); return p; };

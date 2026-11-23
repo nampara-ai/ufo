@@ -1436,3 +1436,22 @@ difference is entry 06 of the quirks corpus.
 *Named values.* `let` in formulas (§7.3). The tools universe asks what
 will leave once where it asked about sixteen times, and no longer keeps
 a value in the presentation state only to use it twice.
+
+## 29. The split in real files (2026-11-23)
+
+Before any more of the base was built, the owner had the split wired
+into real files. A file carries the base and lists what else it needs
+under `components`; the page puts each beside the base; a reader that
+holds one by its hash does not read the file's. The acceptance suite
+runs on the base alone in three engines, with four checks of components,
+among them one that does not verify. The one-paragraph envelope is
+191 748 bytes. The measurements and what is not done are in
+`spike/SPLIT.md` section 9.
+
+3f was measured in outline first: grid layout 2.1 KB and the editing of
+data 1.1 KB, so both stay in the base.
+
+The independent reader checked attribution through `origin.sources`
+from the core text alone, and gave the kernel's nine stretches for
+`decided.ufx`, the word a rejection put back among them. Six places it
+found undecided were settled in §5.4.

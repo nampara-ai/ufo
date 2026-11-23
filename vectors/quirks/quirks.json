@@ -468,6 +468,27 @@
    "pass": "the element holding the focus is removed and a new one placed before its sibling, while a listener answers a lost focus by removing that sibling: no error; zero violations; zero console messages",
    "note": "Found when a decision was recorded through the tools (SPEC 5.4): a pressed word held the focus, the list of changes grew by a line, and the host removed the word's node. In Chromium 153. Firefox 155 and WebKit 26.6 do not report the focus lost at that moment.",
    "status": "provisional"
+  },
+  {
+   "id": "07-failed-inflation-is-silent",
+   "name": "Bytes that do not inflate, read through a Response: the page catches the failure, and Firefox still writes it to the console",
+   "file": "07-failed-inflation-is-silent.html",
+   "where": [
+    "file"
+   ],
+   "expect": {},
+   "naive": [
+    {
+     "file": "07-failed-inflation-is-silent.naive.html",
+     "fails": {
+      "firefox": "a console error: Failed to read data from the ReadableStream: The input data is corrupted"
+     }
+    }
+   ],
+   "rule": "A binding reads what it inflates piece by piece itself, and takes a failure as an answer: the record is then not to be had. It does not hand a stream that may fail to anything that reports failures of its own accord.",
+   "pass": "six bytes that are no DEFLATE stream are inflated: the page finds that they do not inflate; zero violations; zero console messages",
+   "note": "Found when a component with one byte changed was carried in a file (PLAYER K7, K8): its compressed record did not inflate, the page went on as it should, and Firefox 155 wrote an error to the console, which a web envelope never does (TRAVEL E21). Chromium 153 and WebKit 26.6 write nothing.",
+   "status": "provisional"
   }
  ],
  "harness": [

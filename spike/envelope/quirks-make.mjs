@@ -172,6 +172,25 @@ E.push({ id: '06-focus-lost-while-placing', name: 'The element that holds the fo
   pass: 'the element holding the focus is removed and a new one placed before its sibling, while a listener answers a lost focus by removing that sibling: no error; zero violations; zero console messages',
   note: 'Found when a decision was recorded through the tools (SPEC 5.4): a pressed word held the focus, the list of changes grew by a line, and the host removed the word\'s node. In Chromium 153. Firefox 155 and WebKit 26.6 do not report the focus lost at that moment.',
   status: 'provisional' });
+// ---- 07: bytes that do not inflate: one engine writes the failure to the console although the page has caught it ----
+const badCheck = how => `const problems = [];
+// six bytes that are no DEFLATE stream; a page that inflates what a file carries must expect them
+const bad = new Uint8Array([255, 255, 255, 255, 255, 255]), through = () => new Blob([bad]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+${how}
+const got = await inflate().then(b => b, () => null);
+if (got !== null) problems.push('bytes that do not inflate were taken as ' + got.length + ' bytes');
+finish(problems, 800);`;
+page('07-failed-inflation-is-silent.html', { title: '07 what does not inflate fails quietly', says: 'What is inflated is read piece by piece by the page itself, and a failure is an answer like any other: nothing else is given the stream that might report the failure on its own.',
+  script: badCheck(`const inflate = async () => { const r = through().getReader(), parts = []; for (;;) { const { done, value } = await r.read(); if (done) break; parts.push(value); } return new Uint8Array(await new Blob(parts).arrayBuffer()); };`) });
+page('07-failed-inflation-is-silent.naive.html', { title: '07 naive: the stream handed to a Response', says: 'Naive: the inflating stream is handed to a Response and read whole. The page catches the failure; Firefox writes it to the console all the same.',
+  script: badCheck(`const inflate = async () => new Uint8Array(await new Response(through()).arrayBuffer());`) });
+E.push({ id: '07-failed-inflation-is-silent', name: 'Bytes that do not inflate, read through a Response: the page catches the failure, and Firefox still writes it to the console',
+  file: '07-failed-inflation-is-silent.html', where: ['file'], expect: {},
+  naive: [{ file: '07-failed-inflation-is-silent.naive.html', fails: { firefox: 'a console error: Failed to read data from the ReadableStream: The input data is corrupted' } }],
+  rule: 'A binding reads what it inflates piece by piece itself, and takes a failure as an answer: the record is then not to be had. It does not hand a stream that may fail to anything that reports failures of its own accord.',
+  pass: 'six bytes that are no DEFLATE stream are inflated: the page finds that they do not inflate; zero violations; zero console messages',
+  note: 'Found when a component with one byte changed was carried in a file (PLAYER K7, K8): its compressed record did not inflate, the page went on as it should, and Firefox 155 wrote an error to the console, which a web envelope never does (TRAVEL E21). Chromium 153 and WebKit 26.6 write nothing.',
+  status: 'provisional' });
 E.unshift({ id: '00-envelope', name: 'The envelope as built: opened, edited by the keyboard, saved and reopened under its own policy', file: null, where: ['http'], expect: {},
   rule: 'A web envelope, through opening, every face, an edit, saving and reopening what was saved, MUST cause zero policy violations, write nothing to the console, and make no request but the one that fetched it.',
   pass: 'built by spike/envelope/make.mjs from vectors/compose.ufx and served from an http origin: by the keyboard alone: Tab to Edit, Enter; Tab to the field for the name, Enter, typing, Done (no dialog of the browser is shown at any point: one would fail the entry); Tab to a paragraph, Enter, typing, Done; back to Save, Enter, which shows what will leave; the copy with its history chosen, then "Save this copy": one file comes down; it reopens at the same state; over both pages zero securitypolicyviolation events, zero console messages, and the server saw each page asked for once and nothing else' });

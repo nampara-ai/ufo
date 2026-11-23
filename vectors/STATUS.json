@@ -203,7 +203,7 @@
   },
   "quirks/quirks.json": {
    "status": "provisional",
-   "note": "seven entries, run in three engines by the author's test; no independent implementation has been put through it"
+   "note": "eight entries, run in three engines by the author's test; no independent implementation has been put through it"
   },
   "provisional/leaving.json": {
    "status": "provisional",

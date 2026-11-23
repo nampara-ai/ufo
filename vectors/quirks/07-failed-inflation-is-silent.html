@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!-- What is inflated is read piece by piece by the page itself, and a failure is an answer like any other: nothing else is given the stream that might report the failure on its own. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>07 what does not inflate fails quietly</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-mqCSP9EFRw1TrZBcwumR52eKKobiWCRcyaKgfWNvKtE='; style-src 'sha256-VwJYb9DpUq9ftUDHbdhcTMn6sWSJ0JAGjwpLX+Yhjss='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}</style>
+</head><body>
+<h1>07 what does not inflate fails quietly</h1>
+<p>What is inflated is read piece by piece by the page itself, and a failure is an answer like any other: nothing else is given the stream that might report the failure on its own.</p>
+<p>Result: <span id="result">not finished</span></p>
+
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+const problems = [];
+// six bytes that are no DEFLATE stream; a page that inflates what a file carries must expect them
+const bad = new Uint8Array([255, 255, 255, 255, 255, 255]), through = () => new Blob([bad]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+const inflate = async () => { const r = through().getReader(), parts = []; for (;;) { const { done, value } = await r.read(); if (done) break; parts.push(value); } return new Uint8Array(await new Blob(parts).arrayBuffer()); };
+const got = await inflate().then(b => b, () => null);
+if (got !== null) problems.push('bytes that do not inflate were taken as ' + got.length + ' bytes');
+finish(problems, 800);</script></body></html>

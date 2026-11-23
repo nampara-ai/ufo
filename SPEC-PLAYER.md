@@ -399,6 +399,10 @@ written.
   the kernel. An event that arrives meanwhile, from inside something the
   binding is doing — an engine may report the focus lost while the node
   that held it is being removed — waits its turn.
+- **[H11] What does not inflate fails as an answer.** A binding reads
+  what it inflates piece by piece itself. Bytes that do not inflate give
+  no record, and nothing else: it does not hand a stream that may fail
+  to anything that reports a failure of its own accord (**E21**).
 - **[H6]** A reader MUST show the person, at any time, every grant in force,
   and what each program has done with it during the session.
 

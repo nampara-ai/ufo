@@ -272,3 +272,66 @@ estimates from the size of like code already written, not measurements:
 
 Against 17.1 KB left, that leaves between 6 and 9.5 KB at the end. The
 largest and least certain is the last.
+
+## 9. The split in real files (2026-11-23)
+
+A file now carries the base, and beside it only what it lists.
+
+**How it is listed.** Under the universe object's `components`, a role of
+the kernel holds `{module, for}`: the component's bytes as a blob, its
+chunks compressed by the build tooling, and the SHA-256 of the base it
+was divided from (SPEC §1.6, with the vector `listed.ufx`). The kernel
+answers two questions and no more: which components the universe lists
+for a kernel of a given hash, each with its role and the SHA-256 of its
+bytes, for which nothing of the component is read; and the bytes of one,
+which it reads checking every record and the whole.
+
+**How a page loads them.** After the pack is open the binding asks for
+each in turn, puts it beside the base with the base's own exports as its
+imports, and tells the kernel which stand there. It learns no role. That
+is nine lines of the binding, which is 9 644 bytes as shipped, of 16 384.
+
+**How a reader skips one.** A reader with a store of its own looks up
+the SHA-256 the kernel gave. Where it holds the component it uses that
+and never asks for the bytes. Shown in Node (`divided.mjs`): with the
+printer in the store only the agent is read from the file; with both,
+neither. A page has no store and reads what its file carries.
+
+**What a file weighs.** The one-paragraph envelope, `minimal.ufx` with
+the tools nested, measured:
+
+| | Bytes | KiB |
+| --- | ---: | ---: |
+| The base, and the tools in the pack | 191 748 | 187.3 |
+| The same without the tools | 173 496 | 169.4 |
+| With the agent listed | 199 796 | 195.1 |
+| With the printer listed | 201 284 | 196.6 |
+| With both | 210 008 | 205.1 |
+
+Of the first: the base in base64 153 128; the pack 21 720, of which the
+document is 3 468 and the tools the rest; the binding 9 644; the
+skeleton, carried and used, 5 098; the style 2 050. All are within the
+256 KiB budget. A component costs a file about 8 to 9.5 KB.
+
+**The base as carried** is 114 844 bytes compressed (112.2 KiB), 871
+more than before it could list components.
+
+**Run.** In Chromium, Firefox and WebKit every page of the acceptance
+suite now runs on the base alone. The tests ask their questions of the
+page's pack through a whole kernel in Node, since the agent's
+projections are no longer in the page. Four checks are of components: a
+file that lists none answers nothing an agent would ask, and one that
+lists the agent answers as the whole kernel does; a file that needs the
+printer and lists it is shown as itself; with one byte of the printer
+changed it does not verify, and the file opens to its plain text and
+says what is missing; listed for another kernel, the same.
+
+**Found on the way.** A damaged component made the universe object
+unreadable, and so the whole file: an object is now read even where one
+of its values cannot be. And Firefox wrote to the console when the
+damaged record did not inflate, though the page had caught it: the
+binding now reads what it inflates itself (quirks 07, **H11**).
+
+**Not done.** A page cannot take a component from anywhere but its own
+file. No component is yet added to a file by a reader when the file
+comes to need one. The formulas and time components do not exist.

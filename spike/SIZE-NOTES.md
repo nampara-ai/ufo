@@ -518,3 +518,15 @@ Together 3 236 bytes. The outline leaves out the rows' own track sizes,
 `row`, `col`, `span` and `align`, the roles of a table, and what it takes
 for a file's own content to have formulas and handlers at all, which the
 kernel now gives only to the tools.
+
+## The split in real files (2026-11-23)
+
+| | Compressed |
+| --- | ---: |
+| The base as files carry it, able to list its components | 114 844 |
+| Printer | 5 063 |
+| Agent | 3 720 |
+| The kernel whole, for comparison | 121 109 |
+
+The one-paragraph envelope is 191 748 bytes with the base and the tools
+(`SPLIT.md` section 9).

@@ -10,7 +10,8 @@
     "03-save-as-bytes": "pass",
     "04-edit-positions": "pass",
     "05-touch-beside-a-button": "pass",
-    "06-focus-lost-while-placing": "pass"
+    "06-focus-lost-while-placing": "pass",
+    "07-failed-inflation-is-silent": "pass"
    }
   },
   "firefox": {
@@ -23,7 +24,8 @@
     "03-save-as-bytes": "pass",
     "04-edit-positions": "pass",
     "05-touch-beside-a-button": "pass",
-    "06-focus-lost-while-placing": "pass"
+    "06-focus-lost-while-placing": "pass",
+    "07-failed-inflation-is-silent": "pass"
    }
   },
   "webkit": {
@@ -36,12 +38,13 @@
     "03-save-as-bytes": "pass",
     "04-edit-positions": "pass",
     "05-touch-beside-a-button": "pass",
-    "06-focus-lost-while-placing": "pass"
+    "06-focus-lost-while-placing": "pass",
+    "07-failed-inflation-is-silent": "pass"
    }
   }
  },
- "total": 21,
- "passed": 21,
+ "total": 24,
+ "passed": 24,
  "failed": 0,
  "naive": [
   {
@@ -108,11 +111,18 @@
    "how": "file: fail: NotFoundError: Failed to execute 'insertBefore' on 'Node': The node before which the new node is to be inserted is not a"
   },
   {
+   "file": "07-failed-inflation-is-silent.naive.html",
+   "engine": "chromium",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
    "file": "01-no-icon-request.naive.html",
    "engine": "firefox",
    "fails": true,
    "as_recorded": true,
-   "how": "http: fail: policy violation: img-src http://127.0.0.1:37611/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:37611/favic; http: violations: img-src http://127.0.0.1:37611/favicon.ico"
+   "how": "http: fail: policy violation: img-src http://127.0.0.1:42671/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:42671/favic; http: violations: img-src http://127.0.0.1:42671/favicon.ico"
   },
   {
    "file": "01-no-icon-request.naive2.html",
@@ -169,6 +179,13 @@
    "fails": false,
    "as_recorded": true,
    "how": ""
+  },
+  {
+   "file": "07-failed-inflation-is-silent.naive.html",
+   "engine": "firefox",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: console: error: [JavaScript Error: \"Failed to read data from the ReadableStream: “TypeError: The input data is corrupted: invalid block type”.\"]"
   },
   {
    "file": "01-no-icon-request.naive.html",
@@ -228,6 +245,13 @@
   },
   {
    "file": "06-focus-lost-while-placing.naive.html",
+   "engine": "webkit",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
+   "file": "07-failed-inflation-is-silent.naive.html",
    "engine": "webkit",
    "fails": false,
    "as_recorded": true,

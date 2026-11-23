@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!-- Naive: the inflating stream is handed to a Response and read whole. The page catches the failure; Firefox writes it to the console all the same. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>07 naive: the stream handed to a Response</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pyR67Tllnm/8Ji7qM1DZm6dkGWkKQ+rfVT6zgsCo9Zk='; style-src 'sha256-VwJYb9DpUq9ftUDHbdhcTMn6sWSJ0JAGjwpLX+Yhjss='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}</style>
+</head><body>
+<h1>07 naive: the stream handed to a Response</h1>
+<p>Naive: the inflating stream is handed to a Response and read whole. The page catches the failure; Firefox writes it to the console all the same.</p>
+<p>Result: <span id="result">not finished</span></p>
+
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+const problems = [];
+// six bytes that are no DEFLATE stream; a page that inflates what a file carries must expect them
+const bad = new Uint8Array([255, 255, 255, 255, 255, 255]), through = () => new Blob([bad]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+const inflate = async () => new Uint8Array(await new Response(through()).arrayBuffer());
+const got = await inflate().then(b => b, () => null);
+if (got !== null) problems.push('bytes that do not inflate were taken as ' + got.length + ' bytes');
+finish(problems, 800);</script></body></html>
