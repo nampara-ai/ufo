@@ -375,7 +375,9 @@ fn restyle(st: &mut Style, v: &V) {
 fn pressed(cx: &Ctx, st: &mut Style, s: &Span, id: &Id) -> bool {
     let on = cx.env.is_some() && s.v.get("on").is_some();
     if on {
-        st.press = V::L(vec![V::B(id.to_vec()), t(s.key)]);
+        // with what any `each` has bound here, so that the handler can read it when the press comes
+        let bound = cx.env.map(|e| e.args.borrow()[e.base.min(e.args.borrow().len())..].to_vec()).unwrap_or_default();
+        st.press = V::L(vec![V::B(id.to_vec()), t(s.key), V::M(bound)]);
     }
     on
 }
@@ -1176,11 +1178,27 @@ pub fn html(list: &[V]) -> String {
 }
 /// The static face of a universe: the nodes of its primary face. Nothing is measured, so lines end
 /// only where the text ends them, and the result is the same on every host.
+/// The safeguard (PLAYER K7): where the universe requires what this reader does not have, a face is not
+/// attempted. What is shown is one line, said by the reader, naming what is missing, and then the plain-text
+/// face (8.3) of the object. None where nothing is missing.
+pub fn safeguard(cx: &mut Ctx, pk: &Pack, id: &Id, w: f64) -> Option<Vec<Row>> {
+    let missing = crate::project::unmet(pk);
+    if missing.is_empty() {
+        return None;
+    }
+    let mut rows = said_rows(cx, &cat!("This file needs something this reader does not have: ", missing.join(", "), ". Its text is shown below. What is not text cannot be shown here."), w, "status");
+    let mut s = String::new();
+    plain(pk, &pk.head, id, &mut s, 0);
+    rows.extend(plain_rows(cx, s.trim_start_matches('\n'), w));
+    Some(rows)
+}
 pub fn static_face(pk: &Pack) -> Option<String> {
     let u = pk.object(&pk.head, &[0; 16])?;
     let f = pk.object(&pk.head, &u.p.get("roots")?.get("primary")?.tag(REF)?.id()?)?;
     let mut cx = Ctx::new(pk, &|_| None, None);
-    let (rows, mut list) = (compose(&mut cx, &pk.head, &f.p.get("of")?.tag(REF)?.id()?, 1e9), Vec::new());
+    let id = f.p.get("of")?.tag(REF)?.id()?;
+    let rows = match safeguard(&mut cx, pk, &id, 1e9) { Some(rows) => rows, None => compose(&mut cx, &pk.head, &id, 1e9) };
+    let mut list = Vec::new();
     stack(&rows, 0.0, 0.0, &mut list);
     Some(html(&list))
 }

@@ -17,6 +17,7 @@ std = [] # build with the standard library (its allocator, its panic machinery)
 keep = [] # one more export, which reaches every entry point of pack.rs: cutting the parts above then leaves pack.rs whole
 cut-sha = []
 cut-project = []
+cut-decide = [] # recording a decision about a change, and undoing a change that is rejected
 cut-agent = [] # the projections only agents ask for (object, text, the outline of a text or a timeline) and the text of any projection
 cut-query = []
 cut-print = []

@@ -1576,6 +1576,19 @@ the commit that recorded it is covered by a seal.
   content from a model remains content from a model.
 - **[R7]** The current decision about content is the latest decision in the
   Chronicle whose `about` covers it. Earlier decisions remain.
+- **[R9] A decision is a change; rejecting undoes, whole or not at all.**
+  A decision is recorded by a change of its own. Accepting a change
+  records the decision and alters nothing else: its change has no
+  operations. Rejecting a change records the decision and, in the same
+  change, undoes it: each element it inserted is removed; what it removed
+  is inserted again, after the last element it removed, which stands
+  there still as a tombstone; each property it set is set back. What is
+  inserted again is given new elements, and the change's
+  `origin.sources` names, run by run, the changes that first introduced
+  it, so that `why` still gives it to its first author. A change is
+  rejected only whole: where its work is withheld, or anything it
+  inserted has since been removed, the rejection is refused, nothing is
+  written, and the reader says why (**L4**).
 
 **Attribution** is the answer to "where did this come from", and it is read,
 never reconstructed (**L5**). For a region of a sequence, `why` returns, for
@@ -1959,8 +1972,9 @@ throwaway kernel on the packs above:
 | `provisional/edits.json` | for the two edited packs: who is attributed with each stretch around the edit, and where the blocks lie |
 | `provisional/envelope.json` | the web envelope as a function of its parts (§13.2): one fixed case with its exact result, and seven cases that are refused |
 | `provisional/leaving.json` | for `edit-one-word.ufx`: what `leaving` says would travel for each of the two defaults, and the published copy (§13.3 **E12**, Appendix B) |
+| `provisional/decisions.json` | for `decided.ufx`: two edits by one person, then by another the newer accepted and the older rejected; the history with the decision that stands about each change; `why` of the paragraph after the rejection; and a second rejection refused (§5.4 **R9**) |
 | `provisional/roles.json` | the accessible nodes of `compose.ufx` and of a tools line, as a display list carries them: what a host must expose (§9.2) |
-| `quirks/` | the corpus of differences between browser engines: one small page for each, with the naive construction beside it, and `quirks.json` saying what each engine does and the rule that prevents it (§13.2 **E21** to **E25**, §9.3 **H9**) |
+| `quirks/` | the corpus of differences between browser engines: one small page for each, with the naive construction beside it, and `quirks.json` saying what each engine does and the rule that prevents it (§13.2 **E21** to **E25**, §9.3 **H9**, **H10**) |
 | `provisional/projections.json` | eleven projections of the packs, as text: `object`, `text`, `history`, `why`, and outlines by `expand` (§10.1, §10.2, Appendix B) |
 
 `spike/QUERY-NOTES.md` and `spike/COMPOSITION-NOTES.md` list each place
@@ -1974,6 +1988,8 @@ where the text did not decide what the kernel should do, and what it did.
 | `vectors/timeline.ufx` | a pack of 12482 bytes holding four commits of one timeline (§4.5): ten seconds of time with three plays; two seconds cut from the middle; one second inserted; the start of a play cut. Its last commit adds an object whose source is a pin to three seconds of it |
 | `vectors/published.ufx` | `history.ufx` as it is published (§13.3): a pack of 9541 bytes holding its content and attribution layers, its seal, and an `absent` frame saying that working history is withheld. A kernel that publishes `history.ufx` MUST produce these bytes, and likewise for the two below |
 | `vectors/pins.ufx` | a pack of 10245 bytes holding one commit: a text with an empty block and an inline span, an asset, a clock, an object holding an anchor of every kind, and an object whose sources are a pin for each case of the digest (§4.2 to §4.4, §5.2, §5.3) |
+| `vectors/decided.ufx` | `compose.ufx` after two edits, an acceptance and a rejection made through a kernel's gate (§5.4 **R9**) |
+| `vectors/needs.ufx`, `vectors/needs-code.ufx` | one universe twice, requiring a feature a reader may lack: `ufo.time`, and `ufo.code`. The group `needs` says what such a reader shows (§9.1 **K7**) |
 | `vectors/published-timeline.ufx`, `vectors/published-nested.ufx` | `timeline.ufx` and `nested.ufx` as they are published (§2.5): 3830 and 2557 bytes |
 | `vectors/edit-one-word.ufx`, `vectors/edit-paragraph-start.ufx` | `compose.ufx` after edits made through a kernel's gate: one word changed; text typed at the very start of a paragraph (§1.7 **L1**, §5.1) |
 | `vectors/edit-positioned.ufx` | `compose.ufx` after text was typed in front of a word it shares letters with, reported by position (§9.3 **H8**) |
@@ -2010,7 +2026,7 @@ decision, and adds an object whose sources are two pins made then. The file ends
 | `digests` | two pins at the last commit of `history.ufx`, each with its salt, its covered value as bytes, the objects followed and the digest (§4.4): a passage of the text with the span that touches it, and the face object, whose ref to the text is followed |
 | `resolve_continuous` | six regions against an extent: inside, clipped at each end, touching an end, detached, floats |
 | `timeline` | for each of the four commits of `timeline.ufx`: the count, the `seq`, where three anchors and three plays resolve, and at sampled positions the element there and the time of each play present. The fourth commit cuts the start of a play |
-| `published` | the hashes of the content layer and of the attribution layer of `history.ufx`, the number of records in its working history, and what a reader of `published.ufx` finds: the same state, the same text, the same answer to who wrote each character. Generator and kernel agree |
+| `published` | the hashes of the content layer and of the attribution layer of `history.ufx`, the number of records in its working history, and what a reader of `published.ufx` finds: the same state, the same text, the same answer to who wrote each character; under `left_out`, what `leaving` must count as unclassifiable before the copy is made (§13.3 **E12**). Generator and kernel agree |
 | `pins` | where each anchor of `pins.ufx` resolves: continuous regions inside, clipped to, touching and outside an extent, one whose extent is unknown, keyed regions, a point. Eight digests, each with its covered value and followed objects, one for each choice §4.4 settles |
 | `published_timeline`, `published_nested` | the content and attribution layers of `timeline.ufx` and `nested.ufx`, and what a reader of each published copy finds: a commit whose change is withheld; who wrote the nested text |
 | `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§8.3) |

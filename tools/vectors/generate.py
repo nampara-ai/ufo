@@ -651,6 +651,8 @@ def layers_of_history():
 content, attribution, whist, pubpk = layers_of_history()
 open(os.path.join(OUT, "published.ufx"), "wb").write(pubpk.b)
 V["published"] = {"file": "published.ufx", "length": len(pubpk.b), "root_hash": hK3.hex(), "made_from": "history.ufx",
+    "left_out": {"frames_of_unknown_kind": 1, "bytes": len(frame(0x7f, b"a frame of unknown kind: skipped and preserved")),
+                 "what": "history.ufx holds one frame of a kind no reader knows. A copy for outside readers does not carry it, and `leaving` says so before the copy is made: `unread` and `unread-bytes` of its `lacks` record (TRAVEL E10, E12)"},
     "what": "history.ufx as it is published: the content and attribution layers, the seal, and an absent frame saying that working history is withheld. Working history is every other record of history.ufx",
     "content": sorted(h.hex() for h in content), "attribution": sorted(h.hex() for h in attribution), "working_history_records": len(whist),
     "content_is": "the nodes of the current object map, and the current revisions of the universe object, the face and the text. The clock and the forty items are not reachable from the universe object, so they are not live",
@@ -871,6 +873,37 @@ _cov = {"t": [[[_D1, 0, 3 * _S]], {"plays": {"a": _play_a}}]}
 V["pins"]["digests"].append({"case": "three seconds of a timeline", "pack": "timeline.ufx", "why": "on a count the covered items are the runs the region covers, cut to it; play a touches them and plays b and c do not; the first take is followed",
     "o": _TK.hex(), "axis": "t", "a": [_D1.hex(), 0, 0], "b": [_D1.hex(), 3 * _S - 1, 1], "salt": salt(7108).hex(), "covered_value_hex": enc(_cov).hex(),
     "followed": [{"id": _R1.hex(), "revision": TL["st"][_R1].hex()}], "digest": digest(salt(7108), _cov, [(_R1, TL["st"][_R1])]).hex()})
+
+# ---- 13b. a universe that requires what a reader may not have (PLAYER K7): the safeguard ----
+def needs_pack(feature="ufo.time", name="needs.ufx", lin=bytes([0x77]) * 16):
+    pk = Pack(); NU, NT, NK, NF, NC = bytes(16), bytes([0x41]) * 16, bytes([0x42]) * 16, bytes([0x43]) * 16, bytes([0x4c]) * 16
+    chars = "A film, described.Its captions are text."; e = lambda i: [NC, i, 0]
+    spans = {"b0": {"at": anchor({"o": NT, "a": {"chars": ["s", e(0), e(18)]}}), "kind": "block", "role": "paragraph"},
+             "b1": {"at": anchor({"o": NT, "a": {"chars": ["s", e(18), "end"]}}), "kind": "block", "role": "paragraph"}}
+    feats = {"ufo.text": {"v": 1, "required": True}, feature: {"v": 1, "required": True}}
+    objs = [(NU, "ufo.universe", {"lineage": lin, "roots": {"primary": ref(NF)}, "faces": [ref(NF)], "features": feats}),
+            (NT, "ufo.text", {"chars": chars, "spans": spans}), (NK, "ufo.clock", {"start": 0, "end": 10 * FL, "children": [ref(NT)]}),
+            (NF, "ufo.face", {"of": ref(NK), "medium": "video"})]
+    st = {}; ops = []
+    for n, (i, ty, p) in enumerate(objs):
+        st[i] = revision(pk, i, ty, 1, NC, 7201 + n, p, seq={"chars": [[NC, 0, len(chars)]]} if i == NT else None)
+        ops.append({"op": "new", "obj": i, "type": ty})
+        for k_, v in p.items():
+            ops.append({"op": "splice", "obj": i, "key": k_, "after": None, "ins": v} if (i == NT and k_ == "chars") else {"op": "set", "obj": i, "key": k_, "val": v})
+    st, _, _, k = commit(pk, st, NC, ops, None, {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 7250)
+    pk.index(); pk.head(k)
+    return pk, {"file": name, "length": len(pk.b), "root_hash": k.hex(),
+        "what": "one commit: a face whose object is a clock holding a text of two paragraphs. The universe object requires two features, `ufo.text` and `ufo.time`",
+        "a_reader_without_ufo.time": {"missing": ["ufo.time"], "attempts": "no face",
+            "shows": "one line of its own that names what is missing, then the plain-text face of the primary face's object",
+            "plain_text_face": "A film, described.\n\nIts captions are text.\n",
+            "never": "an empty or broken screen; a face composed in part; anything pressable that would change the file"}}
+npk, nv = needs_pack()
+open(os.path.join(OUT, "needs.ufx"), "wb").write(npk.b); V["needs"] = nv
+npk2, nv2 = needs_pack("ufo.code", "needs-code.ufx", bytes([0x78]) * 16)
+open(os.path.join(OUT, "needs-code.ufx"), "wb").write(npk2.b)
+V["needs"]["the_same_requiring_ufo.code"] = {"file": "needs-code.ufx", "length": nv2["length"], "root_hash": nv2["root_hash"],
+    "what": "the same universe, requiring `ufo.code` where the other requires `ufo.time`. A reader that has the printer component beside its base has `ufo.code` and attempts the face. One whose printer is absent, or does not verify against the hash that names it, or does not instantiate against its base, has not, and shows what the first pack shows, naming `ufo.code`"}
 
 # ---- 14. the layers of the other packs (section 2.5), and published copies of them ----
 def map_hashes(state):

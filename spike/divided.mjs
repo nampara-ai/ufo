@@ -2,7 +2,7 @@
 // both, and the answers compared byte for byte; then the base with a component left out, which must still read,
 // compose, edit and publish exactly as the whole kernel does, and say nothing where the component would have answered.
 //   node spike/tools/divide.mjs && node spike/divided.mjs
-import fs from 'fs'; import zlib from 'zlib'; import crypto from 'crypto'; import { start } from './binding/binding.mjs';
+import fs from 'fs'; import zlib from 'zlib'; import crypto from 'crypto'; import { start } from './binding/binding.mjs'; import { tree, flat } from './envelope/nodes.mjs';
 const root = new URL('../', import.meta.url), file = f => fs.readFileSync(new URL(f, root)), sha = b => crypto.createHash('sha256').update(b).digest('hex');
 const V = JSON.parse(file('vectors/vectors.json')), D = 'spike/out/divided/', whole = file(D + 'whole.wasm'), base = file(D + 'base.wasm'), printer = file(D + 'printer.wasm'), agent = file(D + 'agent.wasm');
 const measure = (piece, s) => ({ adv: [...s].length * piece.size * 0.5, asc: piece.size * 0.8, desc: piece.size * 0.2 }), clock = { time: () => 1767312000000, random: n => new Uint8Array(n).fill(7) };
@@ -29,4 +29,14 @@ console.log('the base alone:'); { const none = {}; check('reading, composing, an
   check('no text of any projection, and nothing printed', [Object.values(a).flat().every(x => x === null || x === ''), a.printed], [true, '']); }
 console.log('the base and the agent, no printer:'); { const a = await asks({ agent }); check('the projections as the whole kernel gives them', [a['compose.ufx'], a['history.ufx'], a['timeline.ufx']], [W.asks['compose.ufx'], W.asks['history.ufx'], W.asks['timeline.ufx']]); check('nothing printed', a.printed, ''); }
 console.log('the base and the printer, no agent:'); { const a = await asks({ printer }); check('the module printed as the vector has it', a.printed, V.printer.printed_hex); check('no text of any projection', a['compose.ufx'].every(x => x === null), true); }
+// the safeguard (PLAYER K7): a file requiring what a component provides, where that component is absent or does not verify
+console.log('a file that requires `ufo.code`, which the printer provides:');
+{ const N = V.needs['the_same_requiring_ufo.code'], first = async components => { const k = await kernel(N.file, components), n = flat(tree(k.sample({ as: 'list', w: 480 }).list))[0];
+    return n?.role === 'status' && /does not have: ufo\.code/.test(n.text) ? 'its plain text, and what is missing' : 'the face'; }, SAFE = 'its plain text, and what is missing';
+  check('the kernel whole: the face is attempted', await first(null), 'the face');
+  check('the printer beside the base, its bytes those its hash names: the face is attempted', await first({ agent, printer: { bytes: printer, sha256: sha(printer) } }), 'the face');
+  check('the printer absent', await first({ agent }), SAFE);
+  const damaged = Buffer.from(printer); damaged[damaged.length - 5] ^= 1;
+  check('the printer with one bit changed: it does not verify against the hash that names it', await first({ agent, printer: { bytes: damaged, sha256: sha(printer) } }), SAFE);
+  check('bytes that are not a module', await first({ agent, printer: { bytes: Buffer.from('not a module') } }), SAFE); }
 console.log(bad ? `${bad} DIFFER` : `all ${ok} agree`); process.exit(bad ? 1 : 0);

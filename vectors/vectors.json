@@ -1639,6 +1639,11 @@
   "length": 9541,
   "root_hash": "70c8641585bfdd2c1301c2fbe5fc98fdc4f932bb849052ad793482476fda46fa",
   "made_from": "history.ufx",
+  "left_out": {
+   "frames_of_unknown_kind": 1,
+   "bytes": 49,
+   "what": "history.ufx holds one frame of a kind no reader knows. A copy for outside readers does not carry it, and `leaving` says so before the copy is made: `unread` and `unread-bytes` of its `lacks` record (TRAVEL E10, E12)"
+  },
   "what": "history.ufx as it is published: the content and attribution layers, the seal, and an absent frame saying that working history is withheld. Working history is every other record of history.ufx",
   "content": [
    "0121fe96518c5e91735cb4414b9316b33789bebbb4bab2ecb3ced05c63c3d1b4",
@@ -2353,6 +2358,27 @@
     "digest": "33f32cc9e34911c8fa984618d9ab2928160a9f9488206022bb9844b24de4ecc5"
    }
   ]
+ },
+ "needs": {
+  "file": "needs.ufx",
+  "length": 3329,
+  "root_hash": "ec5b7ad042145f0dc68211f51b0b9f315343805becb3e15dee05ad8babf81b83",
+  "what": "one commit: a face whose object is a clock holding a text of two paragraphs. The universe object requires two features, `ufo.text` and `ufo.time`",
+  "a_reader_without_ufo.time": {
+   "missing": [
+    "ufo.time"
+   ],
+   "attempts": "no face",
+   "shows": "one line of its own that names what is missing, then the plain-text face of the primary face's object",
+   "plain_text_face": "A film, described.\n\nIts captions are text.\n",
+   "never": "an empty or broken screen; a face composed in part; anything pressable that would change the file"
+  },
+  "the_same_requiring_ufo.code": {
+   "file": "needs-code.ufx",
+   "length": 3329,
+   "root_hash": "1564b3aed3c3b8ef544fc9fbec86a14ebe4e7d108987d2da339e61ddccd83efa",
+   "what": "the same universe, requiring `ufo.code` where the other requires `ufo.time`. A reader that has the printer component beside its base has `ufo.code` and attempts the face. One whose printer is absent, or does not verify against the hash that names it, or does not instantiate against its base, has not, and shows what the first pack shows, naming `ufo.code`"
+  }
  },
  "published_timeline": {
   "made_from": "timeline.ufx",

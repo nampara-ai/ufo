@@ -249,8 +249,12 @@ receiving decides the default.
   universe, the reader MUST show the person exactly what will leave: the
   faces and objects, and their size; the principals, models, times and
   number of changes named in the attribution; whether working history is
-  included; which seals; which blobs are absent. The person confirms or
-  changes it. The reader MUST NOT send anything it did not show.
+  included; which seals; which blobs are absent. Where the file holds
+  anything the reader cannot classify — a frame of a kind it does not
+  know — it says so in plain words, with how much there is, and whether
+  this copy will carry it: a copy for outside readers does not
+  (**E10**), and a whole copy does. The person confirms or changes it.
+  The reader MUST NOT send anything it did not show.
 - **[E13] Nothing is lost at home.** Withholding applies only to the copy
   that leaves. A reader MUST NOT remove working history from the person's
   own working form as a consequence of sending, and copies the person makes

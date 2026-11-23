@@ -431,6 +431,18 @@ impl Pack {
 // ---- a copy that withholds (2.5, TRAVEL 13.3) ----
 impl Pack {
     /// Every record held, decoded, in the order of the pack: for nesting this pack's universe in another (1.8).
+    /// The frames of kinds this kernel does not know (P1), up to the last head: how many, and their bytes with their headers.
+    pub fn unknown(&self) -> (usize, usize) {
+        let (mut n, mut bytes, mut off) = (0, 0, 8);
+        while let Some(f) = self.frame(off).filter(|_| off < self.d.len() - self.unread_tail) {
+            if !(1..=6).contains(&f.kind) {
+                n += 1;
+                bytes += f.next - off;
+            }
+            off = f.next;
+        }
+        (n, bytes)
+    }
     /// Every record of the pack as it is framed, each after the hash the pack's own indexes give it (written
     /// here as kind 0): for carrying records into another pack without reading them. A record that is
     /// compressed is carried compressed; whoever reads it later checks it against its hash, as always.

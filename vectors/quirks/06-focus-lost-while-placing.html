@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!-- What an event asks for is done to the end before the next event is taken: one that comes meanwhile waits its turn. An engine that reports the focus lost while a node is being removed then finds the work finished. -->
+<html lang="en"><head><meta charset="utf-8">
+<title>06 one event at a time</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ByNn2lD5dxziKw7Wlr8dw5qaoaISJjEwPhg6+g1rM6w='; style-src 'sha256-VwJYb9DpUq9ftUDHbdhcTMn6sWSJ0JAGjwpLX+Yhjss='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:16px;max-width:44em}#result{font-weight:700}</style>
+</head><body>
+<h1>06 one event at a time</h1>
+<p>What an event asks for is done to the end before the next event is taken: one that comes meanwhile waits its turn. An engine that reports the focus lost while a node is being removed then finds the work finished.</p>
+<p>Result: <span id="result">not finished</span></p>
+<div id="list"><div id="a" tabindex="0">first</div><div id="b" tabindex="0">second</div><div id="c" tabindex="0">third</div></div>
+<script type="module">const violations = []; document.addEventListener('securitypolicyviolation', e => violations.push(e.violatedDirective + ' ' + e.blockedURI));
+const finish = (problems = [], wait = 400) => setTimeout(() => { const all = [...problems, ...violations.map(v => 'policy violation: ' + v)];
+  document.getElementById('result').textContent = document.documentElement.dataset.result = all.length ? 'fail: ' + all.join('; ') : 'pass'; }, wait);
+const list = document.getElementById('list'), b = document.getElementById('b'), c = document.getElementById('c'), problems = [];
+// what one event asks for, as a binding puts nodes in their places: the node that holds the focus goes, and a new one is put before the last
+const place = () => { const before = c; b.remove(); const n = document.createElement('div'); n.textContent = 'new'; list.insertBefore(n, before); };
+// what a lost focus asks for, as a kernel answers an event with a new list: the last node goes
+const lost = () => c.remove();
+const waiting = []; let busy = false;
+const send = f => { waiting.push(f); if (busy) return; busy = true; try { while (waiting.length) waiting.shift()(); } finally { busy = false; } };
+list.addEventListener('focusout', () => send(lost));
+b.focus(); try { send(place); } catch (e) { problems.push(String(e).slice(0, 120)); }
+finish(problems);</script></body></html>

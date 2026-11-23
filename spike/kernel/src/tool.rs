@@ -23,6 +23,7 @@ pub const FORMULA: u64 = 55463;
 pub struct Env<'a> {
     pub state: &'a [(String, V)],          // the presentation state of this presentation (7.3)
     pub args: RefCell<Vec<(String, V)>>,   // named values, read with `arg`: what the reader handed over, what an `each` binds, what an event carries
+    pub base: usize,                       // how many of them were there before anything was composed: the rest are what `each` has bound
     pub subject: Option<&'a Pack>,         // the universe the reader handed over (F6), read as `arg("subject")`
     pub editable: Cell<bool>,              // set while composing: the Portal onto the subject is `editable` (7.6)
     pub through: Cell<Option<Id>>,         // and which Portal that is
@@ -30,7 +31,7 @@ pub struct Env<'a> {
 }
 impl<'a> Env<'a> {
     fn new(state: &'a [(String, V)], args: &[(String, V)], more: &[(String, V)], subject: &'a Pack) -> Env<'a> {
-        Env { state, args: RefCell::new(args.iter().chain(more).cloned().collect()), subject: Some(subject), editable: Cell::new(false), through: Cell::new(None), left: Cell::new(None) }
+        Env { state, args: RefCell::new(args.iter().chain(more).cloned().collect()), base: args.len() + more.len(), subject: Some(subject), editable: Cell::new(false), through: Cell::new(None), left: Cell::new(None) }
     }
 }
 /// The subject, as a value inside the kernel. No file can spell it: a literal of this shape is an error value.
@@ -43,7 +44,7 @@ pub fn is_subject(v: &V) -> bool {
 /// A value, or a formula's value (7.3). None is the error value (F4). A list or a map that is not
 /// a formula may hold formulas (7.6: "any field may be a formula"), and has their values. Operators:
 /// `state`, `arg`, `=`, `not`, `and`, `or`, `if`, `+`, `list`, `nth`, `len`, `concat`, `slice`,
-/// `format`, `get` (of a map, by a key or a path of keys), `ask`; any other is an error value. The
+/// `format`, `get` (of a map, by a key or a path of keys), `ask`, `let`; any other is an error value. The
 /// bound of F2 is not counted.
 pub fn eval(v: &V, env: &Env) -> Option<V> {
     let Some(f) = v.tag(FORMULA) else {
@@ -67,6 +68,19 @@ pub fn eval(v: &V, env: &Env) -> Option<V> {
             "subject" if env.subject.is_some() => subject(),
             name => env.args.borrow().iter().rev().find(|e| e.0 == name)?.1.clone(), // the innermost that binds it
         },
+        // Named values (7.3): `let(name, value, ..., body)`. Each name is bound to its value, worked out once, a later
+        // value seeing the names before it; the result is the body's. A name is read with `arg`, as what `each` binds is.
+        "let" => {
+            let (n, was) = (f.l().len(), env.args.borrow().len());
+            let mut out = if n >= 2 && n % 2 == 0 { Some(V::Null) } else { None };
+            for i in (1..n.saturating_sub(1)).step_by(2) {
+                out = f.l()[i].s().zip(eval(&f.l()[i + 1], env)).map(|(name, v)| { env.args.borrow_mut().push((String::from(name), v)); V::Null });
+                if out.is_none() { break; }
+            }
+            let out = out.and_then(|_| eval(&f.l()[n - 1], env));
+            env.args.borrow_mut().truncate(was);
+            out?
+        }
         "=" => {
             let (a, b) = (arg(1)?, arg(2)?);
             V::Bool(match (&a, &b) {
@@ -245,6 +259,11 @@ pub fn subject_rows(cx: &mut Ctx, env: &Env, portal: &Obj, w: f64) -> Option<Vec
     (sub.blocks, sub.nodes, sub.press) = (1 << 30, 1 << 30, editable && hint != Some("text"));
     let (mut items, pad) = (Vec::new(), 24.0);
     let id = first.p.get("of")?.tag(REF)?.id()?;
+    if let Some(rows) = safeguard(&mut sub, pk, &id, w - 2.0 * pad) {
+        // something the file needs is missing: no face is attempted, whatever was asked for (K7)
+        let h = stack(&rows, pad, pad, &mut items) + pad;
+        return Some(vec![Row { h, gap: 0.0, items, keep: false, block: SUBJECT, line: 0, lines: 1, path: Vec::new() }]);
+    }
     let h = match hint {
         Some("text") => {
             let mut s = String::new();
@@ -485,7 +504,11 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
                 None => Some(&o.p),
             });
             match (holder.and_then(|h| h.get("on")?.get("press")).cloned(), it.get("value").and_then(|v| v.s()), id) {
-                (Some(h), _, _) => perform(rd, pk, &h, &[], None, &mut fx),
+                (Some(h), _, _) => {
+                    // what an `each` had bound where this was composed is bound again while its handler runs
+                    let bound: Vec<(String, V)> = match it.get("press").and_then(|p| p.l().get(2)) { Some(V::M(m)) => m.clone(), _ => Vec::new() };
+                    perform(rd, pk, &h, &bound, None, &mut fx)
+                }
                 (None, Some(s), Some(id)) => {
                     if let Some((_, e)) = surface(rd, on, i, scale, s) {
                         rd.field = Some((rd.serial, id));
@@ -569,6 +592,16 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
                     crate::random(&mut random);
                     let r = write::edit(pk, e.o, e.lo, e.hi, "", Some(edits), who, crate::now(), &random)?;
                     Ok(vec![("change", t(&hex(r.get("change").and_then(|c| c.b()).unwrap_or(&[]))))])
+                }),
+                // 5.4: a decision about a change, by the person using the reader. `about` is the change as a projection names it
+                #[cfg(not(feature = "cut-decide"))]
+                ("decide", _) => text("who").ok_or("a decision says who made it, and no name was given").and_then(|who| {
+                    let about = text("about").and_then(|s| crate::project::identity(pk, s)).ok_or("there is no such change")?;
+                    let verdict = text("verdict").filter(|v| matches!(*v, "accept" | "reject")).ok_or("a verdict this reader does not record")?;
+                    let mut random = [0u8; 64];
+                    crate::random(&mut random);
+                    write::decide(pk, about, verdict, who, crate::now(), &random)?;
+                    Ok(vec![("about", t(text("about").unwrap_or(""))), ("verdict", t(verdict))])
                 }),
                 _ => Err("this reader cannot do that"),
             };

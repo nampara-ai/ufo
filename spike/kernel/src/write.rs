@@ -374,7 +374,7 @@ pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Optio
     set_in(&mut raw_p, &["chars"], Some(v));
     let v = held(&mut recs, raw_seq.get("chars"), "v", &encode(&new_seq), new_seq)?;
     set_in(&mut raw_seq, &["chars"], Some(v));
-    finish(pk, &o, &raw, ops, &p1, Some(&seq1), raw_p, Some(raw_seq), recs, who, time, random)
+    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: Some(&seq1), raw_p, raw_seq: Some(raw_seq) }), ops, Vec::new(), Vec::new(), recs, who, time, random)
 }
 /// `set` (1.7) on one object, through the same gate: what lies at `path` in its properties becomes
 /// `val`, or with none is removed. `with` is a pack whose records are to lie in this one from the
@@ -392,17 +392,118 @@ pub fn set(pk: &mut Pack, id: Id, path: &[&str], val: Option<V>, with: &[u8], wh
     set_in(&mut p1, path, val.clone()).ok_or("the path passes through a value that is not a map")?;
     set_in(&mut raw_p, path, val).ok_or("the path passes through a value that is not a map")?;
     let recs = if with.is_empty() { Vec::new() } else { Pack::scan(with.to_vec()).and_then(Pack::open).ok_or("what is to be nested is not a pack")?.framed() };
-    finish(pk, &o, &raw, vec![map(op)], &p1, o.seq.as_ref(), raw_p, raw.get("seq").cloned(), recs, who, time, random)
+    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref(), raw_p, raw_seq: raw.get("seq").cloned() }), vec![map(op)], Vec::new(), Vec::new(), recs, who, time, random)
+}
+/// A decision about a contribution (5.4), recorded as a change of its own. `accept` records the decision and
+/// alters nothing else (R6). `reject` also undoes what the contribution did: what it inserted is removed, what
+/// it removed is put back after the place it stood, and each property it set is set back. That is done only
+/// where it can be done whole: where the contribution's work is here to be read, and everything it wrote is
+/// still as it wrote it (L4). Otherwise nothing is written, and the reason is given.
+#[cfg(not(feature = "cut-decide"))]
+pub fn decide(pk: &mut Pack, about: Id, verdict: &str, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+    let c = pk.object(&pk.head, &about).filter(|c| c.ty == "ufo.change").ok_or("there is no such change in the current state")?;
+    let decision = map(vec![("about", V::Tag(REF, Box::new(bytes(&about)))), ("verdict", t(verdict)), ("who", map(vec![("name", t(who))]))]);
+    if verdict != "reject" {
+        return finish(pk, None, Vec::new(), vec![decision], Vec::new(), Vec::new(), who, time, random);
+    }
+    let ops = c.p.get("work").filter(|w| w.tag(INDIRECT).is_none()).and_then(|w| w.get("ops")).map(|o| o.l().to_vec()).ok_or("what that change did was withheld from this copy, so it cannot be undone here")?;
+    let id = ops.first().and_then(|o| o.get("obj")).and_then(|i| i.id()).ok_or("that change did nothing that can be undone")?;
+    if ops.iter().any(|o| o.get("obj").and_then(|i| i.id()) != Some(id)) {
+        return Err("this reader undoes a change to one text only");
+    }
+    let o = pk.object(&pk.head, &id).ok_or("what that change edited is no longer there (L4)")?;
+    let raw = pk.node(&o.rev).ok_or("the revision cannot be read")?;
+    let seq0 = o.seq.clone().ok_or("what that change edited is not a text")?;
+    let edited = "what that change wrote has been edited since, so it cannot be undone whole (L4)";
+    let (mut back, mut number): (Vec<(V, Vec<V>)>, i64) = (Vec::new(), 0);
+    for op in &ops {
+        let key = op.get("key").cloned().ok_or("an operation with no key")?;
+        match op.get("op").and_then(|k| k.s()) {
+            Some("splice") => {
+                let n = match op.get("ins") {
+                    Some(V::T(s)) => s.chars().count() as i64,
+                    None => 0,
+                    _ => return Err("this reader undoes edits of text only"),
+                };
+                let mut r = vec![("op", t("splice")), ("obj", bytes(&id)), ("key", key.clone())];
+                if n > 0 {
+                    // every element it inserted must still be there; what they now hold is what is removed
+                    let (rs, chars) = (runs(key.s().and_then(|k| seq0.get(k)).ok_or(edited)?), key.s().and_then(|k| o.p.get(k)).and_then(|c| c.s()).ok_or(edited)?.chars().collect::<Vec<char>>());
+                    let mut old = String::new();
+                    for k in number..number + n {
+                        let at = |side: i64| bpos(&rs, &V::L(vec![bytes(&about), V::Int(k), V::Int(side)]));
+                        match (at(0), at(1)) {
+                            (Some(p), Some(q)) if q == p + 1 => old.push(*chars.get(p as usize).ok_or(edited)?),
+                            _ => return Err(edited),
+                        }
+                    }
+                    r.push(("del", V::L(vec![V::L(vec![bytes(&about), V::Int(number), V::Int(n)])])));
+                    r.push(("old", V::T(old)));
+                }
+                if let Some(was) = op.get("old") {
+                    // what it removed is put back after the last element it removed, which stands there still as a tombstone
+                    let last = op.get("del").and_then(|d| d.l().last()).map(|r| r.l()).filter(|r| r.len() >= 3).ok_or("an operation that removed nothing it names")?;
+                    r.push(("after", V::L(vec![last[0].clone(), V::Int(last[1].i().unwrap_or(0) + last[2].i().unwrap_or(1) - 1)])));
+                    r.push(("ins", was.clone()));
+                }
+                number += n;
+                // 5.4, `sources`: what is put back was first introduced by the changes whose elements were removed, run by run
+                let from = op.get("del").map(|d| d.l()).unwrap_or(&[]).iter().filter_map(|r| Some(V::L(vec![r.l().get(2)?.clone(), r.l().first()?.clone()]))).collect();
+                back.push((map(r), if op.get("old").is_some() { from } else { Vec::new() }));
+            }
+            Some("set") => match (op.get("old"), op.get("val")) {
+                (Some(was), Some(now)) => back.push((map(vec![("op", t("set")), ("obj", bytes(&id)), ("key", key), ("old", now.clone()), ("val", was.clone())]), Vec::new())),
+                _ => return Err("this reader undoes a setting only where there was a value before and after"),
+            },
+            _ => return Err("this reader undoes edits and settings only"),
+        }
+    }
+    back.reverse();
+    let sources: Vec<V> = back.iter().flat_map(|b| b.1.clone()).collect();
+    let back: Vec<V> = back.into_iter().map(|b| b.0).collect();
+    let change: Id = random.get(..16).and_then(|r| r.try_into().ok()).ok_or("random: 64 bytes")?;
+    let (p1, seq1) = replay(&id, &change, &back, &o.p, &seq0).ok_or(edited)?;
+    // as stored: a large text or sequence stays outside its node, as it was
+    let (mut raw_p, mut raw_seq, mut recs): (V, V, Recs) = (raw.get("p").cloned().ok_or("the revision has no properties")?, raw.get("seq").cloned().ok_or("seq")?, Vec::new());
+    for op in &back {
+        match (op.get("op").and_then(|k| k.s()), op.get("key")) {
+            (Some("set"), Some(V::L(path))) => {
+                let path: Vec<&str> = path.iter().filter_map(|k| k.s()).collect();
+                set_in(&mut raw_p, &path, op.get("val").cloned()).ok_or("the path passes through a value that is not a map")?;
+            }
+            (Some("splice"), Some(V::T(key))) => {
+                let (text, seq) = (p1.get(key).and_then(|c| c.s()).ok_or("text")?, seq1.get(key).cloned().ok_or("seq")?);
+                let v = held(&mut recs, raw_p.get(key), "t", text.as_bytes(), V::T(text.into()))?;
+                set_in(&mut raw_p, &[key.as_str()], Some(v));
+                let v = held(&mut recs, raw_seq.get(key), "v", &encode(&seq), seq)?;
+                set_in(&mut raw_seq, &[key.as_str()], Some(v));
+            }
+            _ => return Err("an operation with no key"),
+        }
+    }
+    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: Some(&seq1), raw_p, raw_seq: Some(raw_seq) }), back, vec![decision], sources, recs, who, time, random)
 }
 /// What every change through the gate comes to, whatever it does to its one object: the operations
 /// checked against the state meant, then the records written and read back. `p1` and `seq1` are
 /// the object's properties and `seq` as they are to be; `raw_p` and `raw_seq` the same as the new
 /// revision is to hold them (values kept outside the node are indirects there).
-fn finish(pk: &mut Pack, o: &Obj, raw: &V, ops: Vec<V>, p1: &V, seq1: Option<&V>, raw_p: V, raw_seq: Option<V>, mut recs: Recs, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+/// The one object a change gives a new revision: as it is, its revision as stored, its new state, and the
+/// new state as it is to be stored (large values kept outside the node).
+struct New<'a> {
+    o: &'a Obj,
+    raw: &'a V,
+    p1: &'a V,
+    seq1: Option<&'a V>,
+    raw_p: V,
+    raw_seq: Option<V>,
+}
+/// Writes one change: the new revision of the object it edits, if it edits one; the change object, with its
+/// work, its origin and its decisions; the object map; the commit.
+fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sources: Vec<V>, mut recs: Recs, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
     if pk.unread_tail != 0 {
         return Err("the pack was recovered after an interrupted write (2.3): this spike does not truncate it and append (P7)");
     }
-    let (parent, id) = (pk.head, o.id);
+    let parent = pk.head;
     let c = pk.node(&parent).ok_or("the head commit cannot be read")?;
     let height = c.get("height").and_then(|h| h.i()).ok_or("the head commit has no height")?;
     if c.get("v") != Some(&V::Int(1)) {
@@ -411,7 +512,7 @@ fn finish(pk: &mut Pack, o: &Obj, raw: &V, ops: Vec<V>, p1: &V, seq1: Option<&V>
     let change: Id = random.get(..16).and_then(|r| r.try_into().ok()).filter(|_| random.len() == 64).ok_or("random: 64 bytes")?;
     let mut ents = objects(pk, &parent);
     let in_seq = |seq: &V| if let V::M(m) = seq { m.iter().any(|(_, rs)| runs(rs).iter().any(|r| r.c == change)) } else { false };
-    if ents.iter().any(|e| e.0 == change) || o.seq.as_ref().map_or(false, in_seq) {
+    if ents.iter().any(|e| e.0 == change) || new.as_ref().and_then(|n| n.o.seq.as_ref()).map_or(false, in_seq) {
         return Err("the identity drawn for the change is already in use");
     }
     // L3, L4, before anything is written: the operations, read back from the bytes that will be the
@@ -419,19 +520,26 @@ fn finish(pk: &mut Pack, o: &Obj, raw: &V, ops: Vec<V>, p1: &V, seq1: Option<&V>
     let work = encode(&map(vec![("ops", V::L(ops))]));
     let ops = decode(&work).and_then(|w| w.get("ops").cloned()).ok_or("work")?;
     let none = V::M(Vec::new());
-    let (p2, seq2) = replay(&id, &change, ops.l(), &o.p, o.seq.as_ref().unwrap_or(&none)).ok_or("refused: the operations do not apply to the parent state (L2, L4)")?;
-    if encode(&p2) != encode(p1) || encode(&seq2) != encode(seq1.unwrap_or(&none)) {
-        return Err("refused: the operations do not produce the new state (L3)");
-    }
-    // The records. The new revision carries everything else as it was (C6).
-    let mut rev = raw.clone();
-    let number = raw.get("rev").and_then(|r| r.i()).ok_or("rev")?;
-    for (k, v) in [("rev", Some(V::Int(number + 1))), ("prev", Some(bytes(&o.rev))), ("by", Some(bytes(&change))), ("salt", Some(bytes(&random[16..32]))), ("p", Some(raw_p)), ("seq", raw_seq)] {
-        if v.is_some() {
-            set_in(&mut rev, &[k], v);
+    let mut revised: Option<(Id, H)> = None;
+    match &new {
+        Some(n) => {
+            let (p2, seq2) = replay(&n.o.id, &change, ops.l(), &n.o.p, n.o.seq.as_ref().unwrap_or(&none)).ok_or("refused: the operations do not apply to the parent state (L2, L4)")?;
+            if encode(&p2) != encode(n.p1) || encode(&seq2) != encode(n.seq1.unwrap_or(&none)) {
+                return Err("refused: the operations do not produce the new state (L3)");
+            }
+            // The records. The new revision carries everything else as it was (C6).
+            let mut rev = n.raw.clone();
+            let number = n.raw.get("rev").and_then(|r| r.i()).ok_or("rev")?;
+            for (k, v) in [("rev", Some(V::Int(number + 1))), ("prev", Some(bytes(&n.o.rev))), ("by", Some(bytes(&change))), ("salt", Some(bytes(&random[16..32]))), ("p", Some(n.raw_p.clone())), ("seq", n.raw_seq.clone())] {
+                if v.is_some() {
+                    set_in(&mut rev, &[k], v);
+                }
+            }
+            revised = Some((n.o.id, node(&mut recs, &rev)));
         }
+        None if !ops.l().is_empty() => return Err("operations, and no object for them"),
+        None => {}
     }
-    let text_rev = node(&mut recs, &rev);
     // the change: its work in a blob, behind an opening (1.4); created by committing, so `rev` 1 and `by` itself
     let mut opening = random[48..].to_vec();
     opening.extend(blob(&mut recs, &work));
@@ -440,12 +548,21 @@ fn finish(pk: &mut Pack, o: &Obj, raw: &V, ops: Vec<V>, p1: &V, seq1: Option<&V>
     let whom = map(vec![("name", t(who))]);
     // The origin is written whatever the change does. 1.7 has it "absent if the change introduces
     // none", and a removal introduces nothing; but then nothing would say a person made it.
-    let cp = vec![("work", veiled), ("actor", map(vec![("who", whom.clone()), ("with", map(vec![("name", t("ufo-spike-kernel")), ("version", t("0.0.0"))]))])), ("time", V::Int(time as i64)),
-        ("origin", map(vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom)]))];
+    let mut cp = vec![("work", veiled), ("actor", map(vec![("who", whom.clone()), ("with", map(vec![("name", t("ufo-spike-kernel")), ("version", t("0.0.0"))]))])), ("time", V::Int(time as i64)),
+        ("origin", map({
+            let mut og = vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom)];
+            if !sources.is_empty() {
+                og.push(("sources", V::L(sources))); // 5.4: who first introduced what this change puts back
+            }
+            og
+        }))];
+    if !decisions.is_empty() {
+        cp.push(("decisions", V::L(decisions))); // 5.4: what a person chose, recorded with the change that records it
+    }
     let change_rev = node(&mut recs, &map(vec![("k", t("obj")), ("id", bytes(&change)), ("type", t("ufo.change")), ("rev", V::Int(1)), ("by", bytes(&change)), ("salt", bytes(&random[32..48])), ("p", map(cp))]));
     // every other object keeps the revision it had; the change object is added (L3)
-    for e in ents.iter_mut().filter(|e| e.0 == id) {
-        e.1 = text_rev;
+    for e in ents.iter_mut().filter(|e| Some(e.0) == revised.map(|r| r.0)) {
+        e.1 = revised.map(|r| r.1).unwrap_or(e.1);
     }
     ents.push((change, change_rev));
     crate::small::sort(&mut ents);
@@ -454,8 +571,8 @@ fn finish(pk: &mut Pack, o: &Obj, raw: &V, ops: Vec<V>, p1: &V, seq1: Option<&V>
     let was = pk.bytes().len();
     pk.commit(&recs, &commit).ok_or("the pack could not be extended: nothing was written")?;
     // and read back the ordinary way; if the state written is not the state meant, it is taken off again
-    let back = pk.object(&commit, &id).filter(|b| encode(&b.p) == encode(p1) && b.seq.as_ref().map(encode) == seq1.map(encode) && b.by == change);
-    if back.is_none() || pk.object(&commit, &change).is_none() {
+    let back = new.as_ref().map_or(true, |n| pk.object(&commit, &n.o.id).filter(|b| encode(&b.p) == encode(n.p1) && b.seq.as_ref().map(encode) == n.seq1.map(encode) && b.by == change).is_some());
+    if !back || pk.object(&commit, &change).is_none() {
         pk.cut(was);
         return Err("what was written does not read back as the new state: taken off again");
     }

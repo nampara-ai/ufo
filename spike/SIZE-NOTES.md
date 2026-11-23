@@ -481,3 +481,16 @@ harness. They are parts of the format and stay counted.
 One resolver cost 209 bytes. Removing the second door saved 3 469 while
 adding three things the projections lacked. The kernel as a base and
 components is measured in `SPLIT.md`.
+
+## The base's remaining work, measured as it is done (2026-11-23)
+
+Compressed bytes. "Base" is the kernel divided (`divide.mjs`); where a
+step is given as a difference, it is of the whole kernel built with and
+without that step.
+
+| | Whole kernel | Base |
+| --- | ---: | ---: |
+| Divided, before any of this | 113 853 | 107 093 |
+| The safeguard; what cannot be classified, counted; who first wrote what is put back; the decision that stands, in `history`; what `each` bound, kept for a handler | about +2 050 | |
+| 3a. Decisions: accept, and reject with its undoing (`write::decide`) | +4 095 | |
+| After 3a | 119 961 | 113 490 |

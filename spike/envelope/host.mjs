@@ -220,8 +220,13 @@ const DO = {
     a.click();
   },
 };
-function send(event) {   // one raw input event to the kernel; then whatever it asks for, done blindly
-  for (const [kind, v] of got(call('input', event)) || []) DO[kind]?.(v);
+// One raw input event to the kernel; then whatever it asks for, done blindly. One at a time: an event that comes while
+// that is being done (an engine reports a focus lost while the nodes are being put in their places) waits its turn
+// (vectors/quirks 06).
+const waiting = []; let busy = false;
+function send(event) {
+  waiting.push(event); if (busy) return; busy = true;
+  try { while (waiting.length) for (const [kind, v] of got(call('input', waiting.shift())) || []) DO[kind]?.(v); } finally { busy = false; }
 }
 // ---- raw input: presses, the keyboard's focus, what is done in the text-entry widget, the size of the view ----
 // A press of a pointer is the pointer going down and coming up in one place, and then the click that ends it. Where it was is

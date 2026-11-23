@@ -2,7 +2,7 @@
 // raw input events (`input`), and what comes of it: faces, an edit of one word, an edit at the start of a paragraph,
 // two words apart, a removal, the file made by Save, and the things that must not happen (F6, refusals).
 // Build the kernel first (spike/README.md). Run from the repository root: node spike/envelope/roundtrip.mjs
-import fs from 'fs'; import zlib from 'zlib'; import assert from 'assert'; import { start } from '../binding/binding.mjs';
+import fs from 'fs'; import crypto from 'crypto'; import zlib from 'zlib'; import assert from 'assert'; import { start } from '../binding/binding.mjs';
 import { fixedParts, kernelWasm, withTools } from './parts.mjs'; import { tree, flat, read } from './nodes.mjs'; import { envelope, fixedCase } from './envelope.mjs'; import { tools as toolsMade, hostile } from './mkpack.mjs';
 const root = new URL('../../', import.meta.url), out = f => new URL('spike/out/' + f, root);
 const file = f => new Uint8Array(fs.readFileSync(new URL(f, root)));
@@ -65,7 +65,7 @@ const head0 = r.head();
 say('started: head', head0.commit.slice(0, 16), 'height', head0.height, '; drawn', r.list.length, 'items,', r.h, 'high');
 say('\nthe tools universe, as composed (what a press on each names):');
 for (const t of r.texts().filter(t => t.press)) say('  ', JSON.stringify(t.s).padEnd(12), 'press: ' + t.press[1], t.lit ? '(underlined)' : '');
-assert.deepStrictEqual(r.texts().filter(t => t.press).map(t => t.s), ['Document', 'Pages', 'Text', 'Edit', 'Save']);
+assert.deepStrictEqual(r.texts().filter(t => t.press).map(t => t.s), ['Document', 'Pages', 'Text', 'Edit', 'Save', 'Changes']);
 const subject = () => r.texts().filter(t => t.on === 1);
 assert(subject().length > 20 && subject().every(t => !('press' in t)), 'nothing of the subject carries press');
 assert(r.find('Document').lit && !r.find('Pages').lit && !r.find('Edit').lit, 'the tools show which face is on: a formula over state');
@@ -74,7 +74,7 @@ assert(r.find('Document').lit && !r.find('Pages').lit && !r.find('Edit').lit, 't
 const how = n => n.role + (n.level ? ' ' + n.level : '') + ('current' in n ? (n.current ? ' current' : ' not-current') : '') + ('pressed' in n ? (n.pressed ? ' pressed' : ' not-pressed') : '') + (n.press ? ' press' : '');
 const toolsNow = () => r.nodes(0).map(n => `${how(n)} ${JSON.stringify(n.label ?? n.text)}`);
 say('\nthe nodes of the tools, as a host must expose them:'); for (const l of toolsNow()) say('  ' + l);
-assert.deepStrictEqual(toolsNow().slice(0, 7), ['toolbar "Tools"', 'button current press "Document"', 'button not-current press "Pages"', 'button not-current press "Text"', 'button not-pressed press "Edit"', 'button not-pressed press "Save"', 'status "State"']);
+assert.deepStrictEqual(toolsNow().slice(0, 8), ['toolbar "Tools"', 'button current press "Document"', 'button not-current press "Pages"', 'button not-current press "Text"', 'button not-pressed press "Edit"', 'button not-pressed press "Save"', 'button not-pressed press "Changes"', 'status "State"']);
 assert(/^State c:[0-9a-f]{8}, after 1 changes\.$/.test(r.status()), 'the status, described in the tools universe, says which state this is: ' + r.status()); say('the status:', JSON.stringify(r.status()));
 // every node's group carries the rectangle of what is drawn in it: a host puts the node there
 { const pushes = r.lists.flatMap(l => l.filter(i => i[0] === 'push' && i[1].role)); assert(pushes.length > 20 && pushes.every(i => i[1].box && i[1].box.length === 4 && i[1].box[2] > 0 && i[1].box[3] > 0), 'every node drawn has a box');
@@ -279,7 +279,7 @@ for (const [name, whole, next] of [['compose-edited.ufx.html', true, 'compose-ed
   const b = blockOf(n, 'Every figure'); n.press('Edit'); edit(n, 'Every figure', s => s.replace('ledger', 'books')); const head = n.head(), f = figures(n.k), why0 = why(n.k, b.lo, b.lo + 60);
   // the projection, both ways, as the panel reads it
   for (const history of [true, false]) { const text = n.k.project({ name: 'leaving', history }); say(text.trimEnd().split('\n').map(l => '   ' + l).join('\n'));
-    const [c, a, h, lacks] = text.split('\n').slice(1); assert(c.includes(`name=content included=true`) && c.includes(`bytes=${f.content} `) && a.includes(`name=attribution included=true`) && a.includes(`bytes=${f.attribution} `) && a.includes('"Nested Reader"') && h.includes(`name=history included=${history} `) && h.includes(`bytes=${f.history} `) && lacks === `lacks history=${!history} blobs=0`, text); }
+    const [c, a, h, lacks] = text.split('\n').slice(1); assert(c.includes(`name=content included=true`) && c.includes(`bytes=${f.content} `) && a.includes(`name=attribution included=true`) && a.includes(`bytes=${f.attribution} `) && a.includes('"Nested Reader"') && h.includes(`name=history included=${history} `) && h.includes(`bytes=${f.history} `) && lacks === `lacks history=${!history} blobs=0 unread=0 unread-bytes=0`, text); }
   n.press('Save'); assert(panel(n).includes(`withheld. Its ${f.history} bytes stay here`)); n.press('Save this copy'); const pub = n.fx1('deliver'), pubPage = Buffer.from(pub.bytes).toString('utf8'), pubPack = n.k.published();
   assert.strictEqual(pub.name, 'compose-published.ufx.html'); assert(/That copy is for readers: its working history was withheld\. Everything is still held here/.test(n.status()) && /Not yet in a file/.test(n.status()), 'E13: the page says what the copy lacks, and that it still holds everything: ' + n.status());
   assert.strictEqual(pubPage, envelope({ ...p2, 'static-html': n.k.sample({ as: 'static' }).html, pack: Buffer.from(pubPack).toString('base64'), date: '2026-01-02' }), 'the published file is envelope(parts) with the published pack');
@@ -292,12 +292,12 @@ for (const [name, whole, next] of [['compose-edited.ufx.html', true, 'compose-ed
   assert.strictEqual(q.texts().filter(t => t.on === 1).map(t => t.s).join(''), n.texts().filter(t => t.on === 1).map(t => t.s).join('')); assert.deepStrictEqual(why(q.k, b.lo, b.lo + 60), why0, '`why` names who wrote each stretch, as before');
   for (const w of ['Pages', 'Text', 'Document']) { q.press(w); assert(q.find(w).lit && q.texts().filter(t => t.on === 1).length > 10, 'the face ' + w); }
   const hist = q.k.project({ name: 'history', o: T }).split('\n'); say('history of the text, in the published copy:'); for (const l of hist.slice(0, -1)) say('   ' + l);
-  assert(hist.length === 6 && hist.slice(1, 4).every(l => l.startsWith('change id=o:') && l.endsWith('ops=withheld touched=withheld')) && hist[1].includes('actor="Nested Reader"'), 'every change is there, with its actor, and its work is said to be withheld');
+  assert(hist.length === 6 && hist.slice(1, 4).every(l => l.startsWith('change id=o:') && l.endsWith('ops=withheld touched=withheld verdict=none')) && hist[1].includes('actor="Nested Reader"'), 'every change is there, with its actor, and its work is said to be withheld');
   assert(q.k.project({ name: 'leaving', history: true }).includes('layer name=history included=true objects=0 bytes=0 actors=[] models=[] changes=0 first=0 last=0\nlacks history=true'), 'and `leaving` says a copy of it lacks history whatever is chosen');
   q.press('Save'); assert(panel(q).includes('none is held here'), panel(q)); q.press('Cancel');
   // edited again: a new change on top of history that is withheld; saved again, both ways
   q.press('Edit'); edit(q, 'Readers who', s => s.replace('detail', 'sums')); assert.strictEqual(q.head().height, head.height + 1, q.status()); const h2 = q.k.project({ name: 'history', o: T }).split('\n');
-  assert(h2[1].includes('actor="Later Reader"') && h2[1].endsWith('ops=1 touched=[o:71717171]') && h2[2].endsWith('ops=withheld touched=withheld'), 'the new change shows its work; the ones before it are still withheld'); say('after an edit of the published copy:'); for (const l of h2.slice(1, 3)) say('   ' + l);
+  assert(h2[1].includes('actor="Later Reader"') && h2[1].endsWith('ops=1 touched=[o:71717171] verdict=none') && h2[2].endsWith('ops=withheld touched=withheld verdict=none'), 'the new change shows its work; the ones before it are still withheld'); say('after an edit of the published copy:'); for (const l of h2.slice(1, 3)) say('   ' + l);
   q.press('Save'); assert(panel(q).includes('withheld. Its ')); q.press('Save this copy'); const pub2 = q.fx1('deliver'); assert.strictEqual(pub2.name, 'compose-published-2.ufx.html'); const pp2 = q.k.published();
   q.press('Save'); q.press('For people'); q.press('Save this copy'); assert.strictEqual(q.fx1('deliver').name, 'compose-published-edited-2.ufx.html'); fs.writeFileSync(out('nested-published-edited.ufx'), q.k.packBytes()); fs.writeFileSync(out('nested-published-edited-published.ufx'), pp2);
   const z = await reader({ parts: { ...p2, pack: Buffer.from(pp2).toString('base64') }, name: 'z', own: false }); assert.strictEqual(z.head().commit, q.head().commit); assert.strictEqual(z.k.layers().history.bytes, 0);
@@ -335,4 +335,53 @@ for (const [what, e] of [['positions out of range', { ...e0, lo: 100000, hi: 100
   const x = r.k.propose(e); assert(x.refused && !x.commit, what); assert.deepStrictEqual(r.k.packBytes(), before, what + ': the pack is byte for byte as it was'); say('refused (' + what + '):', x.refused); }
 assert.deepStrictEqual(r.k.findPack(Buffer.from(before).toString('base64')), before); assert.strictEqual(r.k.findPack('not base64!'), null);
 fs.writeFileSync(out('edited.ufx'), before);
+// ---- what this reader cannot classify (TRAVEL E10, E12): history.ufx holds one frame of a kind no reader knows. The panel says so, with how
+// much, and whether it goes; a copy for readers leaves it out and the page still holds it; a whole copy carries it ----
+{ const withUnknown = await withTools(file('vectors/history.ufx')), kinds = bytes => { const d = Buffer.from(bytes), out = {}; let off = 8; while (off < d.length) { const kind = d[off]; let n = 0, sh = 0, at = off + 2, b; do { b = d[at++]; n += (b & 127) * 2 ** sh; sh += 7; } while (b & 128); out[kind] = (out[kind] || 0) + 1; off = at + n; } return out; };
+  const u = await reader({ parts: { ...parts, pack: Buffer.from(withUnknown).toString('base64') }, name: 'history.ufx.html', own: false, who: 'Unknown Reader' });
+  const lacks = u.k.project({ name: 'leaving', history: false }).split('\n')[4]; assert.strictEqual(lacks, 'lacks history=true blobs=0 unread=1 unread-bytes=49', lacks);
+  u.press('Save'); assert(panel(u).includes('This reader cannot read 49 bytes of this file, in one part of a kind it does not know. They will be left out of this copy, and stay here.'), panel(u));
+  u.press('Save this copy'); const forReaders = u.k.published(), page = b => Buffer.from(u.fx1('deliver').bytes).toString('utf8').includes(Buffer.from(b).toString('base64'));
+  assert(page(forReaders) && !kinds(forReaders)[0x7f] && kinds(u.k.packBytes())[0x7f] === 1, 'left out of the copy, and still held');
+  u.press('Save'); u.press('For people'); assert(panel(u).includes('in one part of a kind it does not know. They will be carried as they are.'), panel(u));
+  u.press('Save this copy'); assert(page(u.k.packBytes()) && kinds(u.k.packBytes())[0x7f] === 1, 'carried in the whole copy');
+  say('\nwhat cannot be classified:', lacks, '; said in the panel both ways; left out of the copy for readers, carried in the whole copy'); }
+// ---- decisions (SPEC 5.4; PLAYER K5): through the tools, one contribution is accepted and another rejected. Accepting records a
+// decision and alters nothing else. Rejecting also undoes what the contribution did, and what it puts back is still its first author's ----
+{ const w = await reader({ parts, name: 'compose.ufx.html', who: 'Writer One', seed: 21 }); w.press('Edit');
+  const e1 = edit(w, 'Every figure', s => s.replace('ledger', 'books')), x1 = w.head().change; edit(w, 'Nothing here', s => s.replace('forecast', 'promise')); const x2 = w.head().change, before = chars(w.k); w.press('Edit');
+  const d = await reader({ parts: { ...parts, pack: Buffer.from(w.k.packBytes()).toString('base64') }, name: 'compose.ufx.html', seed: 22 });
+  const rows = () => d.nodes(0).filter(n => n.role === 'paragraph' && /, change o:/.test(n.text)).map(n => n.text), nth = (word, k) => { const t = d.texts().filter(t => t.s.trim() === word)[k]; assert(t, `no ${word} number ${k}`); return d.send({ press: [t.X + 4, t.Y - 4], on: t.on }); };
+  d.press('Changes'); assert.strictEqual(rows().length, 3); assert(rows().every(r => r.endsWith('not decided.')) && rows()[0].startsWith('Writer One, ') && rows()[2].startsWith('Test Author, '), rows().join(' / ')); say('\nthe changes, as the tools list them:'); for (const r of rows()) say('  ' + r);
+  // no name, no decision
+  nth('Accept', 0); assert(/Not recorded: a decision says who made it, and no name was given\./.test(d.status()) && d.head().change === x2, d.status());
+  d.name('Second Reader'); assert.strictEqual(rows().length, 3, 'the panel is still open: ' + d.shown().slice(0, 200));
+  // accept the newest: a change with no operations and one decision; the text is as it was
+  nth('Accept', 0); const a = d.head(); assert(a.height === w.head().height + 1 && chars(d.k) === before, 'accepting altered the text');
+  assert(new RegExp(`Recorded: change o:${x2.slice(0, 8)} accepted by Second Reader\\. Not yet in a file\\.`).test(d.status()), d.status());
+  const hist = () => d.k.project({ name: 'history' }).split('\n').filter(l => l.startsWith('change ')); assert(hist()[0].includes('actor="Second Reader"') && hist()[0].includes('ops=0 touched=[]') && hist()[1].includes(`id=o:${x2.slice(0, 8)}`) && hist()[1].endsWith('verdict=accept decided-by="Second Reader"'), hist().slice(0, 2).join(' / '));
+  assert(rows()[1].endsWith('accepted by Second Reader.'), rows().join(' / '));
+  // reject the one before it: its word goes back, the other edit stays, and the word put back is its first author's
+  nth('Reject', 2); const r = d.head(), now = chars(d.k); assert(r.height === a.height + 1 && now.includes('ledger') && !now.includes('books') && now.includes('promise') && now === before.replace('books', 'ledger'), 'not undone: ' + now.slice(420, 480));
+  assert(new RegExp(`Recorded: change o:${x1.slice(0, 8)} rejected by Second Reader\\. What it did was undone\\.`).test(d.status()), d.status());
+  const b = blockOf(d, 'Every figure'), at = b.text.indexOf('ledger'), runsNow = why(d.k, b.lo, b.hi); say('after the rejection, `why` of the paragraph:'); for (const l of runsNow) say('   ' + l);
+  const word = runsNow.find(l => l.includes(`chars=[${b.lo + at},${b.lo + at + 6}]`)); assert(word && word.includes('change=o:7c7c7c7c') && word.includes('who="Test Author"') && word.includes(`via=o:${r.change.slice(0, 8)}`), 'the word put back is not its first author\'s: ' + runsNow.join(' / '));
+  assert(hist()[0].includes('actor="Second Reader"') && hist().find(l => l.includes(`id=o:${x1.slice(0, 8)}`)).endsWith('verdict=reject decided-by="Second Reader"'));
+  // rejecting it again is refused, and nothing is written: what it wrote is no longer there
+  const packNow = Buffer.from(d.k.packBytes()); nth('Reject', 3); assert(/Not recorded: what that change wrote has been edited since/.test(d.status()) && Buffer.compare(packNow, Buffer.from(d.k.packBytes())) === 0, d.status());
+  fs.writeFileSync(out('decided.ufx'), packNow); fs.writeFileSync(new URL('vectors/decided.ufx', root), packNow); void e1;
+  fs.writeFileSync(new URL('vectors/provisional/decisions.json', root), JSON.stringify({ status: { status: 'provisional', note: "the author's kernel only; the independent reader replays the conservation of every commit of the pack" },
+    what: 'decisions recorded through the tools (SPEC 5.4, R9): compose.ufx after two edits by one person, then, by another, the newer edit accepted and the older rejected',
+    pack: { file: 'decided.ufx', length: packNow.length, sha256: crypto.createHash('sha256').update(packNow).digest('hex'), root_hash: d.head().commit },
+    edits: [{ change: x1, by: 'Writer One', replaced: 'ledger', with: 'books' }, { change: x2, by: 'Writer One', replaced: 'forecast', with: 'promise' }],
+    accepted: { about: x2, by: 'Second Reader', change: a.change, operations: 0, text: 'as it was' },
+    rejected: { about: x1, by: 'Second Reader', change: r.change, text_now_has: 'ledger', and_still_has: 'promise',
+      rule: 'what the rejected change inserted is removed; what it removed is put back after the last element it removed; `origin.sources` of the rejecting change names, run by run, the changes that first introduced what is put back, so that `why` gives the word to its first author, with `via` naming the change that put it back' },
+    history: hist(), why_of_the_paragraph: { region: [b.lo, b.hi], runs: runsNow },
+    refused: { what: 'rejecting the same change again', says: 'what that change wrote has been edited since, so it cannot be undone whole (L4)', written: 'nothing: the pack is byte for byte as it was' } }, null, 1) + '\n');
+  // published, the decisions and the first author travel: they are attribution, not working history (SPEC 2.5)
+  { const pub = d.k.published(), q = await kernel(); assert(await q.open(pub)); const h = q.project({ name: 'history' }).split('\n').filter(l => l.startsWith('change '));
+    assert(h.some(l => l.endsWith('verdict=accept decided-by="Second Reader"')) && h.some(l => l.endsWith('verdict=reject decided-by="Second Reader"')), 'the decisions did not travel: ' + h.join(' / '));
+    assert.deepStrictEqual(why(q, b.lo, b.hi), runsNow, 'a published copy says who first wrote what was put back, as the whole pack does'); say('published:', pub.length, 'bytes of', packNow.length, '; the decisions and the first author are there'); }
+  say('decisions:', JSON.stringify({ accepted: x2.slice(0, 8), rejected: x1.slice(0, 8), by: 'Second Reader', pack: packNow.length })); }
 say('\nOK');

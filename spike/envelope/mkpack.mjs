@@ -103,23 +103,29 @@ function universe(pk, change, lineage, objects) {
 const f = formula, st = n => f('state', n), is = (a, b) => f('=', a, b), not = a => f('not', a), and = (a, b) => f('and', a, b), iff = (c, a, b) => f('if', c, a, b);
 const join = (...a) => f('concat', ...a), list = (...a) => f('list', ...a), get = (m, k) => f('get', m, k), nth = (l, i) => f('nth', l, i), num = n => f('format', n, '0'), len = x => f('len', x), plus = (a, b) => f('+', a, b);
 export function tools(compress = true) {
-  const pk = new Pack('ufo-spike-tools-salt', compress), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90].map(id);
-  const S = f('arg', 'subject'), editing = is(st('editing'), true), named = not(is(st('who'), null)), share = is(st('share'), true), saving = is(st('panel'), 'save'), lit = on => iff(on, 'underline', 'none');
+  const pk = new Pack('ufo-spike-tools-salt', compress), [XF, XG, XT, XR, XP, XC, XS, XL, XN, XW, XV, XH, XE, XM, XO, XB, XA, XY, XQ, XJ, XD] = [0x82, 0x83, 0x81, 0x84, 0x85, 0x8c, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f, 0x90, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5].map(id);
+  const S = f('arg', 'subject'), editing = is(st('editing'), true), named = not(is(st('who'), null)), share = is(st('share'), true), saving = is(st('panel'), 'save'), reviewing = is(st('panel'), 'changes'), lit = on => iff(on, 'underline', 'none');
   // what the kernel's projections say of the subject: `expand` of the whole, the changes newest first, and what a copy would carry
-  const ov = nth(f('ask', 'expand', S), 0), last = nth(f('ask', 'history', S), 0), leaving = f('ask', 'leaving', S, { history: share }), [content, credit, history] = [0, 1, 2].map(i => nth(leaving, i));
+  // Each is asked once and named (`let`, 7.3), and read where it is wanted by its name.
+  const named1 = n => f('arg', n), ov = named1('ov'), last = nth(f('ask', 'history', S), 0), leaving = f('ask', 'leaving', S, { history: share }), [content, credit, history, lacks] = ['content', 'credit', 'history', 'lacks'].map(named1);
   // The name of a saved file: the name of this one without its ending, then a mark for the kind of copy, then a number if a copy was
   // already saved from here; a name that has the mark already takes a number. (No operator of 7.3 finds a text in a text or reads a
   // number from one, so "-edited-2" cannot be counted on from: it becomes "-edited-2-edited".)
   const name = f('arg', 'name'), ends = (s, suf) => is(f('slice', s, plus(len(s), -suf.length), len(s)), suf), less = (s, k) => f('slice', s, 0, plus(len(s), -k));
-  // (The name without its ending is worked out once, when Save is pressed, and kept in the state as `stem`: a formula has no other way to name a value and use it twice.)
-  const stem0 = iff(ends(name, '.ufx.html'), less(name, 9), iff(ends(name, '.html'), less(name, 5), name)), stem = st('stem'), count = iff(is(st('n'), null), 0, st('n'));
+  // The name without its ending is worked out once and named `stem`.
+  const stem0 = iff(ends(name, '.ufx.html'), less(name, 9), iff(ends(name, '.html'), less(name, 5), name)), stem = named1('stem'), count = iff(is(st('n'), null), 0, st('n'));
   const marked = mark => iff(ends(stem, mark), join(stem, '-', num(plus(count, 2))), join(stem, mark, iff(is(count, 0), '', join('-', num(plus(count, 1))))));
-  const saveAs = join(iff(share, marked('-edited'), marked('-published')), '.ufx.html');
+  const saveAs = f('let', 'stem', f('let', 's', stem0, iff(is(named1('s'), ''), 'untitled', named1('s'))), join(iff(share, marked('-edited'), marked('-published')), '.ufx.html'));
   // the status: which state this is; how to begin; what was just recorded, or why not; what was saved, and what that copy lacks
-  const did = st('did'), out = st('out');
-  const status = join(
+  const did = st('did'), out = st('out'), decided = st('decided');
+  const status = f('let', 'ov', nth(f('ask', 'expand', S), 0), join(
     list(join('State ', get(ov, 'commit'), ', after ', num(get(ov, 'changes')), ' changes.')),
     iff(and(editing, not(named)), list('To change the text, first give your name: press the line below.'), list()),
+    iff(and(reviewing, not(named)), list('To accept or reject a change, first give your name: press the line below.'), list()),
+    // a decision just recorded (SPEC 5.4), or why it was not
+    iff(is(decided, null), list(), iff(get(decided, 'ok'),
+      list(join('Recorded: change ', get(decided, 'about'), ' ', get(decided, 'verdict'), 'ed by ', st('who'), '.', iff(is(get(decided, 'verdict'), 'reject'), ' What it did was undone.', ''), ' Not yet in a file.')),
+      list(join('Not recorded: ', get(decided, 'why'), '.')))),
     iff(and(editing, named), list(join('Changes will be recorded as made by ', st('who'), '. Press a paragraph to change it; press the name to change that.')), list()),
     iff(is(did, null), list(), iff(get(did, 'ok'),
       iff(is(st('fresh'), true), list(join('Changed, and recorded as change ', get(last, 'id'), ' by ', get(last, 'actor'), '. Not yet in a file.')), list()),
@@ -127,18 +133,21 @@ export function tools(compress = true) {
     iff(is(out, null), list(), iff(get(out, 'ok'),
       join(list(join('Saved as ', get(out, 'name'), ': ', num(get(out, 'bytes')), ' bytes, holding state ', f('slice', get(out, 'commit'), 0, 16), '. It has been handed to your browser to save.')),
         iff(is(st('outshare'), true), list(), list('That copy is for readers: its working history was withheld. Everything is still held here, in this page; to keep it, save a copy for people working on this.'))),
-      list(join('No file was made: ', get(out, 'why'), '.')))));
+      list(join('No file was made: ', get(out, 'why'), '.'))))));
   // what will leave (TRAVEL E12): the three layers of SPEC 2.5, as `leaving` counts them for the choice now made
   const when = t => f('format', t, 'YYYY-MM-DD hh:mm'), bytes = l => num(get(l, 'bytes')), HISTORY = 'Working history (every operation, and every earlier draft): ';
-  const panel = join(
+  const panel = f('let', 'L', leaving, 'content', nth(named1('L'), 0), 'credit', nth(named1('L'), 1), 'history', nth(named1('L'), 2), 'lacks', nth(named1('L'), 3), join(
     list(join('The document: ', num(get(content, 'objects')), ' objects, ', bytes(content), ' bytes. It always travels.'),
       join('Who and what made it: ', num(get(credit, 'changes')), ' changes, from ', when(get(credit, 'first')), ' to ', when(get(credit, 'last')), ' UTC, ', bytes(credit), ' bytes. This always travels. The names it holds:')),
     get(credit, 'actors'),
     iff(is(len(get(credit, 'models')), 0), list('It names no model.'), join(list('The models it names:'), get(credit, 'models'))),
     list(iff(is(get(history, 'bytes'), 0), join(HISTORY, 'none is held here.'),
       iff(share, join(HISTORY, 'included, ', bytes(history), ' bytes, the work of ', num(get(history, 'changes')), ' changes.'),
-        join(HISTORY, 'withheld. Its ', bytes(history), ' bytes stay here, and the copy will say that they were withheld.'))),
-      join('The copy will be named ', saveAs, '.')));
+        join(HISTORY, 'withheld. Its ', bytes(history), ' bytes stay here, and the copy will say that they were withheld.')))),
+    // what this reader cannot classify (TRAVEL E10): said plainly, with how much, and whether it goes
+    iff(is(get(lacks, 'unread'), 0), list(), list(join('This reader cannot read ', num(get(lacks, 'unread-bytes')), ' bytes of this file, in ', iff(is(get(lacks, 'unread'), 1), 'one part', join(num(get(lacks, 'unread')), ' parts')), ' of a kind it does not know. ',
+      iff(share, 'They will be carried as they are.', 'They will be left out of this copy, and stay here.')))),
+    list(join('The copy will be named ', saveAs, '.'))));
   // each word is a button: what a press on it does (7.6); a formula that underlines it while what it would set is so (7.3);
   // and the same said for those who do not see it: `current` of those that choose among things, `pressed` of those that are on or off
   const button = (T, C, at, word, press, how, on) => ({ at: anchor({ o: T, a: { chars: ['s', [C, at, 0], [C, at + word.length - 1, 1]] } }), kind: 'inline', role: 'button', weight: 700, decoration: on === undefined ? 'none' : lit(on), ...how, on: { press } });
@@ -147,21 +156,29 @@ export function tools(compress = true) {
   const bar = (T, words, more = {}) => { const chars = words.map(w => w[0]).join('   '), spans = { b0: { ...block(T, XC, next), ...more } }; let at = next; next += chars.length;
     words.forEach(([w, press, how, on], i) => { spans['t' + i] = button(T, XC, at, w, press, how, on); at += w.length + 3; }); return { chars, spans, size: F(15), font: ['sans-serif'] }; };
   const shown = { document: f('or', is(st('face'), 'document'), is(st('face'), null)), pages: is(st('face'), 'pages'), text: is(st('face'), 'text') }, face = (word, to) => [word, { set: 'face', to }, { current: shown[to] }, shown[to]];
-  const words = [face('Document', 'document'), face('Pages', 'pages'), face('Text', 'text'), ['Edit', { set: 'editing', to: not(editing) }, { pressed: editing }, editing], ['Save', [{ set: 'stem', to: stem0 }, { set: 'stem', to: iff(is(stem, ''), 'untitled', stem) }, { set: 'panel', to: iff(saving, null, 'save') }], { pressed: saving }, saving]];
+  const words = [face('Document', 'document'), face('Pages', 'pages'), face('Text', 'text'), ['Edit', { set: 'editing', to: not(editing) }, { pressed: editing }, editing], ['Save', { set: 'panel', to: iff(saving, null, 'save') }, { pressed: saving }, saving],
+    ['Changes', { set: 'panel', to: iff(reviewing, null, 'changes') }, { pressed: reviewing }, reviewing]];
   const choice = [['For people working on this', { set: 'share', to: true }, { current: share }, share], ['For readers', { set: 'share', to: false }, { current: not(share) }, not(share)]];
   // Save: the export, with the choice made and the name; then, if it was not refused, what the status is to say of it, and the panel closes
   const save = [{ act: 'export', universe: S, history: share, name: saveAs, into: 'out' }, { set: 'outshare', to: share }, { set: 'n', to: plus(count, 1) }, { set: 'fresh', to: iff(share, false, st('fresh')) }, { set: 'panel', to: null }];
   const grey = [F(0.8), F(0.8), F(0.8), F(1)], side = [F(0), F(16), F(6), F(16)], line = X => ['ufo.portal', { of: f('arg', 'line') }];
   const tBar = bar(XT, words, { role: 'toolbar', label: 'Tools', lang: 'en' }), tHead = { chars: 'What will leave, if you save a copy', spans: { b0: { ...block(XH, XC, next), weight: 700 } }, size: F(15), font: ['sans-serif'] };
   next += tHead.chars.length; const tChoice = bar(XO, choice), tSave = bar(XB, [['Save this copy', save, {}], ['Cancel', { set: 'panel', to: null }, {}]]);
+  // the changes, newest first (SPEC 5.4): who made each and when, the decision that stands about it, and two words to decide. A press
+  // on one records a decision by the person named, about the change of its own line: `each` binds the line's record as `c`
+  const c = f('arg', 'c'), decide = verdict => [{ act: 'decide', about: get(c, 'id'), verdict, who: st('who'), into: 'decided' }, { set: 'fresh', to: true }];
+  const row = iff(is(get(c, 'id'), 'withheld'), 'A change whose record was withheld from this copy.',
+    join(get(c, 'actor'), ', ', when(get(c, 'time')), ' UTC, change ', get(c, 'id'), ': ', iff(is(get(c, 'verdict'), 'none'), 'not decided.', join(get(c, 'verdict'), 'ed by ', get(c, 'decided-by'), '.'))));
+  const tChanges = { chars: 'Changes, newest first', spans: { b0: { ...block(XY, XC, next), weight: 700 } }, size: F(15), font: ['sans-serif'] }; next += tChanges.chars.length;
+  const tDecide = bar(XD, [['Accept', decide('accept'), {}], ['Reject', decide('reject'), {}]]);
   const root = universe(pk, XC, id(0x77), [
     [XF, 'ufo.face', { of: ref(XG), medium: 'document' }],
-    [XG, 'ufo.group', { children: [ref(XT), ref(XS), ref(XN), ref(XV), ref(XR), ref(XP)] }],
+    [XG, 'ufo.group', { children: [ref(XT), ref(XS), ref(XN), ref(XV), ref(XA), ref(XR), ref(XP)] }],
     [XT, 'ufo.text', { ...tBar, margin: [F(10), F(16), F(8), F(16)] }],
     [XS, 'ufo.group', { role: 'status', label: 'State', each: status, as: 'line', children: [ref(XL)], margin: side }],
     [XL, ...line()],
     // who is making the changes: a value of the presentation state, shown while editing is on, which takes text entry (7.6)
-    [XN, 'ufo.group', { visible: editing, each: list(st('who')), as: 'who', children: [ref(XW)], margin: side }],
+    [XN, 'ufo.group', { visible: f('or', editing, reviewing), each: list(st('who')), as: 'who', children: [ref(XW)], margin: side }],
     [XW, 'ufo.portal', { of: f('arg', 'who'), role: 'input', label: 'Your name, to record with the changes you make', editable: true, on: { change: { set: 'who', to: iff(is(f('arg', 'text'), ''), null, f('arg', 'text')) } } }],
     [XV, 'ufo.group', { visible: saving, role: 'region', label: 'What will leave', lang: 'en', children: [ref(XH), ref(XE), ref(XO), ref(XB)], margin: side }],
     [XH, 'ufo.text', tHead],
@@ -169,6 +186,11 @@ export function tools(compress = true) {
     [XM, ...line()],
     [XO, 'ufo.text', tChoice],
     [XB, 'ufo.text', tSave],
+    [XA, 'ufo.group', { visible: reviewing, role: 'region', label: 'Changes', lang: 'en', children: [ref(XY), ref(XQ)], margin: side }],
+    [XY, 'ufo.text', tChanges],
+    [XQ, 'ufo.group', { each: f('ask', 'history', S), as: 'c', children: [ref(XJ), ref(XD)] }],
+    [XJ, 'ufo.portal', { of: row }],
+    [XD, 'ufo.text', tDecide],
     [XR, 'ufo.path', { d: [['M', F(0), F(0)], ['L', F(4000), F(0)]], stroke: grey, width: F(1), h: F(1) }],
     // the subject, in the face the state names. It takes text entry while `editing` is set and a name has been given; what is
     // done there is proposed as a change by that name, and the state then says that there is something not yet in a file

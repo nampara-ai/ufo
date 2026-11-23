@@ -1,0 +1,65 @@
+{
+ "status": {
+  "status": "provisional",
+  "note": "the author's kernel only; the independent reader replays the conservation of every commit of the pack"
+ },
+ "what": "decisions recorded through the tools (SPEC 5.4, R9): compose.ufx after two edits by one person, then, by another, the newer edit accepted and the older rejected",
+ "pack": {
+  "file": "decided.ufx",
+  "length": 27877,
+  "sha256": "921687221e35fa50eaa654a852d61c0c3c74e218160f9a94485a5c468563cf1d",
+  "root_hash": "ced84b11d59d17e715a612d9ee728de02f7b38169f5dad042f54e6626317614d"
+ },
+ "edits": [
+  {
+   "change": "85aacff4193e6388add2f71c41668bb0",
+   "by": "Writer One",
+   "replaced": "ledger",
+   "with": "books"
+  },
+  {
+   "change": "ea0f34597ea3c8ed12375c81a6cbf015",
+   "by": "Writer One",
+   "replaced": "forecast",
+   "with": "promise"
+  }
+ ],
+ "accepted": {
+  "about": "ea0f34597ea3c8ed12375c81a6cbf015",
+  "by": "Second Reader",
+  "change": "86abd0f51a3f6489aed3f81d42678cb1",
+  "operations": 0,
+  "text": "as it was"
+ },
+ "rejected": {
+  "about": "85aacff4193e6388add2f71c41668bb0",
+  "by": "Second Reader",
+  "change": "eb10355a7fa4c9ee13385d82a7ccf116",
+  "text_now_has": "ledger",
+  "and_still_has": "promise",
+  "rule": "what the rejected change inserted is removed; what it removed is put back after the last element it removed; `origin.sources` of the rejecting change names, run by run, the changes that first introduced what is put back, so that `why` gives the word to its first author, with `via` naming the change that put it back"
+ },
+ "history": [
+  "change id=o:eb10355a commit=c:ced84b11 time=1767355200000 actor=\"Second Reader\" basis=witnessed by=person ops=1 touched=[o:71717171] verdict=none",
+  "change id=o:86abd0f5 commit=c:25f76723 time=1767355200000 actor=\"Second Reader\" basis=witnessed by=person ops=0 touched=[] verdict=none",
+  "change id=o:ea0f3459 commit=c:ea383233 time=1767355200000 actor=\"Writer One\" basis=witnessed by=person ops=3 touched=[o:71717171] verdict=accept decided-by=\"Second Reader\"",
+  "change id=o:85aacff4 commit=c:e258999a time=1767355200000 actor=\"Writer One\" basis=witnessed by=person ops=1 touched=[o:71717171] verdict=reject decided-by=\"Second Reader\"",
+  "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=15 touched=[o:00000000,o:71717171,o:72727272,o:73737373] verdict=none"
+ ],
+ "why_of_the_paragraph": {
+  "region": [
+   423,
+   538
+  ],
+  "runs": [
+   "run chars=[423,471] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false",
+   "run chars=[471,477] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" via=o:eb10355a sealed=false",
+   "run chars=[477,538] change=o:7c7c7c7c basis=witnessed by=person who=\"Test Author\" sealed=false"
+  ]
+ },
+ "refused": {
+  "what": "rejecting the same change again",
+  "says": "what that change wrote has been edited since, so it cannot be undone whole (L4)",
+  "written": "nothing: the pack is byte for byte as it was"
+ }
+}

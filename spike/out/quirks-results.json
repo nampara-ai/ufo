@@ -9,7 +9,8 @@
     "02-look-without-style": "pass",
     "03-save-as-bytes": "pass",
     "04-edit-positions": "pass",
-    "05-touch-beside-a-button": "pass"
+    "05-touch-beside-a-button": "pass",
+    "06-focus-lost-while-placing": "pass"
    }
   },
   "firefox": {
@@ -21,7 +22,8 @@
     "02-look-without-style": "pass",
     "03-save-as-bytes": "pass",
     "04-edit-positions": "pass",
-    "05-touch-beside-a-button": "pass"
+    "05-touch-beside-a-button": "pass",
+    "06-focus-lost-while-placing": "pass"
    }
   },
   "webkit": {
@@ -33,12 +35,13 @@
     "02-look-without-style": "pass",
     "03-save-as-bytes": "pass",
     "04-edit-positions": "pass",
-    "05-touch-beside-a-button": "pass"
+    "05-touch-beside-a-button": "pass",
+    "06-focus-lost-while-placing": "pass"
    }
   }
  },
- "total": 18,
- "passed": 18,
+ "total": 21,
+ "passed": 21,
  "failed": 0,
  "naive": [
   {
@@ -98,11 +101,18 @@
    "how": ""
   },
   {
+   "file": "06-focus-lost-while-placing.naive.html",
+   "engine": "chromium",
+   "fails": true,
+   "as_recorded": true,
+   "how": "file: fail: NotFoundError: Failed to execute 'insertBefore' on 'Node': The node before which the new node is to be inserted is not a"
+  },
+  {
    "file": "01-no-icon-request.naive.html",
    "engine": "firefox",
    "fails": true,
    "as_recorded": true,
-   "how": "http: fail: policy violation: img-src http://127.0.0.1:45689/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:45689/favic; http: violations: img-src http://127.0.0.1:45689/favicon.ico"
+   "how": "http: fail: policy violation: img-src http://127.0.0.1:41067/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:41067/favic; http: violations: img-src http://127.0.0.1:41067/favicon.ico"
   },
   {
    "file": "01-no-icon-request.naive2.html",
@@ -148,6 +158,13 @@
   },
   {
    "file": "05-touch-beside-a-button.naive.html",
+   "engine": "firefox",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
+  },
+  {
+   "file": "06-focus-lost-while-placing.naive.html",
    "engine": "firefox",
    "fails": false,
    "as_recorded": true,
@@ -208,6 +225,13 @@
    "fails": true,
    "as_recorded": true,
    "how": "file: fail: the press was given to #a, not to the line that was touched; it is reported at 79,326, not at 92,340 where the touch was"
+  },
+  {
+   "file": "06-focus-lost-while-placing.naive.html",
+   "engine": "webkit",
+   "fails": false,
+   "as_recorded": true,
+   "how": ""
   }
  ],
  "harness": {

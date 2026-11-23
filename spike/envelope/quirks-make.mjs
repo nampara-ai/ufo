@@ -149,6 +149,29 @@ E.push({ id: '05-touch-beside-a-button', name: 'A touch on something that cannot
   rule: 'A binding takes where a pointer pressed from the pointer itself: the drawing it went down on, and the point it came up at (pointerdown, then pointerup within a few pixels, no pointercancel between). The click that follows says only that the press is complete: its target and its point are not used, since an engine may move them to a neighbouring control; and where it was moved to something outside the drawing, it is stopped there. A click that no pointer event came before (one made for the person by assistive technology or by script) names an element and no trustworthy point: it is a press on the node that element stands for.',
   pass: 'a real touch on a paragraph, 11 pixels under a focusable element with role button that lies in it: exactly one press is taken, on the paragraph, at the point touched; zero violations; zero console messages',
   note: 'Found when the accessible nodes were laid over the drawing (TRAVEL E23, the exception): until then the page held nothing a touch could be given to but the canvas. The piece of a button that was drawn on a second line had no element over it, and a tap on it was delivered as a click on the button above. In WebKit 26.6 as Playwright builds it for Linux; whether Safari on iOS does the same was not observed, but iOS is where this adjustment of touches is known from.' });
+// ---- 06: an element that holds the focus is moved, and one engine reports the focus lost before the move is finished ----
+const moveBody = '<div id="list"><div id="a" tabindex="0">first</div><div id="b" tabindex="0">second</div><div id="c" tabindex="0">third</div></div>',
+  moveCheck = send => `const list = document.getElementById('list'), b = document.getElementById('b'), c = document.getElementById('c'), problems = [];
+// what one event asks for, as a binding puts nodes in their places: the node that holds the focus goes, and a new one is put before the last
+const place = () => { const before = c; b.remove(); const n = document.createElement('div'); n.textContent = 'new'; list.insertBefore(n, before); };
+// what a lost focus asks for, as a kernel answers an event with a new list: the last node goes
+const lost = () => c.remove();
+${send}
+list.addEventListener('focusout', () => send(lost));
+b.focus(); try { send(place); } catch (e) { problems.push(String(e).slice(0, 120)); }
+finish(problems);`;
+page('06-focus-lost-while-placing.html', { title: '06 one event at a time', body: moveBody, says: 'What an event asks for is done to the end before the next event is taken: one that comes meanwhile waits its turn. An engine that reports the focus lost while a node is being removed then finds the work finished.',
+  script: moveCheck(`const waiting = []; let busy = false;
+const send = f => { waiting.push(f); if (busy) return; busy = true; try { while (waiting.length) waiting.shift()(); } finally { busy = false; } };`) });
+page('06-focus-lost-while-placing.naive.html', { title: '06 naive: an event handled as it comes', body: moveBody, says: 'Naive: each event is handled as it comes. Chromium reports the focus lost from inside the call that removes the element holding it; the handler then removes another node, and what was being done fails.',
+  script: moveCheck('const send = f => f();') });
+E.push({ id: '06-focus-lost-while-placing', name: 'The element that holds the focus is removed: Chromium reports the focus lost from inside the removal, and what the handler does breaks what the binding was doing',
+  file: '06-focus-lost-while-placing.html', where: ['file'], expect: {},
+  naive: [{ file: '06-focus-lost-while-placing.naive.html', fails: { chromium: 'NotFoundError from insertBefore: the node to be removed is no longer a child of this node' } }],
+  rule: 'A binding handles one input event at a time. What the kernel asks for in answer to an event is done to the end before the next event is given to the kernel; an event that arrives meanwhile, from inside something the binding is doing, waits its turn.',
+  pass: 'the element holding the focus is removed and a new one placed before its sibling, while a listener answers a lost focus by removing that sibling: no error; zero violations; zero console messages',
+  note: 'Found when a decision was recorded through the tools (SPEC 5.4): a pressed word held the focus, the list of changes grew by a line, and the host removed the word\'s node. In Chromium 153. Firefox 155 and WebKit 26.6 do not report the focus lost at that moment.',
+  status: 'provisional' });
 E.unshift({ id: '00-envelope', name: 'The envelope as built: opened, edited by the keyboard, saved and reopened under its own policy', file: null, where: ['http'], expect: {},
   rule: 'A web envelope, through opening, every face, an edit, saving and reopening what was saved, MUST cause zero policy violations, write nothing to the console, and make no request but the one that fetched it.',
   pass: 'built by spike/envelope/make.mjs from vectors/compose.ufx and served from an http origin: by the keyboard alone: Tab to Edit, Enter; Tab to the field for the name, Enter, typing, Done (no dialog of the browser is shown at any point: one would fail the entry); Tab to a paragraph, Enter, typing, Done; back to Save, Enter, which shows what will leave; the copy with its history chosen, then "Save this copy": one file comes down; it reopens at the same state; over both pages zero securitypolicyviolation events, zero console messages, and the server saw each page asked for once and nothing else' });

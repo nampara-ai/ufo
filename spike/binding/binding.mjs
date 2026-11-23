@@ -59,7 +59,12 @@ export async function start(wasmBytes, measure, inflate, clock = {}, components 
     host_time: () => clock.time ? clock.time() : Date.now(),
     host_random(out, n) { mem().set(clock.random ? clock.random(n) : crypto.getRandomValues(new Uint8Array(n)), out); } } };
   ex = (await WebAssembly.instantiate(wasmBytes, imports)).instance.exports;
-  if (components) { let mask = 0; for (const [name, bytes] of Object.entries(components)) if (bytes) { await WebAssembly.instantiate(bytes, { 'ufo:base': ex }); mask |= COMPONENT_BITS[name]; } ex.components(mask); }
+  // a component is used only if its bytes are those its hash names, where one is given ({ bytes, sha256 }), and it instantiates
+  // against this base; one that is absent, or fails either way, is simply not there, and the kernel is told so (PLAYER K7)
+  if (components) { let mask = 0; for (const [name, c] of Object.entries(components)) { if (!c) continue; const bytes = c.bytes || c;
+      try { if (c.sha256 && c.sha256 !== [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('')) continue;
+        await WebAssembly.instantiate(bytes, { 'ufo:base': ex }); mask |= COMPONENT_BITS[name]; } catch { } }
+    ex.components(mask); }
   const call = (f, v) => { const q = encode(v); const p = f(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); };
   const pend = async () => {
     for (let i = 0, n = ex.pending(); i < n; i++) {

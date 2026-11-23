@@ -91,7 +91,7 @@ structure, never as text to be parsed; a readable spelling is a projection.
 
 | Group | Operators |
 | --- | --- |
-| reference | `get` (a property of an object, by ref and key path), `cell` (a table cell by row and column key), `col` (a column as a list), `arg` (a named value supplied by the enclosing `each`, or by the Portal that presents this, §7.6), `size` (the laid-out width and height of an earlier sibling in the same group), `ask` (the records of a projection, §10.1) |
+| reference | `get` (a property of an object, by ref and key path), `cell` (a table cell by row and column key), `col` (a column as a list), `arg` (a named value supplied by the enclosing `each` or `let`, or by the Portal that presents this, §7.6), `let` (names values for the formula inside it), `size` (the laid-out width and height of an earlier sibling in the same group), `ask` (the records of a projection, §10.1) |
 | environment | `time` (the enclosing clock's time), `input` (the pointer's position and whether it is pressed, within the enclosing group, and the `src` of the item under it), `view` (the available width and height), `state` (a named value of the presentation state) |
 | arithmetic | `+ − × ÷ mod neg abs min max floor ceil round sqrt pow exp ln sin cos atan2` |
 | logic | `= ≠ < ≤ > ≥ and or not if` |
@@ -143,6 +143,7 @@ and a result that is not finite is an error value.
 | `list count sum mean nth range` | `sum` of nothing is 0 and `mean` of nothing an error value; `nth(list, i)` counts from 0 and is an error value outside the list; `range(a, b)` is the integers from *a* up to but not including *b*, at most 2²⁰ of them |
 | `sort filter map` | `sort(list, key)` is stable and ascending by the key formula's value, or by the items themselves |
 | `get cell col` | `get(ref, path)` is the value at a key path of an object's properties; `cell(ref, row, col)` a cell's value, a formula there being evaluated; `col(ref, col)` a column's values in the table's order. A missing object, key or cell is an error value |
+| `let` | `let(name, value, …, body)`: each name, a text, is bound to its value, which is worked out once; a later value may read the names before it; the result is the body's. A name is read with `arg`, and hides one of the same name outside. With no body, or a name that is not a text, an error value |
 | `arg size time input view state` | `size(key)` is `[w, h]`; `time` is in flicks; `input` is `[x, y, pressed, src]`, `src` being the anchor carried by the item under the pointer (§9.2); `view` is `[w, h]`; `state(name)` is null until set |
 | `ask` | `ask(projection, argument…)` is the records a projection of §10.1 returns for those arguments, as a list of maps from field name to value. A projection is a function of a commit, so `ask` is as pure as `get`. It reads the universe the formula is in, or a subject it was given (§7.6). Each record counts one toward the bound of **F2** |
 

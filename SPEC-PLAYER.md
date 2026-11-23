@@ -83,6 +83,16 @@ only forwarded each item to a host call would be an empty layer.
   and no ordinary universe carries a renderer (§8.4). The universe object's
   `components` names those it does carry (§1.6), so that copying and
   compaction keep them.
+- **[K7] Every file opens with what it carries, or says what it lacks.**
+  A universe states what it requires (`features`, §1.6). Where a reader
+  does not have something a universe requires — a component the file
+  does not carry, or one that does not verify against the hash that
+  names it, or one that cannot be used with this kernel — it attempts no
+  face. It shows one line of its own that names what is missing, and
+  then the plain-text face of the primary face's object (§8.3), which
+  any reader can make of any universe. Nothing shown this way can be
+  pressed, and nothing changes the file. A reader MUST NOT show an
+  empty, broken or partly composed face in its place.
 
 The kernel is itself a sandboxed component: it has no authority over the
 host except through the host interface.
@@ -368,6 +378,11 @@ written.
   control, and a click moved to something outside the drawing is
   stopped. A click that no pointer came before, made for the person by
   assistive technology, is a press on the node its element stands for.
+- **[H10] One event at a time.** What the kernel asks for in answer to
+  an input event is done to the end before the next event is given to
+  the kernel. An event that arrives meanwhile, from inside something the
+  binding is doing — an engine may report the focus lost while the node
+  that held it is being removed — waits its turn.
 - **[H6]** A reader MUST show the person, at any time, every grant in force,
   and what each program has done with it during the session.
 
@@ -625,6 +640,7 @@ to outside agents as tools under the Model Context Protocol:
 
 | Action | Effect |
 | --- | --- |
+| `decide(change, verdict)` | record a decision about a change, as the act of the person using the reader; with `reject`, also undo the change in the same one, whole or not at all (§5.4 **R9**) |
 | `propose(change)` | submit operations with origin, evidence and note; the kernel verifies and commits, or refuses whole and says why |
 | `try(change)` | everything `propose` would do short of committing: verify the change and, for a Compute-let, print the candidate and run its tests in a shadow (§12.6). It reports what `propose` would report, and changes nothing |
 | `call(computelet, export, arguments, from)` | run one exported function in a shadow instance started from a stated snapshot, and return its results. It changes nothing |
@@ -822,7 +838,7 @@ passed back, exactly as written, as an argument to another projection.
 | `diff` | two commits or revisions | `op`* |
 | `expand` | anchor, or none | `part`*; before them, with no anchor: `universe`; `seal`*; `feature`*; `component`*; `face`*; `lacks`? |
 | `verify` | commit | `check`*; `issue`* |
-| `leaving` | the parameters of an export | `layer`*; `seal`*; `lacks`? |
+| `leaving` | the parameters of an export | `layer`, three; `lacks`; `seal`* |
 | `sample` | face, parameters | as text: `text`; as a display list: `item`* |
 | `unit` | object identity of a function | `unit`; `stmt`* |
 
@@ -833,13 +849,13 @@ passed back, exactly as written, as an argument to another projection.
 | `feature` | `name` `v` `required` `supported` |
 | `component` | `role` `hash` `status` |
 | `face` | `id` `kind` (`sampled`, `carried`, `transmuted`) `status` `medium` `label` |
-| `lacks` | `history` (boolean) `blobs` (count) |
+| `lacks` | `history` (boolean) `blobs` (count); and from `leaving` also `unread` (the count of frames of kinds this reader does not know) `unread-bytes` (their bytes, headers included) |
 | `part` | `at` (an anchor) `type` `label` (its label, heading or name, or the first 60 characters of a block) `size` `changed` (time) `by` `basis` [`parts` (count)] [`derived` (status)] [`summary` (the text of its line) `summary-status`] |
 | `source` | `at` (an anchor: a pin of `from.sources`, as it resolves now) `status` (`current`, `stale` or `detached`, §4.4) |
 | `made` | `how` `change` `basis` [`by`] [`model`] [`tool`] [`asked`] [`prompt` (its text, or `withheld`)] [`parameters`] |
 | `object` | `id` `type` `rev` (number) `r` (revision hash) `by` |
 | `prop` | `key` then `value`, or `len` and `kind` when large |
-| `run` | a stretch of elements with one origin: the region, as positions, then `change` `basis` [`by`] [`who`] [`model`] [`tool`] [`asked`] [`prompt`] [`method`] [`confidence`] `sealed` (boolean) |
+| `run` | a stretch of elements with one origin: the region, as positions, then `change` `basis` [`by`] [`who`] [`model`] [`tool`] [`asked`] [`prompt`] [`method`] [`confidence`] [`via` (the change that put the stretch here, where another first introduced it: `origin.sources`, §5.4)] `sealed` (boolean) |
 | `value` | `key` then the same fields as `run` from `change` on |
 | `copied` | `from` (anchor) `basis` |
 | `finding` | `change` `basis` and the origin fields, as in `run` |
@@ -849,7 +865,7 @@ passed back, exactly as written, as an argument to another projection.
 | `text` | `at` (an anchor) `chars` (count) `s` |
 | `region` | `at` (an anchor) |
 | `hit` | `at` (an anchor) `type` `s` (up to 80 characters around the match) |
-| `change` | `id` `commit` (the commit it made) `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of object identities) [`note`] |
+| `change` | `id` `commit` (the commit it made) `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of object identities) `verdict` (of the decision that stands about it, **R7**, or `none`) [`decided-by`] [`note`] |
 | `op` | `op` `obj` [`key`] [`after`] [`del`] then `old` and `new`, each a value; where the change's `work` is withheld, one record `op withheld` |
 | `check` | `rule` (a label of this document) `scope` `result` (`pass`, `fail`, `skipped`) [`reason`] |
 | `layer` | `name` (`content`, `attribution`, `history`) `included` (boolean) `objects` (count) `bytes` `actors` (list) `models` (list) `changes` (count) `first` `last` (times) |

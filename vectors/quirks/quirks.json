@@ -447,6 +447,27 @@
    "pass": "a real touch on a paragraph, 11 pixels under a focusable element with role button that lies in it: exactly one press is taken, on the paragraph, at the point touched; zero violations; zero console messages",
    "note": "Found when the accessible nodes were laid over the drawing (TRAVEL E23, the exception): until then the page held nothing a touch could be given to but the canvas. The piece of a button that was drawn on a second line had no element over it, and a tap on it was delivered as a click on the button above. In WebKit 26.6 as Playwright builds it for Linux; whether Safari on iOS does the same was not observed, but iOS is where this adjustment of touches is known from.",
    "status": "provisional"
+  },
+  {
+   "id": "06-focus-lost-while-placing",
+   "name": "The element that holds the focus is removed: Chromium reports the focus lost from inside the removal, and what the handler does breaks what the binding was doing",
+   "file": "06-focus-lost-while-placing.html",
+   "where": [
+    "file"
+   ],
+   "expect": {},
+   "naive": [
+    {
+     "file": "06-focus-lost-while-placing.naive.html",
+     "fails": {
+      "chromium": "NotFoundError from insertBefore: the node to be removed is no longer a child of this node"
+     }
+    }
+   ],
+   "rule": "A binding handles one input event at a time. What the kernel asks for in answer to an event is done to the end before the next event is given to the kernel; an event that arrives meanwhile, from inside something the binding is doing, waits its turn.",
+   "pass": "the element holding the focus is removed and a new one placed before its sibling, while a listener answers a lost focus by removing that sibling: no error; zero violations; zero console messages",
+   "note": "Found when a decision was recorded through the tools (SPEC 5.4): a pressed word held the focus, the list of changes grew by a line, and the host removed the word's node. In Chromium 153. Firefox 155 and WebKit 26.6 do not report the focus lost at that moment.",
+   "status": "provisional"
   }
  ],
  "harness": [

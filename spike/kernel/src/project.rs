@@ -257,23 +257,37 @@ fn refs(v: &V, out: &mut Set<Id>) {
         _ => {}
     }
 }
-/// `run` records: stretches of live elements with one origin, between positions lo and hi.
+/// `run` records: stretches of live elements with one origin, between positions lo and hi. Where the change
+/// that inserted elements says who first introduced them (`origin.sources`, 5.4: it put back what another had
+/// written), the origin given is that first change's, and `via` names the change that put them here.
 fn runs_of(cx: &mut Cx, axis: &str, rs: &[Run], lo: u64, hi: u64) {
-    let (mut p, mut open): (u64, Option<(Id, u64, u64)>) = (0, None);
-    let mut out = Vec::new();
+    let (mut p, mut out): (u64, Vec<(Id, Option<Id>, u64, u64)>) = (0, Vec::new());
     for r in rs.iter().filter(|r| r.live) {
-        let (a, b) = (lo.max(p), hi.min(p + r.count));
-        if a < b {
-            match &mut open {
-                Some((c, _, end)) if *c == r.c && *end == a => *end = b,
-                _ => { if let Some(x) = open.take() { out.push(x); } open = Some((r.c, a, b)); }
+        let sources = cx.change(&r.c).and_then(|c| c.get("origin")?.get("sources").cloned());
+        let mut n = r.first;
+        while n < r.first + r.count {
+            // the source of element n of this change, and the number its stretch runs up to
+            let (mut first, mut upto, mut at) = (None, u64::MAX, 0u64);
+            for s in sources.as_ref().map(|s| s.l()).unwrap_or(&[]) {
+                let count = s.l().first().and_then(|x| x.i()).unwrap_or(0) as u64;
+                if n < at + count { (first, upto) = (s.l().get(1).and_then(|x| x.id()), at + count); break; }
+                at += count;
             }
+            let end = upto.min(r.first + r.count);
+            let (a, b) = (lo.max(p + (n - r.first)), hi.min(p + (end - r.first)));
+            if a < b {
+                let (c, via) = (first.unwrap_or(r.c), first.map(|_| r.c));
+                match out.last_mut() {
+                    Some(x) if x.0 == c && x.1 == via && x.3 == a => x.3 = b,
+                    _ => out.push((c, via, a, b)),
+                }
+            }
+            n = end;
         }
         p += r.count;
     }
-    out.extend(open);
-    for (c, a, b) in out {
-        let r = R::new("run").f(axis, V::L(vec![V::Int(a as i64), V::Int(b as i64)])).more(cx.origin(&c)).f("sealed", V::Bool(cx.sealed(&c)));
+    for (c, via, a, b) in out {
+        let r = R::new("run").f(axis, V::L(vec![V::Int(a as i64), V::Int(b as i64)])).more(cx.origin(&c)).opt("via", via.map(|v| w(cx.o(&v)))).f("sealed", V::Bool(cx.sealed(&c)));
         cx.push(r);
     }
 }
@@ -331,10 +345,20 @@ fn covered(rs: &[Run], lo: u64, hi: u64) -> Vec<Id> {
 /// missing). So is a change whose own revision is withheld, of which the commit says only that it was.
 fn history(cx: &mut Cx, id: Option<&Id>) -> Option<()> {
     let chain = cx.chain.clone();
+    // R7: the current decision about a change is the latest in the Chronicle that is about it
+    let mut decided: Vec<(Id, V, V)> = Vec::new();
+    for (_, n) in &chain {
+        let Some(p) = n.get("change").and_then(|c| c.hash()).and_then(|c| cx.pk.node(&c)).and_then(|n| n.get("p").cloned()) else { continue };
+        for d in p.get("decisions").map(|d| d.l()).unwrap_or(&[]) {
+            if let Some(about) = d.get("about").and_then(|a| a.tag(REF)).and_then(|a| a.id()).filter(|a| decided.iter().all(|e| e.0 != *a)) {
+                decided.push((about, d.get("verdict").cloned().unwrap_or(V::Null), d.get("who").map_or(V::Null, Cx::name)));
+            }
+        }
+    }
     for (h, n) in &chain {
         let Some(cid) = n.get("change").and_then(|c| c.hash()).and_then(|c| cx.pk.node(&c)).and_then(|n| n.get("id").and_then(|i| i.id())) else {
             let wh = || w("withheld");
-            cx.push(R::new("change").f("id", wh()).f("commit", w(cx.c(h))).f("time", wh()).f("actor", wh()).f("basis", w("unknown")).f("ops", wh()).f("touched", wh()));
+            cx.push(R::new("change").f("id", wh()).f("commit", w(cx.c(h))).f("time", wh()).f("actor", wh()).f("basis", w("unknown")).f("ops", wh()).f("touched", wh()).f("verdict", w("none")));
             continue;
         };
         let Some(p) = cx.change(&cid) else { continue };
@@ -352,6 +376,8 @@ fn history(cx: &mut Cx, id: Option<&Id>) -> Option<()> {
         } else {
             r.f("ops", w("withheld")).f("touched", w("withheld"))
         };
+        let verdict = decided.iter().find(|e| e.0 == cid);
+        r = r.f("verdict", w(verdict.and_then(|e| e.1.s()).unwrap_or("none"))).opt("decided-by", verdict.map(|e| e.2.clone()));
         r = r.opt("note", p.get("work").and_then(|w| w.get("note")).and_then(|n| n.s()).map(t));
         cx.push(r);
     }
@@ -359,7 +385,7 @@ fn history(cx: &mut Cx, id: Option<&Id>) -> Option<()> {
 }
 /// `leaving` (10.1, E12): what an export of the universe would carry, by the layers of SPEC 2.5, with
 /// those of the universes it takes in. One `layer` record each for `content`, `attribution` and
-/// `history`, in that order; then the seals; then `lacks`, always: whether the copy would lack
+/// `history`, in that order; then `lacks`, always, so that it is found by its place; then the seals. `lacks`: whether the copy would lack
 /// history, by this choice or because what is held here already lacks some. Of each layer: whether
 /// it is included; `objects`, the live objects, the attributing changes, or the objects whose
 /// current revision is neither; `bytes`, of its records as they are framed here; and of the changes
@@ -399,8 +425,11 @@ fn leaving(cx: &mut Cx, history: bool) -> Option<()> {
     };
     let layers = [said(cx, "content", true, live.len(), bytes(&|h| content.contains(h)), &[]), said(cx, "attribution", true, credited.len(), bytes(&|h| attribution.contains(h)), &credited), said(cx, "history", history, rest, bytes(&other), &worked)];
     for r in layers { cx.push(r); }
+    // what this kernel cannot classify, frames of kinds it does not know: how many and how much. A copy for
+    // outside readers leaves them out (E10); a whole copy is the pack as it stands, and carries them
+    let (unread, unread_bytes) = pk.unknown();
+    cx.push(R::new("lacks").f("history", V::Bool(!history || lacking)).f("blobs", V::Int(0)).f("unread", int(unread)).f("unread-bytes", int(unread_bytes)));
     seals(cx);
-    cx.push(R::new("lacks").f("history", V::Bool(!history || lacking)).f("blobs", V::Int(0)));
     Some(())
 }
 fn seals(cx: &mut Cx) {
@@ -547,7 +576,7 @@ fn expand_universe(cx: &mut Cx) -> Option<()> {
     seals(cx);
     if let Some(V::M(fs)) = u.p.get("features") {
         for (name, f) in fs {
-            let r = R::new("feature").f("name", w(name.as_str())).f("v", V::Int(f.get("v").and_then(|v| v.i()).unwrap_or(0))).f("required", V::Bool(f.get("required") == Some(&V::Bool(true)))).f("supported", V::Bool(name == "ufo.text"));
+            let r = R::new("feature").f("name", w(name.as_str())).f("v", V::Int(f.get("v").and_then(|v| v.i()).unwrap_or(0))).f("required", V::Bool(f.get("required") == Some(&V::Bool(true)))).f("supported", V::Bool(supported(name)));
             cx.push(r);
         }
     }
@@ -567,6 +596,29 @@ fn expand_universe(cx: &mut Cx) -> Option<()> {
     universe_parts(cx)
 }
 
+/// An object identity as a projection wrote it (`o:` and a prefix, Appendix B), read back: the one identity of
+/// the current state that begins so.
+pub fn identity(pk: &Pack, spelled: &str) -> Option<Id> {
+    let want = spelled.strip_prefix("o:")?;
+    let mut found = objects(pk, &pk.head).into_iter().map(|e| e.0).filter(|i| hex(i).starts_with(want));
+    found.next().filter(|_| !want.is_empty() && found.next().is_none())
+}
+/// Whether this reader has what a feature names (1.6): the base has the text profile; described code needs
+/// the printer component beside it; nothing else is known here.
+pub fn supported(feature: &str) -> bool {
+    match feature {
+        "ufo.text" => true,
+        "ufo.code" => crate::held(crate::PRINTER),
+        _ => false,
+    }
+}
+/// The features a universe requires that this reader does not have, by name: what is missing (9.1, K7).
+pub fn unmet(pk: &Pack) -> Vec<String> {
+    match pk.object(&pk.head, &[0; 16]).and_then(|u| u.p.get("features").cloned()) {
+        Some(V::M(fs)) => fs.iter().filter(|(name, f)| f.get("required") == Some(&V::Bool(true)) && !supported(name)).map(|(name, _)| name.clone()).collect(),
+        _ => Vec::new(),
+    }
+}
 /// The records of a projection, in the context they were made in, and its header line. `q` names the
 /// projection and gives its arguments. The base of the kernel needs four of them, for the tools: `expand`
 /// of the universe, `history`, `why` and `leaving`. The others, and the text of any of them, are for agents.

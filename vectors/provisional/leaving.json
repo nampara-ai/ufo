@@ -17,7 +17,7 @@
    "layer name=content included=true objects=4 bytes=4338 actors=[] models=[] changes=0 first=0 last=0",
    "layer name=attribution included=true objects=2 bytes=828 actors=[\"Reader Test\",\"Test Author\"] models=[] changes=2 first=1767225600000 last=1767355200000",
    "layer name=history included=true objects=0 bytes=8207 actors=[\"Reader Test\",\"Test Author\"] models=[] changes=2 first=1767225600000 last=1767355200000",
-   "lacks history=false blobs=0",
+   "lacks history=false blobs=0 unread=0 unread-bytes=0",
    "end lines=4"
   ],
   "for readers (history: false)": [
@@ -25,7 +25,7 @@
    "layer name=content included=true objects=4 bytes=4338 actors=[] models=[] changes=0 first=0 last=0",
    "layer name=attribution included=true objects=2 bytes=828 actors=[\"Reader Test\",\"Test Author\"] models=[] changes=2 first=1767225600000 last=1767355200000",
    "layer name=history included=false objects=0 bytes=8207 actors=[\"Reader Test\",\"Test Author\"] models=[] changes=2 first=1767225600000 last=1767355200000",
-   "lacks history=true blobs=0",
+   "lacks history=true blobs=0 unread=0 unread-bytes=0",
    "end lines=4"
   ]
  },
@@ -54,7 +54,7 @@
    "layer name=content included=true objects=4 bytes=4338 actors=[] models=[] changes=0 first=0 last=0",
    "layer name=attribution included=true objects=2 bytes=828 actors=[\"Reader Test\",\"Test Author\"] models=[] changes=2 first=1767225600000 last=1767355200000",
    "layer name=history included=true objects=0 bytes=0 actors=[] models=[] changes=0 first=0 last=0",
-   "lacks history=true blobs=0",
+   "lacks history=true blobs=0 unread=0 unread-bytes=0",
    "end lines=4"
   ],
   "a_reader_of_the_copy": {
@@ -70,14 +70,14 @@
    "why_is_as_from_the_whole_pack": true,
    "history": [
     "history o:71717171 @ commit=c:07964126",
-    "change id=o:7095badf commit=c:07964126 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=withheld touched=withheld",
-    "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=withheld touched=withheld",
+    "change id=o:7095badf commit=c:07964126 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=withheld touched=withheld verdict=none",
+    "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=withheld touched=withheld verdict=none",
     "end lines=2"
    ],
    "history_from_the_whole_pack": [
     "history o:71717171 @ commit=c:07964126",
-    "change id=o:7095badf commit=c:07964126 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:71717171]",
-    "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=15 touched=[o:00000000,o:71717171,o:72727272,o:73737373]",
+    "change id=o:7095badf commit=c:07964126 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:71717171] verdict=none",
+    "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=15 touched=[o:00000000,o:71717171,o:72727272,o:73737373] verdict=none",
     "end lines=2"
    ],
    "note": "Where a change's work is withheld, `history` cannot say what the change touched: it lists the change, with `ops` and `touched` given as `withheld` (E11). Appendix B does not say this; it is this kernel's reading"

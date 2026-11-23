@@ -13,7 +13,7 @@ import { start, commitsOf, layersOf } from '../binding/binding.mjs'; import { ke
 import { playwright, launch, executable, ENGINES } from './engines.mjs';
 const { devices } = playwright, here = p => fileURLToPath(new URL(p, import.meta.url)), out = here('../out/'), shots = here('../out/shots/');
 const arg = n => (i => i < 0 ? null : process.argv[i + 1])(process.argv.indexOf('--' + n)), engineName = arg('engine') || 'all';
-const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
+const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
 const CONTEXTS = ['Node', 'desktop, file://', 'http origin', 'phone, larger', 'phone, smaller', 'scripts off', 'reader', 'validators'];
 if (![...ENGINES, 'all'].includes(engineName)) { console.error('--engine chromium|firefox|webkit'); process.exit(2); }
 
@@ -169,17 +169,17 @@ async function environment(name, browser, options, address, { touch = false, fir
       const snap = await player.ariaSnapshot(); for (const l of ['- toolbar "Tools":', '- document "The document these tools work on":', '  - heading "The Quarterly Review" [level=1]', '  - list:', '      - list:', '        - listitem: 1. A numbered step.', '  - blockquote: ' + quote]) must(snap.split('\n').includes(l), 'the snapshot has no line ' + l);
       fs.writeFileSync(path.join(out, `aria-${engineName}.txt`), snap + '\n'); return `${want.filter(n => n.role === 'paragraph').length} paragraphs, 2 lists, 5 items; snapshot in out/aria-${engineName}.txt`;
     });
-    await check('accessible: the five tools are buttons that say how they stand, before and after Pages and Edit are pressed; the state is a status; the name is asked for by a labelled field', async () => {
-      same(await tools(), [['Document', 'true', null], ['Pages', 'false', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, 'false']], 'at first');
+    await check('accessible: the six tools are buttons that say how they stand, before and after Pages and Edit are pressed; the state is a status; the name is asked for by a labelled field', async () => {
+      same(await tools(), [['Document', 'true', null], ['Pages', 'false', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, 'false'], ['Changes', null, 'false']], 'at first');
       must(await bar.getByRole('button', { name: 'Edit', pressed: false }).count() === 1 && await page.getByRole('status').count() === 1, 'Edit is not a toggle that is off, or there is no status');
-      await press(page, 'Pages'); same(await tools(), [['Document', 'false', null], ['Pages', 'true', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, 'false']], 'after Pages');
+      await press(page, 'Pages'); same(await tools(), [['Document', 'false', null], ['Pages', 'true', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, 'false'], ['Changes', null, 'false']], 'after Pages');
       const regions = await doc.getByRole('region').evaluateAll(rs => rs.map(r => r.getAttribute('aria-label'))); must(regions.length >= 2 && regions[0] === 'Page 1' && regions[1] === 'Page 2', 'the pages are not regions: ' + regions);
       same(await doc.getByRole('paragraph').allTextContents(), want.filter(n => n.role === 'paragraph').map(n => n.text), 'the paragraphs of the pages (one that runs over a page is still one)');
-      await press(page, 'Edit'); same(await tools(), [['Document', 'false', null], ['Pages', 'true', null], ['Text', 'false', null], ['Edit', null, 'true'], ['Save', null, 'false']], 'after Edit');
+      await press(page, 'Edit'); same(await tools(), [['Document', 'false', null], ['Pages', 'true', null], ['Text', 'false', null], ['Edit', null, 'true'], ['Save', null, 'false'], ['Changes', null, 'false']], 'after Edit');
       must(await bar.getByRole('button', { name: 'Edit', pressed: true }).count() === 1, 'Edit is not pressed'); must(await doc.locator('[tabindex="0"]').count() === 0, 'the blocks can be reached before a name is given');
       const field = page.getByRole('textbox', { name: 'Your name, to record with the changes you make' }); must(await field.count() === 1 && await field.getAttribute('tabindex') === '0' && /first give your name/.test(await page.getByRole('status').textContent()), 'no field for the name, or the status does not ask for it');
       await giveName(page, 'Ada Tester'); must(await field.textContent() === 'Ada Tester' && /recorded as made by Ada Tester/.test(await page.getByRole('status').textContent()), 'the name is not in the field, or the status does not say it'); must(await doc.locator('[tabindex="0"]').count() >= 10, 'the blocks cannot be reached');
-      await press(page, 'Edit'); await press(page, 'Document'); same(await tools(), [['Document', 'true', null], ['Pages', 'false', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, 'false']], 'back');
+      await press(page, 'Edit'); await press(page, 'Document'); same(await tools(), [['Document', 'true', null], ['Pages', 'false', null], ['Text', 'false', null], ['Edit', null, 'false'], ['Save', null, 'false'], ['Changes', null, 'false']], 'back');
       must(await doc.locator('[tabindex]').count() === 0 && await page.getByRole('textbox').count() === 0, 'blocks can still be reached with editing off, or the field is still there'); return 'aria-current on the three that choose, aria-pressed on Edit and Save; the name is asked for by a field of the tools, named, and by the status';
     });
   };
@@ -250,11 +250,11 @@ async function environment(name, browser, options, address, { touch = false, fir
       same(await whyOf(page, ...one.region), one.why, 'why'); await pure(page, one.published); return one.why[1].trim(); });
     await check('published: `history` lists every change with its work said to be withheld (E11), and the panel says no working history is held', async () => {
       const h = (await page.evaluate(o => ufo.project({ name: 'history', o }), T)).split('\n').filter(l => l.startsWith('change ')); for (const l of h.slice(0, 3)) console.log('      ' + l);
-      must(h.length === (await headOf(page)).height + 1 && h.every(l => l.endsWith('ops=withheld touched=withheld') && /^change id=(o:[0-9a-f]{8} commit=c:[0-9a-f]{8,} time=\d+ actor="|withheld commit=c:[0-9a-f]{8,} time=withheld actor=withheld basis=unknown )/.test(l)) && h.some(l => l.includes('actor="Ada Tester"')), 'history: ' + h.join(' / '));
+      must(h.length === (await headOf(page)).height + 1 && h.every(l => l.endsWith('ops=withheld touched=withheld verdict=none') && /^change id=(o:[0-9a-f]{8} commit=c:[0-9a-f]{8,} time=\d+ actor="|withheld commit=c:[0-9a-f]{8,} time=withheld actor=withheld basis=unknown )/.test(l)) && h.some(l => l.includes('actor="Ada Tester"')), 'history: ' + h.join(' / '));
       await press(page, 'Save'); const said = flatten(await page.getByRole('region', { name: 'What will leave' }).textContent()); must(said.includes(flatten('none is held here')), said); await press(page, 'Cancel'); return `${h.length} changes, each "ops=withheld touched=withheld"; ${h.filter(l => l.startsWith('change id=withheld')).length} of them (changes that left nothing in the text as it stands) withheld whole, and said to be`; });
     await check('published: it is edited again, a new change on top of withheld history, and saved again each way', async () => {
       const e = await edit(page, log, 'Cy Third', edits.second.para, replaceWord(edits.second.words[0])); same(e.ops, [edits.second.words[0]], 'the work');
-      const h = (await page.evaluate(o => ufo.project({ name: 'history', o }), T)).split('\n').filter(l => l.startsWith('change ')); must(h[0].includes('actor="Cy Third"') && /ops=1 touched=\[o:71717171\]$/.test(h[0]) && h[1].endsWith('touched=withheld'), 'history: ' + h.slice(0, 2).join(' / '));
+      const h = (await page.evaluate(o => ufo.project({ name: 'history', o }), T)).split('\n').filter(l => l.startsWith('change ')); must(h[0].includes('actor="Cy Third"') && /ops=1 touched=\[o:71717171\] verdict=none$/.test(h[0]) && h[1].endsWith('touched=withheld verdict=none'), 'history: ' + h.slice(0, 2).join(' / '));
       const save = async (mode, name) => { await press(page, 'Save'); await choose(page, mode); const [d] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), press(page, 'Save this copy')]); must(d.suggestedFilename() === name, 'named ' + d.suggestedFilename()); const f = path.join(path.dirname(one.published), name); await d.saveAs(f); return f; };
       got.again = await save('For readers', nameOf(one.published, '-published', 0)); got.whole = await save('For people', nameOf(one.published, '-edited', 1)); got.head = e.head.commit;
       const a = await inNode(packIn(got.again)), w = await inNode(packIn(got.whole)); must(a.head === e.head.commit && w.head === e.head.commit && a.layers.history.bytes === 0 && a.layers.lacks.history === true && w.layers.history.bytes > 0, 'the two copies');
@@ -284,7 +284,7 @@ async function environment(name, browser, options, address, { touch = false, fir
     await boxes(page, firstRound);
     if (firstRound) await accessible(page, made.parts);
     await check('edit: with editing off, a press on the document does nothing', async () => {
-      const l = await look(page); must(l.texts.filter(t => t.press).map(t => t.s).join() === 'Document,Pages,Text,Edit,Save' && l.texts.filter(t => t.src && !t.press).length > 20, 'the working universe carries something to press');
+      const l = await look(page); must(l.texts.filter(t => t.press).map(t => t.s).join() === 'Document,Pages,Text,Edit,Save,Changes' && l.texts.filter(t => t.src && !t.press).length > 20, 'the working universe carries something to press');
       const h = await headOf(page); await press(page, edits.para); must(await entry(page).isHidden() && !log.asked.length && (await headOf(page)).commit === h.commit, 'a press on the document did something with editing off');
     });
     if (firstRound) {
@@ -385,7 +385,7 @@ async function environment(name, browser, options, address, { touch = false, fir
   if (one.published) { console.log('  -- the copy published for readers, reopened, edited and saved again'); await republished(one); } else step('published: (no copy was published)', false);
   console.log('  -- by the keyboard alone, from the file as first made'); await keyboard(first);
   if (kit && one.saved) { fs.copyFileSync(original, here('phone/compose.ufx.html')); fs.copyFileSync(one.saved, here('phone/compose-edited.ufx.html')); if (one.published) fs.copyFileSync(one.published, here('phone/compose-published.ufx.html')); }
-  if (more) await more(open, press);
+  if (more) await more(open, press, { giveName, pressAt, one });
   return { one, two, open, press, look: look };
 }
 
@@ -463,7 +463,31 @@ const bare = async (open, press) => check('no tools: a file whose pack carries n
 });
 const d0 = { look };
 const D = 'desktop, file://', H = 'http origin';
-const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press) => { await f6(open, press); await bare(open, press); } });
+// decisions (SPEC 5.4, R9): in the file as it was saved with its edits, the newest change is accepted and the one before it rejected
+const decisions = async (open, press, { giveName, pressAt, one }) => check('decisions: through the tools, a change is accepted, which alters nothing, and another rejected, which undoes it; each is recorded with who decided', async () => {
+  must(one.saved, 'nothing was saved to decide about'); const { context, page, log } = await open(one.saved, 'nobody'), who = 'Dee Cider', text = () => charsOf(page), status = async () => flatten((await page.getByRole('status').allTextContents()).join(' '));
+  const hist = async () => (await page.evaluate(() => ufo.project({ name: 'history' }))).split('\n').filter(l => l.startsWith('change ')), nth = async (word, k) => pressAt(page, (await look(page)).texts.filter(t => t.s.trim() === word)[k]);
+  const before = await text(), h0 = await hist(), [newest, second] = h0.map(l => /id=(o:[0-9a-f]+)/.exec(l)[1]); await press(page, 'Changes');
+  const rows = async () => (await page.getByRole('region', { name: 'Changes' }).getByRole('paragraph').allTextContents()).filter(t => /, change o:/.test(t)); must((await rows()).length === h0.length && (await rows()).every(r => /not decided\.$/.test(r)), 'the changes are not listed: ' + (await rows()).join(' / '));
+  await giveName(page, who); await press(page, 'Edit'); must((await rows()).length === h0.length, 'the panel closed');
+  await nth('Accept', 0); let h = await hist(); must(h.length === h0.length + 1 && /ops=0 touched=\[\]/.test(h[0]) && h[0].includes(`actor="${who}"`) && h[1].endsWith(`verdict=accept decided-by="${who}"`) && await text() === before, 'accepting: ' + h.slice(0, 2).join(' / '));
+  must((await status()).includes(flatten(`Recorded: change ${newest} accepted by ${who}.`)), 'the status: ' + await status());
+  await nth('Reject', 2); h = await hist(); const after = await text(), line = h.find(l => l.includes(`id=${second} `));
+  must(h.length === h0.length + 2 && line.endsWith(`verdict=reject decided-by="${who}"`) && after !== before, 'rejecting: ' + line);
+  must((await status()).includes(flatten(`Recorded: change ${second} rejected by ${who}. What it did was undone.`)), 'the status: ' + await status());
+  const via = (await page.evaluate(o => ufo.project({ name: 'why', o }), T)).split('\n').filter(l => l.startsWith('run ') && l.includes('via=')); must(via.every(l => !l.includes(`who="${who}"`)), 'what was put back is given to the one who rejected: ' + via.join(' / '));
+  const held = await page.evaluate(() => ufo.project({ name: 'history', full: true })); await nth('Reject', 3); must((await status()).includes(flatten('Not recorded: what that change wrote has been edited since')) && await page.evaluate(() => ufo.project({ name: 'history', full: true })) === held, 'a second rejection: ' + await status());
+  must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify([log.requests.length, log.errors, await page.evaluate(() => globalThis.__violations)])); await context.close(); return `${newest} accepted, ${second} rejected by ${who}; ${via.length} stretches put back, each still its first author's`;
+});
+// the safeguard (PLAYER K7): a file that requires what this reader does not have opens, says what is missing, and shows its text
+const needy = async (open, press) => check('safeguard: a file that requires what this reader does not have opens to its plain text, with one line saying what is missing; nothing is broken and nothing can change it', async () => {
+  const f = path.join(work, 'needs.ufx.html'); make(here('../../vectors/needs.ufx'), f); const { context, page, log } = await open(f, 'nobody'), want = JSON.parse(fs.readFileSync(here('../../vectors/vectors.json'), 'utf8')).needs['a_reader_without_ufo.time'];
+  const said = await page.getByRole('status').allTextContents(), line = said.find(s => /This file needs something this reader does not have/.test(s)); must(line && want.missing.every(m => line.includes(m)), 'what is missing is not said: ' + said.join(' / '));
+  const paras = (await page.getByRole('paragraph').allTextContents()).map(flatten); for (const p of want.plain_text_face.trim().split('\n\n')) must(paras.includes(flatten(p)), 'not shown: ' + p + ' in ' + paras.join(' / '));
+  const l = await d0.look(page); must(l.all.includes('Its captions are text.') && l.all.includes('ufo.time'), 'not drawn'); const head = (await headOf(page)).commit; await press(page, 'Edit'); await press(page, 'A film'); await page.keyboard.type('x'); await page.keyboard.press('Tab');
+  must((await headOf(page)).commit === head, 'the file was changed'); must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet'); await context.close(); return JSON.stringify(line);
+});
+const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await f6(open, press); await bare(open, press); await needy(open, press); await decisions(open, press, h); } });
 
 // ---- f: sent on. The saved file served from another origin; and the packs given to the independent reader ----
 let h = null;

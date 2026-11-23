@@ -1,7 +1,7 @@
 // Runs the throwaway spike kernel over the packs in vectors/ and writes vectors/provisional/*.json.
 // Where the generator (tools/vectors/generate.py) already states an expected value, the two are compared:
 // the generator and the kernel were written separately, in different languages, by the same author.
-import fs from 'fs'; import zlib from 'zlib'; import { start, records } from './binding/binding.mjs';
+import fs from 'fs'; import zlib from 'zlib'; import { start, records } from './binding/binding.mjs'; import { tree, flat } from './envelope/nodes.mjs';
 const root = new URL('../', import.meta.url);
 const wasm = fs.readFileSync(new URL('spike/kernel/target/wasm32-unknown-unknown/release/ufo_spike_kernel.wasm', root));
 const V = JSON.parse(fs.readFileSync(new URL('vectors/vectors.json', root)));
@@ -62,6 +62,7 @@ for (const [P, text] of [[V.published, 'a1'.repeat(16)], [V.published_timeline, 
   check(key + ': the kernel publishes the same bytes', sameBytes(whole.published(), bytes(P.file)), true);
   check(key + ': a published copy published again is itself', sameBytes(pub.published(), bytes(P.file)), true);
   check(key + ': state', pub.commits()[0].commit, P.root_hash);
+  if (P.left_out) check(key + ': what cannot be classified is counted before it is left out', [whole.layers(false).lacks.unread, whole.layers(false).lacks['unread-bytes'], pub.layers().lacks.unread], [P.left_out.frames_of_unknown_kind, P.left_out.bytes, 0]);
   const lw = whole.layers(false), lp = pub.layers();
   check(key + ': nothing of the third layer, and the two others as the whole pack has them', [lp.history.bytes, lp.lacks.history, lp.content.bytes, lp.attribution.bytes], [0, true, lw.content.bytes, lw.attribution.bytes]);
   check(key + ': plain text', pub.sample({ as: 'text' })?.text, whole.sample({ as: 'text' })?.text);
@@ -74,4 +75,13 @@ for (const [P, text] of [[V.published, 'a1'.repeat(16)], [V.published_timeline, 
   check('pins: every anchor resolved', anchors(prop(rec(k, { name: 'object', o: P.marks_object }), 'marks')), P.anchors_resolve_to);
   const here = P.digests.filter(d => !d.pack); check('pins: each stored pin is current, so each digest is the generator\'s', states(k, P.pinned_object), here.map(() => 'current'));
   console.log(k.project({ name: 'why', o: P.pinned_object })); }
+// ---- the safeguard (PLAYER K7): a universe that requires what this reader does not have ----
+{ const N = V.needs, E = N['a_reader_without_ufo.time'], k = await open(N.file), nodes = flat(tree(k.sample({ as: 'list', w: 480 }).list));
+  check('needs: the commit', k.commits()[0].commit, N.root_hash);
+  check('needs: what is missing, by `expand`', rec(k, { name: 'expand' }).filter(r => r.is === 'feature' && r.required && !r.supported).map(r => r.name), E.missing);
+  check('needs: first one line of the reader\'s own, a status, naming what is missing', [nodes[0].role, E.missing.every(m => nodes[0].text.includes(m))], ['status', true]);
+  check('needs: then the plain-text face, and nothing else', nodes.slice(1).filter(n => n.text).map(n => n.text).join('\n\n') + '\n', E.plain_text_face);
+  check('needs: the plain-text face itself', k.sample({ as: 'text' }).text, E.plain_text_face);
+  check('needs: the static face says the same', [k.sample({ as: 'static' }).html.includes('ufo.time'), k.sample({ as: 'static' }).html.includes('Its captions are text.')], [true, true]);
+  console.log(nodes.map(n => `${n.role}: ${n.text}`).join('\n')); }
 console.log('agree', agree, 'differ', differ);

@@ -271,7 +271,9 @@ unsafe fn run(params: &V) -> Option<V> {
     let w = params.get("w").and_then(|w| w.f()).unwrap_or(600.0);
     if mode == "list" {
         // the display list of the primary face composed at exactly `w`, its rows stacked from the top left
-        let h = stack(&compose(&mut cx, &root, &of(&primary)?, w), 0.0, 0.0, &mut list);
+        let id = of(&primary)?;
+        let rows = match safeguard(&mut cx, pk, &id, w) { Some(rows) => rows, None => compose(&mut cx, &root, &id, w) };
+        let h = stack(&rows, 0.0, 0.0, &mut list);
         return Some(map(vec![("list", V::L(list)), ("w", V::F(w)), ("h", V::F(h))]));
     }
     if mode == "rows" {
