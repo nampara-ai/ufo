@@ -46,7 +46,10 @@ const FLOATS = new Set(['adv', 'asc', 'desc', 'w']);   // fields the contract ty
 // `inflate(bytes, len)` is the host's raw DEFLATE: it returns the inflated bytes (`len` of them are expected) or a
 // Promise of them. In Node: b => zlib.inflateRawSync(b). In a browser: browserInflate, below.
 // `clock` gives the host's time and random bytes (PLAYER 9.3): { time: () => milliseconds, random: n => Uint8Array }.
-export async function start(wasmBytes, measure, inflate, clock = {}) {
+// `components`, where the kernel was divided (spike/SPLIT.md): { printer, agent } as module bytes. Each is instantiated
+// with the base's own exports as its imports, and the base is told which stand beside it. Not given: the kernel is whole.
+export const COMPONENT_BITS = { printer: 1, agent: 2 };
+export async function start(wasmBytes, measure, inflate, clock = {}, components = null) {
   let ex; const mem = () => new Uint8Array(ex.memory.buffer);
   const give = bytes => { const p = ex.alloc(bytes.length); mem().set(bytes, p); return p; };
   // the text capability's `measure` (PLAYER 9.3): the advance of a piece up to each offset, its ascent and descent.
@@ -56,6 +59,7 @@ export async function start(wasmBytes, measure, inflate, clock = {}) {
     host_time: () => clock.time ? clock.time() : Date.now(),
     host_random(out, n) { mem().set(clock.random ? clock.random(n) : crypto.getRandomValues(new Uint8Array(n)), out); } } };
   ex = (await WebAssembly.instantiate(wasmBytes, imports)).instance.exports;
+  if (components) { let mask = 0; for (const [name, bytes] of Object.entries(components)) if (bytes) { await WebAssembly.instantiate(bytes, { 'ufo:base': ex }); mask |= COMPONENT_BITS[name]; } ex.components(mask); }
   const call = (f, v) => { const q = encode(v); const p = f(give(q), q.length); return decode(mem().slice(p, p + ex.out_len())); };
   const pend = async () => {
     for (let i = 0, n = ex.pending(); i < n; i++) {

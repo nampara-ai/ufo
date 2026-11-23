@@ -1,0 +1,27 @@
+{
+ "functions": {
+  "whole": 670,
+  "printer": 18,
+  "agent": 12
+ },
+ "whole": {
+  "bytes": 242476,
+  "deflate": 113853,
+  "sha256": "23494e009bce4219b37200eaf59ee4eafaf643b4110e83defcd2af0227d75bf5"
+ },
+ "base": {
+  "bytes": 227839,
+  "deflate": 107093,
+  "sha256": "59946c2a53730797dbd16e07a19616181ccbaf9143a47d6a583f8af75f22c0f8"
+ },
+ "printer": {
+  "bytes": 10110,
+  "deflate": 5061,
+  "sha256": "2bef3933d09144413dbc02ed8b0a81a2618741fbedd618ec69cf987da0c1f29b"
+ },
+ "agent": {
+  "bytes": 7348,
+  "deflate": 3712,
+  "sha256": "f36ab1e826f5332b091e74bbaf687fdbe904ede75c7ed7e3337783a338a237c1"
+ }
+}

@@ -1,7 +1,9 @@
 # The kernel as a base and its components
 
-A design for review, with measurements. Nothing here is built, and none
-of it is in the specification yet. It follows the founding design: every
+Approved by the owner on 2026-11-23: one build, divided after linking.
+The division is now made, measured, reproducible and run (section 7).
+None of it is in the specification yet, and the page does not yet load a
+component. It follows the founding design: every
 file carries the base kernel and only the components its content
 requires, each named by its hash, and a reader that already holds one
 uses its own.
@@ -116,11 +118,8 @@ Carried presenters are a different class and do not change: they are
 Compute-lets, sandboxed, built against the host interface, independent
 of any kernel build.
 
-**Not shown.** The dividing tool for A is Binaryen's `wasm-split`, a
-released tool that is not in the package installed here, so no divided
-module was made or run. The figures for "sharing" are therefore a lower
-bound. Whether the divided bytes are reproducible (**B5**) is to be
-shown before A is relied on.
+**Shown since** (section 7): the division was made with Binaryen's
+`wasm-split`, its real cost measured, and its bytes found reproducible.
 
 ## 4. How a file lists what it carries, and how a reader skips it
 
@@ -185,10 +184,56 @@ from the first: no envelope was built with a base kernel.
 
 ## 6. What is not known
 
-- The glue A adds at each call across the boundary, and whether its
-  output is reproducible.
 - The sizes of the components that do not exist: formulas, time and
   space, the rest of the agent's projections, execution.
-- Whether the base as measured runs the founding round trip. It was
-  built and measured, not run: the tests ask their questions through the
-  agent's projections, which the base does not hold.
+- Whether a page runs the founding round trip on the base alone. In Node
+  the base alone reads, composes, edits and publishes as the whole
+  kernel does (section 7); in a browser it has not been tried.
+
+## 7. The division, made (2026-11-23)
+
+`spike/tools/divide.mjs` builds the kernel whole, gives each function a
+short name, works out from the call graph which functions only a
+component's entries reach, and divides the module with Binaryen's
+`wasm-split`; each module is then optimised as the whole kernel is. The
+tool is release 132 of Binaryen, the version of the optimiser already
+pinned, from its published archive (SHA-256
+`195ddc94f9bc89f45abdabb0b9eea86023d727ba90eac8b35b80f2544fc30572`).
+
+| | Functions | Compressed | KiB |
+| --- | ---: | ---: | ---: |
+| The kernel whole | 670 | 113 853 | 111.2 |
+| **The base** | 640 | **107 093** | **104.6** |
+| Printer | 18 | 5 061 | 4.9 |
+| Agent | 12 | 3 712 | 3.6 |
+| The three together | | 115 866 | |
+
+**What the boundary costs: 2 013 bytes**, 1.8% of the kernel, nearly all
+of it in the base: 1 827 over the lower bound of section 1, for the
+functions, memory and table it must now export. The printer costs 14
+bytes over its lower bound and the agent 662. With the compiler's long
+names left on the exports the cost was 6 059; functions are therefore
+renamed before the division.
+
+**Reproducible.** Two clean divisions, each from its own build of the
+kernel in its own directory, give the same bytes for the base and for
+both components.
+
+**Run.** `spike/divided.mjs` asks the same questions of the kernel whole
+and divided, and compares the answers byte for byte (9 of 9 agree):
+
+- base, printer and agent together answer everything as the whole kernel
+  does: faces, an edit, a published pack, ten projections, a printed
+  module;
+- the base alone reads, composes, edits and publishes exactly as the
+  whole kernel does, gives no text of any projection, and prints nothing;
+- with one component left out, the other still answers as the whole
+  kernel does.
+
+A component is instantiated with the base's own exports as its imports,
+and the base is then told which components stand beside it; a call into
+one that is absent is never made.
+
+**Still not done.** The web binding does not load components, a file
+does not yet list them, and the envelope still carries the kernel whole.
+A page run with the base alone has not been tried.

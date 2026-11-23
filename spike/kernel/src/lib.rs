@@ -149,6 +149,20 @@ static mut TOOLS: Option<Pack> = None; // a tools universe the reader holds itse
 static mut READER: Option<tool::Reader> = None; // what the reader holds while it presents the tools
 static mut OUT: Vec<u8> = Vec::new();
 
+// ---- components (spike/SPLIT.md): the kernel is built whole and divided after linking. Which components
+// stand beside the base is told by the host that instantiated them; whole, all are here.
+pub const PRINTER: u32 = 1;
+pub const AGENT: u32 = 2;
+static mut HELD: u32 = !0;
+pub fn held(which: u32) -> bool {
+    unsafe { HELD & which != 0 }
+}
+/// The host says which components it has instantiated beside the base: a set of bits.
+#[no_mangle]
+pub unsafe extern "C" fn components(mask: u32) {
+    HELD = mask;
+}
+
 #[no_mangle]
 pub extern "C" fn alloc(n: usize) -> *mut u8 {
     let mut v = Vec::<u8>::with_capacity(n.max(1));
@@ -273,7 +287,7 @@ unsafe fn run(params: &V) -> Option<V> {
 #[no_mangle]
 pub unsafe extern "C" fn print(p: *const u8) -> *const u8 {
     let id: [u8; 16] = core::slice::from_raw_parts(p, 16).try_into().unwrap_or([0; 16]);
-    OUT = PACK.as_ref().and_then(|pk| print_module(pk, &pk.head, &id)).unwrap_or_default();
+    OUT = PACK.as_ref().filter(|_| held(PRINTER)).and_then(|pk| print_module(pk, &pk.head, &id)).unwrap_or_default();
     OUT.as_ptr()
 }
 /// A projection (Appendix B), as its text: an encoded map with `name` and its arguments. Null if it has no answer.

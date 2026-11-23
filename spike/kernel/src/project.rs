@@ -16,6 +16,7 @@ use alloc::vec::Vec;
 /// Inside the kernel only, never in a record that is stored: a text that is written bare, as an
 /// identity, a hash, an anchor or a word of a fixed set is. Any other text is written in quotes.
 const WORD: u64 = u64::MAX;
+use crate::AGENT;
 fn w(s: impl Into<String>) -> V {
     V::Tag(WORD, Box::new(V::T(s.into())))
 }
@@ -203,6 +204,7 @@ impl<'a> Cx<'a> {
     }
 }
 
+#[inline(never)] // an entry of the agent component: kept a function of its own, so that the kernel can be divided here
 fn text(cx: &mut Cx, id: &Id) -> Option<()> {
     let o = cx.obj(id)?;
     let s = o.p.get("chars")?.s()?;
@@ -211,6 +213,7 @@ fn text(cx: &mut Cx, id: &Id) -> Option<()> {
     cx.push(r);
     Some(())
 }
+#[inline(never)] // an entry of the agent component: kept a function of its own, so that the kernel can be divided here
 fn object(cx: &mut Cx, id: &Id) -> Option<()> {
     let o = cx.obj(id)?;
     let rev = cx.pk.node(&o.rev)?.get("rev")?.i()?;
@@ -424,6 +427,7 @@ fn size(s: &str) -> usize {
 }
 /// 10.2: the outline of a text, or of blocks of it within positions lo..hi. The blocks and the plain
 /// text are the composer's (7.7, 8.3): there is one of each in the kernel.
+#[inline(never)] // an entry of the agent component: kept a function of its own, so that the kernel can be divided here
 fn expand_text(cx: &mut Cx, o: &Obj, lo: u64, hi: u64) -> Option<()> {
     use crate::layout::{blocks, level, plain_text, spans};
     let chars: Vec<char> = o.p.get("chars")?.s()?.chars().collect();
@@ -465,6 +469,7 @@ fn expand_text(cx: &mut Cx, o: &Obj, lo: u64, hi: u64) -> Option<()> {
 /// some of positions lo..hi (or the one position, where they are the same), anchored to what it plays at the
 /// times of its own that fall there: its `offset`, and the count on from the play's first element. Only
 /// elements inserted by the change that inserted that first element are the play's own (T3).
+#[inline(never)] // an entry of the agent component: kept a function of its own, so that the kernel can be divided here
 fn expand_clock(cx: &mut Cx, o: &Obj, lo: u64, hi: u64) -> Option<()> {
     let rs = runs(o.seq.as_ref()?.get("t")?);
     let Some(V::M(plays)) = o.p.get("plays") else { return Some(()) };
@@ -586,11 +591,11 @@ fn run<'a>(pk: &'a Pack, q: &V) -> Option<(Cx<'a>, String)> {
         ("why", Some(i)) => why(&mut cx, i, lo, hi)?,
         ("expand", None) => expand_universe(&mut cx)?,
         #[cfg(not(feature = "cut-agent"))]
-        ("text", Some(i)) => text(&mut cx, i)?,
+        ("text", Some(i)) if crate::held(AGENT) => text(&mut cx, i)?,
         #[cfg(not(feature = "cut-agent"))]
-        ("object", Some(i)) => object(&mut cx, i)?,
+        ("object", Some(i)) if crate::held(AGENT) => object(&mut cx, i)?,
         #[cfg(not(feature = "cut-agent"))]
-        ("expand", Some(i)) => {
+        ("expand", Some(i)) if crate::held(AGENT) => {
             let o = cx.obj(i)?;
             match o.ty.as_str() {
                 "ufo.text" => expand_text(&mut cx, &o, lo.unwrap_or(0), hi.unwrap_or(u64::MAX))?,
@@ -606,7 +611,15 @@ fn run<'a>(pk: &'a Pack, q: &V) -> Option<(Cx<'a>, String)> {
 /// A projection as the text an agent reads (Appendix B): the one spelling of its records.
 #[cfg(not(feature = "cut-agent"))]
 pub fn project(pk: &Pack, q: &V) -> Option<V> {
-    let (cx, mut s) = run(pk, q)?;
+    if !crate::held(AGENT) {
+        return None; // the text of a projection is the agent component's
+    }
+    let (cx, s) = run(pk, q)?;
+    Some(V::T(spelled(&cx, s)))
+}
+#[cfg(not(feature = "cut-agent"))]
+#[inline(never)] // an entry of the agent component
+fn spelled(cx: &Cx, mut s: String) -> String {
     for r in &cx.recs {
         let V::M(fields) = r else { continue };
         for (i, (k, v)) in fields.iter().enumerate() {
@@ -616,7 +629,7 @@ pub fn project(pk: &Pack, q: &V) -> Option<V> {
         s.push('\n');
     }
     put!(s; "end lines=", cx.recs.len(), "\n");
-    Some(V::T(s))
+    s
 }
 #[cfg(feature = "cut-agent")]
 pub fn project(_: &Pack, _: &V) -> Option<V> {

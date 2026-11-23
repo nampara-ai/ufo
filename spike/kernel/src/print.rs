@@ -232,6 +232,7 @@ fn pairs(v: Option<&V>) -> Vec<(&str, &str)> {
     v.map(|l| l.l()).unwrap_or(&[]).iter().filter_map(|p| Some((p.l().first()?.s()?, p.l().get(1)?.s()?))).collect()
 }
 /// SPEC 11.3: every byte that is not an item's is derived here, by fixed rules.
+#[inline(never)] // the entry of the printer component
 pub fn print(pk: &Pack, uni: &H, module: &Id) -> Option<Vec<u8>> {
     let m = pk.object(uni, module)?;
     let funcs: Vec<Id> = m.p.get("funcs")?.l().iter().filter_map(|f| f.tag(REF).and_then(|x| x.id())).collect();
