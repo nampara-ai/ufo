@@ -13,7 +13,7 @@ import { start, commitsOf, layersOf } from '../binding/binding.mjs'; import { ke
 import { playwright, launch, executable, ENGINES } from './engines.mjs';
 const { devices } = playwright, here = p => fileURLToPath(new URL(p, import.meta.url)), out = here('../out/'), shots = here('../out/shots/');
 const arg = n => (i => i < 0 ? null : process.argv[i + 1])(process.argv.indexOf('--' + n)), engineName = arg('engine') || 'all';
-const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'asset', 'components', 'seals', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
+const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'asset', 'table', 'contained', 'components', 'seals', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
 const CONTEXTS = ['Node', 'desktop, file://', 'http origin', 'phone, larger', 'phone, smaller', 'scripts off', 'reader', 'validators'];
 if (![...ENGINES, 'all'].includes(engineName)) { console.error('--engine chromium|firefox|webkit'); process.exit(2); }
 
@@ -446,14 +446,6 @@ globalThis.hostNumbers = { lines: counted, source_bytes: Buffer.byteLength(sourc
 
 // ---- a to e on the desktop, from file:// ----
 const desktop = { viewport: { width: 900, height: 900 }, deviceScaleFactor: 2 };
-// F6 in the page: a working universe that carries handlers and a Portal onto arg("subject")
-const f6 = async (open, press) => check('edit: F6, a file whose own content carries handlers and asks for a subject: nothing in it acts', async () => {
-  const f = path.join(work, 'hostile.ufx.html'); make(here('../out/hostile.ufx'), f, '--title', 'Hostile'); const { context, page, log } = await open(f, 'nobody'); let downloads = 0; page.on('download', () => downloads++);
-  const l = await look(page); must(l.texts.find(t => t.s === 'SAVE-ME' && !t.press && !t.lit) && l.all.includes('NO-SUBJECT-HERE'), 'not as expected: ' + l.all.slice(0, 200)); const h = await headOf(page);
-  same(await page.getByRole('document', { name: 'The document these tools work on' }).locator('[role=button]').evaluateAll(bs => bs.map(b => [b.textContent, b.getAttribute('tabindex'), b.getAttribute('aria-disabled'), b.getAttribute('aria-pressed')])), [['SAVE-ME', '-1', 'true', null], ['SWITCH-ME', '-1', 'true', null]], 'the buttons it carries, to the keyboard and to assistive technology');
-  for (const w of ['SAVE-ME', 'SWITCH-ME']) await press(page, w); await page.waitForTimeout(300); const l2 = await look(page);
-  must(!downloads && (await headOf(page)).commit === h.commit && l2.texts.find(t => t.s === 'Document').lit && !l2.texts.some(t => t.mono) && !log.asked.length && !log.errors.length, 'something happened'); await context.close(); return 'pressed SAVE-ME and SWITCH-ME: no file, no change of face, no change; the Portal shows its label; to the keyboard they are not there';
-});
 // A pack that names no tools universe, in this reader, which has none of its own: the page says so, shows the document to be read, and nothing can be pressed.
 const bare = async (open, press) => check('no tools: a file whose pack carries no tools universe opens, says so in plain words, and shows the document to read; nothing in it can be pressed', async () => {
   const f = path.join(work, 'bare.ufx.html'); make(here('../../vectors/compose.ufx'), f, '--bare'); const { context, page, log, url } = await open(f, 'nobody');
@@ -507,6 +499,51 @@ const adding = async (open, press, { giveName }) => check('asset: through the to
   must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify([log.requests.length, log.errors, await page.evaluate(() => globalThis.__violations)])); await context.close();
   return `${want.first.name}, ${picture.length} bytes, told to be image/png from its content though given as text/plain; notes.TXT by the keyboard, then undone`;
 });
+// a table (PRESENTATION 7.2, 7.3, 7.6): a data object in a grid; a total by formula; values changed through the document's own handlers, when the person applies them
+const tabled = async (open, press, { giveName, pressAt }) => check('table: a data object is presented as a table, with a total its formula works out; the document\'s own state is its own; what its handlers propose is written only when the person applies it in the tools, as theirs; a figure is typed; the keyboard does the same', async () => {
+  const f = path.join(work, 'table.ufx.html'); make(here('../../vectors/table.ufx'), f); const { context, page, log } = await open(f, 'nobody'), who = 'Tess Table', want = JSON.parse(fs.readFileSync(here('../../vectors/provisional/data.json'), 'utf8'));
+  const doc = async () => (await look(page)).texts.filter(t => t.on === 1).map(t => t.s), at = async s => (await look(page)).texts.find(t => t.on === 1 && t.s === s), hist = async () => (await ask(page, { name: 'history' })).split('\n').filter(l => l.startsWith('change '));
+  const region = page.getByRole('region', { name: 'A change the document asks for' }), asked = async () => (await region.count()) ? (await region.getByRole('paragraph').allTextContents()).filter(t => t.startsWith('Set ')) : [];
+  must(JSON.stringify(await doc()) === JSON.stringify(want.presented.texts.map(t => t.s)), 'as drawn: ' + (await doc()).join(' | '));
+  // for whoever does not see it: one table, named; a row of three headers; three rows of three cells
+  const tb = page.getByRole('table', { name: 'Costs' }); must(await tb.count() === 1 && await tb.getByRole('row').count() === 4 && await tb.getByRole('columnheader').count() === 3 && await tb.getByRole('cell').count() === 9, 'the table\'s nodes');
+  must(JSON.stringify(await tb.getByRole('row').nth(2).getByRole('cell').allTextContents()) === JSON.stringify(['Ink', '45.50', 'not paid']), 'the second row: ' + (await tb.getByRole('row').nth(2).getByRole('cell').allTextContents()).join(' | '));
+  const h0 = await hist(); await press(page, 'Show the note'); must((await doc()).includes('Note: the figures are in euros.') && await page.getByRole('note').count() === 1 && (await hist()).length === h0.length, 'the note');
+  // a press on a value proposes; the person is asked in the tools; dismissed, nothing; then, in a name, applied
+  await pressAt(page, await at('not paid')); must(JSON.stringify(await asked()) === JSON.stringify([want.proposed[0].asked]), 'asked: ' + (await asked()).join(' / ')); await press(page, 'Dismiss'); must((await asked()).length === 0 && (await hist()).length === h0.length, 'dismissed');
+  await giveName(page, who); await pressAt(page, await at('not paid')); await press(page, 'Apply'); let h = await hist(); must(h.length === h0.length + 1 && h[0].includes(`actor="${who}"`) && h[0].endsWith(`verdict=approve decided-by="${who}"`), 'applied: ' + h[0]);
+  must(JSON.stringify(await tb.getByRole('row').nth(2).getByRole('cell').allTextContents()) === JSON.stringify(['Ink', '45.50', 'paid']), 'the row after');
+  // a figure, typed in the widget the browser has
+  await pressAt(page, await at('45.50')); await page.locator('#ufo-entry').waitFor({ state: 'visible', timeout: 3000 }); const a = page.locator('#ufo-entry textarea'); must(await a.inputValue() === '45.50', 'the widget holds ' + await a.inputValue());
+  await a.evaluate(el => el.setSelectionRange(0, el.value.length)); await page.keyboard.type('50'); await page.locator('#ufo-entry button').first().click(); await page.locator('#ufo-entry').waitFor({ state: 'hidden', timeout: 3000 });
+  must(JSON.stringify(await asked()) === JSON.stringify([want.proposed[1].asked]), 'asked: ' + (await asked()).join(' / ')); await press(page, 'Apply'); must((await doc()).includes('50.00') && (await doc()).includes(want.proposed[1].total_then), 'the total: ' + (await doc()).join(' | '));
+  // the keyboard alone: the value is reached, Enter proposes, the word in the tools is reached, Enter applies
+  await tb.getByRole('row').nth(3).getByRole('cell').nth(2).focus(); await page.keyboard.press('Enter'); must((await asked()).length === 1 && (await asked())[0].includes('rows.r3.paid'), 'by Enter: ' + (await asked()).join(' / '));
+  await region.getByRole('button', { name: 'Apply' }).focus(); await page.keyboard.press('Enter'); h = await hist(); must(h.length === h0.length + 3 && (await asked()).length === 0 && (await tb.getByRole('row').nth(3).getByRole('cell').nth(2).textContent()) === 'paid', 'applied by Enter: ' + h[0]);
+  must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify([log.requests.length, log.errors, await page.evaluate(() => globalThis.__violations)])); await context.close();
+  return `a table of 4 rows; ${want.proposed[0].asked} applied by ${who}; 45.50 typed to 50, the total then ${want.proposed[1].total_then.slice(7)}; a third by the keyboard alone`;
+});
+// containment (PRESENTATION 7.6 F6, F8 to F11): a file whose own description tries each way out, in a real page
+const contained = async (open, press, { giveName, pressAt }) => check('contained: a file whose formulas and handlers try to read the tools, take a subject, save, decide, undo, import, commit and fetch does none of it: nothing is downloaded, chosen, requested or written; what it proposes honestly is written only when the person applies it', async () => {
+  const f = path.join(work, 'contained.ufx.html'); make(here('../../vectors/contained.ufx'), f); const { context, page, log } = await open(f, 'nobody'), who = 'Rhea Reader', want = JSON.parse(fs.readFileSync(here('../../vectors/provisional/containment.json'), 'utf8'));
+  const events = []; page.on('download', () => events.push('download')); page.on('filechooser', () => events.push('filechooser')); page.on('popup', () => events.push('popup'));
+  const doc = async () => (await look(page)).texts.filter(t => t.on === 1).map(t => t.s), word = async w => (await look(page)).texts.find(t => t.on === 1 && t.s.trim().length > 2 && w.startsWith(t.s.trim())), head = async () => (await headOf(page)).commit;
+  const region = page.getByRole('region', { name: 'A change the document asks for' }), asked = async () => (await region.count()) ? (await region.getByRole('paragraph').allTextContents()).filter(t => t.startsWith('Set ')) : [];
+  const labels = want.attempts.map(a => /^the label (.*)$/.exec(a.here)).filter(Boolean).map(m => m[1]); must(labels.length === 7, 'the vector\'s labels'); let d = await doc(); for (const l of labels) must(d.includes(l), 'not shown: ' + l + ' in ' + d.join(' | '));
+  must(d.includes('OWN label=as it was made') && d.includes('STATE who=nobody editing=off ran=nothing'), 'its own universe and state: ' + d.join(' | '));
+  await giveName(page, who); must((await doc()).includes('STATE who=nobody editing=off ran=nothing'), 'the file reads the tools\' state'); const h0 = await head(), status0 = flatten((await page.getByRole('status').allTextContents()).join(' '));
+  for (const w of ['SAVE-ME', 'DECIDE-ME', 'UNDO-ME', 'IMPORT-ME', 'COMMIT-ME', 'REACH-ME', 'SPLICE-ME']) { await pressAt(page, await word(w)); await page.waitForTimeout(60);
+    must(await head() === h0 && !events.length && (await asked()).length === 0 && flatten((await page.getByRole('status').allTextContents()).join(' ')) === status0, w + ' did something: ' + JSON.stringify(events) + (await page.getByRole('status').allTextContents()).join(' ')); }
+  await pressAt(page, await word('SWITCH-ME')); must((await doc()).includes('STATE who=Mallory editing=on ran=nothing') && await head() === h0 && (await asked()).length === 0, 'its own state'); const st = (await look(page)).texts.filter(t => t.on === 0);
+  must(st.find(t => t.s === 'Document').lit && !st.find(t => t.s === 'Text').lit && flatten((await page.getByRole('status').allTextContents()).join(' ')).includes(flatten(`recorded as made by ${who}`)), 'the tools\' state was set by the file');
+  // the keyboard is no way round: the same word, reached and pressed with Enter
+  await page.getByRole('button', { name: 'SAVE-ME' }).focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(60); must(await head() === h0 && !events.length, 'SAVE-ME by Enter: ' + JSON.stringify(events));
+  // an honest proposal: asked, dismissed, nothing; asked, applied, the person's
+  await pressAt(page, await word('HONEST-ME')); const line = await asked(); must(line.length === 1 && line[0] === 'Set label of o:93939393: from “as it was made” to “changed by the file”.', 'asked: ' + line.join(' / ')); await press(page, 'Dismiss'); must(await head() === h0 && (await asked()).length === 0, 'dismissed');
+  await pressAt(page, await word('HONEST-ME')); await press(page, 'Apply'); const top = (await ask(page, { name: 'history' })).split('\n').find(l => l.startsWith('change ')); must(await head() !== h0 && top.includes(`actor="${who}"`) && top.endsWith(`verdict=approve decided-by="${who}"`) && (await doc()).includes('OWN label=changed by the file'), 'applied: ' + top);
+  must(!events.length && log.requests.length <= 1 && !log.errors.length && !log.asked.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify([events, log.requests, log.errors, log.asked])); await context.close();
+  return `${labels.length} formulas that reach outside show their labels; 8 handlers pressed, one by the keyboard too, did nothing: no download, no chooser, no request, no change; one honest proposal dismissed, then applied by ${who}`;
+});
 // components (SPEC 1.6; spike/SPLIT.md): a page runs the base, and beside it only what its file lists for that base and the kernel can verify
 const components = async (open) => {
   const made = (name, pack, ...flags) => { const f = path.join(work, name); make(here('../../vectors/' + pack), f, ...flags); return f; }, SAFE = /This file needs something this reader does not have: ufo\.code/;
@@ -539,7 +576,7 @@ const needy = async (open, press) => check('safeguard: a file that requires what
   const l = await d0.look(page); must(l.all.includes('Its captions are text.') && l.all.includes('ufo.time'), 'not drawn'); const head = (await headOf(page)).commit; await press(page, 'Edit'); await press(page, 'A film'); await page.keyboard.type('x'); await page.keyboard.press('Tab');
   must((await headOf(page)).commit === head, 'the file was changed'); must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet'); await context.close(); return JSON.stringify(line);
 });
-const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await f6(open, press); await bare(open, press); await needy(open, press); await decisions(open, press, h); await adding(open, press, h); await components(open); await sealing(open); } });
+const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await bare(open, press); await needy(open, press); await decisions(open, press, h); await adding(open, press, h); await tabled(open, press, h); await contained(open, press, h); await components(open); await sealing(open); } });
 
 // ---- f: sent on. The saved file served from another origin; and the packs given to the independent reader ----
 let h = null;

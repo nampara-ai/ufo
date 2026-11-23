@@ -30,6 +30,8 @@
    "safeguard": "passed",
    "decisions": "passed",
    "asset": "passed",
+   "table": "passed",
+   "contained": "passed",
    "components": "passed",
    "seals": "passed",
    "sent on": "passed"
@@ -125,6 +127,6 @@
    "state"
   ]
  },
- "total": 252,
+ "total": 253,
  "failures": 0
 }

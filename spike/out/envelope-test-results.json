@@ -31,7 +31,9 @@
      "no tools": "passed",
      "safeguard": "passed",
      "decisions": "passed",
-     "asset": "failed",
+     "asset": "passed",
+     "table": "passed",
+     "contained": "passed",
      "components": "passed",
      "seals": "passed",
      "sent on": "passed"
@@ -127,8 +129,8 @@
      "state"
     ]
    },
-   "total": 252,
-   "failures": 1
+   "total": 253,
+   "failures": 0
   },
   "firefox": {
    "engine": "firefox",
@@ -162,6 +164,8 @@
      "safeguard": "passed",
      "decisions": "passed",
      "asset": "passed",
+     "table": "passed",
+     "contained": "passed",
      "components": "passed",
      "seals": "passed",
      "sent on": "passed"
@@ -257,7 +261,7 @@
      "state"
     ]
    },
-   "total": 252,
+   "total": 253,
    "failures": 0
   },
   "webkit": {
@@ -292,6 +296,8 @@
      "safeguard": "passed",
      "decisions": "passed",
      "asset": "passed",
+     "table": "passed",
+     "contained": "passed",
      "components": "passed",
      "seals": "passed",
      "sent on": "passed"
@@ -387,7 +393,7 @@
      "state"
     ]
    },
-   "total": 252,
+   "total": 253,
    "failures": 0
   }
  },
@@ -515,7 +521,7 @@
     "engine": "firefox",
     "fails": true,
     "as_recorded": true,
-    "how": "http: fail: policy violation: img-src http://127.0.0.1:39851/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:39851/favic; http: violations: img-src http://127.0.0.1:39851/favicon.ico"
+    "how": "http: fail: policy violation: img-src http://127.0.0.1:33027/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:33027/favic; http: violations: img-src http://127.0.0.1:33027/favicon.ico"
    },
    {
     "file": "01-no-icon-request.naive2.html",
