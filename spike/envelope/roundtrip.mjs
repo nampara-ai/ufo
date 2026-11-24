@@ -531,7 +531,7 @@ fs.writeFileSync(out('edited.ufx'), before);
 // ---- a long history, in parts: the Changes panel shows twenty at a time (PRESENTATION F2: what the tools ask for is bounded too) ----
 { const r = await reader({ parts, name: 'compose.ufx.html', who: 'Many Hands', seed: 57 }); r.press('Edit');
   for (let i = 0; i < 24; i++) edit(r, 'Revenue grew', s => s.replace(/quarter\d*/, 'quarter' + i));
-  r.press('Changes'); const rows = () => r.nodes(0).filter(n => n.role === 'paragraph' && /, change o:/.test(n.text)).length, head = () => r.nodes(0).find(n => /^Changes[ :]\S/.test(n.text || ''))?.text;
+  r.press('Changes'); const rows = () => r.nodes(0).filter(n => n.role === 'paragraph' && /, change o:/.test(n.text)).length, head = () => r.nodes(0).find(n => /^Changes( \d|:)/.test(n.text || ''))?.text;
   assert.strictEqual(r.head().height, 24); assert.strictEqual(rows(), 20, 'the first part: ' + rows()); assert.strictEqual(head(), 'Changes 1 to 20, counting from the newest');
   r.press('Older changes'); assert.strictEqual(rows(), 5); assert.strictEqual(head(), 'Changes 21 to 25, counting from the newest'); r.press('Older changes'); assert.strictEqual(head(), 'Changes 21 to 25, counting from the newest', 'past the oldest');
   r.press('Newer changes'); assert.strictEqual(rows(), 20); r.press('Newer changes'); assert.strictEqual(head(), 'Changes 1 to 20, counting from the newest');
