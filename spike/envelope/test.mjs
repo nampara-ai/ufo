@@ -13,7 +13,7 @@ import { start, commitsOf, layersOf } from '../binding/binding.mjs'; import { ke
 import { playwright, launch, executable, ENGINES } from './engines.mjs';
 const { devices } = playwright, here = p => fileURLToPath(new URL(p, import.meta.url)), out = here('../out/'), shots = here('../out/shots/');
 const arg = n => (i => i < 0 ? null : process.argv[i + 1])(process.argv.indexOf('--' + n)), engineName = arg('engine') || 'all';
-const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'asset', 'table', 'contained', 'components', 'seals', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
+const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'asset', 'table', 'contained', 'components', 'seals', 'damage', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
 const CONTEXTS = ['Node', 'desktop, file://', 'http origin', 'phone, larger', 'phone, smaller', 'scripts off', 'reader', 'validators'];
 if (![...ENGINES, 'all'].includes(engineName)) { console.error('--engine chromium|firefox|webkit'); process.exit(2); }
 
@@ -402,7 +402,7 @@ const option = ({ name, defaultBrowserType, ...o }) => o;
 if (!arg('only')) {
 // ---- the kernel alone, in Node: roundtrip.mjs (the tools driven by input events, positioned reports, the envelope function and its fixed case) and more-edits.mjs ----
 env = 'Node'; console.log('\n== the kernel alone (Node)');
-for (const [key, script, last] of [['kernel', 'roundtrip.mjs', /^OK$/], ['kernel', 'more-edits.mjs', /^end lines=12$/]]) await check(`${key}: ${script}`, () => { const said = execFileSync('node', [here(script)]).toString().trim().split('\n'); must(last.test(said.pop()), 'did not finish'); return said.length + ' lines'; });
+for (const [key, script, last] of [['kernel', 'roundtrip.mjs', /^OK$/], ['kernel', 'more-edits.mjs', /^end lines=12$/], ['kernel', '../vectors.mjs', /^agree \d+ differ 0$/], ['kernel', 'fuzz.mjs', /^fuzz: \d+ cases, 0 failed$/]]) await check(`${key}: ${script}`, () => { const said = execFileSync('node', [here(script)]).toString().trim().split('\n'); must(last.test(said.pop()), 'did not finish'); return said.length + ' lines'; });
 
 // ---- host code: everything the page ships as script is the binding; its budget (PLAYER 11.1), and what it may not know or do ----
 console.log('\n== host code (the script as the page carries it)');
@@ -568,6 +568,20 @@ const sealing = async (open) => check('seals: a file whose seal is good says who
   const good = await one('history.ufx'), bad = await one('bad-seal.ufx');
   must(/Sealed by Test Author at state c:[0-9a-f]{8}: the signature is good\. The file has changed since\./.test(good), 'the good seal: ' + good); must(/A seal in the name of Test Author is here, and its signature is NOT good\. Do not rely on it\./.test(bad), 'the bad seal: ' + bad);
   return JSON.stringify(good.match(/Sealed by[^.]*\.[^.]*\./)[0]); });
+// damage (SPEC P9, P11): found by an outside implementation as a file that opened to an empty text and said nothing
+const damaged = async (open) => check('damage: a file whose index is wrong opens whole, and says that its index is wrong; one with a record gone shows what is left, and says that a record is missing; with no tools, the reader says it itself', async () => {
+  const M = JSON.parse(fs.readFileSync(here('../../vectors/vectors.json'), 'utf8')).minimal_pack, nested = path.join(work, 'minimal-nested.ufx'); make(here('../../vectors/minimal.ufx'), path.join(work, 'minimal.ufx.html'), '--pack', nested);
+  const b = fs.readFileSync(nested), frames = []; for (let off = 8; off + 2 < b.length;) { let n = 0, sh = 0, q = off + 2, x; do { x = b[q++]; n += (x & 0x7f) * 2 ** sh; sh += 7; } while (x & 0x80); frames.push({ off, kind: b[off], start: q, len: n }); off = q + n; }
+  const text = Buffer.from(M.revisions.text, 'hex'), entry = frames.filter(f => f.kind === 4).flatMap(f => Array.from({ length: (f.len - 24) / 40 }, (_, i) => f.start + 24 + 40 * i)).filter(at => b.subarray(at, at + 32).equals(text)).pop(); must(entry, 'the text\'s revision is in no index');
+  const at = Number(b.readBigUInt64LE(entry + 32)), other = frames.find(f => f.kind === 2 && f.off !== at).off, quiet = async (page, log) => must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify(log.errors));
+  const made = (name, change, ...flags) => { const c = Buffer.from(b); change(c); const p = path.join(work, name + '.ufx'), f = path.join(work, name + '.ufx.html'); fs.writeFileSync(p, c); make(p, f, ...flags); return f; };
+  const said = async page => (await page.getByRole('status').allTextContents()).join(' '), shown = async page => (await look(page)).texts.filter(t => t.on === 1).map(t => t.s).join(' ');
+  { const { context, page, log } = await open(made('index-wrong', c => c.writeBigUInt64LE(BigInt(other), entry + 32)), 'nobody'); must(/This file is damaged: the index is wrong; the file was read by going through all of it\./.test(await said(page)) && (await shown(page)).includes('Hello, universe.'), 'a wrong index: ' + await said(page) + ' / ' + await shown(page)); await quiet(page, log); await context.close(); }
+  { const { context, page, log } = await open(made('record-gone', c => { const f = frames.find(f => f.off === at); c[f.start + f.len - 3] ^= 1; }), 'nobody'), s = await said(page); must(/This file is damaged: a record the document needs is not in the file\./.test(s) && !(await shown(page)).includes('Hello, universe.'), 'a record gone: ' + s + ' / ' + await shown(page)); await quiet(page, log); await context.close(); }
+  { const f = path.join(work, 'index-wrong-bare.ufx.html'); make(here('../../vectors/index-wrong.ufx'), f, '--bare'); const { context, page, log } = await open(f, 'nobody'), s = await said(page);
+    must(/This file carries no tools/.test(s) && /This file is damaged: what could be read of it is shown\./.test(s) && (await shown(page)).includes('Hello, universe.'), 'with no tools: ' + s); await quiet(page, log); await context.close(); }
+  return 'the index wrong: the text whole, and the index said to be wrong; a record gone: said, and nothing shown in its place as though it were the text';
+});
 // the safeguard (PLAYER K7): a file that requires what this reader does not have opens, says what is missing, and shows its text
 const needy = async (open, press) => check('safeguard: a file that requires what this reader does not have opens to its plain text, with one line saying what is missing; nothing is broken and nothing can change it', async () => {
   const f = path.join(work, 'needs.ufx.html'); make(here('../../vectors/needs.ufx'), f); const { context, page, log } = await open(f, 'nobody'), want = JSON.parse(fs.readFileSync(here('../../vectors/vectors.json'), 'utf8')).needs['a_reader_without_ufo.time'];
@@ -576,7 +590,7 @@ const needy = async (open, press) => check('safeguard: a file that requires what
   const l = await d0.look(page); must(l.all.includes('Its captions are text.') && l.all.includes('ufo.time'), 'not drawn'); const head = (await headOf(page)).commit; await press(page, 'Edit'); await press(page, 'A film'); await page.keyboard.type('x'); await page.keyboard.press('Tab');
   must((await headOf(page)).commit === head, 'the file was changed'); must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet'); await context.close(); return JSON.stringify(line);
 });
-const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await bare(open, press); await needy(open, press); await decisions(open, press, h); await adding(open, press, h); await tabled(open, press, h); await contained(open, press, h); await components(open); await sealing(open); } });
+const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await bare(open, press); await needy(open, press); await decisions(open, press, h); await adding(open, press, h); await tabled(open, press, h); await contained(open, press, h); await components(open); await sealing(open); await damaged(open); } });
 
 // ---- f: sent on. The saved file served from another origin; and the packs given to the independent reader ----
 let h = null;

@@ -832,7 +832,21 @@ frames after the newest index's coverage.
   content to be accepted. Before concluding that a record is absent, a
   reader MUST have scanned the frames itself or rebuilt the index: an index
   cannot hide a record that is there. A wrong index is reported and
-  rebuilt; it does not make the pack malformed or a head invalid.
+  rebuilt; it does not make the pack malformed or a head invalid. Nor can
+  an index show a record that is not there: an offset is followed only to
+  a place where a frame begins, as scanning from the signature finds
+  frames. What lies inside a frame's payload is not a frame, whatever
+  bytes it holds, and a reader MUST NOT take a record from there. A
+  reader that uses the index and one that scans therefore find the same
+  records in every pack.
+- **[P22] Offsets are 64 bits wide, and are checked as such.** Every
+  offset and count a head or an index holds is compared, as the 64-bit
+  number it is, with the length of the file before it is used for
+  anything. One that lies outside the file is wrong, and is treated as
+  any other wrong offset is: a head with one is not valid (**P3**), an
+  index with one is a wrong index. It is never narrowed to a smaller
+  width first: a reader whose own offsets are 32 bits wide MUST NOT read
+  at the low half of an offset it cannot hold.
 - **[P10]** With a correct index, reading any one record costs a number of
   seeks logarithmic in the number of records.
 
@@ -2006,7 +2020,7 @@ where the text did not decide what the kernel should do, and what it did.
 | `vectors/decided.ufx` | `compose.ufx` after two edits, an acceptance and a rejection made through a kernel's gate (§5.4 **R9**) |
 | `vectors/listed.ufx` | `needs-code.ufx` carrying one component for a kernel of a stated hash; the group `components` says what a reader finds listed (§1.6, §9.1 **K8**) |
 | `vectors/undone.ufx` | `decided.ufx` after one more edit and its undoing (§9.6) |
-| `vectors/needs.ufx`, `vectors/needs-code.ufx` | one universe twice, requiring a feature a reader may lack: `ufo.time`, and `ufo.code`. The group `needs` says what such a reader shows (§9.1 **K7**) |
+| `vectors/needs.ufx`, `vectors/needs-code.ufx`, `vectors/needs-version.ufx` | one universe three times, requiring a feature a reader may lack: `ufo.time`; `ufo.code`; and `ufo.text` at version 999, which a reader that has it at version 1 lacks (**C8**). The group `needs` says what such a reader shows (§9.1 **K7**) |
 | `vectors/published-timeline.ufx`, `vectors/published-nested.ufx` | `timeline.ufx` and `nested.ufx` as they are published (§2.5): 3830 and 2557 bytes |
 | `vectors/edit-one-word.ufx`, `vectors/edit-paragraph-start.ufx` | `compose.ufx` after edits made through a kernel's gate: one word changed; text typed at the very start of a paragraph (§1.7 **L1**, §5.1) |
 | `vectors/edit-positioned.ufx` | `compose.ufx` after text was typed in front of a word it shares letters with, reported by position (§9.3 **H8**) |
@@ -2047,7 +2061,10 @@ decision, and adds an object whose sources are two pins made then. The file ends
 | `pins` | where each anchor of `pins.ufx` resolves: continuous regions inside, clipped to, touching and outside an extent, one whose extent is unknown, keyed regions, a point. Eight digests, each with its covered value and followed objects, one for each choice §4.4 settles |
 | `published_timeline`, `published_nested` | the content and attribution layers of `timeline.ufx` and `nested.ufx`, and what a reader of each published copy finds: a commit whose change is withheld; who wrote the nested text |
 | `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§8.3) |
-| `printer` | the described module of `module.ufx` — a function with operands folded, a function with a loop, a call, a global and named locals, three exports and a memory — as encoded values, and the 119 bytes the printer makes of it |
+| `printer` | the described module of `module.ufx` — a function with operands folded, a function with a loop, a call, a global and named locals, three exports and a memory — as encoded values, and the 119 bytes the printer makes of it. Under `more`, three more: `module-reserved.ufx`, which exports a name beginning `ufo:` and is not printed (**N1**); `module-globals.ufx`, with a global of each type, and the bytes printed; `module-bad-global.ufx`, whose `i32` global has an `init` of 1.5 and is not printed |
+| `offsets` | `head-offset-wrapped.ufx`: minimal.ufx with its head's commit offset written as the true offset plus 2³², and the head's check made again. No valid head: the file holds no universe (§2.3, **P22**) |
+| `index_wrong` | `index-wrong.ufx`: minimal.ufx with one index entry giving another record's offset. It opens at the same commit with the same text, and the index is reported wrong (**P9**) |
+| `frame_inside_a_chunk` | `frame-inside-a-chunk.ufx`: the index gives, for the revision of a live text, an offset inside the payload of a chunk, where the bytes of such a frame lie. The revision is not in the file: malformed storage (**P9**, **P11**) |
 | `instrumentation` | three modules and their instrumented forms under **M4**: an entry region, a loop region, and NaN canonicalization, each with the fuel it consumes |
 
 Three values, for a first check without opening the files:

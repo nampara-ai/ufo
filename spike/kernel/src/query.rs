@@ -258,7 +258,8 @@ fn universe_layers(pk: &Pack, commit: &H, also: Option<Id>, content: &mut Set<H>
     while let Some(i) = todo.pop_first() {
         if !done.insert((*commit, i)) { continue; }
         let Some(rev) = revs.get(&i) else { continue };
-        let Some(n) = pk.node(rev) else { continue };
+        // a live object's revision that is not here is still content: it is missed (P11)
+        let Some(n) = pk.node(rev) else { content.insert(*rev); continue };
         if n.get("type").and_then(|x| x.s()) == Some("ufo.change") { continue; }
         content.insert(*rev);
         live.push((*commit, i));
@@ -307,6 +308,26 @@ pub fn split(pk: &Pack) -> (Set<H>, Set<H>, Vec<(H, Id)>, Vec<(H, Id)>) {
     universe_layers(pk, &pk.head, None, &mut content, &mut attribution, &mut attributing, &mut live, &mut done);
     let attribution: Set<H> = Map(attribution.0.into_iter().filter(|h| !content.contains(&h.0)).collect());
     (content, attribution, attributing, live)
+}
+/// P11: the records of the content and attribution layers that are not in the pack: malformed storage. The chunks
+/// of a blob whose node is here are not among them: a pack may lack those (2.5, absent blobs).
+pub fn missing(pk: &Pack) -> Vec<H> {
+    if let Some(m) = pk.missing.borrow().as_ref() {
+        return m.clone();
+    }
+    let (content, attribution, _, _) = split(pk);
+    let mut gone: Vec<H> = content.0.iter().chain(attribution.0.iter()).map(|e| e.0).filter(|h| !pk.has(h)).collect();
+    if !gone.is_empty() {
+        for (h, _) in content.0.iter() {
+            if let Some(n) = pk.node(h).filter(|n| n.get("k").and_then(|k| k.s()) == Some("blob") && n.get("level").and_then(|l| l.i()) == Some(0)) {
+                for part in n.get("parts").map(|p| p.l()).unwrap_or(&[]) {
+                    gone.retain(|g| Some(*g) != part.l().get(1).and_then(|x| x.hash()));
+                }
+            }
+        }
+    }
+    *pk.missing.borrow_mut() = Some(gone.clone());
+    gone
 }
 pub fn published(pk: &Pack) -> Option<Vec<u8>> {
     let (content, attribution, _, _) = split(pk);

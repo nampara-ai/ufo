@@ -1,27 +1,27 @@
 {
  "functions": {
-  "whole": 732,
+  "whole": 745,
   "printer": 18,
   "agent": 12
  },
  "whole": {
-  "bytes": 284269,
-  "deflate": 132512,
-  "sha256": "4935a0e3edccaa0b05e2f3d6c18ede765d4adf014bd71c41d206dd4fcfba6e4b"
+  "bytes": 288664,
+  "deflate": 134620,
+  "sha256": "4737722fc6b4b4ee1c4dfb7b78d8256a5972104a3dcc1426cc8a514f3745c203"
  },
  "base": {
-  "bytes": 269744,
-  "deflate": 125533,
-  "sha256": "7ad305cd75ce35ddd0c07e245e737826af76147fbd608c397e2c6ef8d2faf918"
+  "bytes": 273863,
+  "deflate": 127291,
+  "sha256": "36ce15ed7159bd34cd97ea8b15d517c468af4921c3d366570d90bca1804f5138"
  },
  "printer": {
-  "bytes": 10070,
-  "deflate": 5019,
-  "sha256": "954847e8af4405833641fc13057fdd35e966f4e5e916c25a3aa94dbd1e049db3"
+  "bytes": 10349,
+  "deflate": 5144,
+  "sha256": "7c2c52cc4fbe11f798bcda1b81581b7964cdd96f66591cc947d71d8f64e46920"
  },
  "agent": {
   "bytes": 7350,
-  "deflate": 3714,
-  "sha256": "713f9987a453fbdb6928b4cfda3a96d614357b8190221a02f91b1be3a96321c2"
+  "deflate": 3720,
+  "sha256": "09be405d3e25678ccd6977b4a97d7e4f74821387db78f412c24b0c161bfe24b1"
  }
 }

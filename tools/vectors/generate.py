@@ -307,6 +307,40 @@ def genesis(pk):
 
 pk = Pack(); _, g = genesis(pk)
 open(os.path.join(OUT, "minimal.ufx"), "wb").write(pk.b)
+# Found by an outside implementation (2026-11-24): two packs made from minimal.ufx by changing eight bytes.
+# (i) The head's commit offset with 2^32 added, and the head's check made again so that nothing else is wrong. The offset lies
+# outside the file, so the head is not valid (section 2.3) and the file holds no universe. A reader that keeps offsets in 32 bits
+# would find the commit where the low half points.
+_mini = bytes(pk.b); _h = len(_mini) - 75 + 3; _body = bytearray(_mini[_h:_h + 64])
+_true = struct.unpack("<Q", _body[32:40])[0]; _body[32:40] = struct.pack("<Q", _true + 2 ** 32)
+_wrapped = _mini[:_h] + bytes(_body) + sha(bytes(_body))[:8]
+open(os.path.join(OUT, "head-offset-wrapped.ufx"), "wb").write(_wrapped)
+V["offsets"] = {"file": "head-offset-wrapped.ufx", "length": len(_wrapped), "made_from": "minimal.ufx",
+    "what": "minimal.ufx with its one head changed: the commit offset is the true offset plus 2^32, and the head's check is made again over the changed bytes, so that the offset is the only thing wrong",
+    "true_offset": _true, "written_offset": _true + 2 ** 32,
+    "a_reader": "finds no valid head: the offset lies outside the file. The file holds no universe and is reported as malformed (section 2.3). It is not opened",
+    "never": "the commit found where the low 32 bits of the offset point. Every offset in a pack is 64 bits wide, and is compared with the length of the file before it is used for anything",
+    "the_same_holds_for": ["a head's index offset, previous-head offset and end offset", "an index's previous-index offset and coverage offset", "the offset of every index entry"]}
+# (ii) The index entry of the text's revision made to give the offset of the face's revision. Every record is still in the file.
+_ix = pk.index_at
+def _index_entries(b, at):   # where an index frame's entries begin, and how many there are
+    ln, q = 0, at + 2; sh = 0
+    while True:
+        x = b[q]; q += 1; ln |= (x & 0x7f) << sh; sh += 7
+        if not x & 0x80: break
+    n = struct.unpack("<Q", b[q:q + 8])[0]
+    return q + 24, n
+_e0, _n = _index_entries(_mini, _ix)
+_ents = [(_mini[_e0 + 40 * i:_e0 + 40 * i + 32], _e0 + 40 * i + 32) for i in range(_n)]
+_at_text = [pos_ for h_, pos_ in _ents if h_ == g["text"]][0]
+_wrong = bytearray(_mini); _wrong[_at_text:_at_text + 8] = struct.pack("<Q", pk.off[g["face"]])
+open(os.path.join(OUT, "index-wrong.ufx"), "wb").write(_wrong)
+V["index_wrong"] = {"file": "index-wrong.ufx", "length": len(_wrong), "made_from": "minimal.ufx", "root_hash": g["root"].hex(),
+    "what": "minimal.ufx with one entry of its index changed: the entry for the revision of the text gives the offset of the revision of the face. Every record is still in the file, and the head is valid",
+    "entry_of": g["text"].hex(), "true_offset": pk.off[g["text"]], "written_offset": pk.off[g["face"]],
+    "a_reader": "opens it at the same commit and presents the same text as minimal.ufx: the record at the offset the index gives does not have the hash asked for, so the reader finds the record by scanning the frames (P9). It reports that the index is wrong",
+    "text": "Hello, universe.",
+    "never": "the text shown as empty or missing, or the pack called malformed, because of the index; nor the record at the wrong offset taken for the one asked for"}
 V["minimal_pack"] = {"file": "minimal.ufx", "length": len(pk.b), "sha256_of_file": sha(bytes(pk.b)).hex(),
     "root_hash": g["root"].hex(), "object_map_root": g["map"].hex(),
     "revisions": {"universe": g["universe"].hex(), "text": g["text"].hex(), "face": g["face"].hex(), "change": g["change"].hex()},
@@ -561,6 +595,54 @@ V["printer"] = {
     "notes": ["types in order of first use; exports in the order of their keys in the encoded map (add, memory, sum_to)",
               "a bare name is local.get of a local or parameter, else global.get; a bare integer is i32.const",
               "the body of sum_to has one run of locals: one i32"]}
+# Found by an outside implementation (2026-11-24): three more described modules, of the same two functions.
+def described(name, mod_p, lin, sl):
+    pk = Pack(); pch = bytes([0xd3]) * 16
+    st = {bytes(16): revision(pk, bytes(16), "ufo.universe", 1, pch, sl + 1, {"lineage": lin, "roots": {"primary": ref(MOD)}}),
+          MOD: revision(pk, MOD, "ufo.module", 1, pch, sl + 2, mod_p),
+          F_ADD: revision(pk, F_ADD, "ufo.func", 1, pch, sl + 3, add_p, seq={"body": [[pch, 0, 1]]}),
+          F_SUM: revision(pk, F_SUM, "ufo.func", 1, pch, sl + 4, sum_p, seq={"body": [[pch, 1, len(sum_body)]]})}
+    ops = [{"op": "new", "obj": bytes(16), "type": "ufo.universe"}, {"op": "set", "obj": bytes(16), "key": "lineage", "val": lin},
+           {"op": "set", "obj": bytes(16), "key": "roots", "val": {"primary": ref(MOD)}}, {"op": "new", "obj": F_ADD, "type": "ufo.func"}]
+    ops += [{"op": "set", "obj": F_ADD, "key": k, "val": add_p[k]} for k in ("name", "params", "results", "locals")]
+    ops += [{"op": "splice", "obj": F_ADD, "key": "body", "after": None, "ins": add_p["body"]}, {"op": "new", "obj": F_SUM, "type": "ufo.func"}]
+    ops += [{"op": "set", "obj": F_SUM, "key": k, "val": sum_p[k]} for k in ("name", "params", "results", "locals")]
+    ops += [{"op": "splice", "obj": F_SUM, "key": "body", "after": None, "ins": sum_body}, {"op": "new", "obj": MOD, "type": "ufo.module"}]
+    ops += [{"op": "set", "obj": MOD, "key": k, "val": mod_p[k]} for k in mod_p]
+    _, _, _, root = commit(pk, st, pch, ops, "A module, described.", {"actor": actor, "time": 1767398400000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, sl + 5)
+    pk.index(); pk.head(root); open(os.path.join(OUT, name), "wb").write(pk.b)
+    return {"file": name, "length": len(pk.b), "root_hash": root.hex(), "module": MOD.hex(), "module_properties_hex": enc(mod_p).hex()}
+# (i) an export under a name the kernel keeps for itself (section 12.2, N1)
+res_p = dict(mod_p, exports=dict(mod_p["exports"], **{"ufo:fuel": ref(F_ADD)}))
+# (ii) a global of each type, with a constant of its type; one exported. Globals are in the order of their keys: big, half, ratio, total
+glob_p = dict(mod_p, globals={"total": {"type": "i32", "mutable": True, "init": 0}, "ratio": {"type": "f64", "mutable": False, "init": 1.5},
+                              "half": {"type": "f32", "mutable": True, "init": 0.5}, "big": {"type": "i64", "mutable": False, "init": 2 ** 40}},
+              exports=dict(mod_p["exports"], ratio={"global": "ratio"}))
+code_sum3 = code_sum.replace(b"\x20\x01\x24\x00", b"\x20\x01\x24\x03"); body_sum3 = vec([b"\x01" + I32]) + code_sum3
+I64, F32 = b"\x7e", b"\x7d"
+printed_g = (b"\0asm\1\0\0\0" + sec(1, vec([t_add, t_sum])) + sec(3, vec([leb(0), leb(1)])) + sec(5, vec([b"\x01\x01\x01"]))
+             + sec(6, vec([I64 + b"\x00" + b"\x42\x80\x80\x80\x80\x80\x20\x0b", F32 + b"\x01" + b"\x43" + struct.pack("<f", 0.5) + b"\x0b",
+                           F64 + b"\x00" + b"\x44" + struct.pack("<d", 1.5) + b"\x0b", I32 + b"\x01" + b"\x41\x00\x0b"]))
+             + sec(7, vec([name("add") + b"\x00\x00", name("ratio") + b"\x03\x02", name("memory") + b"\x02\x00", name("sum_to") + b"\x00\x01"]))
+             + sec(10, vec([leb(len(body_add)) + body_add, leb(len(body_sum3)) + body_sum3])))
+# (iii) a global whose initial value is not a constant of its type
+bad_p = dict(mod_p, globals={"total": {"type": "i32", "mutable": True, "init": 1.5}})
+V["printer"]["more"] = {
+    "a_reserved_name": dict(described("module-reserved.ufx", res_p, bytes([0x45]) * 16, 3100),
+        what="module.ufx again, with one more export: the function `add` under the name `ufo:fuel`",
+        a_reader="does not print it: a described module exports and imports no name beginning `ufo:` (N1). The module is inconsistent (section 1.9), and is not run",
+        never="bytes of a module that exports the name; nor the name passed on to whatever would run the module"),
+    "globals_of_every_type": dict(described("module-globals.ufx", glob_p, bytes([0x46]) * 16, 3200),
+        what="module.ufx again, with four globals: `total` an i32, `ratio` an f64 of 1.5, `half` an f32 of 0.5, `big` an i64 of 2^40; `ratio` is exported",
+        printed_hex=printed_g.hex(), printed_length=len(printed_g),
+        notes=["a global's initial value is a constant of its type: i32.const, i64.const, f32.const or f64.const",
+               "globals are in the order of their keys: big, half, ratio, total; so `total` is global 3, and sum_to sets global 3",
+               "exports in the order of their keys: add, ratio, memory, sum_to"],
+        behaviour="the bytes are a valid module; its exported global `ratio` is 1.5; sum_to(4) returns 10"),
+    "an_initial_value_of_another_type": dict(described("module-bad-global.ufx", bad_p, bytes([0x47]) * 16, 3300),
+        what="module.ufx again, its one global an i32 whose `init` is 1.5",
+        a_reader="does not print it: 1.5 is not a constant of type i32. The module is inconsistent",
+        never="bytes that are not a valid module")}
 t_div = functype([F64, F64], [F64]); code_div = b"\x20\x00\x20\x01\xa3\x0b"
 canon = b"\x22\x02\x20\x02\x62\x04\x7c\x44" + struct.pack("<Q", 0x7ff8000000000000) + b"\x05\x20\x02\x0b"
 stored_div = module([t_div], [0], [], [("div", 0, 0)], [vec([]) + code_div])
@@ -577,6 +659,36 @@ V["instrumentation"] = [
      "behaviour": "div(0.0, 0.0) returns the bits 0x7ff8000000000000"},
     {"name": "spin: entry region of 2 (loop, final end), loop region of 6", "stored_hex": stored_loop.hex(), "instrumented_hex": instr_loop.hex(),
      "behaviour": "spin(3) consumes 2 + 3*6 = 20; with ufo:fuel = 19 it traps out of fuel on entering the third iteration"}]
+
+# ---- 8a. what lies inside a frame is not a frame (section 2.4, P9) ----
+# A pack whose index gives, for the revision of its text, an offset inside the payload of a chunk: the bytes there are
+# those of a node frame holding that revision, and they are part of a file someone added as an asset. No frame of the
+# pack holds the revision. A reader that went wherever the index pointed would read the text; one that scans the frames,
+# as every reader may (P9), would not find it. They must agree, so the offset names nothing.
+def inside_pack():
+    pk = Pack(); HA, HC = bytes([0xab]) * 16, bytes([0xc9]) * 16; t0 = "Hello, universe."
+    span = {"at": anchor({"o": T, "a": {"chars": ["s", [HC, 0, 0], "end"]}}), "kind": "block", "role": "paragraph"}
+    rev_t = enc({"k": "obj", "id": T, "type": "ufo.text", "rev": 1, "by": HC, "salt": salt(9102), "p": {"chars": t0, "spans": {"p1": span}}, "seq": {"chars": [[HC, 0, 16]]}})
+    hT = rhash(NODE, rev_t); before = b"These bytes are a file someone added. Inside them: "
+    data = before + frame(NODE, rev_t) + b" and after it, more of the file."
+    asset_p = {"bytes": pk.outside("b", data), "media": "application/octet-stream", "name": "holds-a-frame.bin"}
+    inner = pk.off[rhash(CHUNK, data)] + 2 + len(leb(len(data))) + len(before)
+    pk.off[hT] = inner; pk.pending.append(hT)                      # the index will give it; no frame holds it
+    up = {"lineage": bytes([0x12]) * 16, "roots": roots, "faces": faces, "features": feats}
+    st = {U: revision(pk, U, "ufo.universe", 1, HC, 9101, up), T: hT, F: revision(pk, F, "ufo.face", 1, HC, 9103, {"of": ref(T), "medium": "document"}),
+          HA: revision(pk, HA, "ufo.asset", 1, HC, 9104, asset_p)}
+    ops = [{"op": "new", "obj": U, "type": "ufo.universe"}] + [{"op": "set", "obj": U, "key": k_, "val": v} for k_, v in up.items()]
+    ops += [{"op": "new", "obj": T, "type": "ufo.text"}, {"op": "splice", "obj": T, "key": "chars", "after": None, "ins": t0}, {"op": "set", "obj": T, "key": ["spans", "p1"], "val": span},
+            {"op": "new", "obj": F, "type": "ufo.face"}, {"op": "set", "obj": F, "key": "of", "val": ref(T)}, {"op": "set", "obj": F, "key": "medium", "val": "document"},
+            {"op": "new", "obj": HA, "type": "ufo.asset"}] + [{"op": "set", "obj": HA, "key": k_, "val": v} for k_, v in asset_p.items()]
+    st, _, _, k = commit(pk, st, HC, ops, None, {"actor": actor, "time": 1767225600000, "origin": {"basis": "witnessed", "by": "person", "who": who}}, None, 0, 9105)
+    pk.index(); pk.head(k); open(os.path.join(OUT, "frame-inside-a-chunk.ufx"), "wb").write(pk.b)
+    return {"file": "frame-inside-a-chunk.ufx", "length": len(pk.b), "root_hash": k.hex(),
+        "what": "one commit: a text, a face of it, and an asset. The asset's bytes, one chunk, hold within them the bytes of a node frame whose record is the text's revision. The index gives that place for the revision's hash. No frame of the pack holds the revision",
+        "revision_of_the_text": hT.hex(), "offset_the_index_gives": inner, "which_is": "inside the payload of the chunk frame at offset %d" % pk.off[rhash(CHUNK, data)],
+        "a_reader": "opens it at the commit. The revision of the text is not in the file: an offset names a frame only where a frame begins, as scanning from the signature finds frames. The text is live, so the record is missing from the content layer: malformed storage (P11), reported. The index entry leads to no such record, so the index is wrong, and that is reported too (P9). The text is not presented",
+        "never": "the text read from inside the chunk; nor the file presented as whole. A reader that uses the index and one that scans the frames find the same records"}
+V["frame_inside_a_chunk"] = inside_pack()
 
 # ---- 8b. digests of pins (section 4.4), at the last commit of history.ufx ----
 cov_text = {"chars": ["Hello, ", {"spans": {"p1": SPAN}}]}
@@ -882,12 +994,12 @@ V["pins"]["digests"].append({"case": "three seconds of a timeline", "pack": "tim
     "followed": [{"id": _R1.hex(), "revision": TL["st"][_R1].hex()}], "digest": digest(salt(7108), _cov, [(_R1, TL["st"][_R1])]).hex()})
 
 # ---- 13b. a universe that requires what a reader may not have (PLAYER K7): the safeguard ----
-def needs_pack(feature="ufo.time", name="needs.ufx", lin=bytes([0x77]) * 16, carried=None):
+def needs_pack(feature="ufo.time", name="needs.ufx", lin=bytes([0x77]) * 16, carried=None, feats=None):
     pk = Pack(); NU, NT, NK, NF, NC = bytes(16), bytes([0x41]) * 16, bytes([0x42]) * 16, bytes([0x43]) * 16, bytes([0x4c]) * 16
     chars = "A film, described.Its captions are text."; e = lambda i: [NC, i, 0]
     spans = {"b0": {"at": anchor({"o": NT, "a": {"chars": ["s", e(0), e(18)]}}), "kind": "block", "role": "paragraph"},
              "b1": {"at": anchor({"o": NT, "a": {"chars": ["s", e(18), "end"]}}), "kind": "block", "role": "paragraph"}}
-    feats = {"ufo.text": {"v": 1, "required": True}, feature: {"v": 1, "required": True}}
+    feats = feats or {"ufo.text": {"v": 1, "required": True}, feature: {"v": 1, "required": True}}
     up = {"lineage": lin, "roots": {"primary": ref(NF)}, "faces": [ref(NF)], "features": feats}
     if carried: up["components"] = {role: {"module": pk.outside("b", module), "for": base} for role, (module, base) in carried.items()}
     objs = [(NU, "ufo.universe", up),
@@ -920,6 +1032,15 @@ V["components"] = {"file": "listed.ufx", "length": nv3["length"], "root_hash": n
     "for": _base.hex(), "listed": [{"role": "ufo.printer", "sha256": sha(_module).hex(), "length": len(_module), "bytes_hex": _module.hex()}],
     "a_reader_whose_base_has_that_hash": "finds one component for it: its role, and the SHA-256 of its bytes, which names it wherever it is held; it reads the bytes only if it does not already hold a component of that hash",
     "a_reader_whose_base_has_another_hash": "finds none for it, and is without `ufo.code`"}
+# found by an outside implementation (2026-11-24): a feature at a version this reader does not have is a feature it lacks (C8)
+npk4, nv4 = needs_pack("ufo.text", "needs-version.ufx", bytes([0x7a]) * 16, feats={"ufo.text": {"v": 999, "required": True}})
+open(os.path.join(OUT, "needs-version.ufx"), "wb").write(npk4.b)
+V["needs"]["a_feature_at_a_version_the_reader_has_not"] = {"file": "needs-version.ufx", "length": nv4["length"], "root_hash": nv4["root_hash"],
+    "what": "the same universe, requiring one feature: `ufo.text` at version 999. A reader that has `ufo.text` at version 1 does not have it at 999 (section 1.6, C8)",
+    "feature": {"name": "ufo.text", "v": 999, "required": True, "supported": False},
+    "shows": "one line of its own that names the feature and the version, then the plain-text face", "line_names": ["ufo.text", "999"],
+    "plain_text_face": nv4["a_reader_without_ufo.time"]["plain_text_face"],
+    "never": "the face attempted as though the feature were had"}
 V["needs"]["the_same_requiring_ufo.code"] = {"file": "needs-code.ufx", "length": nv2["length"], "root_hash": nv2["root_hash"],
     "what": "the same universe, requiring `ufo.code` where the other requires `ufo.time`. A reader that has the printer component beside its base has `ufo.code` and attempts the face. One whose printer is absent, or does not verify against the hash that names it, or does not instantiate against its base, has not, and shows what the first pack shows, naming `ufo.code`"}
 

@@ -3,6 +3,7 @@ use crate::value::*;
 use crate::small::Map;
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::cell::{Cell, RefCell};
 
 pub type H = [u8; 32];
 pub type Id = [u8; 16];
@@ -14,6 +15,10 @@ pub struct Pack {
     index: usize,             // offset of the newest index frame, or 0
     head_at: usize,           // offset of the head frame that gives the state
     after: Map<H, usize>, // records in frames no index covers
+    starts: Vec<usize>,       // where each frame begins, as walking from the signature finds them: an offset names a frame only if it is one of these
+    all: RefCell<Option<Map<H, usize>>>, // P9: every record by its hash, from the frames themselves; made when an index has not led to one
+    wrong: Cell<bool>,        // and whether an index hid a record that is here
+    pub missing: RefCell<Option<Vec<H>>>, // P11, once worked out for this state (query.rs)
     pub unread_tail: usize,
     /// Every compressed chunk or node frame, in the order of the pack: what the host is to inflate.
     pub pending: Vec<Pending>,
@@ -33,12 +38,19 @@ struct Frame {
     len: usize,
     next: usize,
 }
+/// Eight bytes as a count or an offset. One too large for this machine to hold is never narrowed to one it
+/// can: it becomes a number that lies outside any file, and stays so when a little is added to it.
 fn le(b: &[u8]) -> usize {
     let mut n = 0u64;
     for (i, &x) in b.iter().enumerate().take(8) {
         n |= (x as u64) << (8 * i);
     }
-    n as usize
+    usize::try_from(n).unwrap_or(usize::MAX).min(usize::MAX >> 1)
+}
+/// The entries of an index whose payload is `p`: None unless the payload is exactly as long as its count says (2.4).
+fn entries(p: &[u8]) -> Option<usize> {
+    let n = p.len().checked_sub(24)? / 40;
+    if p.len() != 24 + 40 * n || le(&p[..8]) != n { None } else { Some(n) }
 }
 fn leb(d: &[u8], mut p: usize) -> Option<(usize, usize)> {
     let (mut n, mut shift) = (0u64, 0);
@@ -69,26 +81,30 @@ impl Pack {
         }
         Some(Frame { kind, codec, start, len, next })
     }
-    /// The decoded record held by the chunk or node frame at `off`.
-    fn record_at(&self, off: usize) -> Option<(u8, Vec<u8>)> {
+    /// The decoded record held by the chunk or node frame at `off`. An offset that is not where a frame begins,
+    /// as walking the frames from the signature finds them, names nothing: what lies inside a frame is not a frame.
+    fn bytes_at(&self, off: usize) -> Option<(u8, &[u8])> {
+        crate::small::search(self.starts.len(), &mut |i| self.starts[i].cmp(&off)).ok()?;
         let f = self.frame(off)?;
         if f.kind != 1 && f.kind != 2 {
             return None;
         }
-        let p = &self.d[f.start..f.next];
         let bytes = match f.codec {
-            0 => p.to_vec(),
+            0 => &self.d[f.start..f.next],
             1 => {
                 let i = crate::small::search(self.pending.len(), &mut |i| self.pending[i].off.cmp(&off)).ok()?;
-                self.pending[i].got.clone()?
+                self.pending[i].got.as_deref()?
             }
             _ => return None,
         };
         Some((f.kind, bytes))
     }
+    fn record_at(&self, off: usize) -> Option<(u8, Vec<u8>)> {
+        self.bytes_at(off).map(|(k, b)| (k, b.to_vec()))
+    }
     fn hash_at(&self, off: usize) -> Option<H> {
-        let (k, b) = self.record_at(off)?;
-        Some(sha256(&[&[k], &b]))
+        let (k, b) = self.bytes_at(off)?;
+        Some(sha256(&[&[k], b]))
     }
     /// P3. Returns the commit the head at `off` names, and its index offset.
     fn valid_head(&self, off: usize, depth: u32) -> Option<(H, usize)> {
@@ -122,7 +138,7 @@ impl Pack {
         if d.len() < 8 || d[..8] != SIG {
             return None;
         }
-        let mut pk = Pack { d, head: [0; 32], index: 0, head_at: 0, after: Map::new(), unread_tail: 0, pending: Vec::new() };
+        let mut pk = Pack { d, head: [0; 32], index: 0, head_at: 0, after: Map::new(), starts: Vec::new(), all: RefCell::new(None), wrong: Cell::new(false), missing: RefCell::new(None), unread_tail: 0, pending: Vec::new() };
         let mut off = 8;
         while let Some(f) = pk.frame(off) {
             if (f.kind == 1 || f.kind == 2) && f.codec == 1 {
@@ -146,7 +162,13 @@ impl Pack {
     /// 2.3: finds the current state afresh, from the bytes as they now stand.
     fn reopen(&mut self) -> Option<()> {
         let pk = self;
-        pk.after = Map::new();
+        (pk.after, pk.starts) = (Map::new(), Vec::new());
+        (*pk.all.borrow_mut(), *pk.missing.borrow_mut()) = (None, None);
+        let mut off = 8;
+        while let Some(f) = pk.frame(off) {
+            pk.starts.push(off);
+            off = f.next;
+        }
         let n = pk.d.len();
         let mut found = if n >= 83 { pk.valid_head(n - 75, 0).map(|h| (h, n)) } else { None };
         if found.is_none() {
@@ -190,19 +212,48 @@ impl Pack {
         }
         Some(())
     }
+    /// Where the record of a hash lies. What an index says is checked against the record it leads to (C2); and
+    /// before a record is said not to be here, the frames themselves are gone through (P9): an index cannot hide
+    /// a record that is there. One that did is wrong, and is said to be (`index_wrong`).
     fn find(&self, h: &H) -> Option<usize> {
         if let Some(&o) = self.after.get(h) {
             return Some(o);
         }
+        match self.indexed(h) {
+            Some(o) if self.hash_at(o) == Some(*h) => return Some(o),
+            Some(_) => self.wrong.set(true), // an entry that does not lead to the record it names
+            None => {}
+        }
+        let mut all = self.all.borrow_mut();
+        let all = all.get_or_insert_with(|| {
+            let mut m = Map::new();
+            for &off in &self.starts {
+                if let Some(x) = self.hash_at(off) {
+                    m.entry(x, off);
+                }
+            }
+            m
+        });
+        let o = *all.get(h)?;
+        self.wrong.set(true);
+        Some(o)
+    }
+    pub fn has(&self, h: &H) -> bool {
+        self.find(h).is_some()
+    }
+    pub fn index_wrong(&self) -> bool {
+        self.wrong.get()
+    }
+    fn indexed(&self, h: &H) -> Option<usize> {
         let mut at = self.index;
         let mut hops = 0;
         while at != 0 && hops < 64 {
             let f = self.frame(at)?;
             let p = &self.d[f.start..f.next];
-            if f.kind != 4 || p.len() < 24 || p.len() != 24 + 40 * le(&p[..8]) {
+            if f.kind != 4 {
                 return None;
             }
-            let (mut lo, mut hi) = (0, le(&p[..8]));
+            let (mut lo, mut hi) = (0, entries(p)?);
             while lo < hi {
                 let mid = (lo + hi) / 2;
                 let e = &p[24 + 40 * mid..64 + 40 * mid];
@@ -220,7 +271,7 @@ impl Pack {
     /// C2: a record is obtained by its hash and checked against it.
     pub fn record(&self, kind: u8, h: &H) -> Option<Vec<u8>> {
         let (k, bytes) = self.record_at(self.find(h)?)?;
-        if k != kind || sha256(&[&[k], &bytes]) != *h {
+        if k != kind {
             return None;
         }
         Some(bytes)
@@ -562,14 +613,14 @@ impl Pack {
         let commit_at = self.find(commit)?;
         // 2.4: the new index covers from the end of the newest index's coverage to its own offset
         let field = |d: &[u8], at: usize, k: usize| le(&d[at + k..at + k + 8]);
-        let index = |pk: &Pack, at: usize| pk.frame(at).filter(|f| f.kind == 4 && f.len >= 24 && f.len == 24 + 40 * le(&pk.d[f.start..f.start + 8])).map(|f| f.start);
+        let index = |pk: &Pack, at: usize| pk.frame(at).filter(|f| f.kind == 4 && entries(&pk.d[f.start..f.next]).is_some()).map(|f| f.start);
         let (at, mut prev) = (self.d.len(), self.index);
         let mut off = match index(self, prev) {
             Some(p) => field(&self.d, p, 16).max(8),
             None => 8,
         };
-        if off == 8 {
-            prev = 0; // no index, or one that cannot be read: everything is listed again
+        if off == 8 || self.wrong.get() {
+            (prev, off) = (0, 8); // no index, or one that cannot be read, or one that was found wrong (P9): everything is listed again
         }
         let mut ents: Vec<(H, usize)> = Vec::new();
         while off < at {

@@ -158,7 +158,7 @@
   },
   "printer": {
    "status": "provisional",
-   "note": "belong to the execution part; not part of the core reader test"
+   "note": "belong to the execution part; not part of the core reader test The three modules under `more` (a reserved name, globals of every type, an initial value of another type) were added on 2026-11-24 after an outside implementation found the author's printer wrong about the first two; the bytes of module-globals.ufx are assembled by hand in the generator, printed the same by the kernel, and accepted by a WebAssembly engine."
   },
   "instrumentation": {
    "status": "provisional",
@@ -174,11 +174,32 @@
   },
   "needs": {
    "status": "provisional",
-   "note": "the author's kernel, in Node and in three browser engines"
+   "note": "the author's kernel, in Node and in three browser engines The case of a feature at a version the reader has not (needs-version.ufx) was found by an outside implementation on 2026-11-24 and is the author's kernel only."
   },
   "seals": {
    "status": "provisional",
    "note": "generator and the author's kernel agree on the bytes signed; the signature is checked by Node's and by three browser engines' own Ed25519"
+  },
+  "offsets": {
+   "status": "reproduced",
+   "by": [
+    "the second independent reader, unmodified, on 2026-11-24: it finds no valid head in head-offset-wrapped.ufx and calls the file malformed, holding no universe; the author's kernel now does the same"
+   ],
+   "note": "found by an outside implementation of another model family, whose suite showed the author's kernel opening this file. A fuzzing pass (spike/envelope/fuzz.mjs) puts values that 32 bits cannot hold in every offset and count of seven packs"
+  },
+  "index_wrong": {
+   "status": "reproduced",
+   "by": [
+    "the second independent reader, unmodified, on 2026-11-24: it opens index-wrong.ufx at the same commit, reports the index wrong and rebuilt by scanning, and finds no record missing; the author's kernel now does the same"
+   ],
+   "note": "found by an outside implementation, whose suite showed the author's kernel presenting an empty text and reporting nothing"
+  },
+  "frame_inside_a_chunk": {
+   "status": "reproduced",
+   "by": [
+    "the second independent reader, unmodified, on 2026-11-24: it reports the index entry wrong and the revision of the text missing from the content layer, malformed storage; the author's kernel does the same"
+   ],
+   "note": "made by the author after the outside findings, to settle whether an offset may be followed into a frame's payload"
   }
  },
  "files": {

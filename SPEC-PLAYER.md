@@ -85,10 +85,10 @@ only forwarded each item to a host call would be an empty layer.
   compaction keep them.
 - **[K7] Every file opens with what it carries, or says what it lacks.**
   A universe states what it requires (`features`, §1.6). Where a reader
-  does not have something a universe requires — a component the file
-  does not carry, or one that does not verify against the hash that
-  names it, or one that cannot be used with this kernel — it attempts no
-  face. It shows one line of its own that names what is missing, and
+  does not have something a universe requires — a feature at a version
+  it does not have (**C8**), a component the file does not carry, or one
+  that does not verify against the hash that names it, or one that
+  cannot be used with this kernel — it attempts no face. It shows one line of its own that names what is missing, and
   then the plain-text face of the primary face's object (§8.3), which
   any reader can make of any universe. Nothing shown this way can be
   pressed, and nothing changes the file. A reader MUST NOT show an

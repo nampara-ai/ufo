@@ -159,7 +159,7 @@
    },
    "printer": {
     "status": "provisional",
-    "note": "belong to the execution part; not part of the core reader test"
+    "note": "belong to the execution part; not part of the core reader test The three modules under `more` (a reserved name, globals of every type, an initial value of another type) were added on 2026-11-24 after an outside implementation found the author's printer wrong about the first two; the bytes of module-globals.ufx are assembled by hand in the generator, printed the same by the kernel, and accepted by a WebAssembly engine."
    },
    "instrumentation": {
     "status": "provisional",
@@ -175,11 +175,32 @@
    },
    "needs": {
     "status": "provisional",
-    "note": "the author's kernel, in Node and in three browser engines"
+    "note": "the author's kernel, in Node and in three browser engines The case of a feature at a version the reader has not (needs-version.ufx) was found by an outside implementation on 2026-11-24 and is the author's kernel only."
    },
    "seals": {
     "status": "provisional",
     "note": "generator and the author's kernel agree on the bytes signed; the signature is checked by Node's and by three browser engines' own Ed25519"
+   },
+   "offsets": {
+    "status": "reproduced",
+    "by": [
+     "the second independent reader, unmodified, on 2026-11-24: it finds no valid head in head-offset-wrapped.ufx and calls the file malformed, holding no universe; the author's kernel now does the same"
+    ],
+    "note": "found by an outside implementation of another model family, whose suite showed the author's kernel opening this file. A fuzzing pass (spike/envelope/fuzz.mjs) puts values that 32 bits cannot hold in every offset and count of seven packs"
+   },
+   "index_wrong": {
+    "status": "reproduced",
+    "by": [
+     "the second independent reader, unmodified, on 2026-11-24: it opens index-wrong.ufx at the same commit, reports the index wrong and rebuilt by scanning, and finds no record missing; the author's kernel now does the same"
+    ],
+    "note": "found by an outside implementation, whose suite showed the author's kernel presenting an empty text and reporting nothing"
+   },
+   "frame_inside_a_chunk": {
+    "status": "reproduced",
+    "by": [
+     "the second independent reader, unmodified, on 2026-11-24: it reports the index entry wrong and the revision of the text missing from the content layer, malformed storage; the author's kernel does the same"
+    ],
+    "note": "made by the author after the outside findings, to settle whether an offset may be followed into a frame's payload"
    }
   },
   "files": {
@@ -224,6 +245,18 @@
    "provisional/undo.json": {
     "status": "provisional",
     "note": "the author's kernel wrote the pack. The second independent reader, unmodified, replayed the conservation of all seven commits of undone.ufx: every one ok"
+   },
+   "provisional/asset.json": {
+    "status": "provisional",
+    "note": "the author's kernel wrote the pack. The second independent reader, unmodified, replayed the conservation of all four commits of asset.ufx, among them one that makes an object (`new`) and one that retires one (`drop`): every one ok. It also found each file's bytes under one blob: 70008 bytes in nine parts and 61 bytes in one, each with the SHA-256 the vector states. What `object` gives for an asset, the kind told from content and name, and what the tools say are the author's kernel only"
+   },
+   "provisional/data.json": {
+    "status": "provisional",
+    "note": "the author's kernel made table.ufx's presentation and wrote table-edited.ufx. The second independent reader, unmodified, replayed the conservation of all five commits of table-edited.ufx: every one ok. It does not lay out a grid or work out formulas, so what is presented, what `number` gives and what the handlers propose are the author's kernel only, in Node and in three browser engines"
+   },
+   "provisional/containment.json": {
+    "status": "provisional",
+    "note": "the author's kernel only, in Node and in three browser engines: twenty-four attempts, each coming to what the rules require. No independent reader has composed this pack"
    }
   },
   "note": "Both readers are instances of the model that wrote the specification. Two of them agreeing does not make a vector confirmed: that needs an implementation from a different model family, or a person."
@@ -693,6 +726,34 @@
    "root_hash": "30cded7dec6abfc6f6227aa7fec2025a6164e1d7e8aac94a1ecc04ef926e06d3"
   }
  ],
+ "offsets": {
+  "file": "head-offset-wrapped.ufx",
+  "length": 2599,
+  "made_from": "minimal.ufx",
+  "what": "minimal.ufx with its one head changed: the commit offset is the true offset plus 2^32, and the head's check is made again over the changed bytes, so that the offset is the only thing wrong",
+  "true_offset": 2020,
+  "written_offset": 4294969316,
+  "a_reader": "finds no valid head: the offset lies outside the file. The file holds no universe and is reported as malformed (section 2.3). It is not opened",
+  "never": "the commit found where the low 32 bits of the offset point. Every offset in a pack is 64 bits wide, and is compared with the length of the file before it is used for anything",
+  "the_same_holds_for": [
+   "a head's index offset, previous-head offset and end offset",
+   "an index's previous-index offset and coverage offset",
+   "the offset of every index entry"
+  ]
+ },
+ "index_wrong": {
+  "file": "index-wrong.ufx",
+  "length": 2599,
+  "made_from": "minimal.ufx",
+  "root_hash": "804ec174f46f773d36c1fe7318c999ff21c338b735cb4e5068224725b9cce8bf",
+  "what": "minimal.ufx with one entry of its index changed: the entry for the revision of the text gives the offset of the revision of the face. Every record is still in the file, and the head is valid",
+  "entry_of": "63f351178907e790888b3c4b4ce8e3e087943d477cfe9ed51fb553f7e3ef0416",
+  "true_offset": 227,
+  "written_offset": 476,
+  "a_reader": "opens it at the same commit and presents the same text as minimal.ufx: the record at the offset the index gives does not have the hash asked for, so the reader finds the record by scanning the frames (P9). It reports that the index is wrong",
+  "text": "Hello, universe.",
+  "never": "the text shown as empty or missing, or the pack called malformed, because of the index; nor the record at the wrong offset taken for the one asked for"
+ },
  "minimal_pack": {
   "file": "minimal.ufx",
   "length": 2599,
@@ -1577,7 +1638,45 @@
    "types in order of first use; exports in the order of their keys in the encoded map (add, memory, sum_to)",
    "a bare name is local.get of a local or parameter, else global.get; a bare integer is i32.const",
    "the body of sum_to has one run of locals: one i32"
-  ]
+  ],
+  "more": {
+   "a_reserved_name": {
+    "file": "module-reserved.ufx",
+    "length": 3772,
+    "root_hash": "438daf036ced29292c7c0179f132eaa2535b0ff8cc91e35041456c98c89241b0",
+    "module": "e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0",
+    "module_properties_hex": "a46566756e637382d9d8a550adadadadadadadadadadadadadadadadd9d8a5505e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e666d656d6f7279a267696e697469616c01676d6178696d756d01676578706f727473a463616464d9d8a550adadadadadadadadadadadadadadadad666d656d6f7279666d656d6f72796673756d5f746fd9d8a5505e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e6875666f3a6675656cd9d8a550adadadadadadadadadadadadadadadad67676c6f62616c73a165746f74616ca364696e697400647479706563693332676d757461626c65f5",
+    "what": "module.ufx again, with one more export: the function `add` under the name `ufo:fuel`",
+    "a_reader": "does not print it: a described module exports and imports no name beginning `ufo:` (N1). The module is inconsistent (section 1.9), and is not run",
+    "never": "bytes of a module that exports the name; nor the name passed on to whatever would run the module"
+   },
+   "globals_of_every_type": {
+    "file": "module-globals.ufx",
+    "length": 3958,
+    "root_hash": "89a40c3152f681da79451b599929583583dfa860f463d62993ddfbe512093280",
+    "module": "e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0",
+    "module_properties_hex": "a46566756e637382d9d8a550adadadadadadadadadadadadadadadadd9d8a5505e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e666d656d6f7279a267696e697469616c01676d6178696d756d01676578706f727473a463616464d9d8a550adadadadadadadadadadadadadadadad65726174696fa166676c6f62616c65726174696f666d656d6f7279666d656d6f72796673756d5f746fd9d8a5505e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e67676c6f62616c73a463626967a364696e69741b0000010000000000647479706563693634676d757461626c65f46468616c66a364696e6974f93800647479706563663332676d757461626c65f565726174696fa364696e6974f93e00647479706563663634676d757461626c65f465746f74616ca364696e697400647479706563693332676d757461626c65f5",
+    "what": "module.ufx again, with four globals: `total` an i32, `ratio` an f64 of 1.5, `half` an f32 of 0.5, `big` an i64 of 2^40; `ratio` is exported",
+    "printed_hex": "0061736d01000000010c0260027f7f017f60017f017f03030200010504010101010624047e00428080808080200b7d01430000003f0b7c0044000000000000f83f0b7f0141000b07210403616464000005726174696f0302066d656d6f727902000673756d5f746f00010a31020700200020016a0b2701017f024003402000450d012001200010002101200041016b21000c000b0b2001240320010f0b",
+    "printed_length": 157,
+    "notes": [
+     "a global's initial value is a constant of its type: i32.const, i64.const, f32.const or f64.const",
+     "globals are in the order of their keys: big, half, ratio, total; so `total` is global 3, and sum_to sets global 3",
+     "exports in the order of their keys: add, ratio, memory, sum_to"
+    ],
+    "behaviour": "the bytes are a valid module; its exported global `ratio` is 1.5; sum_to(4) returns 10"
+   },
+   "an_initial_value_of_another_type": {
+    "file": "module-bad-global.ufx",
+    "length": 3718,
+    "root_hash": "f683f9085a32d427a3d56f2398d120e646a1abdf5e82bd0696ac32e6cb2c7537",
+    "module": "e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0",
+    "module_properties_hex": "a46566756e637382d9d8a550adadadadadadadadadadadadadadadadd9d8a5505e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e666d656d6f7279a267696e697469616c01676d6178696d756d01676578706f727473a363616464d9d8a550adadadadadadadadadadadadadadadad666d656d6f7279666d656d6f72796673756d5f746fd9d8a5505e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e67676c6f62616c73a165746f74616ca364696e6974f93e00647479706563693332676d757461626c65f5",
+    "what": "module.ufx again, its one global an i32 whose `init` is 1.5",
+    "a_reader": "does not print it: 1.5 is not a constant of type i32. The module is inconsistent",
+    "never": "bytes that are not a valid module"
+   }
+  }
  },
  "instrumentation": [
   {
@@ -1599,6 +1698,17 @@
    "behaviour": "spin(3) consumes 2 + 3*6 = 20; with ufo:fuel = 19 it traps out of fuel on entering the third iteration"
   }
  ],
+ "frame_inside_a_chunk": {
+  "file": "frame-inside-a-chunk.ufx",
+  "length": 3403,
+  "root_hash": "9ad4760a4ca891e421353df701e335baf2abe158d6622277c59588a35e525793",
+  "what": "one commit: a text, a face of it, and an asset. The asset's bytes, one chunk, hold within them the bytes of a node frame whose record is the text's revision. The index gives that place for the revision's hash. No frame of the pack holds the revision",
+  "revision_of_the_text": "f3bb988acd1e62409ff9596eb2fd0fb1b501ba8ed603609ecf997962391fb457",
+  "offset_the_index_gives": 63,
+  "which_is": "inside the payload of the chunk frame at offset 8",
+  "a_reader": "opens it at the commit. The revision of the text is not in the file: an offset names a frame only where a frame begins, as scanning from the signature finds frames. The text is live, so the record is missing from the content layer: malformed storage (P11), reported. The index entry leads to no such record, so the index is wrong, and that is reported too (P9). The text is not presented",
+  "never": "the text read from inside the chunk; nor the file presented as whole. A reader that uses the index and one that scans the frames find the same records"
+ },
  "digests": [
   {
    "pin": "the text of history.ufx at its last commit, the region from before element (c1, 0) to after element (c1, 6)",
@@ -2414,6 +2524,25 @@
    "shows": "one line of its own that names what is missing, then the plain-text face of the primary face's object",
    "plain_text_face": "A film, described.\n\nIts captions are text.\n",
    "never": "an empty or broken screen; a face composed in part; anything pressable that would change the file"
+  },
+  "a_feature_at_a_version_the_reader_has_not": {
+   "file": "needs-version.ufx",
+   "length": 3287,
+   "root_hash": "adad48105211bce50424e4bcd4b72e2b67378976d148919af05581d100da5bf1",
+   "what": "the same universe, requiring one feature: `ufo.text` at version 999. A reader that has `ufo.text` at version 1 does not have it at 999 (section 1.6, C8)",
+   "feature": {
+    "name": "ufo.text",
+    "v": 999,
+    "required": true,
+    "supported": false
+   },
+   "shows": "one line of its own that names the feature and the version, then the plain-text face",
+   "line_names": [
+    "ufo.text",
+    "999"
+   ],
+   "plain_text_face": "A film, described.\n\nIts captions are text.\n",
+   "never": "the face attempted as though the feature were had"
   },
   "the_same_requiring_ufo.code": {
    "file": "needs-code.ufx",

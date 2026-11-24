@@ -599,3 +599,46 @@ edit, as the owner allowed. By the sizes of those functions before
 optimisation, scaled by the base's ratio, that is about 2.8 KB. It is an
 estimate, not a measurement.
 
+
+## Five defects found from outside, fixed (2026-11-24)
+
+An outside implementation, of another model family, found five things this
+kernel did wrong. Each was confirmed against the kernel as it stood, by a
+vector that then differed, before anything was changed.
+
+| | Was | Now |
+| --- | --- | --- |
+| a. `ufo.text` required at version 999 | said to be supported; the face attempted | not supported (C8); the safeguard, naming the version |
+| b. A head whose commit offset is the true one plus 2³² | opened, at the low half | no valid head; not opened (P22) |
+| c. An index entry giving another record's offset | opened to an empty text; nothing said | the same text, found by going through the frames; the index said to be wrong (P9) |
+| d. A module exporting `ufo:fuel` | printed | not printed (N1) |
+| e. A global of type `f64` | printed with an `i32.const`: not a valid module | printed with a constant of its type; an `init` of another type is not printed |
+
+Beyond the five: a record of the content or attribution layer that is not
+in the file is now reported (P11), in `verify` and by the tools, where
+before the document was shown with a gap and nothing said. And an offset is
+followed only to where a frame begins: what lies inside a chunk is not a
+frame (P9, `frame-inside-a-chunk.ufx`). The independent reader, unmodified,
+agrees on b, on c and on that last.
+
+The fuzzing pass (`spike/envelope/fuzz.mjs`): 2 587 cases. Every offset and
+count of the heads and indexes of seven packs is given eight values that 32
+bits cannot hold, and must be treated as an offset just past the end of the
+file is; an index, whatever it says, must leave the state and the text as
+they were. Twelve reserved names and fourteen that only resemble them are
+exported as a function, the memory and a global. Run against the kernel as
+it was before the fixes, the pass fails 809 cases; against the kernel now,
+none.
+
+Cost: the whole kernel 132 940 by `size.mjs` (it was 130 805); the base
+127 291 after division (it was 125 533): 1 758 bytes, most of it keeping
+where every frame begins, the going through of the frames, and the report
+of what is missing.
+
+Not settled, for the owner: following an offset only to a frame's beginning
+needs the frame headers walked once at opening. This kernel holds the whole
+pack and does that anyway. A reader of a very large file over a network
+would rather not; P10 promises it a record in a few seeks. The rule is
+written as a MUST in P9 because two readers must find the same records;
+whether a reader that has not scanned may rely on an index until `verify`
+is run is a decision.

@@ -95,4 +95,30 @@ for (const [P, text] of [[V.published, 'a1'.repeat(16)], [V.published_timeline, 
 { const C = V.components, k = await open(C.file);
   check('components: listed for the kernel of that hash', k.listed(C.for).map(c => ({ role: c.role, sha256: c.sha256, length: c.bytes.length, bytes_hex: Buffer.from(c.bytes).toString('hex') })), C.listed);
   check('components: none for a kernel of another hash', k.listed('00'.repeat(32)), []); }
+// ---- found by an outside implementation (2026-11-24): five things this kernel did wrong ----
+{ const fresh = () => start(wasm, noMeasure, b => zlib.inflateRawSync(b)), hexOf = b => Buffer.from(b).toString('hex');
+  // (a) C8: a feature at a version this reader has not is a feature it lacks
+  { const N = V.needs.a_feature_at_a_version_the_reader_has_not, k = await open(N.file), f = rec(k, { name: 'expand' }).filter(r => r.is === 'feature'), nodes = flat(tree(k.sample({ as: 'list', w: 480 }).list));
+    check('version: the feature, as `expand` gives it', f.map(r => ({ name: r.name, v: r.v, required: r.required, supported: r.supported })), [N.feature]);
+    check('version: one line that names the feature and the version, then the plain-text face', [nodes[0].role, N.line_names.every(m => nodes[0].text.includes(m)), nodes.slice(1).filter(n => n.text).map(n => n.text).join('\n\n') + '\n'], ['status', true, N.plain_text_face]); }
+  // (b) 2.3: an offset outside the file is not narrowed to one inside it
+  { const k = await fresh(); check('offsets: a head whose commit offset is the true one plus 2^32 is not a valid head; the file is not opened', await k.open(new Uint8Array(bytes(V.offsets.file))), false); }
+  // (c) P9: a wrong index hides nothing, and is reported
+  { const I = V.index_wrong, k = await fresh(), opened = await k.open(new Uint8Array(bytes(I.file)));
+    check('index: opens at the same commit', [opened, opened && k.commits()[0].commit], [true, I.root_hash]);
+    check('index: the text is all there', opened && k.sample({ as: 'text' }).text.trim(), I.text);
+    check('index: and the index is reported wrong', opened && rec(k, { name: 'verify' }).filter(r => r.is === 'issue').map(r => r.rule), ['P9']);
+    const m = await open('minimal.ufx'); check('index: a pack whose index is right reports nothing', rec(m, { name: 'verify' }).filter(r => r.is === 'issue'), []); }
+  // P9, P11: what lies inside a frame is not a frame, whatever an index says
+  { const I = V.frame_inside_a_chunk, k = await fresh(), opened = await k.open(new Uint8Array(bytes(I.file)));
+    check('inside: opens at the commit', [opened, opened && k.commits()[0]?.commit], [true, I.root_hash]);
+    check('inside: the revision is missing, and said to be', opened && rec(k, { name: 'verify' }).filter(r => r.is === 'issue').map(r => [r.rule, bare(r.record)]), [['P11', I.revision_of_the_text], ['P9', 'index']]);
+    check('inside: the text is not read from inside the chunk', opened && (k.sample({ as: 'text' })?.text || '').includes('Hello'), false); }
+  // (d), (e) N1: the printer refuses a reserved name, and prints a constant of each global's type or nothing
+  { const M = V.printer.more, printed = async v => { const k = await open(v.file); return hexOf(k.print(Uint8Array.from(Buffer.from(v.module, 'hex')))); };
+    check('printer: an export named ufo:fuel is not printed', await printed(M.a_reserved_name), '');
+    const g = await printed(M.globals_of_every_type); check('printer: globals of every type', g, M.globals_of_every_type.printed_hex);
+    const valid = g && WebAssembly.validate(Buffer.from(g, 'hex')), inst = valid ? new WebAssembly.Instance(new WebAssembly.Module(Buffer.from(g, 'hex'))) : null;
+    check('printer: and those bytes are a valid module that behaves', [valid, inst && inst.exports.ratio.value, inst && inst.exports.sum_to(4)], [true, 1.5, 10]);
+    check('printer: an initial value of another type is not printed', await printed(M.an_initial_value_of_another_type), ''); } }
 console.log('agree', agree, 'differ', differ);

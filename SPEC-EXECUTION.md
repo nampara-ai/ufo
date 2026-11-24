@@ -313,7 +313,9 @@ axis `funcs`.
   that order.
 - An imported function is an entry of the import section: module name
   `ufo:host/1`, the field name its `import` gives, and its type.
-- A global's initial value is a constant of its type. A data segment is
+- A global's initial value is a constant of its type: `init` is an
+  integer for `i32` and `i64`, within the type's range, and a number for
+  `f32` and `f64`. A module with any other `init` does not print. A data segment is
   active, at offset `i32.const` *at*. A `table`, if present, is one table
   of function references of exactly the list's length, filled by one active
   element segment at offset 0.

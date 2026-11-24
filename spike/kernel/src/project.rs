@@ -593,7 +593,8 @@ fn expand_universe(cx: &mut Cx) -> Option<()> {
     seals(cx);
     if let Some(V::M(fs)) = u.p.get("features") {
         for (name, f) in fs {
-            let r = R::new("feature").f("name", w(name.as_str())).f("v", V::Int(f.get("v").and_then(|v| v.i()).unwrap_or(0))).f("required", V::Bool(f.get("required") == Some(&V::Bool(true)))).f("supported", V::Bool(supported(name)));
+            let v = f.get("v").and_then(|v| v.i()).unwrap_or(0);
+            let r = R::new("feature").f("name", w(name.as_str())).f("v", V::Int(v)).f("required", V::Bool(f.get("required") == Some(&V::Bool(true)))).f("supported", V::Bool(supported(name, v)));
             cx.push(r);
         }
     }
@@ -622,8 +623,9 @@ pub fn identity(pk: &Pack, spelled: &str) -> Option<Id> {
 }
 /// Whether this reader has what a feature names (1.6): the base has the text profile; described code needs
 /// the printer component beside it; nothing else is known here.
-pub fn supported(feature: &str) -> bool {
-    match feature {
+/// Whether this reader has a feature at a version (1.6, **C8**): each of those it has, it has at version 1.
+pub fn supported(feature: &str, v: i64) -> bool {
+    v == 1 && match feature {
         "ufo.text" => true,
         "ufo.code" => crate::held(crate::PRINTER),
         _ => false,
@@ -632,7 +634,10 @@ pub fn supported(feature: &str) -> bool {
 /// The features a universe requires that this reader does not have, by name: what is missing (9.1, K7).
 pub fn unmet(pk: &Pack) -> Vec<String> {
     match pk.object(&pk.head, &[0; 16]).and_then(|u| u.p.get("features").cloned()) {
-        Some(V::M(fs)) => fs.iter().filter(|(name, f)| f.get("required") == Some(&V::Bool(true)) && !supported(name)).map(|(name, _)| name.clone()).collect(),
+        Some(V::M(fs)) => fs.iter().filter_map(|(name, f)| {
+            let v = f.get("v").and_then(|v| v.i()).unwrap_or(0);
+            if f.get("required") != Some(&V::Bool(true)) || supported(name, v) { None } else if v == 1 { Some(name.clone()) } else { Some(cat!(name, " at version ", v)) }
+        }).collect(),
         _ => Vec::new(),
     }
 }
@@ -659,7 +664,18 @@ fn run<'a>(pk: &'a Pack, q: &V) -> Option<(Cx<'a>, String)> {
         ("leaving", _) => leaving(&mut cx, whole)?,
         ("why", Some(i)) => why(&mut cx, i, lo, hi)?,
         ("expand", None) => expand_universe(&mut cx)?,
-        ("verify", _) => seals(&mut cx), // 10.1, in part: the seals, each as the host found it
+        // 10.1, in part: the seals, each as the host found it; and what is wrong with the storage. A record of the
+        // content or attribution layer that is not here is malformed storage (P11); an index that hid a record is wrong (P9)
+        ("verify", _) => {
+            seals(&mut cx);
+            let issue = |record: V, rule: &str, s: &str| R::new("issue").f("class", w("malformed")).f("record", record).f("rule", w(rule)).f("s", t(s));
+            for h in crate::query::missing(pk) {
+                cx.push(issue(w(cat!("h:", hex(&h).get(..if cx.full { 64 } else { 8 }).unwrap_or(""))), "P11", "a record the document needs is not in the file"));
+            }
+            if pk.index_wrong() {
+                cx.push(issue(w("index"), "P9", "the index is wrong; the file was read by going through all of it"));
+            }
+        }
         #[cfg(not(feature = "cut-agent"))]
         ("text", Some(i)) if crate::held(AGENT) => text(&mut cx, i)?,
         #[cfg(not(feature = "cut-agent"))]

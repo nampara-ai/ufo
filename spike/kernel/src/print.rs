@@ -302,14 +302,28 @@ pub fn print(pk: &Pack, uni: &H, module: &Id) -> Option<Vec<u8>> {
     let mut gs = Vec::new();
     for (_, g) in globals {
         let ty = g.get("type")?.s()?;
+        // its initial value is a constant of its type, or the module is not printed
         let mut e = vec![vt(ty)?, (g.get("mutable") == Some(&V::Bool(true))) as u8];
-        let init = g.get("init").and_then(|i| i.i()).unwrap_or(0);
-        if ty == "i64" {
-            e.push(0x42);
-            sleb(&mut e, init);
-        } else {
-            e.push(0x41);
-            sleb(&mut e, init as i32 as i64);
+        let zero = V::Int(0);
+        let init = g.get("init").unwrap_or(&zero);
+        match (ty, init.i().filter(|_| matches!(init, V::Int(_)))) {
+            ("i64", Some(n)) => {
+                e.push(0x42);
+                sleb(&mut e, n);
+            }
+            ("i32", Some(n)) if (-(1i64 << 31)..1i64 << 32).contains(&n) => {
+                e.push(0x41);
+                sleb(&mut e, n as i32 as i64);
+            }
+            ("f32", _) => {
+                e.push(0x43);
+                e.extend((init.f()? as f32).to_le_bytes());
+            }
+            ("f64", _) => {
+                e.push(0x44);
+                e.extend(init.f()?.to_le_bytes());
+            }
+            _ => return None,
         }
         e.push(0x0b);
         gs.push(e);
@@ -319,6 +333,9 @@ pub fn print(pk: &Pack, uni: &H, module: &Id) -> Option<Vec<u8>> {
     if let Some(V::M(exports)) = m.p.get("exports") {
         // a map's entries are already in ascending order of name
         for (n, target) in exports {
+            if n.starts_with("ufo:") {
+                return None; // N1: the names the kernel keeps for itself are no module's to export
+            }
             let mut e = Vec::new();
             name(&mut e, n);
             if let Some(id) = target.tag(REF).and_then(|x| x.id()) {

@@ -859,7 +859,10 @@ fn present(rd: &mut Reader, own: Option<&Pack>, pk: &Pack, home: Option<H>) -> V
         (editable, through, shown) = (env.editable.get(), env.through.get(), env.left.get());
     } else {
         let mut cx = Ctx::new(pk, &crate::host, None);
-        let said = said_rows(&mut cx, "This file carries no tools, and this reader has none of its own. The document is shown to be read; it cannot be changed or saved from here.", rd.w - 32.0, "status");
+        // with no tools to say it, the reader says it: what is wrong with the file itself (P9, P11) is never passed over
+        let damaged = !crate::query::missing(pk).is_empty() || pk.index_wrong();
+        let said = said_rows(&mut cx, &cat!("This file carries no tools, and this reader has none of its own. The document is shown to be read; it cannot be changed or saved from here.",
+            if damaged { " This file is damaged: what could be read of it is shown." } else { "" }), rd.w - 32.0, "status");
         high[0] = stack(&said, 16.0, 10.0, &mut lists[0]) + 10.0;
         let rows = primary(pk, &pk.head).map(|id| compose(&mut cx, &pk.head, &id, rd.w - 48.0)).unwrap_or_default();
         high[1] = stack(&rows, 24.0, 24.0, &mut lists[1]) + 24.0;

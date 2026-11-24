@@ -172,7 +172,8 @@ export function tools(compress = true) {
   const choice = [['For people working on this', { set: 'share', to: true }, { current: share }, share], ['For readers', { set: 'share', to: false }, { current: not(share) }, not(share)]];
   // Save: the export, with the choice made and the name; then, if it was not refused, what the status is to say of it, and the panel closes
   const save = [{ act: 'export', universe: S, history: share, name: saveAs, into: 'out' }, { set: 'outshare', to: share }, { set: 'n', to: plus(count, 1) }, { set: 'fresh', to: iff(share, false, st('fresh')) }, { set: 'panel', to: null }];
-  // the seals (TRAVEL 14.2): what checking each signature found, in words; a seal that was not or could not be checked is never said to be good
+  // the seals (TRAVEL 14.2): what checking each signature found, in words; a seal that was not or could not be checked is never said to be good.
+  // And what `verify` found wrong with the file itself (SPEC P9, P11): said in the same place, never passed over
   const z = f('arg', 'z'), signer = iff(is(get(z, 'name'), ''), 'a key that gives no name', get(z, 'name'));
   const sealLine = iff(is(get(z, 'status'), 'valid'), join('Sealed by ', signer, ' at state ', get(z, 'commit'), ': the signature is good.', iff(is(get(z, 'behind'), 0), ' Nothing has changed since.', ' The file has changed since.')),
     iff(is(get(z, 'status'), 'invalid'), join('A seal in the name of ', signer, ' is here, and its signature is NOT good. Do not rely on it.'), join('A seal in the name of ', signer, ' is here. This reader could not check it.')));
@@ -203,8 +204,8 @@ export function tools(compress = true) {
     [XT, 'ufo.text', { ...tBar, margin: [F(10), F(16), F(8), F(16)] }],
     [XS, 'ufo.group', { role: 'status', label: 'State', each: status, as: 'line', children: [ref(XL)], margin: side }],
     [XL, ...line()],
-    [XZ, 'ufo.group', { role: 'status', label: 'Seals', each: f('ask', 'verify', S), as: 'z', children: [ref(XI)], margin: side }],
-    [XI, 'ufo.portal', { of: sealLine }],
+    [XZ, 'ufo.group', { role: 'status', label: 'Seals, and damage', each: f('ask', 'verify', S), as: 'z', children: [ref(XI)], margin: side }],
+    [XI, 'ufo.portal', { of: iff(is(get(z, 'is'), 'issue'), join('This file is damaged: ', get(z, 's'), '.'), sealLine) }],
     // who is making the changes: a value of the presentation state, shown while editing is on, which takes text entry (7.6)
     [XN, 'ufo.group', { visible: f('or', editing, reviewing), each: list(st('who')), as: 'who', children: [ref(XW)], margin: side }],
     [XW, 'ufo.portal', { of: f('arg', 'who'), role: 'input', label: 'Your name, to record with the changes you make', editable: true, on: { change: { set: 'who', to: iff(is(f('arg', 'text'), ''), null, f('arg', 'text')) } } }],

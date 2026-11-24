@@ -1,0 +1,79 @@
+{
+ "cases": 2587,
+ "failed": 0,
+ "offsets": {
+  "minimal.ufx": {
+   "fields": 16,
+   "tried": 16,
+   "cases": 143
+  },
+  "compose.ufx": {
+   "fields": 17,
+   "tried": 17,
+   "cases": 152
+  },
+  "history.ufx": {
+   "fields": 160,
+   "tried": 69,
+   "cases": 608
+  },
+  "undone.ufx": {
+   "fields": 185,
+   "tried": 84,
+   "cases": 731
+  },
+  "table-edited.ufx": {
+   "fields": 123,
+   "tried": 65,
+   "cases": 568
+  },
+  "needs.ufx": {
+   "fields": 17,
+   "tried": 17,
+   "cases": 152
+  },
+  "module.ufx": {
+   "fields": 17,
+   "tried": 17,
+   "cases": 152
+  }
+ },
+ "names": {
+  "refused": [
+   "ufo:fuel",
+   "ufo:memory",
+   "ufo:table",
+   "ufo:global:0",
+   "ufo:global:1",
+   "ufo:",
+   "ufo:x",
+   "ufo:host/1",
+   "ufo:fuel ",
+   "ufo::",
+   "ufo:é",
+   "ufo:FUEL"
+  ],
+  "printed": [
+   "ufo",
+   "ufo_fuel",
+   "UFO:fuel",
+   "Ufo:fuel",
+   "xufo:fuel",
+   " ufo:fuel",
+   "fuel",
+   "u",
+   "ufo;fuel",
+   "ufo/fuel",
+   "uf:o",
+   "ｕfo:fuel",
+   "ufo​:fuel",
+   "add"
+  ],
+  "as": [
+   "function",
+   "memory",
+   "global"
+  ]
+ },
+ "failures": []
+}
