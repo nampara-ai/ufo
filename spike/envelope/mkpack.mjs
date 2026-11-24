@@ -73,14 +73,17 @@ export class Pack {
   // frame by frame, taking each hash from this index and reading nothing (write.rs, `set` with a pack)
   carried() { const ents = [...this.off].sort((a, b) => (a[0] < b[0] ? -1 : 1)), at = this.b.length, u64 = n => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(n)); return b; };
     return cat(this.b, frame(4, cat(u64(ents.length), u64(0), u64(at), ...ents.flatMap(([h, o]) => [Buffer.from(h, 'hex'), u64(o)])))); }
+  // 1.5: up to 32 entries in one node; more are divided by the next byte of the identity
+  objectMap(entries, depth = 0) { if (entries.length <= 32) return this.node({ k: 'map', e: entries });
+    const kids = {}; for (const e of entries) (kids[e[0][depth].toString(16).padStart(2, '0')] ||= []).push(e);
+    return this.node({ k: 'map', c: Object.fromEntries(Object.entries(kids).map(([b, es]) => [b, this.objectMap(es, depth + 1)])) }); }
   revision(id, type, by, p, seq) { const n = { k: 'obj', id, type, rev: 1, by, salt: this.salt(), p }; if (seq) n.seq = seq; return this.node(n); }
   // One commit, the first: `objects` is [[id, type, properties, seq]], `ops` the operations that make them (1.7).
   genesis(change, objects, ops, pub) {
     const state = objects.map(([id, type, p, seq]) => [id, this.revision(id, type, change, p, seq)]);
     const hC = this.revision(change, 'ufo.change', change, { ...pub, work: this.veiled({ ops }) });
     state.push([change, hC]); state.sort((a, b) => Buffer.compare(a[0], b[0]));
-    if (state.length > 32) throw Error('an object map of more than one node: not written by this script');
-    const hM = this.node({ k: 'map', e: state });
+    const hM = this.objectMap(state);
     const hK = this.put(2, enc({ k: 'commit', v: 1, parents: [], objects: hM, change: hC, height: 0 }), true);
     // 2.4: the index, every record by hash; 2.3: the head
     const ents = [...this.off].sort((a, b) => (a[0] < b[0] ? -1 : 1)), at = this.b.length, u64 = n => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(n)); return b; };
@@ -111,7 +114,7 @@ export function tools(compress = true) {
   const S = f('arg', 'subject'), editing = is(st('editing'), true), named = not(is(st('who'), null)), share = is(st('share'), true), saving = is(st('panel'), 'save'), reviewing = is(st('panel'), 'changes'), lit = on => iff(on, 'underline', 'none');
   // what the kernel's projections say of the subject: `expand` of the whole, the changes newest first, and what a copy would carry
   // Each is asked once and named (`let`, 7.3), and read where it is wanted by its name.
-  const named1 = n => f('arg', n), ov = named1('ov'), last = nth(f('ask', 'history', S), 0), leaving = f('ask', 'leaving', S, { history: share }), [content, credit, history, lacks] = ['content', 'credit', 'history', 'lacks'].map(named1);
+  const named1 = n => f('arg', n), ov = named1('ov'), last = nth(f('ask', 'history', S, { count: 1 }), 0), leaving = f('ask', 'leaving', S, { history: share }), [content, credit, history, lacks] = ['content', 'credit', 'history', 'lacks'].map(named1);
   // The name of a saved file: the name of this one without its ending, then a mark for the kind of copy, then a number if a copy was
   // already saved from here; a name that has the mark already takes a number. (No operator of 7.3 finds a text in a text or reads a
   // number from one, so "-edited-2" cannot be counted on from: it becomes "-edited-2-edited".)
@@ -185,10 +188,13 @@ export function tools(compress = true) {
   const c = f('arg', 'c'), decide = verdict => [{ act: 'decide', about: get(c, 'id'), verdict, who: st('who'), into: 'decided' }, { set: 'fresh', to: true }];
   const row = iff(is(get(c, 'id'), 'withheld'), 'A change whose record was withheld from this copy.',
     join(get(c, 'actor'), ', ', when(get(c, 'time')), ' UTC, change ', get(c, 'id'), ': ', iff(is(get(c, 'verdict'), 'none'), 'not decided.', join(get(c, 'verdict'), 'ed by ', get(c, 'decided-by'), '.'))));
-  const tChanges = { chars: 'Changes, newest first', spans: { b0: { ...block(XY, XC, next), weight: 700 } }, size: F(15), font: ['sans-serif'] }; next += tChanges.chars.length;
   const tDecide = bar(XD, [['Accept', decide('accept'), {}], ['Reject', decide('reject'), {}]]);
   // undo (PLAYER 9.6): the newest change of the person named that is not undone yet
-  const tUndo = bar(XK, [['Undo my last change', [{ act: 'undo', who: st('who'), into: 'undone' }, { set: 'fresh', to: true }], {}]]);
+  // a long history is asked for in parts (PRESENTATION F2: what a formula works out is bounded): twenty changes at a time, newest first
+  const PAGE = 20, from = iff(is(st('from'), null), 0, st('from')), shownChanges = f('ask', 'history', S, { first: from, count: PAGE });
+  const pageLine = f('let', 'n', len(shownChanges), iff(is(named1('n'), 0), 'Changes: there are no older ones.', join('Changes ', num(plus(from, 1)), ' to ', num(plus(from, named1('n'))), ', counting from the newest')));
+  const tUndo = bar(XK, [['Undo my last change', [{ act: 'undo', who: st('who'), into: 'undone' }, { set: 'fresh', to: true }, { set: 'from', to: 0 }], {}],
+    ['Older changes', { set: 'from', to: iff(is(len(shownChanges), PAGE), plus(from, PAGE), from) }, {}], ['Newer changes', { set: 'from', to: iff(is(from, 0), 0, plus(from, -PAGE)) }, {}]]);
   // adding a file (SPEC 5.2): the reader asks the person for one, and takes it in as an asset, by the person named
   const tAdd = bar(XU, [['Add a file', [{ act: 'import', who: st('who'), into: 'added' }, { set: 'fresh', to: true }], {}]]);
   // what the document itself asks for (PRESENTATION 7.6 **F10**): a handler in the file proposed a change. Nothing is written until the
@@ -216,8 +222,8 @@ export function tools(compress = true) {
     [XO, 'ufo.text', tChoice],
     [XB, 'ufo.text', tSave],
     [XA, 'ufo.group', { visible: reviewing, role: 'region', label: 'Changes', lang: 'en', children: [ref(XY), ref(XK), ref(XQ)], margin: side }],
-    [XY, 'ufo.text', tChanges],
-    [XQ, 'ufo.group', { each: f('ask', 'history', S), as: 'c', children: [ref(XJ), ref(XD)] }],
+    [XY, 'ufo.portal', { of: pageLine, role: 'heading', level: 2 }],
+    [XQ, 'ufo.group', { each: shownChanges, as: 'c', children: [ref(XJ), ref(XD)] }],
     [XJ, 'ufo.portal', { of: row }],
     [XD, 'ufo.text', tDecide],
     [XK, 'ufo.text', tUndo],

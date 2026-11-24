@@ -121,4 +121,9 @@ for (const [P, text] of [[V.published, 'a1'.repeat(16)], [V.published_timeline, 
     const valid = g && WebAssembly.validate(Buffer.from(g, 'hex')), inst = valid ? new WebAssembly.Instance(new WebAssembly.Module(Buffer.from(g, 'hex'))) : null;
     check('printer: and those bytes are a valid module that behaves', [valid, inst && inst.exports.ratio.value, inst && inst.exports.sum_to(4)], [true, 1.5, 10]);
     check('printer: an initial value of another type is not printed', await printed(M.an_initial_value_of_another_type), ''); } }
+// ---- `history` in parts (PLAYER 10.1): `count` of them after the `first` newest, the same records as the whole gives ----
+{ const k = await open('undone.ufx'), all = rec(k, { name: 'history' }).filter(r => r.is === 'change'), part = (first, count) => rec(k, { name: 'history', first, count }).filter(r => r.is === 'change');
+  check('history in parts: seven changes in all', all.length, 7);
+  for (const [first, count] of [[0, 1], [2, 3], [5, 20], [7, 5], [0, 0]]) check(`history in parts: ${count} after the ${first} newest`, part(first, count), all.slice(first, first + count));
+  check('history in parts: with no count, all of them, whatever `first` says', rec(k, { name: 'history', first: 3 }).filter(r => r.is === 'change'), all); }
 console.log('agree', agree, 'differ', differ);

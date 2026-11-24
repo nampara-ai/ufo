@@ -858,7 +858,7 @@ passed back, exactly as written, as an argument to another projection.
 | `object` | object identity | `object`; `prop`*; `run`*; `referrer`* |
 | `text` | anchor | `text` |
 | `search` | query | `hit`* |
-| `history` | anchor | `change`* newest first |
+| `history` | anchor; optionally `count`, and `first` | `change`* newest first; with `count`, at most that many of them, after the `first` newest (0 if not given): a long history is asked for in parts |
 | `why` | anchor | `region`; then for each part of it: `run` or `value`; `copied`*; `finding`*; `evidence`*; `decision`?; and of a derived object `source`*; `made` |
 | `diff` | two commits or revisions | `op`* |
 | `expand` | anchor, or none | `part`*; before them, with no anchor: `universe`; `seal`*; `feature`*; `component`*; `face`*; `lacks`? |

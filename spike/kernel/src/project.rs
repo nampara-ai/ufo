@@ -660,7 +660,14 @@ fn run<'a>(pk: &'a Pack, q: &V) -> Option<(Cx<'a>, String)> {
         if let (Some(a), Some(b)) = (lo, hi) { put!(args; "/", q.get("axis").and_then(|a| a.s()).unwrap_or("chars"), "=[", a, ",", b, "]"); }
     }
     match (name, &id) {
-        ("history", i) => history(&mut cx, i.as_ref())?,
+        ("history", i) => {
+            history(&mut cx, i.as_ref())?;
+            // in parts: with `count`, at most that many of them, after the `first` newest
+            if let Some(n) = q.get("count").and_then(|n| n.i()) {
+                let from = (q.get("first").and_then(|n| n.i()).unwrap_or(0).max(0) as usize).min(cx.recs.len());
+                cx.recs = cx.recs[from..(from + n.max(0) as usize).min(cx.recs.len())].to_vec();
+            }
+        }
         ("leaving", _) => leaving(&mut cx, whole)?,
         ("why", Some(i)) => why(&mut cx, i, lo, hi)?,
         ("expand", None) => expand_universe(&mut cx)?,

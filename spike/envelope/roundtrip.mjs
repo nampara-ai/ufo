@@ -528,4 +528,12 @@ fs.writeFileSync(out('edited.ufx'), before);
     after: { file: 'table-edited.ufx', length: now.length, sha256: sha(now), root_hash: t.head().commit, rows: data, history: hist(), origin_of_the_first: og },
     refused: [{ what: 'applying a proposal while the document is not open for changes', says: 'the document is not open for changes, or nothing was proposed', written: 'nothing' }] }, null, 1) + '\n');
   say('table:', JSON.stringify({ changes: t.head().height, pack: now.length, rows: data.slice(0, 160) })); }
+// ---- a long history, in parts: the Changes panel shows twenty at a time (PRESENTATION F2: what the tools ask for is bounded too) ----
+{ const r = await reader({ parts, name: 'compose.ufx.html', who: 'Many Hands', seed: 57 }); r.press('Edit');
+  for (let i = 0; i < 24; i++) edit(r, 'Revenue grew', s => s.replace(/quarter\d*/, 'quarter' + i));
+  r.press('Changes'); const rows = () => r.nodes(0).filter(n => n.role === 'paragraph' && /, change o:/.test(n.text)).length, head = () => r.nodes(0).find(n => /^Changes[ :]\S/.test(n.text || ''))?.text;
+  assert.strictEqual(r.head().height, 24); assert.strictEqual(rows(), 20, 'the first part: ' + rows()); assert.strictEqual(head(), 'Changes 1 to 20, counting from the newest');
+  r.press('Older changes'); assert.strictEqual(rows(), 5); assert.strictEqual(head(), 'Changes 21 to 25, counting from the newest'); r.press('Older changes'); assert.strictEqual(head(), 'Changes 21 to 25, counting from the newest', 'past the oldest');
+  r.press('Newer changes'); assert.strictEqual(rows(), 20); r.press('Newer changes'); assert.strictEqual(head(), 'Changes 1 to 20, counting from the newest');
+  say('\na history of 25 changes: shown twenty at a time, then five'); }
 say('\nOK');
