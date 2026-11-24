@@ -187,7 +187,11 @@ export function tools(compress = true) {
   // on one records a decision by the person named, about the change of its own line: `each` binds the line's record as `c`
   const c = f('arg', 'c'), decide = verdict => [{ act: 'decide', about: get(c, 'id'), verdict, who: st('who'), into: 'decided' }, { set: 'fresh', to: true }];
   const row = iff(is(get(c, 'id'), 'withheld'), 'A change whose record was withheld from this copy.',
-    join(get(c, 'actor'), ', ', when(get(c, 'time')), ' UTC, change ', get(c, 'id'), ': ', iff(is(get(c, 'verdict'), 'none'), 'not decided.', join(get(c, 'verdict'), 'ed by ', get(c, 'decided-by'), '.'))));
+    // who made it, as its origin says (SPEC 5.4): a model's or a tool's work is said to be, whoever asked for it; and a change given as
+    // a person's that was entered in bulk is said to have been, with what (R10)
+    join(get(c, 'actor'), ', ', when(get(c, 'time')), ' UTC, change ', get(c, 'id'),
+      iff(is(get(c, 'by'), 'model'), ', written by a model', iff(is(get(c, 'by'), 'tool'), ', made by a tool', iff(is(get(c, 'bulk'), ''), '', join(', entered in one change with ', get(c, 'bulk'))))),
+      ': ', iff(is(get(c, 'verdict'), 'none'), 'not decided.', join(get(c, 'verdict'), 'ed by ', get(c, 'decided-by'), '.'))));
   const tDecide = bar(XD, [['Accept', decide('accept'), {}], ['Reject', decide('reject'), {}]]);
   // undo (PLAYER 9.6): the newest change of the person named that is not undone yet
   // a long history is asked for in parts (PRESENTATION F2: what a formula works out is bounded): twenty changes at a time, newest first

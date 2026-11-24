@@ -1558,6 +1558,33 @@ latest.
   written by a person. For an inferred origin the reader MUST make the
   method and confidence available.
 
+- **[R10] Software says its own part, and no more.** A change's `actor`
+  says on whose authority it was committed (`who`) and what software
+  committed it (`with`): every change names that software. Its `origin`
+  says who or what composed what the change introduces, and `witnessed`
+  means that the software which committed the change saw that happen.
+  So a change is `by: person` only where that software took the content
+  from the person's own input as they gave it: text they entered, a
+  choice they pressed, a file they chose. Where the software composed
+  the content itself, by a process that would do the same again — a
+  template, a conversion, a build step that carries in a component — it
+  is `by: tool`, with `tool` naming it and `asked` the person. Where a
+  model generated it, it is `by: model`, with the model's identifier and
+  `asked`, and `prompt` and `context` where they are held. Where the
+  software was handed content and did not see who made it, the basis is
+  `unknown`. Asking for content is not composing it: software MUST NOT
+  record as a person's what the person only asked for, or only
+  approved. Content of several makers is introduced by several changes.
+
+  A reader cannot tell from a file whether software kept this rule. One
+  sign it can see: a change said to be a person's that makes more than
+  one object, or enters more than 2 000 scalar values of text, in one
+  change. A reader MAY say of such a change that it was entered in one
+  change, and with what software (`history` gives it as `bulk`). That
+  is a fact about how the content arrived, shown as one; it changes no
+  origin (**R1**), and accuses nobody: a person may paste what they
+  wrote.
+
 A witnessed origin is still a statement by the change's actor: software
 reporting its own part in an act. Whether to believe the actor is the
 business of seals (§14.2), and a reader shows, beside any origin, whether
@@ -2064,6 +2091,8 @@ decision, and adds an object whose sources are two pins made then. The file ends
 | `published_timeline`, `published_nested` | the content and attribution layers of `timeline.ufx` and `nested.ufx`, and what a reader of each published copy finds: a commit whose change is withheld; who wrote the nested text |
 | `nested` | for the two files above: the commit the anchor names, the Portal's `of` as bytes, which records are reachable only through the anchor, how a reader classifies each file, and the plain-text face of each (§8.3) |
 | `printer` | the described module of `module.ufx` — a function with operands folded, a function with a loop, a call, a global and named locals, three exports and a memory — as encoded values, and the 119 bytes the printer makes of it. Under `more`, three more: `module-reserved.ufx`, which exports a name beginning `ufo:` and is not printed (**N1**); `module-globals.ufx`, with a global of each type, and the bytes printed; `module-bad-global.ufx`, whose `i32` global has an `init` of 1.5 and is not printed |
+| `authored` | `authored.ufx`: one document made through an authoring tool for one person in four changes: the tool's template, the person's typing, a model's sentence with its prompt, and the person's correction of one word of it. Who or what wrote each character, as `why` gives it (§5.4 **R10**) |
+| `interop` | `interop/ufo-living-capsule.ufx`, kept as it was received: the first pack from another implementation's own writer. Its commit, the 335 bytes its described module prints to and what its five functions return, and the one change of it that a reader may say was entered in bulk |
 | `offsets` | `head-offset-wrapped.ufx`: minimal.ufx with its head's commit offset written as the true offset plus 2³², and the head's check made again. No valid head: the file holds no universe (§2.3, **P22**) |
 | `index_wrong` | `index-wrong.ufx`: minimal.ufx with one index entry giving another record's offset. It opens at the same commit with the same text, and the index is reported wrong (**P9**) |
 | `frame_inside_a_chunk` | `frame-inside-a-chunk.ufx`: the index gives, for the revision of a live text, an offset inside the payload of a chunk, where the bytes of such a frame lie. The revision is not in the file: malformed storage (**P9**, **P11**) |

@@ -411,7 +411,8 @@ pub unsafe extern "C" fn block_at(p: *mut u8, n: usize) -> *const u8 {
 }
 /// One change through the gate: `{commit, change, root}`, or `{refused: reason}`. Either `{o, lo, hi, ins, who,
 /// time, random}`, an edit of a text by positions; or `{o, key, val, with, who, time, random}`, a `set` of what
-/// lies at the path `key` of an object's properties, `with` being a pack to nest in this one by the same commit.
+/// lies at the path `key` of an object's properties, `with` being a pack to nest in this one by the same commit, and
+/// `tool` the name of the software whose own work this is, done at the asking of `who` (5.4 **R10**).
 #[no_mangle]
 pub unsafe extern "C" fn propose(p: *mut u8, n: usize) -> *const u8 {
     let q = taken(p, n);
@@ -419,7 +420,7 @@ pub unsafe extern "C" fn propose(p: *mut u8, n: usize) -> *const u8 {
         Some(pk) if q.get("key").is_none() => write::propose(pk, &q),
         Some(pk) => match (q.get("o").and_then(|x| x.id()), q.get("key"), q.get("who").and_then(|x| x.s()), q.get("time").and_then(|x| x.i()), q.get("random").and_then(|x| x.b())) {
             (Some(o), Some(key), Some(who), Some(time), Some(random)) if held(FORMULAS) => write::stated(pk, &o, key.l(), q.get("val")).ok_or("no such object in the current state (L4)")
-                .and_then(|op| write::submit(pk, &[op], q.get("with").and_then(|w| w.b()).unwrap_or(&[]), None, None, who, time as u64, random)),
+                .and_then(|op| write::submit(pk, &[op], q.get("with").and_then(|w| w.b()).unwrap_or(&[]), q.get("tool").and_then(|n| n.s()).map(write::Via::Tool), None, who, time as u64, random)),
             _ => Err("arguments: o (16 bytes), key (a list of texts), who (text), time, random (64 bytes)"),
         },
         None => Err("no pack is open"),

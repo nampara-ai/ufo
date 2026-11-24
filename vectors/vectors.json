@@ -201,6 +201,17 @@
      "the second independent reader, unmodified, on 2026-11-24: it reports the index entry wrong and the revision of the text missing from the content layer, malformed storage; the author's kernel does the same"
     ],
     "note": "made by the author after the outside findings, to settle whether an offset may be followed into a frame's payload"
+   },
+   "authored": {
+    "status": "provisional",
+    "note": "the generator states who wrote each character; the author's kernel gives the same through `why`. The second independent reader, unmodified, replays the conservation of all four commits: every one ok. No independent reader has been asked who wrote each character of this pack"
+   },
+   "interop": {
+    "status": "reproduced",
+    "by": [
+     "the second independent reader, unmodified, on 2026-11-24: it opens the file at the same commit, verifies all 70 records by hash, replays the conservation of all four commits, the first written by the other implementation's own writer, and reports nothing; the author's kernel opens it, reports nothing, and prints its module to the 335 bytes stated, which a WebAssembly engine accepts and whose five functions return what is stated"
+    ],
+    "note": "the file was written by another implementation, of another model family, and is kept as received. What was reproduced is this project's two readers reading another writer's file; the other direction, that implementation reading this project's files, is its own suite's to say"
    }
   },
   "files": {
@@ -2631,5 +2642,256 @@
   "length": 3919,
   "root_hash": "2d8445f69d4794764fa9b016c8c3eda488b813c042aac676953e5e61de3716b0",
   "what": "a minimal tools universe: one line of five words, each under a span whose `on.press` handler sets presentation state (which face; whether editing) or acts (export). It names no universe: a reader presents it with the universe being worked on as its subject"
+ },
+ "authored": {
+  "file": "authored.ufx",
+  "length": 9750,
+  "root_hash": "a7087a0f0a3ab23ca2f94e831bf70ab3485aeb22073f02b07a41019561bbc49e",
+  "text": "61616161616161616161616161616161",
+  "prompt": "63636363636363636363636363636363",
+  "what": "one document made through an authoring tool for one person, in four changes. Every change's `actor` is that person with that tool: `actor.who` says on whose authority, `actor.with` what software committed. The `origin` of each says who or what composed what the change introduced",
+  "changes": [
+   {
+    "change": "64646464646464646464646464646464",
+    "did": "the tool laid down its template: a universe, a face, a text holding a title",
+    "by": "tool",
+    "origin": {
+     "map": [
+      [
+       "basis",
+       "witnessed"
+      ],
+      [
+       "by",
+       "tool"
+      ],
+      [
+       "tool",
+       {
+        "map": [
+         [
+          "name",
+          "example-writer"
+         ],
+         [
+          "version",
+          "1.0"
+         ]
+        ]
+       }
+      ],
+      [
+       "asked",
+       {
+        "map": [
+         [
+          "name",
+          "Test Author"
+         ]
+        ]
+       }
+      ]
+     ]
+    }
+   },
+   {
+    "change": "65656565656565656565656565656565",
+    "did": "the person typed a sentence into the document, and a prompt into a text of its own",
+    "by": "person",
+    "origin": {
+     "map": [
+      [
+       "basis",
+       "witnessed"
+      ],
+      [
+       "by",
+       "person"
+      ],
+      [
+       "who",
+       {
+        "map": [
+         [
+          "name",
+          "Test Author"
+         ]
+        ]
+       }
+      ]
+     ]
+    }
+   },
+   {
+    "change": "66666666666666666666666666666666",
+    "did": "a model wrote the next sentence, at the person's asking through the tool",
+    "by": "model",
+    "origin": {
+     "map": [
+      [
+       "basis",
+       "witnessed"
+      ],
+      [
+       "by",
+       "model"
+      ],
+      [
+       "model",
+       "example-model-1"
+      ],
+      [
+       "asked",
+       {
+        "map": [
+         [
+          "name",
+          "Test Author"
+         ]
+        ]
+       }
+      ],
+      [
+       "prompt",
+       {
+        "tag": "ref",
+        "of": {
+         "bytes_hex": "63636363636363636363636363636363"
+        }
+       }
+      ]
+     ]
+    }
+   },
+   {
+    "change": "67676767676767676767676767676767",
+    "did": "the person replaced one word of the model's sentence",
+    "by": "person",
+    "origin": {
+     "map": [
+      [
+       "basis",
+       "witnessed"
+      ],
+      [
+       "by",
+       "person"
+      ],
+      [
+       "who",
+       {
+        "map": [
+         [
+          "name",
+          "Test Author"
+         ]
+        ]
+       }
+      ]
+     ]
+    }
+   }
+  ],
+  "characters": "Quarterly noteWe met our target. Revenue grew by a fifth over the quarter.",
+  "who_wrote_each_character": [
+   {
+    "from": 0,
+    "to": 14,
+    "change": "64646464646464646464646464646464",
+    "by": "tool",
+    "tool": "example-writer",
+    "asked": "Test Author"
+   },
+   {
+    "from": 14,
+    "to": 32,
+    "change": "65656565656565656565656565656565",
+    "by": "person",
+    "who": "Test Author"
+   },
+   {
+    "from": 32,
+    "to": 51,
+    "change": "66666666666666666666666666666666",
+    "by": "model",
+    "model": "example-model-1",
+    "asked": "Test Author"
+   },
+   {
+    "from": 51,
+    "to": 56,
+    "change": "67676767676767676767676767676767",
+    "by": "person",
+    "who": "Test Author"
+   },
+   {
+    "from": 56,
+    "to": 74,
+    "change": "66666666666666666666666666666666",
+    "by": "model",
+    "model": "example-model-1",
+    "asked": "Test Author"
+   }
+  ],
+  "entered_in_bulk": "no change here is a person's and entered in bulk: the template is the tool's and says so, and what is the person's is what they typed",
+  "never": "the template or the model's sentence given as the person's, because the person asked for them and the tool committed in their name"
+ },
+ "interop": {
+  "file": "interop/ufo-living-capsule.ufx",
+  "length": 36409,
+  "sha256_of_file": "1978433ab61940119472e0805a1b63d210ce147f523afe8ec22f479dc4dfb24b",
+  "what": "a pack whose first commit was written by another implementation's own pack writer (it names itself `ufo-studio` 0.8), from this specification; its three later commits nest a tools universe and two components, and were written by this project's kernel at that implementation's asking. Kept byte for byte as it was received",
+  "root_hash": "10ce7a8d5a38307cf8f4405870415823157a5b2cdf259469de1d75e17b4df32e",
+  "commits": 4,
+  "objects": 14,
+  "first_commit_operations": 48,
+  "a_reader": "opens it at that commit; finds every record by its hash; replays the conservation of all four commits; reports nothing malformed, inconsistent or missing",
+  "module": "the object its universe names under `roots.code`: five functions, described",
+  "printed_length": 335,
+  "printed_sha256": "0b151ed42dc676e04ee6251adf9b8ae1bc1de06c41599962fb1ad248490b110e",
+  "behaviour": {
+   "fib": {
+    "0": 0,
+    "1": 1,
+    "10": 55,
+    "20": 6765
+   },
+   "is_prime": {
+    "1": 0,
+    "2": 1,
+    "9": 0,
+    "97": 1,
+    "7919": 1
+   },
+   "collatz": {
+    "1": 0,
+    "6": 8,
+    "27": 111
+   },
+   "gcd": {
+    "48,18": 6,
+    "17,5": 1
+   },
+   "factorial": {
+    "0": 1,
+    "5": 120,
+    "12": 479001600
+   }
+  },
+  "its_attribution": {
+   "as_recorded": "every change is a person's witnessed work. The first makes ten objects and enters 1 129 characters in one change, with `ufo-studio`",
+   "what_a_reader_may_say": "that the first change was entered in one change with ufo-studio (R10): `history` gives `bulk=\"ufo-studio\"` for it and for no other",
+   "bulk": [
+    "ufo-studio"
+   ]
+  },
+  "its_page": {
+   "file": "interop/ufo-living-capsule.ufx.html",
+   "length": 255877,
+   "sha256_of_file": "d4c3c97437e022ecef419016fc17b97d38db36162a90276407d08555212c834e",
+   "is": "the web envelope of this specification, made by this project's envelope function with this project's base kernel as it stood at an earlier commit, and one thing more: a script element that asks for `/_aistudio-iframe.js`, put before the end of the head by whatever the page was saved from. With that element taken out, the page is exactly the envelope of its parts",
+   "its_pack": "62 249 bytes, of which the .ufx is the first 36 409: two more commits list the two components again",
+   "not_run": "the page's script is not run by this project's suite; the page is read with scripts off"
+  }
  }
 }

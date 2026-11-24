@@ -205,6 +205,11 @@ however fully they are written.
 
 - **Subjects** (§7.6, **F6**, **F7**), `ask` and `act`: how tools reach
   the work.
+- **Software says its own part** (§5.4, **R10**): the founding documents
+  ask that what a person wrote, what a model wrote and what a tool made
+  never be confused. They do not say what a tool that commits for a
+  person must record; this rule does, and is the owner's, made on seeing
+  the first file from another writer.
 - **What a file's own description can reach** (§7.6, **F8** to **F11**;
   §7.3 **F2** by size): the founding documents ask that a document be
   alive without becoming a program that runs on whoever opens it. No

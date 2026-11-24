@@ -1557,7 +1557,59 @@ it will use the index, and it will have to say that it has not verified
 the pack, and not call it whole. That rule waits for the reader and the
 vector that exercise it; P10 stands for a correct index until then. Git
 answers the same question the same way: a pack's index is made by
-whoever receives the pack, by reading the pack. The first
-file from a second writer, `ufo-living-capsule.ufx`, is held and not yet
-examined: that is the next item, with the provenance of authoring tools.
+whoever receives the pack, by reading the pack. What a reader with only part of a pack does is
+unwritten until one exists.
+
+## 32. The first file from a second writer, and who made what (2026-11-24)
+
+**Interoperability.** `vectors/interop/ufo-living-capsule.ufx` was
+written by another implementation's own pack writer, from this
+specification, and is kept as it came. The kernel opens it and reports
+nothing wrong. The independent reader, unmodified, verifies all 70
+records by hash and replays the conservation of all four commits, the
+first of them the other writer's, 48 operations. The described module
+prints to 335 bytes that a WebAssembly engine accepts, and its five
+functions return what they should. Neither reader rejects or disputes
+anything in it. In a page made now it is drawn and read in its faces,
+with the tools universe it carries from an earlier day.
+
+Its page is this project's envelope, made with this project's base
+kernel as it stood before the five fixes, and one element more: a script
+element asking for `/_aistudio-iframe.js`, put into the head by whatever
+it was saved from. With that element taken out the page is exactly the
+envelope of its parts. The page's own policy allows only its own script,
+so the element should do nothing; this was not run to see. It is the
+first sight of something a web envelope will meet often: a host that
+writes into a page it serves. A reader that re-saves makes the page
+again from its parts, which drops it.
+
+What the file does not show: the other direction. That implementation
+reading this project's files is its own suite's to report.
+
+Two things in it that the rules leave loose, noted and not acted on: it
+declares no features at all, though it holds a described module; and
+nothing yet says that a universe must declare the profiles it uses.
+
+**Who made what (R10).** The file records every change as a person's
+witnessed work, though a tool laid down ten objects and 1 129 characters
+in its first change. And this project's own build steps did the same:
+nesting the tools and listing a component were recorded as the work of a
+person. The rule now written: `actor` says on whose authority and with
+what software; `origin` says who or what composed the content, and a
+person only where the software took it from their own input. A tool's
+own work is `by: tool`, a model's `by: model`, each with who asked.
+Asking for content is not composing it. The build steps now say that
+they are a tool. `vectors/authored.ufx` is one document in four changes,
+a tool's, a person's, a model's and a person's again, with who wrote
+each character.
+
+A reader cannot see whether software kept the rule. It can see one
+sign, and may say it: a change given as a person's that makes more than
+one object or enters more than 2 000 characters at once. `history` gives
+it (`bulk`), and the tools' list of changes says "entered in one change
+with" and the software's name. It accuses nobody.
+
+Not done: a tool cannot yet say `by: model` through this kernel's own
+write path, which records a person's input, a tool's work, or an undo;
+nothing in the reader's tools asks a model for anything.
 

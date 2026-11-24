@@ -51,9 +51,9 @@
   ]
  },
  "history": [
-  "change id=o:597ea3c8ed12375c81a6cbf0153a5f84 commit=c:4c87acc623e3ae08edf7efa7fbf5b2cb72a18a11036079ca246a7b968374e341 time=1767355200000 actor=\"Fourth Hand\" basis=witnessed by=tool ops=1 touched=[o:34597ea3c8ed12375c81a6cbf0153a5f] verdict=none",
-  "change id=o:f4193e6388add2f71c41668bb0d5fa1f commit=c:03a5f8071c21d6f9c1206155ecff5a92458500513f5feaa4b44a6ad315d6d4f1 time=1767355200000 actor=\"Fourth Hand\" basis=witnessed by=person ops=4 touched=[o:34597ea3c8ed12375c81a6cbf0153a5f] verdict=none",
-  "change id=o:8fb4d9fe23486d92b7dc01264b7095ba commit=c:163d312da7f5cbdf3d1e0abf59804781b5a67113fe3e6a0a4f7433bdbc447e31 time=1767355200000 actor=\"Fourth Hand\" basis=witnessed by=person ops=4 touched=[o:cff4193e6388add2f71c41668bb0d5fa] verdict=none"
+  "change id=o:597ea3c8ed12375c81a6cbf0153a5f84 commit=c:4c87acc623e3ae08edf7efa7fbf5b2cb72a18a11036079ca246a7b968374e341 time=1767355200000 actor=\"Fourth Hand\" basis=witnessed by=tool ops=1 touched=[o:34597ea3c8ed12375c81a6cbf0153a5f] bulk=\"\" verdict=none",
+  "change id=o:f4193e6388add2f71c41668bb0d5fa1f commit=c:03a5f8071c21d6f9c1206155ecff5a92458500513f5feaa4b44a6ad315d6d4f1 time=1767355200000 actor=\"Fourth Hand\" basis=witnessed by=person ops=4 touched=[o:34597ea3c8ed12375c81a6cbf0153a5f] bulk=\"\" verdict=none",
+  "change id=o:8fb4d9fe23486d92b7dc01264b7095ba commit=c:163d312da7f5cbdf3d1e0abf59804781b5a67113fe3e6a0a4f7433bdbc447e31 time=1767355200000 actor=\"Fourth Hand\" basis=witnessed by=person ops=4 touched=[o:cff4193e6388add2f71c41668bb0d5fa] bulk=\"\" verdict=none"
  ],
  "published": {
   "length": 5759,

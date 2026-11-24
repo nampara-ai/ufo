@@ -144,7 +144,7 @@
  "tools": {
   "pack": {
    "file": "spike/envelope/tools.ufx (written by spike/envelope/mkpack.mjs)",
-   "sha256": "35a2f707cbb4e92cf515e9e70e1bc69581b9ee21f2df7cd7045504634eabd417"
+   "sha256": "51ee75190566a70671c55a05e9c6350dc252c17ad1b35a859e64248caa7ca45f"
   },
   "what": "the first of the reader's two lists (the tools, held in view; the second is the subject), at first, after a press on \"Pages\", after a further press on \"Edit\" (the status then asks for a name, and a field for it, an `input`, is there), and after the name \"A. Reader\" was given through that field. `current` and `pressed` are formulas over the presentation state in the tools universe; the kernel reports their values and knows nothing of what they mean",
   "at_first": [
@@ -476,6 +476,18 @@
       "role": "paragraph",
       "content": [
        "A. Reader"
+      ]
+     }
+    ]
+   },
+   {
+    "role": "paragraph",
+    "content": [
+     {
+      "role": "button",
+      "press": true,
+      "content": [
+       "Add a file"
       ]
      }
     ]

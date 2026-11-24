@@ -13,7 +13,7 @@ import { start, commitsOf, layersOf } from '../binding/binding.mjs'; import { ke
 import { playwright, launch, executable, ENGINES } from './engines.mjs';
 const { devices } = playwright, here = p => fileURLToPath(new URL(p, import.meta.url)), out = here('../out/'), shots = here('../out/shots/');
 const arg = n => (i => i < 0 ? null : process.argv[i + 1])(process.argv.indexOf('--' + n)), engineName = arg('engine') || 'all';
-const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'asset', 'table', 'contained', 'components', 'seals', 'damage', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
+const STEPS = ['kernel', 'host', 'opened', 'pure function', 'faces', 'node boxes', 'accessible', 'keyboard', 'edit', 'one word', 'paragraph start', 'typed', 'what will leave', 'saved', 'published', 'policy', 'reopened', 'no tools', 'safeguard', 'decisions', 'asset', 'table', 'contained', 'components', 'seals', 'damage', 'interop', 'sent on', 'static face', 'reader', 'valid', 'quirks'];
 const CONTEXTS = ['Node', 'desktop, file://', 'http origin', 'phone, larger', 'phone, smaller', 'scripts off', 'reader', 'validators'];
 if (![...ENGINES, 'all'].includes(engineName)) { console.error('--engine chromium|firefox|webkit'); process.exit(2); }
 
@@ -254,7 +254,7 @@ async function environment(name, browser, options, address, { touch = false, fir
       await press(page, 'Save'); const said = flatten(await page.getByRole('region', { name: 'What will leave' }).textContent()); must(said.includes(flatten('none is held here')), said); await press(page, 'Cancel'); return `${h.length} changes, each "ops=withheld touched=withheld"; ${h.filter(l => l.startsWith('change id=withheld')).length} of them (changes that left nothing in the text as it stands) withheld whole, and said to be`; });
     await check('published: it is edited again, a new change on top of withheld history, and saved again each way', async () => {
       const e = await edit(page, log, 'Cy Third', edits.second.para, replaceWord(edits.second.words[0])); same(e.ops, [edits.second.words[0]], 'the work');
-      const h = (await ask(page, { name: 'history', o: T })).split('\n').filter(l => l.startsWith('change ')); must(h[0].includes('actor="Cy Third"') && /ops=1 touched=\[o:71717171\] verdict=none$/.test(h[0]) && h[1].endsWith('touched=withheld verdict=none'), 'history: ' + h.slice(0, 2).join(' / '));
+      const h = (await ask(page, { name: 'history', o: T })).split('\n').filter(l => l.startsWith('change ')); must(h[0].includes('actor="Cy Third"') && /ops=1 touched=\[o:71717171\] bulk="" verdict=none$/.test(h[0]) && h[1].endsWith('touched=withheld verdict=none'), 'history: ' + h.slice(0, 2).join(' / '));
       const save = async (mode, name) => { await press(page, 'Save'); await choose(page, mode); const [d] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), press(page, 'Save this copy')]); must(d.suggestedFilename() === name, 'named ' + d.suggestedFilename()); const f = path.join(path.dirname(one.published), name); await d.saveAs(f); return f; };
       got.again = await save('For readers', nameOf(one.published, '-published', 0)); got.whole = await save('For people', nameOf(one.published, '-edited', 1)); got.head = e.head.commit;
       const a = await inNode(packIn(got.again)), w = await inNode(packIn(got.whole)); must(a.head === e.head.commit && w.head === e.head.commit && a.layers.history.bytes === 0 && a.layers.lacks.history === true && w.layers.history.bytes > 0, 'the two copies');
@@ -590,6 +590,16 @@ const damaged = async (open) => check('damage: a file whose index is wrong opens
     must(/This file carries no tools/.test(s) && /This file is damaged: what could be read of it is shown\./.test(s) && (await shown(page)).includes('Hello, universe.'), 'with no tools: ' + s); await quiet(page, log); await context.close(); }
   return 'the index wrong: the text whole, and the index said to be wrong; a record gone: said, and nothing shown in its place as though it were the text';
 });
+// the first file from another writer (vectors/interop): in a page made now, with this kernel. It carries a tools universe of an earlier day and
+// components for an earlier base, which are not this kernel's to use
+const foreign = async (open, press) => check('interop: a file whose first commit another implementation wrote opens in a page made now, is drawn, and can be read in its faces; its own tools, made for an earlier kernel, still work; the change entered in bulk is said to be', async () => {
+  const f = path.join(work, 'capsule.ufx.html'); make(here('../../vectors/interop/ufo-living-capsule.ufx'), f); const { context, page, log } = await open(f, 'nobody'), l = await look(page);
+  must(l.all.includes('UFO Living Capsule') && l.all.includes('factorial') && /State c:10ce7a8d, after 4 changes\./.test((await page.getByRole('status').allTextContents()).join(' ')), 'not drawn: ' + l.all.slice(0, 200));
+  await press(page, 'Text'); must((await look(page)).texts.some(t => t.mono), 'the plain-text face'); await press(page, 'Document');
+  const h = (await ask(page, { name: 'history' })).split('\n').filter(l => l.startsWith('change ')); must(h.length === 4 && h[3].includes('bulk="ufo-studio"') && h.slice(0, 3).every(x => x.includes('bulk=""')), 'history: ' + h.map(x => /bulk="[^"]*"/.exec(x)?.[0]).join(' '));
+  must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet: ' + JSON.stringify(log.errors)); await context.close();
+  return 'drawn, read as a document and as text with the tools it carries; ' + /bulk="[^"]*"/.exec(h[3])[0] + ' on its first change';
+});
 // the safeguard (PLAYER K7): a file that requires what this reader does not have opens, says what is missing, and shows its text
 const needy = async (open, press) => check('safeguard: a file that requires what this reader does not have opens to its plain text, with one line saying what is missing; nothing is broken and nothing can change it', async () => {
   const f = path.join(work, 'needs.ufx.html'); make(here('../../vectors/needs.ufx'), f); const { context, page, log } = await open(f, 'nobody'), want = JSON.parse(fs.readFileSync(here('../../vectors/vectors.json'), 'utf8')).needs['a_reader_without_ufo.time'];
@@ -598,7 +608,7 @@ const needy = async (open, press) => check('safeguard: a file that requires what
   const l = await d0.look(page); must(l.all.includes('Its captions are text.') && l.all.includes('ufo.time'), 'not drawn'); const head = (await headOf(page)).commit; await press(page, 'Edit'); await press(page, 'A film'); await page.keyboard.type('x'); await page.keyboard.press('Tab');
   must((await headOf(page)).commit === head, 'the file was changed'); must(log.requests.length <= 1 && !log.errors.length && !(await page.evaluate(() => globalThis.__violations)).length, 'not quiet'); await context.close(); return JSON.stringify(line);
 });
-const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await bare(open, press); await needy(open, press); await decisions(open, press, h); await adding(open, press, h); await tabled(open, press, h); await contained(open, press, h); await components(open); await sealing(open); await damaged(open); } });
+const d = await environment(D, browser, desktop, file, { label: `desktop ${engineName}, file://`, first: dir('desktop'), kit: engineName === 'chromium', more: async (open, press, h) => { await bare(open, press); await needy(open, press); await decisions(open, press, h); await adding(open, press, h); await tabled(open, press, h); await contained(open, press, h); await components(open); await sealing(open); await damaged(open); await foreign(open, press); } });
 
 // ---- f: sent on. The saved file served from another origin; and the packs given to the independent reader ----
 let h = null;

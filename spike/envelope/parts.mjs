@@ -13,6 +13,8 @@ export function kernelWasm() {
 // The kernel as files carry it (spike/SPLIT.md): the base, and each component, divided from one build by spike/tools/divide.mjs
 // and made again whenever the kernel's source is newer than they are. `kernelWasm`, above, is the kernel whole: what the tests in
 // Node ask their questions of.
+// what these build steps call themselves, where they record their own work in a pack (SPEC 5.4 R10)
+const MAKER = 'ufo-spike make';
 export const ROLES = { printer: 'ufo.printer', agent: 'ufo.agent', formulas: 'ufo.formulas' };
 export function divided(name = 'base') {
   const dir = here('../out/divided/'), file = dir + name + '.wasm', src = here('../kernel/src/'), newest = Math.max(...fs.readdirSync(src).map(f => fs.statSync(src + f).mtimeMs));
@@ -29,7 +31,7 @@ export async function withComponents(pack, names, { time = Date.UTC(2026, 0, 2),
     const k = await start(kernelWasm(), () => ({ adv: 0, asc: 0, desc: 0 }), z => zlib.inflateRawSync(z)); if (!await k.open(new Uint8Array(pack))) throw Error('not a pack');
     const carry = new Pack('ufo-spike-component', true), blob = carry.blob(divided(name)), frames = carry.carried(), before = pack.length;
     const made = k.propose({ o: new Uint8Array(16), key: ['components', ROLES[name]], val: { module: { tag: 55464, v: ['b', Uint8Array.from(blob)] }, for: Uint8Array.from(Buffer.from(other ? '00'.repeat(32) : hashOf(base), 'hex')) },
-      with: new Uint8Array(frames), who, time, random: new Uint8Array(crypto.createHash('sha512').update('ufo-spike-component').update(pack).update(name).digest()) });
+      with: new Uint8Array(frames), who, tool: MAKER, time, random: new Uint8Array(crypto.createHash('sha512').update('ufo-spike-component').update(pack).update(name).digest()) });
     if (made.refused) throw Error(`the component ${name} was not carried in: ${made.refused}`);
     pack = Buffer.from(k.packBytes()); if (damage) pack[before + 200] ^= 1;   // inside the first frame carried in: a chunk of the module
   }
@@ -47,7 +49,7 @@ export const shipped = (source = here('host.mjs')) => execFileSync(here('../tool
 export async function withTools(pack, { tools = fs.readFileSync(here('tools.ufx')), time = Date.UTC(2026, 0, 2), who = 'UFO spike' } = {}) {
   const open = async b => { const k = await start(kernelWasm(), () => ({ adv: 0, asc: 0, desc: 0 }), z => zlib.inflateRawSync(z)); if (!await k.open(new Uint8Array(b))) throw Error('not a pack'); return k; };
   const k = await open(pack), commit = (await open(tools)).commits()[0].commit, zero = new Uint8Array(16);
-  const made = k.propose({ o: zero, key: ['components', 'tools'], val: { tag: 55462, v: { o: zero, u: Uint8Array.from(Buffer.from(commit, 'hex')) } }, with: new Uint8Array(tools), who, time,
+  const made = k.propose({ o: zero, key: ['components', 'tools'], val: { tag: 55462, v: { o: zero, u: Uint8Array.from(Buffer.from(commit, 'hex')) } }, with: new Uint8Array(tools), who, tool: MAKER, time,
     random: new Uint8Array(crypto.createHash('sha512').update('ufo-spike-nest').update(pack).update(tools).digest()) });
   if (made.refused) throw Error('the tools were not nested: ' + made.refused);
   return k.packBytes();

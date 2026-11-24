@@ -1095,6 +1095,82 @@ xpk, xk = tools_pack()
 open(os.path.join(OUT, "tools.ufx"), "wb").write(xpk.b)
 V["tools_pack"] = {"file": "tools.ufx", "length": len(xpk.b), "root_hash": xk.hex(),
     "what": "a minimal tools universe: one line of five words, each under a span whose `on.press` handler sets presentation state (which face; whether editing) or acts (export). It names no universe: a reader presents it with the universe being worked on as its subject"}
+# ---- 17. who and what made a change, said by the software that committed it (section 5.4, R10) ----
+# One document, four changes, each recorded by an authoring tool for one person: the tool's own template; what the person
+# typed; what a model wrote at their asking, with the prompt they typed; and the person's correction of the model's word.
+def authored_pack():
+    pk = Pack(); AT, AF, AP = bytes([0x61]) * 16, bytes([0x62]) * 16, bytes([0x63]) * 16; A0, A1, A2, A3 = (bytes([c]) * 16 for c in (0x64, 0x65, 0x66, 0x67))
+    tool = {"name": "example-writer", "version": "1.0"}; act = {"who": who, "with": tool}
+    title, prompt, typed, wrote = "Quarterly note", "Write one sentence saying that revenue grew.", "We met our target.", " Revenue grew by a tenth over the quarter."
+    up = {"lineage": bytes([0x13]) * 16, "roots": {"primary": ref(AF)}, "faces": [ref(AF)], "features": feats}
+    head_ = {"at": anchor({"o": AT, "a": {"chars": ["s", [A0, 0, 0], [A0, len(title) - 1, 1]]}}), "kind": "block", "role": "heading", "level": 1}
+    # 0: the tool lays down its template. Its own work, at the person's asking: by a tool
+    st = {U: revision(pk, U, "ufo.universe", 1, A0, 9201, up), AT: revision(pk, AT, "ufo.text", 1, A0, 9202, {"chars": title, "spans": {"h": head_}}, seq={"chars": [[A0, 0, len(title)]]}),
+          AF: revision(pk, AF, "ufo.face", 1, A0, 9203, {"of": ref(AT), "medium": "document"})}
+    ops = [{"op": "new", "obj": U, "type": "ufo.universe"}] + [{"op": "set", "obj": U, "key": k_, "val": v} for k_, v in up.items()]
+    ops += [{"op": "new", "obj": AT, "type": "ufo.text"}, {"op": "splice", "obj": AT, "key": "chars", "after": None, "ins": title}, {"op": "set", "obj": AT, "key": ["spans", "h"], "val": head_},
+            {"op": "new", "obj": AF, "type": "ufo.face"}, {"op": "set", "obj": AF, "key": "of", "val": ref(AT)}, {"op": "set", "obj": AF, "key": "medium", "val": "document"}]
+    og0 = {"basis": "witnessed", "by": "tool", "tool": tool, "asked": who}
+    st, _, _, k0 = commit(pk, st, A0, ops, None, {"actor": act, "time": 1767225600000, "origin": og0}, None, 0, 9204); pk.index(); pk.head(k0)
+    # 1: the person types a sentence into the document, and a prompt: their own input, by a person
+    n = len(prompt); para = {"at": anchor({"o": AT, "a": {"chars": ["s", [A1, n, 0], "end"]}}), "kind": "block", "role": "paragraph"}
+    seq1 = [[A0, 0, len(title)], [A1, n, len(typed)]]
+    hP = revision(pk, AP, "ufo.text", 1, A1, 9211, {"chars": prompt}, seq={"chars": [[A1, 0, n]]})
+    hT1 = revision(pk, AT, "ufo.text", 2, A1, 9212, {"chars": title + typed, "spans": {"h": head_, "p": para}}, prev=st[AT], seq={"chars": seq1})
+    ops = [{"op": "new", "obj": AP, "type": "ufo.text"}, {"op": "splice", "obj": AP, "key": "chars", "after": None, "ins": prompt},
+           {"op": "splice", "obj": AT, "key": "chars", "after": [A0, len(title) - 1], "ins": typed}, {"op": "set", "obj": AT, "key": ["spans", "p"], "val": para}]
+    og1 = {"basis": "witnessed", "by": "person", "who": who}
+    st = dict(st); st[AP] = hP; st[AT] = hT1
+    st, _, _, k1 = commit(pk, st, A1, ops, None, {"actor": act, "time": 1767225660000, "origin": og1}, k0, 1, 9213); pk.index(); pk.head(k1)
+    # 2: a model writes the next sentence, asked by the person through the tool: by a model, with its name, who asked, and the prompt
+    seq2 = seq1 + [[A2, 0, len(wrote)]]
+    hT2 = revision(pk, AT, "ufo.text", 3, A2, 9221, {"chars": title + typed + wrote, "spans": {"h": head_, "p": para}}, prev=hT1, seq={"chars": seq2})
+    ops = [{"op": "splice", "obj": AT, "key": "chars", "after": [A1, n + len(typed) - 1], "ins": wrote}]
+    og2 = {"basis": "witnessed", "by": "model", "model": "example-model-1", "asked": who, "prompt": ref(AP)}
+    st = dict(st); st[AT] = hT2
+    st, _, _, k2 = commit(pk, st, A2, ops, None, {"actor": act, "time": 1767225720000, "origin": og2}, k1, 2, 9222); pk.index(); pk.head(k2)
+    # 3: the person corrects one word of what the model wrote: by a person, and only that word is theirs
+    i = wrote.index("tenth"); fixed = wrote.replace("tenth", "fifth")
+    seq3 = seq1 + [[A2, 0, i], [A3, 0, 5], [A2, i, 5, False], [A2, i + 5, len(wrote) - i - 5]]
+    hT3 = revision(pk, AT, "ufo.text", 4, A3, 9231, {"chars": title + typed + fixed, "spans": {"h": head_, "p": para}}, prev=hT2, seq={"chars": seq3})
+    ops = [{"op": "splice", "obj": AT, "key": "chars", "after": [A2, i - 1], "del": [[A2, i, 5]], "old": "tenth", "ins": "fifth"}]
+    st = dict(st); st[AT] = hT3
+    st, _, _, k3 = commit(pk, st, A3, ops, None, {"actor": act, "time": 1767225780000, "origin": og1}, k2, 3, 9232); pk.index(); pk.head(k3)
+    open(os.path.join(OUT, "authored.ufx"), "wb").write(pk.b)
+    a, b_, c = len(title), len(title) + len(typed), len(title) + len(typed) + i
+    return {"file": "authored.ufx", "length": len(pk.b), "root_hash": k3.hex(), "text": AT.hex(), "prompt": AP.hex(),
+        "what": "one document made through an authoring tool for one person, in four changes. Every change's `actor` is that person with that tool: `actor.who` says on whose authority, `actor.with` what software committed. The `origin` of each says who or what composed what the change introduced",
+        "changes": [{"change": A0.hex(), "did": "the tool laid down its template: a universe, a face, a text holding a title", "by": "tool", "origin": describe(og0)},
+                    {"change": A1.hex(), "did": "the person typed a sentence into the document, and a prompt into a text of its own", "by": "person", "origin": describe(og1)},
+                    {"change": A2.hex(), "did": "a model wrote the next sentence, at the person's asking through the tool", "by": "model", "origin": describe(og2)},
+                    {"change": A3.hex(), "did": "the person replaced one word of the model's sentence", "by": "person", "origin": describe(og1)}],
+        "characters": title + typed + fixed,
+        "who_wrote_each_character": [
+            {"from": 0, "to": a, "change": A0.hex(), "by": "tool", "tool": "example-writer", "asked": who["name"]},
+            {"from": a, "to": b_, "change": A1.hex(), "by": "person", "who": who["name"]},
+            {"from": b_, "to": c, "change": A2.hex(), "by": "model", "model": "example-model-1", "asked": who["name"]},
+            {"from": c, "to": c + 5, "change": A3.hex(), "by": "person", "who": who["name"]},
+            {"from": c + 5, "to": len(title + typed + fixed), "change": A2.hex(), "by": "model", "model": "example-model-1", "asked": who["name"]}],
+        "entered_in_bulk": "no change here is a person's and entered in bulk: the template is the tool's and says so, and what is the person's is what they typed",
+        "never": "the template or the model's sentence given as the person's, because the person asked for them and the tool committed in their name"}
+V["authored"] = authored_pack()
+# ---- 18. the first file from another writer (2026-11-24) ----
+# vectors/interop/ufo-living-capsule.ufx was written by another implementation's own pack writer and is kept as it came.
+_cap = open(os.path.join(OUT, "interop", "ufo-living-capsule.ufx"), "rb").read(); _page = open(os.path.join(OUT, "interop", "ufo-living-capsule.ufx.html"), "rb").read()
+V["interop"] = {"file": "interop/ufo-living-capsule.ufx", "length": len(_cap), "sha256_of_file": sha(_cap).hex(),
+    "what": "a pack whose first commit was written by another implementation's own pack writer (it names itself `ufo-studio` 0.8), from this specification; its three later commits nest a tools universe and two components, and were written by this project's kernel at that implementation's asking. Kept byte for byte as it was received",
+    "root_hash": "10ce7a8d5a38307cf8f4405870415823157a5b2cdf259469de1d75e17b4df32e", "commits": 4, "objects": 14, "first_commit_operations": 48,
+    "a_reader": "opens it at that commit; finds every record by its hash; replays the conservation of all four commits; reports nothing malformed, inconsistent or missing",
+    "module": "the object its universe names under `roots.code`: five functions, described",
+    "printed_length": 335, "printed_sha256": "0b151ed42dc676e04ee6251adf9b8ae1bc1de06c41599962fb1ad248490b110e",
+    "behaviour": {"fib": {"0": 0, "1": 1, "10": 55, "20": 6765}, "is_prime": {"1": 0, "2": 1, "9": 0, "97": 1, "7919": 1}, "collatz": {"1": 0, "6": 8, "27": 111},
+                  "gcd": {"48,18": 6, "17,5": 1}, "factorial": {"0": 1, "5": 120, "12": 479001600}},
+    "its_attribution": {"as_recorded": "every change is a person's witnessed work. The first makes ten objects and enters 1 129 characters in one change, with `ufo-studio`",
+        "what_a_reader_may_say": "that the first change was entered in one change with ufo-studio (R10): `history` gives `bulk=\"ufo-studio\"` for it and for no other", "bulk": ["ufo-studio"]},
+    "its_page": {"file": "interop/ufo-living-capsule.ufx.html", "length": len(_page), "sha256_of_file": sha(_page).hex(),
+        "is": "the web envelope of this specification, made by this project's envelope function with this project's base kernel as it stood at an earlier commit, and one thing more: a script element that asks for `/_aistudio-iframe.js`, put before the end of the head by whatever the page was saved from. With that element taken out, the page is exactly the envelope of its parts",
+        "its_pack": "62 249 bytes, of which the .ufx is the first 36 409: two more commits list the two components again",
+        "not_run": "the page's script is not run by this project's suite; the page is read with scripts off"}}
 # the status of every group: kept by hand in vectors/STATUS.json, copied here so that each vector file states it
 V = dict(status=json.load(open(os.path.join(OUT, "STATUS.json"))), **V)
 json.dump(V, open(os.path.join(OUT, "vectors.json"), "w"), indent=1)

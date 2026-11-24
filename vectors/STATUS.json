@@ -200,6 +200,17 @@
     "the second independent reader, unmodified, on 2026-11-24: it reports the index entry wrong and the revision of the text missing from the content layer, malformed storage; the author's kernel does the same"
    ],
    "note": "made by the author after the outside findings, to settle whether an offset may be followed into a frame's payload"
+  },
+  "authored": {
+   "status": "provisional",
+   "note": "the generator states who wrote each character; the author's kernel gives the same through `why`. The second independent reader, unmodified, replays the conservation of all four commits: every one ok. No independent reader has been asked who wrote each character of this pack"
+  },
+  "interop": {
+   "status": "reproduced",
+   "by": [
+    "the second independent reader, unmodified, on 2026-11-24: it opens the file at the same commit, verifies all 70 records by hash, replays the conservation of all four commits, the first written by the other implementation's own writer, and reports nothing; the author's kernel opens it, reports nothing, and prints its module to the 335 bytes stated, which a WebAssembly engine accepts and whose five functions return what is stated"
+   ],
+   "note": "the file was written by another implementation, of another model family, and is kept as received. What was reproduced is this project's two readers reading another writer's file; the other direction, that implementation reading this project's files, is its own suite's to say"
   }
  },
  "files": {

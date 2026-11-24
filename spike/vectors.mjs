@@ -126,4 +126,24 @@ for (const [P, text] of [[V.published, 'a1'.repeat(16)], [V.published_timeline, 
   check('history in parts: seven changes in all', all.length, 7);
   for (const [first, count] of [[0, 1], [2, 3], [5, 20], [7, 5], [0, 0]]) check(`history in parts: ${count} after the ${first} newest`, part(first, count), all.slice(first, first + count));
   check('history in parts: with no count, all of them, whatever `first` says', rec(k, { name: 'history', first: 3 }).filter(r => r.is === 'change'), all); }
+// ---- who and what made a change (section 5.4, R10): a tool's template, a person's typing, a model's sentence ----
+{ const A = V.authored, k = await open(A.file), runs = rec(k, { name: 'why', o: A.text }).filter(r => r.is === 'run');
+  check('authored: the commit and the text', [k.commits()[0].commit, k.sample({ as: 'text' }).text.replace(/\n/g, '')], [A.root_hash, A.characters]);
+  check('authored: who wrote each character', runs.map(r => { const [from, to] = JSON.parse(/chars=(\[[^\]]*\])/.exec(r.at || '')?.[1] || JSON.stringify(r.chars)); const o = { from, to, change: bare(r.change), by: r.by };
+    for (const f of ['who', 'model', 'asked']) if (r[f] !== undefined) o[f] = r[f]; if (r.tool !== undefined) o.tool = r.tool; return o; }), A.who_wrote_each_character);
+  const hist = rec(k, { name: 'history' }).filter(r => r.is === 'change').reverse();
+  check('authored: each change, as `history` gives its origin', hist.map(r => [bare(r.id), r.basis, r.by]), A.changes.map(c => [c.change, 'witnessed', c.by]));
+  check('authored: none of it is a person\'s and entered in bulk', hist.filter(r => r.bulk !== '').length, 0); }
+// ---- the first file from another writer (vectors/interop) ----
+{ const I = V.interop, k = await open(I.file), hexOf = b => Buffer.from(b).toString('hex'), crypto = await import('crypto'), sha = b => crypto.createHash('sha256').update(b).digest('hex');
+  check('interop: the file is the one received', [bytes(I.file).length, sha(bytes(I.file))], [I.length, I.sha256_of_file]);
+  const u = rec(k, { name: 'expand' }).find(r => r.is === 'universe'), hist = rec(k, { name: 'history' }).filter(r => r.is === 'change');
+  check('interop: opens at its commit; four commits; fourteen objects; nothing reported', [bare(u.commit), k.commits().length, u.objects, hist[hist.length - 1].ops, rec(k, { name: 'verify' }).filter(r => r.is === 'issue').length], [I.root_hash, I.commits, I.objects, I.first_commit_operations, 0]);
+  const code = rec(k, { name: 'object', o: '00'.repeat(16) }).find(r => r.key === 'roots').value.code.$ref.slice(2), out = Buffer.from(k.print(Uint8Array.from(Buffer.from(code, 'hex'))));
+  check('interop: its module prints to 335 bytes', [out.length, sha(out), WebAssembly.validate(out)], [I.printed_length, I.printed_sha256, true]);
+  const f = new WebAssembly.Instance(new WebAssembly.Module(out)).exports, got = Object.fromEntries(Object.entries(I.behaviour).map(([name, cases]) => [name, Object.fromEntries(Object.keys(cases).map(a => [a, Number(f[name](...a.split(',').map(Number)))]))]));
+  check('interop: and its five functions compute', got, I.behaviour);
+  check('interop: the one change entered in bulk is said to be, with what', hist.filter(r => r.bulk).map(r => r.bulk), I.its_attribution.bulk);
+  const page = bytes(I.its_page.file), text = page.toString('utf8'), inner = Buffer.from(/<script type="application\/x-ufo-pack">([^<]*)<\/script>/.exec(text)[1], 'base64');
+  check('interop: its page is the one received, and the pack it carries begins with the file', [page.length, sha(page), inner.subarray(0, I.length).equals(bytes(I.file))], [I.its_page.length, I.its_page.sha256_of_file, true]); }
 console.log('agree', agree, 'differ', differ);

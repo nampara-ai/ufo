@@ -730,7 +730,7 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
                     let c = m.get("change").or_else(|| event.iter().find(|e| e.0 == "direct").map(|e| &e.1)).filter(|c| rd.editable && c.get("ops").is_some() && crate::held(crate::FORMULAS)).ok_or("the document is not open for changes, or nothing was proposed")?;
                     let mut random = [0u8; 64];
                     crate::random(&mut random);
-                    let r = write::submit(pk, c.get("ops").map(|o| o.l()).unwrap_or(&[]), &[], c.get("by").and_then(|b| b.id()), text("verdict"), who, crate::now(), &random)?;
+                    let r = write::submit(pk, c.get("ops").map(|o| o.l()).unwrap_or(&[]), &[], c.get("by").and_then(|b| b.id()).map(write::Via::Asked), text("verdict"), who, crate::now(), &random)?;
                     Ok(vec![("change", t(&hex(r.get("change").and_then(|c| c.b()).unwrap_or(&[]))))])
                 }),
                 #[cfg(not(feature = "cut-decide"))]

@@ -76,8 +76,8 @@
    ],
    "history_from_the_whole_pack": [
     "history o:71717171 @ commit=c:07964126",
-    "change id=o:7095badf commit=c:07964126 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:71717171] verdict=none",
-    "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=15 touched=[o:00000000,o:71717171,o:72727272,o:73737373] verdict=none",
+    "change id=o:7095badf commit=c:07964126 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:71717171] bulk=\"\" verdict=none",
+    "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=15 touched=[o:00000000,o:71717171,o:72727272,o:73737373] bulk=\"ufo-vectors\" verdict=none",
     "end lines=2"
    ],
    "note": "Where a change's work is withheld, `history` cannot say what the change touched: it lists the change, with `ops` and `touched` given as `withheld` (E11). Appendix B does not say this; it is this kernel's reading"

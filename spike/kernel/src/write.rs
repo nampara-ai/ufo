@@ -402,7 +402,7 @@ pub fn stated(pk: &Pack, id: &Id, key: &[V], val: Option<&V>) -> Option<V> {
 /// document asked for the operations, if something did (7.6 **F10**): the origin then names it, beside the
 /// person. With a `verdict`, the change records the person's decision about itself: that they were asked.
 #[inline(never)] // an entry of the formulas component: what a file's own handler asked for, or a value typed, applied
-pub fn submit(pk: &mut Pack, ops: &[V], with: &[u8], by: Option<Id>, verdict: Option<&str>, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+pub fn submit(pk: &mut Pack, ops: &[V], with: &[u8], by: Option<Via>, verdict: Option<&str>, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
     let whole = "this reader applies a change that sets values of one object, not of a change, a sequence or a value kept outside its node";
     let id = ops.first().and_then(|o| o.get("obj")).and_then(|i| i.id()).ok_or(whole)?;
     let o = pk.object(&pk.head, &id).filter(|o| o.ty != "ufo.change").ok_or("what it would change is not in the current state (L4)")?;
@@ -420,7 +420,7 @@ pub fn submit(pk: &mut Pack, ops: &[V], with: &[u8], by: Option<Id>, verdict: Op
     let (_, p1, _) = replay(&id, &change, ops, true, &o.p, o.seq.as_ref().unwrap_or(&none)).ok_or("what it would change is not as the operations say it is (L2)")?;
     let decisions = verdict.map(|v| map(vec![("about", V::Tag(REF, Box::new(bytes(&change)))), ("verdict", t(v)), ("who", map(vec![("name", t(who))]))])).into_iter().collect();
     let recs = if with.is_empty() { Vec::new() } else { Pack::scan(with.to_vec()).ok_or("what is to be carried in is not a pack")?.framed() };
-    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref(), raw_p, raw_seq: raw.get("seq").cloned(), life: (true, true) }), ops.to_vec(), decisions, Vec::new(), by.map(|b| (false, b)), recs, who, time, random)
+    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref(), raw_p, raw_seq: raw.get("seq").cloned(), life: (true, true) }), ops.to_vec(), decisions, Vec::new(), by, recs, who, time, random)
 }
 /// A file taken in as an asset (5.2), through the same gate: a new object, `id`, whose `bytes` are the file's
 /// exactly, kept outside the node in one blob that the operation and the state both name (1.7).
@@ -487,7 +487,7 @@ fn reverse(pk: &mut Pack, c: &Obj, about: Id, decisions: Vec<V>, undoes: Option<
             return Err(edited);
         }
         let back = vec![map(vec![("op", t("drop")), ("obj", bytes(&id))])];
-        return finish(pk, Some(New { o: &o, raw: &raw, p1: &o.p, seq1: None, raw_p: V::Null, raw_seq: None, life: (true, false) }), back, decisions, Vec::new(), undoes.map(|u| (true, u)), Vec::new(), who, time, random);
+        return finish(pk, Some(New { o: &o, raw: &raw, p1: &o.p, seq1: None, raw_p: V::Null, raw_seq: None, life: (true, false) }), back, decisions, Vec::new(), undoes.map(Via::Undo), Vec::new(), who, time, random);
     }
     let seq0 = o.seq.clone().unwrap_or(V::M(Vec::new()));
     let (mut back, mut number): (Vec<(V, Vec<V>)>, i64) = (Vec::new(), 0);
@@ -557,7 +557,7 @@ fn reverse(pk: &mut Pack, c: &Obj, about: Id, decisions: Vec<V>, undoes: Option<
             _ => return Err("an operation with no key"),
         }
     }
-    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref().map(|_| &seq1), raw_p, raw_seq, life: (true, true) }), back, decisions, sources, undoes.map(|u| (true, u)), recs, who, time, random)
+    finish(pk, Some(New { o: &o, raw: &raw, p1: &p1, seq1: o.seq.as_ref().map(|_| &seq1), raw_p, raw_seq, life: (true, true) }), back, decisions, sources, undoes.map(Via::Undo), recs, who, time, random)
 }
 /// What every change through the gate comes to, whatever it does to its one object: the operations
 /// checked against the state meant, then the records written and read back. `p1` and `seq1` are
@@ -576,7 +576,15 @@ struct New<'a> {
 }
 /// Writes one change: the new revision of the object it edits, if it edits one; the change object, with its
 /// work, its origin and its decisions; the object map; the commit.
-fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sources: Vec<V>, via: Option<(bool, Id)>, mut recs: Recs, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
+/// How a change came to be made, where it is not simply a person's own input (5.4 **R10**): the undoing of a change
+/// by the reader's tool; what an object of the document asked for and a person applied or typed; or the work of a
+/// tool that names itself, done at a person's asking.
+pub enum Via<'a> {
+    Undo(Id),
+    Asked(Id),
+    Tool(&'a str),
+}
+fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sources: Vec<V>, via: Option<Via>, mut recs: Recs, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
     if pk.unread_tail != 0 {
         return Err("the pack was recovered after an interrupted write (2.3): this spike does not truncate it and append (P7)");
     }
@@ -638,9 +646,11 @@ fn finish(pk: &mut Pack, new: Option<New>, ops: Vec<V>, decisions: Vec<V>, sourc
         ("origin", map({
             // 9.6: an undo is the kernel's work at a person's asking: its origin is a tool, and names what it undoes
             // 7.6 F10: what a handler in the document proposed is the person's change, and says what proposed it
+            let tool = |name: &str| vec![("basis", t("witnessed")), ("by", t("tool")), ("tool", map(vec![("name", t(name))])), ("asked", whom.clone())];
             let mut og = match via {
-                Some((true, c)) => vec![("basis", t("witnessed")), ("by", t("tool")), ("tool", map(vec![("name", t("undo"))])), ("asked", whom), ("context", V::Tag(REF, Box::new(bytes(&c))))],
-                Some((false, o)) => vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom), ("context", V::Tag(REF, Box::new(bytes(&o))))],
+                Some(Via::Undo(c)) => { let mut og = tool("undo"); og.push(("context", V::Tag(REF, Box::new(bytes(&c))))); og }
+                Some(Via::Tool(name)) => tool(name), // R10: software that composed what a change holds says so, and who asked
+                Some(Via::Asked(o)) => vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom), ("context", V::Tag(REF, Box::new(bytes(&o))))],
                 None => vec![("basis", t("witnessed")), ("by", t("person")), ("who", whom)],
             };
             if !sources.is_empty() {

@@ -150,12 +150,12 @@
   {
    "attempt": "the same, and the person applies it",
    "must": "one change through the gate, by the person, recording their decision and what in the file asked (F10)",
-   "here": "change id=o:d5fa1f44 commit=c:dd2f622a t… actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\"; origin.context o:90909090"
+   "here": "change id=o:d5fa1f44 commit=c:dd2f622a t… actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] bulk=\"\" verdict=approve decided-by=\"Reader Test\"; origin.context o:90909090"
   },
   {
    "attempt": "typed into a value whose handler sets that value to what was typed",
    "must": "their own input: written at once, as theirs, with no question and no decision recorded (F10)",
-   "here": "actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=none; origin.context o:c1c1c1c1"
+   "here": "actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] bulk=\"\" verdict=none; origin.context o:c1c1c1c1"
   },
   {
    "attempt": "the same text typed again",
@@ -165,6 +165,6 @@
  ],
  "after": {
   "height": 2,
-  "history": "change id=o:d5fa1f44 commit=c:dd2f622a time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\""
+  "history": "change id=o:d5fa1f44 commit=c:dd2f622a time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] bulk=\"\" verdict=approve decided-by=\"Reader Test\""
  }
 }

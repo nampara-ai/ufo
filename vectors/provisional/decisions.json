@@ -40,11 +40,11 @@
   "rule": "what the rejected change inserted is removed; what it removed is put back after the last element it removed; `origin.sources` of the rejecting change names, run by run, the changes that first introduced what is put back, so that `why` gives the word to its first author, with `via` naming the change that put it back"
  },
  "history": [
-  "change id=o:eb10355a commit=c:ced84b11 time=1767355200000 actor=\"Second Reader\" basis=witnessed by=person ops=1 touched=[o:71717171] verdict=none",
-  "change id=o:86abd0f5 commit=c:25f76723 time=1767355200000 actor=\"Second Reader\" basis=witnessed by=person ops=0 touched=[] verdict=none",
-  "change id=o:ea0f3459 commit=c:ea383233 time=1767355200000 actor=\"Writer One\" basis=witnessed by=person ops=3 touched=[o:71717171] verdict=accept decided-by=\"Second Reader\"",
-  "change id=o:85aacff4 commit=c:e258999a time=1767355200000 actor=\"Writer One\" basis=witnessed by=person ops=1 touched=[o:71717171] verdict=reject decided-by=\"Second Reader\"",
-  "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=15 touched=[o:00000000,o:71717171,o:72727272,o:73737373] verdict=none"
+  "change id=o:eb10355a commit=c:ced84b11 time=1767355200000 actor=\"Second Reader\" basis=witnessed by=person ops=1 touched=[o:71717171] bulk=\"\" verdict=none",
+  "change id=o:86abd0f5 commit=c:25f76723 time=1767355200000 actor=\"Second Reader\" basis=witnessed by=person ops=0 touched=[] bulk=\"\" verdict=none",
+  "change id=o:ea0f3459 commit=c:ea383233 time=1767355200000 actor=\"Writer One\" basis=witnessed by=person ops=3 touched=[o:71717171] bulk=\"\" verdict=accept decided-by=\"Second Reader\"",
+  "change id=o:85aacff4 commit=c:e258999a time=1767355200000 actor=\"Writer One\" basis=witnessed by=person ops=1 touched=[o:71717171] bulk=\"\" verdict=reject decided-by=\"Second Reader\"",
+  "change id=o:7c7c7c7c commit=c:092acf57 time=1767225600000 actor=\"Test Author\" basis=witnessed by=person ops=15 touched=[o:00000000,o:71717171,o:72727272,o:73737373] bulk=\"ufo-vectors\" verdict=none"
  ],
  "why_of_the_paragraph": {
   "region": [

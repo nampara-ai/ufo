@@ -372,7 +372,12 @@ fn history(cx: &mut Cx, id: Option<&Id>) -> Option<()> {
         let mut r = R::new("change").f("id", w(cx.o(&cid))).f("commit", w(cx.c(h))).f("time", V::Int(cx.time(&cid))).f("actor", p.get("actor").and_then(|a| a.get("who")).map_or(V::Null, Cx::name))
             .f("basis", w(og.and_then(|o| o.get("basis")).and_then(|b| b.s()).unwrap_or("unknown"))).opt("by", og.and_then(|o| o.get("by")).and_then(|b| b.s()).map(w));
         r = if held {
-            r.f("ops", int(ops.len())).f("touched", V::L(touched.iter().map(|i| w(cx.o(i))).collect()))
+            // R10: said to be a person's own work, and entered more at once than a person enters: more than one
+            // object made, or more than 2 000 scalar values of text. A reader may say with what it was entered
+            let entered: usize = ops.iter().filter_map(|o| o.get("ins")?.s()).map(|s| s.chars().count()).sum();
+            let made = ops.iter().filter(|o| o.get("op").and_then(|k| k.s()) == Some("new")).count();
+            let bulk = og.filter(|o| o.get("by").and_then(|b| b.s()) == Some("person") && (made > 1 || entered > 2000)).and_then(|_| p.get("actor")?.get("with")?.get("name")?.s());
+            r.f("ops", int(ops.len())).f("touched", V::L(touched.iter().map(|i| w(cx.o(i))).collect())).f("bulk", t(bulk.unwrap_or("")))
         } else {
             r.f("ops", w("withheld")).f("touched", w("withheld"))
         };

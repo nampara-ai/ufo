@@ -894,7 +894,7 @@ passed back, exactly as written, as an argument to another projection.
 | `text` | `at` (an anchor) `chars` (count) `s` |
 | `region` | `at` (an anchor) |
 | `hit` | `at` (an anchor) `type` `s` (up to 80 characters around the match) |
-| `change` | `id` `commit` (the commit it made) `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of object identities) `verdict` (of the decision that stands about it, **R7**, or `none`) [`decided-by`] [`note`] |
+| `change` | `id` `commit` (the commit it made) `time` `actor` `basis` [`by`] `ops` (count) `touched` (list of object identities) [`bulk` (where the change's work is held: the name of the software it was entered with, if it is given as a person's and makes more than one object or enters more than 2 000 scalar values of text, §5.4 **R10**; otherwise empty)] `verdict` (of the decision that stands about it, **R7**, or `none`) [`decided-by`] [`note`] |
 | `op` | `op` `obj` [`key`] [`after`] [`del`] then `old` and `new`, each a value; where the change's `work` is withheld, one record `op withheld` |
 | `check` | `rule` (a label of this document) `scope` `result` (`pass`, `fail`, `skipped`) [`reason`] |
 | `layer` | `name` (`content`, `attribution`, `history`) `included` (boolean) `objects` (count) `bytes` `actors` (list) `models` (list) `changes` (count) `first` `last` (times) |

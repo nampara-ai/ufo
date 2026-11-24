@@ -61,9 +61,9 @@
   ]
  },
  "history": [
-  "change id=o:ec11365b commit=c:5b4e28d8 time=1767355200000 actor=\"Third Hand\" basis=witnessed by=tool ops=2 touched=[o:71717171] verdict=none",
-  "change id=o:87acd1f6 commit=c:6daabc35 time=1767355200000 actor=\"Third Hand\" basis=witnessed by=person ops=2 touched=[o:71717171] verdict=none",
-  "change id=o:eb10355a commit=c:ced84b11 time=1767355200000 actor=\"Second Reader\" basis=witnessed by=person ops=1 touched=[o:71717171] verdict=none"
+  "change id=o:ec11365b commit=c:5b4e28d8 time=1767355200000 actor=\"Third Hand\" basis=witnessed by=tool ops=2 touched=[o:71717171] bulk=\"\" verdict=none",
+  "change id=o:87acd1f6 commit=c:6daabc35 time=1767355200000 actor=\"Third Hand\" basis=witnessed by=person ops=2 touched=[o:71717171] bulk=\"\" verdict=none",
+  "change id=o:eb10355a commit=c:ced84b11 time=1767355200000 actor=\"Second Reader\" basis=witnessed by=person ops=1 touched=[o:71717171] bulk=\"\" verdict=none"
  ],
  "refused": {
   "what": "undoing again",
