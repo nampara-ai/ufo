@@ -388,6 +388,7 @@ pub fn edit(pk: &mut Pack, id: Id, lo: usize, hi: usize, ins: &str, given: Optio
 }
 /// A `set` (1.7) stated against the current state: what lies at the path `key` of an object's properties is to
 /// become `val`, or with none is to be removed; `old` is what is there now (L2). None if the object is not there.
+#[inline(never)] // an entry of the formulas component
 pub fn stated(pk: &Pack, id: &Id, key: &[V], val: Option<&V>) -> Option<V> {
     let o = pk.object(&pk.head, id)?;
     let mut op = vec![("op", t("set")), ("obj", bytes(id)), ("key", V::L(key.to_vec()))];
@@ -400,6 +401,7 @@ pub fn stated(pk: &Pack, id: &Id, key: &[V], val: Option<&V>) -> Option<V> {
 /// same commit on: a universe that a value names by an anchor is then nested here (1.8). `by` is what in the
 /// document asked for the operations, if something did (7.6 **F10**): the origin then names it, beside the
 /// person. With a `verdict`, the change records the person's decision about itself: that they were asked.
+#[inline(never)] // an entry of the formulas component: what a file's own handler asked for, or a value typed, applied
 pub fn submit(pk: &mut Pack, ops: &[V], with: &[u8], by: Option<Id>, verdict: Option<&str>, who: &str, time: u64, random: &[u8]) -> Result<V, &'static str> {
     let whole = "this reader applies a change that sets values of one object, not of a change, a sequence or a value kept outside its node";
     let id = ops.first().and_then(|o| o.get("obj")).and_then(|i| i.id()).ok_or(whole)?;

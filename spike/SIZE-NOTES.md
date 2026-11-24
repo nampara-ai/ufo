@@ -642,3 +642,43 @@ would rather not; P10 promises it a record in a few seeks. The rule is
 written as a MUST in P9 because two readers must find the same records;
 whether a reader that has not scanned may rely on an index until `verify`
 is run is a decision.
+
+## The formulas component; typed input; history in parts (2026-11-24)
+
+The owner's decision: what a file's own description works out and does
+moves out of the base, into a component carried by files that have such
+content. Its entries, each a function of its own: the handler of a file
+(`tool::handle`), `number`, `get` by a ref, the rows of a data object,
+stating a `set` and applying a proposal (`write::stated`, `submit`).
+Everything only they reach goes with them. The evaluator stays in the base:
+the tools' own formulas are worked out there. Grid layout stays in the base.
+
+| | Compressed | KiB |
+| --- | ---: | ---: |
+| The kernel whole | 135 286 | 132.1 |
+| **The base** | **123 464** | **120.6** |
+| Printer | 5 143 | 5.0 |
+| Agent | 3 709 | 3.6 |
+| Formulas | 5 892 | 5.8 |
+
+7 608 bytes of the base's limit are left. The base was 127 291 after the
+five defects were fixed; the move took out 3 827. The division costs 2 922
+over the whole. Two clean divisions give the same bytes.
+
+Between the last review and this one the base went: 125 533; with the
+defects fixed 127 291 (+1 758); with typed input told apart and history
+asked in parts, before the move, not measured separately; after the move
+123 464.
+
+A defect of the division tool itself was found by adding a third
+component: what two components both reached, and the base did not, was
+taken from the first and left in the last, by the order they were looked
+at. With the printer beside the base and the formulas absent, printing
+called a function that was not there. It now stays in the base, decided for
+all components before any list is changed. `divided.mjs` runs each
+component without the others: 23 of 23.
+
+A file whose description has formulas or handlers says that it requires
+`ufo.formulas`. `table.ufx` and `contained.ufx` do. Opened with the base
+alone, each is shown by the safeguard: its plain text, and what is missing.
+

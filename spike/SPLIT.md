@@ -374,3 +374,32 @@ larger part, the binding 10 046.
 The acceptance table on three engines with the base alone in each page:
 `spike/out/envelope-test-all.txt`.
 
+## 11. A third component: formulas (2026-11-24)
+
+By the owner's decision the base no longer works out a file's own
+formulas, performs its handlers, or applies what they ask. That is the
+formulas component, role `ufo.formulas`, bit 4; it has the feature of the
+same name. The measurements are in `SIZE-NOTES.md`: the base 123 464, the
+component 5 892.
+
+What stayed in the base, and why: the evaluator, its bounds and the few
+operators, because the reader's own tools are description too; grid
+layout, because a document with a table whose cells are text needs
+nothing worked out; the telling apart of the file's items from the tools',
+because that is the base's guard and must not depend on what a file
+carries.
+
+What a reader without the component does with a file that needs it: K7.
+With a file that has formulas and does not say that it needs them: they
+have no values, and nothing in the file can be pressed.
+
+The containment rules are unchanged by where the code lies. They are
+tested with the component beside the base, in three engines; the base
+alone is tested to do nothing with such a file but show its text.
+
+
+**What a file weighs now.** The one-paragraph envelope is 211 077 bytes
+(212 549 before the move). The table document, which carries the formulas
+component, is 237 342. The acceptance table on three engines, each page
+running the base and what its file lists: `spike/out/envelope-test-all.txt`,
+257 of 257 in each.

@@ -48,7 +48,7 @@ const FLOATS = new Set(['adv', 'asc', 'desc', 'w']);   // fields the contract ty
 // `clock` gives the host's time and random bytes (PLAYER 9.3): { time: () => milliseconds, random: n => Uint8Array }.
 // `components`, where the kernel was divided (spike/SPLIT.md): { printer, agent } as module bytes. Each is instantiated
 // with the base's own exports as its imports, and the base is told which stand beside it. Not given: the kernel is whole.
-export const COMPONENT_BITS = { printer: 1, agent: 2 };
+export const COMPONENT_BITS = { printer: 1, agent: 2, formulas: 4 };
 export async function start(wasmBytes, measure, inflate, clock = {}, components = null) {
   let ex; const mem = () => new Uint8Array(ex.memory.buffer);
   const give = bytes => { const p = ex.alloc(bytes.length); mem().set(bytes, p); return p; };

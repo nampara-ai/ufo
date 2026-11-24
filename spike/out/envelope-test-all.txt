@@ -1,6 +1,6 @@
-chromium: running (output in spike/out/envelope-test-output-chromium.txt) … 253 of 253 passed, exit 0, 101 s
-firefox: running (output in spike/out/envelope-test-output-firefox.txt) … 253 of 253 passed, exit 0, 119 s
-webkit: running (output in spike/out/envelope-test-output-webkit.txt) … 253 of 253 passed, exit 0, 115 s
+chromium: running (output in spike/out/envelope-test-output-chromium.txt) … 257 of 257 passed, exit 0, 135 s
+firefox: running (output in spike/out/envelope-test-output-firefox.txt) … 257 of 257 passed, exit 0, 177 s
+webkit: running (output in spike/out/envelope-test-output-webkit.txt) … 257 of 257 passed, exit 0, 179 s
 
 step × context × engine. In each cell one letter an engine, in the order chromium, firefox, webkit: p passed, F FAILED, - not attempted there.
 The phones are each engine's own: chromium: Pixel 7 (412 by 839) and Galaxy S8 (360 by 740); firefox: Firefox, 412 by 839 at 2.625, touch and Firefox, 360 by 740 at 3, touch; webkit: iPhone 14 (390 by 664) and iPhone SE (320 by 568).
@@ -31,13 +31,14 @@ table           | ---  | ppp              | ---         | ---           | ---   
 contained       | ---  | ppp              | ---         | ---           | ---            | ---         | ---    | ---       
 components      | ---  | ppp              | ---         | ---           | ---            | ---         | ---    | ---       
 seals           | ---  | ppp              | ---         | ---           | ---            | ---         | ---    | ---       
+damage          | ---  | ppp              | ---         | ---           | ---            | ---         | ---    | ---       
 sent on         | ---  | ppp              | ppp         | ---           | ---            | ---         | ---    | ---       
 static face     | ---  | ---              | ---         | ---           | ---            | ppp         | ---    | ---       
 reader          | ---  | ---              | ---         | ---           | ---            | ---         | ppp    | ---       
 valid           | ---  | ---              | ---         | ---           | ---            | ---         | ---    | ppp       
 quirks          | ppp  | ---              | ---         | ---           | ---            | ---         | ---    | ---       
 
-totals: chromium 253 of 253 checks passed; firefox 253 of 253 checks passed; webkit 253 of 253 checks passed; quirks corpus 24 of 24
+totals: chromium 257 of 257 checks passed; firefox 257 of 257 checks passed; webkit 257 of 257 checks passed; quirks corpus 24 of 24
 entry                                      | chromium     | firefox      | webkit      
 00-envelope                                | pass         | pass         | pass        
 01-no-icon-request                         | pass         | pass         | pass        

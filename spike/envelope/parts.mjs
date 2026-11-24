@@ -13,7 +13,7 @@ export function kernelWasm() {
 // The kernel as files carry it (spike/SPLIT.md): the base, and each component, divided from one build by spike/tools/divide.mjs
 // and made again whenever the kernel's source is newer than they are. `kernelWasm`, above, is the kernel whole: what the tests in
 // Node ask their questions of.
-export const ROLES = { printer: 'ufo.printer', agent: 'ufo.agent' };
+export const ROLES = { printer: 'ufo.printer', agent: 'ufo.agent', formulas: 'ufo.formulas' };
 export function divided(name = 'base') {
   const dir = here('../out/divided/'), file = dir + name + '.wasm', src = here('../kernel/src/'), newest = Math.max(...fs.readdirSync(src).map(f => fs.statSync(src + f).mtimeMs));
   if (!fs.existsSync(file) || fs.statSync(file).mtimeMs < newest) divide(dir);

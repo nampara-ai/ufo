@@ -252,11 +252,11 @@
    },
    "provisional/data.json": {
     "status": "provisional",
-    "note": "the author's kernel made table.ufx's presentation and wrote table-edited.ufx. The second independent reader, unmodified, replayed the conservation of all five commits of table-edited.ufx: every one ok. It does not lay out a grid or work out formulas, so what is presented, what `number` gives and what the handlers propose are the author's kernel only, in Node and in three browser engines"
+    "note": "the author's kernel made table.ufx's presentation and wrote table-edited.ufx. The second independent reader, unmodified, replayed the conservation of all seven commits of table-edited.ufx: every one ok. It does not lay out a grid or work out formulas, so what is presented, what `number` gives, which changes are a person's own input and which are asked about are the author's kernel only, in Node and in three browser engines"
    },
    "provisional/containment.json": {
     "status": "provisional",
-    "note": "the author's kernel only, in Node and in three browser engines: twenty-four attempts, each coming to what the rules require. No independent reader has composed this pack"
+    "note": "the author's kernel only, in Node and in three browser engines: thirty attempts, each coming to what the rules require. No independent reader has composed this pack; it replays its one commit"
    }
   },
   "note": "Both readers are instances of the model that wrote the specification. Two of them agreeing does not make a vector confirmed: that needs an implementation from a different model family, or a person."

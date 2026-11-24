@@ -8,7 +8,8 @@ const here = fileURLToPath(new URL('.', import.meta.url)), kernel = path.join(he
 const BIN = (process.env.BINARYEN || home + '/binaryen-132') + '/bin/', FEATURES = ['--enable-bulk-memory', '--enable-sign-ext', '--enable-nontrapping-float-to-int', '--enable-mutable-globals'];
 const env = { ...process.env, PATH: home + '/.cargo/bin:' + process.env.PATH, CARGO_PROFILE_RELEASE_STRIP: 'debuginfo' };   // the names are kept until the division is made
 // the entries of each component: the functions the base calls it by. Everything only they reach goes with them
-export const COMPONENTS = { printer: [/ufo_spike_kernel5print5print$/], agent: [/7project(4text|6object|11expand_text|12expand_clock|7spelled)$/] };
+export const COMPONENTS = { printer: [/ufo_spike_kernel5print5print$/], agent: [/7project(4text|6object|11expand_text|12expand_clock|7spelled)$/],
+  formulas: [/ufo_spike_kernel4tool(6handle|6number|6by_ref)$/, /ufo_spike_kernel6layout9data_rows$/, /ufo_spike_kernel5write(6submit|6stated)$/] };
 const sha = b => crypto.createHash('sha256').update(b).digest('hex'), deflated = b => zlib.deflateRawSync(b, { level: 9 }).length;
 // Writes the module again with each function named by a short name of its index, and nothing else named. The division
 // exports and imports functions by name, so the compiler's long names would be carried in every module.
@@ -51,7 +52,9 @@ export function divide(dir, target = 'divide') {
   const base = reach([...kept].filter(n => !all.has(n)), all); for (const e of all) base.delete(e);
   const members = {}, taken = new Set();
   for (const [c, e] of Object.entries(entries)) { const others = new Set([...all].filter(n => !e.includes(n))); members[c] = [...reach(e, others)].filter(n => !base.has(n) && !others.has(n)); }
-  for (const c of Object.keys(members)) { members[c] = members[c].filter(n => Object.keys(members).every(d => d === c || !members[d].includes(n)) || entries[c].includes(n)); for (const n of members[c]) taken.add(n); }
+  // what two components both reach, and the base does not, stays in the base: decided for all of them before any list is changed
+  const shared = new Set(Object.keys(members).flatMap(c => members[c].filter(n => !entries[c].includes(n) && Object.keys(members).some(d => d !== c && members[d].includes(n)))));
+  for (const c of Object.keys(members)) { members[c] = members[c].filter(n => !shared.has(n)); for (const n of members[c]) taken.add(n); }
   const manifest = path.join(dir, 'manifest.txt'); fs.writeFileSync(manifest, Object.entries(members).map(([c, fns]) => [c, ...fns.sort()].join('\n')).join('\n\n') + '\n');
   execFileSync(BIN + 'wasm-split', ['--multi-split', ...FEATURES, '-g', '--no-placeholders', '--import-namespace=ufo:base', '--manifest', manifest, '--out-prefix', dir + '/raw-', built, '-o', path.join(dir, 'raw-base.wasm')], { stdio: ['ignore', 'pipe', 'pipe'] });
   const out = { functions: { whole: names.length, ...Object.fromEntries(Object.entries(members).map(([c, m]) => [c, m.length])) } };

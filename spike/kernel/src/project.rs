@@ -628,6 +628,7 @@ pub fn supported(feature: &str, v: i64) -> bool {
     v == 1 && match feature {
         "ufo.text" => true,
         "ufo.code" => crate::held(crate::PRINTER),
+        "ufo.formulas" => crate::held(crate::FORMULAS),
         _ => false,
     }
 }

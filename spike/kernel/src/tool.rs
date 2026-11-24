@@ -158,7 +158,7 @@ fn apply(f: &V, env: &Env) -> Option<V> {
             }
         }
         // the number a text spells: digits, at most fifteen, with `-` before them or `.` among them or neither
-        "number" => number(arg(1)?.s()?)?,
+        "number" if crate::held(crate::FORMULAS) => number(arg(1)?.s()?)?,
         "slice" => {
             let (x, n) = (arg(1)?, |i: usize, len: usize| index(i).map(|k| k.clamp(0, len as i64) as usize));
             match &x {
@@ -181,16 +181,8 @@ fn apply(f: &V, env: &Env) -> Option<V> {
                 V::T(k) => m.get(k).cloned(),
                 l => l.l().iter().try_fold(m, |v, k| v.get(k.s()?)).cloned(),
             };
-            match m.tag(REF).and_then(|i| i.id()) {
-                // F8: an object of the universe the formula is in, and of no other; read once in a composition
-                Some(id) => {
-                    let mut seen = env.seen.borrow_mut();
-                    if seen.iter().all(|e| e.0 != id) {
-                        let o = env.home.and_then(|pk| pk.object(&pk.head, &id))?;
-                        seen.push((id, o.p));
-                    }
-                    at(&seen.iter().find(|e| e.0 == id)?.1)?
-                }
+            match m.tag(REF).and_then(|i| i.id()).filter(|_| crate::held(crate::FORMULAS)) {
+                Some(id) => by_ref(env, &id, &path)?,
                 None => at(&m)?,
             }
         }
@@ -215,8 +207,24 @@ fn apply(f: &V, env: &Env) -> Option<V> {
         _ => return None,
     })
 }
+/// `get`, by a ref (F8): the value at a path of an object of the universe the formula is in, and of no other; each
+/// object is read once in a composition.
+#[inline(never)] // an entry of the formulas component
+fn by_ref(env: &Env, id: &Id, path: &V) -> Option<V> {
+    let mut seen = env.seen.borrow_mut();
+    if seen.iter().all(|e| e.0 != *id) {
+        let o = env.home.and_then(|pk| pk.object(&pk.head, id))?;
+        seen.push((*id, o.p));
+    }
+    let m = &seen.iter().find(|e| e.0 == *id)?.1;
+    match path {
+        V::T(k) => m.get(k).cloned(),
+        l => l.l().iter().try_fold(m, |v, k| v.get(k.s()?)).cloned(),
+    }
+}
 /// `number` (7.3): the number a text spells: digits, at most fifteen, with `-` before them or one `.` among them
 /// or neither, and a digit on each side of the `.`; an integer if there is no `.`.
+#[inline(never)] // an entry of the formulas component
 fn number(x: &str) -> Option<V> {
     let (neg, body) = x.strip_prefix('-').map_or((false, x), |b| (true, b));
     let (whole, frac) = body.split_once('.').unwrap_or((body, ""));
@@ -327,8 +335,10 @@ pub fn subject_rows(cx: &mut Ctx, env: &Env, portal: &Obj, w: f64) -> Option<Vec
     // What a file presents has an environment of its own: no subject (F6), its own presentation state, and
     // nothing of the tools' (F8). Its blocks and nodes are numbered from far above those of the tools, so
     // that no two are alike.
-    let within = Env::new(env.content, &[], &[], None, Some(pk), &[]);
-    let mut sub = Ctx::new(pk, cx.measure, Some(&within));
+    // That is the formulas component's work: without it beside the base, what a file presents has no formulas worked
+    // out and nothing to press, and a file that says it needs them is shown by the safeguard below (K7).
+    let within = crate::held(crate::FORMULAS).then(|| Env::new(env.content, &[], &[], None, Some(pk), &[]));
+    let mut sub = Ctx::new(pk, cx.measure, within.as_ref());
     (sub.blocks, sub.nodes, sub.press) = (1 << 30, 1 << 30, editable && hint != Some("text"));
     let (mut items, pad) = (Vec::new(), 24.0);
     let id = first.p.get("of")?.tag(REF)?.id()?;
@@ -587,7 +597,8 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
                 (Some(h), _, _) => {
                     // what an `each` had bound where this was composed is bound again while its handler runs
                     match (within, id) {
-                        (true, Some(id)) => handle(rd, own, pk, home, id, &h, &bound(&it), None, &mut fx),
+                        (true, Some(id)) if crate::held(crate::FORMULAS) => handle(rd, own, pk, home, id, &h, &bound(&it), None, &mut fx),
+                        (true, _) => {}
                         _ => perform(rd, pk, &h, &bound(&it), None, &mut fx),
                     }
                 }
@@ -626,7 +637,8 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
         if let (true, Some(h)) = (*done, o.and_then(|o| o.p.get("on")?.get("change").cloned())) {
             bound.push((String::from("text"), ev.get("s").cloned().unwrap_or(V::Null)));
             match within {
-                true => handle(rd, own, pk, home, id, &h, &bound, ev.get("s").and_then(|s| s.s()).map(|s| (shown.as_str(), s)), &mut fx),
+                true if crate::held(crate::FORMULAS) => handle(rd, own, pk, home, id, &h, &bound, ev.get("s").and_then(|s| s.s()).map(|s| (shown.as_str(), s)), &mut fx),
+                true => {}
                 false => perform(rd, pk, &h, &bound, None, &mut fx),
             }
         }
@@ -715,7 +727,7 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
                 // is how the reader's tools commit what a file's own handler proposed, once the person has said so (F10)
                 ("propose", None) => text("who").ok_or("a change says who made it, and no name was given").and_then(|who| {
                     // what is written: the change the handler gives; or, on a `change` event, what the person typed into a value of the document
-                    let c = m.get("change").or_else(|| event.iter().find(|e| e.0 == "direct").map(|e| &e.1)).filter(|c| rd.editable && c.get("ops").is_some()).ok_or("the document is not open for changes, or nothing was proposed")?;
+                    let c = m.get("change").or_else(|| event.iter().find(|e| e.0 == "direct").map(|e| &e.1)).filter(|c| rd.editable && c.get("ops").is_some() && crate::held(crate::FORMULAS)).ok_or("the document is not open for changes, or nothing was proposed")?;
                     let mut random = [0u8; 64];
                     crate::random(&mut random);
                     let r = write::submit(pk, c.get("ops").map(|o| o.l()).unwrap_or(&[]), &[], c.get("by").and_then(|b| b.id()), text("verdict"), who, crate::now(), &random)?;
@@ -753,6 +765,7 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
 /// operation is stated against the state as it is, and the request is handed, as the event `propose`, to the
 /// Portal the reader presents the file through, whose handler decides. That ends the handler. Anything else
 /// (`act`, an operation that is not a `set` of a value of an object of this universe) ends it and does nothing.
+#[inline(never)] // an entry of the formulas component
 fn handle(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, home: Option<H>, by: Id, h: &V, event: &[(String, V)], typed: Option<(&str, &str)>, fx: &mut Vec<V>) {
     for h in if let V::L(l) = h { &l[..] } else { core::slice::from_ref(h) } {
         let Some(m) = eval(h, &Env::new(&rd.content, event, &[], None, Some(pk), &[])) else { return };

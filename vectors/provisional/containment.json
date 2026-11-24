@@ -6,9 +6,9 @@
  "what": "containment (PRESENTATION 7.6 F6, F8 to F11; 7.3 F2, F4): a file whose own description tries each way out. `must` is what the rules require of every reader; `here` is what this kernel did",
  "pack": {
   "file": "contained.ufx",
-  "length": 24189,
-  "sha256": "3904e836994a108b50a931bb75854eb26a0bd29c359319f3507f351319551c0d",
-  "root_hash": "32e3db0e411d8f11e26d2646049b9a6c34869946df4e81e58240d5fbe7d39f34"
+  "length": 24346,
+  "sha256": "f5e13d3ec3bbdca7cba43b84d0d9c502778e6118c205ac6ddf38790a2b585b4b",
+  "root_hash": "b1f3b2bf80049f9107520bcb02e4a9d07da55e7604bc9aef3cc33603350863b2"
  },
  "reader": "the reader's own tools (spike/envelope/tools.ufx) present the pack as their subject, in the name of Reader Test",
  "attempts": [
@@ -150,7 +150,7 @@
   {
    "attempt": "the same, and the person applies it",
    "must": "one change through the gate, by the person, recording their decision and what in the file asked (F10)",
-   "here": "change id=o:d5fa1f44 commit=c:6aa3cdad t… actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\"; origin.context o:90909090"
+   "here": "change id=o:d5fa1f44 commit=c:dd2f622a t… actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\"; origin.context o:90909090"
   },
   {
    "attempt": "typed into a value whose handler sets that value to what was typed",
@@ -165,6 +165,6 @@
  ],
  "after": {
   "height": 2,
-  "history": "change id=o:d5fa1f44 commit=c:6aa3cdad time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\""
+  "history": "change id=o:d5fa1f44 commit=c:dd2f622a time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\""
  }
 }

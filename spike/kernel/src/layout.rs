@@ -1193,17 +1193,21 @@ fn each_of(cx: &Ctx, uni: &H, o: &Obj) -> Vec<Option<V>> {
     match (cx.env, o.p.get("each")) {
         (_, None) => vec![None],
         (Some(_), Some(V::L(l))) => l.iter().cloned().map(Some).collect(),
-        (Some(_), Some(V::Tag(REF, id))) => {
-            let Some(d) = id.id().and_then(|i| cx.pk.object(uni, &i)) else { return Vec::new() };
-            let Some(V::M(rows)) = d.p.get("rows") else { return Vec::new() };
-            let keys: Vec<&str> = match d.p.get("sort") {
-                Some(V::L(order)) => order.iter().filter_map(|k| k.s()).collect(),
-                _ => rows.iter().map(|r| r.0.as_str()).collect(),
-            };
-            keys.iter().filter_map(|k| { let mut m = match rows.iter().find(|r| r.0 == *k)?.1.clone() { V::M(m) => m, _ => return None }; m.push((String::from("key"), t(k))); Some(Some(V::M(m))) }).collect()
-        }
+        (Some(_), Some(V::Tag(REF, id))) if crate::held(crate::FORMULAS) => data_rows(cx, uni, id),
         _ => Vec::new(),
     }
+}
+/// The rows of a data object, in the table's order: each a map from column key to value, with the row's own
+/// key under `key`.
+#[inline(never)] // an entry of the formulas component
+fn data_rows(cx: &Ctx, uni: &H, id: &V) -> Vec<Option<V>> {
+    let Some(d) = id.id().and_then(|i| cx.pk.object(uni, &i)) else { return Vec::new() };
+    let Some(V::M(rows)) = d.p.get("rows") else { return Vec::new() };
+    let keys: Vec<&str> = match d.p.get("sort") {
+        Some(V::L(order)) => order.iter().filter_map(|k| k.s()).collect(),
+        _ => rows.iter().map(|r| r.0.as_str()).collect(),
+    };
+    keys.iter().filter_map(|k| { let mut m = match rows.iter().find(|r| r.0 == *k)?.1.clone() { V::M(m) => m, _ => return None }; m.push((String::from("key"), t(k))); Some(Some(V::M(m))) }).collect()
 }
 /// 7.7, a grid's tracks: a column is a length, `fit` (as wide as the longest line of its cells) or a
 /// fraction of what is left; a row is as tall as its tallest cell; the children, once for each item of `each`,

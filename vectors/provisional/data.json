@@ -6,9 +6,9 @@
  "what": "a table (PRESENTATION 7.2 grid, 7.3 formulas and `each` over a data object, 7.6 handlers in a file): as presented at a width of 600 with every scalar value half its size wide, and after changes its own handlers proposed and a person applied",
  "pack": {
   "file": "table.ufx",
-  "length": 11720,
-  "sha256": "5fb5526b45f97f3c9154d88683c95cc1db87047e836940a0338392548d86182e",
-  "root_hash": "4e4a4abdd5efe7431744afdadad9f4c8bee095b019506dfc4ad8811a5332cc21"
+  "length": 11877,
+  "sha256": "de4b39db1505e3ec4beba18220573ce0618f89a011e1e94f91c4763761b7857e",
+  "root_hash": "b3631ec204b5d844e76d9ac8c487633560539e50626c2e4a9072fba409b1e355"
  },
  "presented": {
   "texts": [
@@ -327,18 +327,18 @@
  ],
  "after": {
   "file": "table-edited.ufx",
-  "length": 30766,
-  "sha256": "6e2174576396e582501d782e04ebdd7699c3e8de3b8e0c723ec0d8e65b8f3def",
-  "root_hash": "a02a37f0ef15745fde15103d56e3ba968beae909b05016525b7ba3a9494a7a81",
+  "length": 30923,
+  "sha256": "f640303defb1a1e024a0a53c2cdeb11c3f3ff3de32d18cf6ac03461b580a0dfc",
+  "root_hash": "f157a3e218b269c3c317e2654399f02a2ad91d35fca030ccdd19164936cc29c2",
   "rows": "prop key=rows value={\"r1\":{\"item\":\"Paper\",\"paid\":true,\"amount\":120},\"r2\":{\"item\":\"Ink\",\"paid\":true,\"amount\":50},\"r3\":{\"item\":\"Postage\",\"paid\":false,\"amount\":30}}",
   "history": [
-   "change id=o:92b7dc01 commit=c:a02a37f0 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=tool ops=1 touched=[o:b4b4b4b4] verdict=none",
-   "change id=o:2d52779c commit=c:19e8d30a time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
-   "change id=o:c8ed1237 commit=c:b47c9174 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
-   "change id=o:6388add2 commit=c:3742d385 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
-   "change id=o:fe23486d commit=c:62c1c84b time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
-   "change id=o:99bee308 commit=c:9a441d6b time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=approve decided-by=\"Table Hand\"",
-   "change id=o:c1c1c1c1 commit=c:4e4a4abd time=1767225600000 actor=\"UFO spike\" basis=witnessed by=person ops=68 touched=[o:00000000,o:b1b1b1b1,o:b2b2b2b2,o:b3b3b3b3,o:b4b4b4b4,o:b5b5b5b5,o:b6b6b6b6,o:b7b7b7b7,o:b8b8b8b8,o:b9b9b9b9,o:babababa,o:bbbbbbbb,o:bcbcbcbc,o:bdbdbdbd,o:bebebebe,o:bfbfbfbf,o:c0c0c0c0] verdict=none"
+   "change id=o:92b7dc01 commit=c:f157a3e2 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=tool ops=1 touched=[o:b4b4b4b4] verdict=none",
+   "change id=o:2d52779c commit=c:6507fd56 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
+   "change id=o:c8ed1237 commit=c:bdf4bef0 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
+   "change id=o:6388add2 commit=c:20e1e413 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
+   "change id=o:fe23486d commit=c:c5ad91d2 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
+   "change id=o:99bee308 commit=c:3fd69b1e time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=approve decided-by=\"Table Hand\"",
+   "change id=o:c1c1c1c1 commit=c:b3631ec2 time=1767225600000 actor=\"UFO spike\" basis=witnessed by=person ops=69 touched=[o:00000000,o:b1b1b1b1,o:b2b2b2b2,o:b3b3b3b3,o:b4b4b4b4,o:b5b5b5b5,o:b6b6b6b6,o:b7b7b7b7,o:b8b8b8b8,o:b9b9b9b9,o:babababa,o:bbbbbbbb,o:bcbcbcbc,o:bdbdbdbd,o:bebebebe,o:bfbfbfbf,o:c0c0c0c0] verdict=none"
   ],
   "origin_of_the_first": {
    "by": "person",

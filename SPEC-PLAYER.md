@@ -97,7 +97,11 @@ only forwarded each item to a host call would be an empty layer.
 - **[K8] One kernel, divided.** The kernel is built whole, once, and then
   divided into a **base** and components. The base is what every file
   needs to be opened, read in its faces, edited through its tools, saved
-  and sent on, and every file carries it. A component of the kernel holds
+  and sent on, and every file carries it. What only some files need is a
+  component, and a file that needs one says so and carries it: printing a
+  described module (`ufo.code`); the projections only agents ask; and
+  what a file's own description works out and does — its formulas, its
+  handlers, the values a person types into (`ufo.formulas`, §7.6). A component of the kernel holds
   only functions of its own and uses the base's memory and functions: it
   works with the base it was divided from, and with no other. A universe
   lists the components it carries under `components` (§1.6), each with

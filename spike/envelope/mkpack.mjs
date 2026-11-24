@@ -97,8 +97,8 @@ const pub = { actor: { who: { name: 'UFO spike' }, with: { name: 'spike/envelope
 // The operations that make an object of given properties: `new`, then a `set` for each, but `chars`, which is spliced in.
 const making = (o, type, p) => [{ op: 'new', obj: o, type }, ...Object.entries(p).map(([key, val]) => key === 'chars' ? { op: 'splice', obj: o, key, after: null, ins: val } : { op: 'set', obj: o, key, val })];
 const block = (T, C, first = 0) => ({ at: anchor({ o: T, a: { chars: ['s', [C, first, 0], 'end'] } }), kind: 'block', role: 'paragraph' });
-function universe(pk, change, lineage, objects) {
-  const F0 = objects[0][0], all = [[U, 'ufo.universe', { lineage, roots: { primary: ref(F0) }, faces: [ref(F0)] }], ...objects];
+function universe(pk, change, lineage, objects, features) {
+  const F0 = objects[0][0], all = [[U, 'ufo.universe', { lineage, roots: { primary: ref(F0) }, faces: [ref(F0)], ...(features ? { features } : {}) }], ...objects];
   let n = 0;   // elements are numbered across everything the change inserts, in the order of its operations (1.7)
   return pk.genesis(change, all.map(([o, type, p]) => { const k = p.chars === undefined ? 0 : [...p.chars].length; n += k; return [o, type, p, k ? { chars: [[change, n - k, k]] } : p.chars === undefined ? undefined : { chars: [] }]; }), all.flatMap(([o, type, p]) => making(o, type, p)), pub);
 }
@@ -243,6 +243,8 @@ export function tools(compress = true) {
   return { bytes: pk.b, root, words: words.map(w => w[0]) };
 }
 // ---- a fixture: a working universe that tries to act and to take a subject (F6). Nothing in it may do anything. ----
+// What a file requires whose own description works things out and can be pressed (SPEC 1.6): the formulas component has it (PLAYER K8)
+const LIVE = { 'ufo.text': { v: 1, required: true }, 'ufo.formulas': { v: 1, required: true } };
 // ---- a document with a table (PRESENTATION 7.2, 7.3, 7.6): a data object, presented by grids under `each`, with a total worked out
 // by a formula, values that take text entry, a value that a press changes, and a line that the document's own state shows ----
 export const TABLE = Object.fromEntries(['face', 'group', 'title', 'data', 'table', 'head', 'h1', 'h2', 'h3', 'body', 'c1', 'c2', 'c3', 'total', 'more', 'note', 'change'].map((k, i) => [k, id(0xb1 + i)]));
@@ -270,7 +272,7 @@ export function table() {
     [T.total, 'ufo.portal', { of: join('Total: ', f('format', plus(plus(amount('r1'), amount('r2')), amount('r3')), '0.00')), role: 'paragraph' }],
     [T.more, 'ufo.text', more],
     [T.note, 'ufo.portal', { of: iff(is(st('note'), true), 'Note: the figures are in euros.', ''), visible: is(st('note'), true), role: 'note' }],
-  ]);
+  ], LIVE);
   return { bytes: pk.b, root };
 }
 
@@ -321,7 +323,7 @@ export function hostile() {
     line(HR, join('DEEPER ', deep(64)), 'TOO-DEEP'),
     line(HX, join('SPENT ', num(len(spend))), 'BOUND-SPENT'),
     line(HL, join('AF', 'TER'), 'NOTHING-AFTER-THE-BOUND'),
-  ]);
+  ], LIVE);
   return { bytes: pk.b, root };
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

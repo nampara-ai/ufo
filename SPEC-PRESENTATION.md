@@ -328,6 +328,15 @@ universe, which the description reads as `arg("subject")`.
   its kind needs the person's approval (§12.6, **U11**), it needs it
   here.
 
+**A file says that it has them.** A universe whose own description holds
+formulas or handlers declares the feature `ufo.formulas`, at version 1, as
+required (§1.6). Working them out is not part of what every file needs:
+it is a component of the kernel (§9.1 **K8**), which such a file
+carries. A reader without it attempts no face of such a file, and shows
+its plain text and what is missing (**K7**). A tools universe a reader
+presents needs no such declaration: its formulas and handlers are the
+reader's own, and the base works them out.
+
 **What a file's own description can reach.** A PDF could carry a program
 that ran when the file was opened, and readers spent decades containing
 it. Here the description a file carries is not a program, and these four

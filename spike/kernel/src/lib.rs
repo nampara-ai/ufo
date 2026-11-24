@@ -153,6 +153,7 @@ static mut OUT: Vec<u8> = Vec::new();
 // stand beside the base is told by the host that instantiated them; whole, all are here.
 pub const PRINTER: u32 = 1;
 pub const AGENT: u32 = 2;
+pub const FORMULAS: u32 = 4;
 static mut HELD: u32 = 0; // none until the host says: a call into a component that is not there is never made
 pub fn held(which: u32) -> bool {
     unsafe { HELD & which != 0 }
@@ -184,7 +185,7 @@ pub unsafe extern "C" fn seal_checked(i: usize, good: i32) {
     SEALED[i] = Some(good == 1);
 }
 /// The roles of the components this kernel can be divided into, and the bit of each.
-const ROLES: [(&str, u32); 2] = [("ufo.printer", PRINTER), ("ufo.agent", AGENT)];
+const ROLES: [(&str, u32); 3] = [("ufo.printer", PRINTER), ("ufo.agent", AGENT), ("ufo.formulas", FORMULAS)];
 /// The i-th component the universe carries for this kernel (1.6; spike/SPLIT.md): an entry of the universe
 /// object's `components` whose role this kernel knows and whose `for` is this kernel's hash. Its role, its bit,
 /// the SHA-256 of its bytes, which names it wherever it is held, and the blob that holds them.
@@ -417,7 +418,7 @@ pub unsafe extern "C" fn propose(p: *mut u8, n: usize) -> *const u8 {
     let r = match PACK.as_mut() {
         Some(pk) if q.get("key").is_none() => write::propose(pk, &q),
         Some(pk) => match (q.get("o").and_then(|x| x.id()), q.get("key"), q.get("who").and_then(|x| x.s()), q.get("time").and_then(|x| x.i()), q.get("random").and_then(|x| x.b())) {
-            (Some(o), Some(key), Some(who), Some(time), Some(random)) => write::stated(pk, &o, key.l(), q.get("val")).ok_or("no such object in the current state (L4)")
+            (Some(o), Some(key), Some(who), Some(time), Some(random)) if held(FORMULAS) => write::stated(pk, &o, key.l(), q.get("val")).ok_or("no such object in the current state (L4)")
                 .and_then(|op| write::submit(pk, &[op], q.get("with").and_then(|w| w.b()).unwrap_or(&[]), None, None, who, time as u64, random)),
             _ => Err("arguments: o (16 bytes), key (a list of texts), who (text), time, random (64 bytes)"),
         },

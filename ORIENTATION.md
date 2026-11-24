@@ -1502,3 +1502,39 @@ reader with none is shown to be read, and its own state does not work
 there. None of it has been tried on a phone, in Safari, or with a
 screen reader.
 
+## 31. Evidence from outside, and four decisions (2026-11-24)
+
+**Five defects, found by an implementation of another model family.**
+Each was confirmed against the kernel before it was touched, then fixed
+with a vector (`spike/SIZE-NOTES.md`): a feature at a version the reader
+has not; a head offset that wrapped in 32 bits; a wrong index that showed
+an empty text; a module exporting a reserved name; a global whose constant
+was not of its type. Two were security defects. The lesson is the one the
+reader tests already taught: what the author tests, the author's kernel
+passes. A fuzzing pass over every offset and over the reserved names is
+now part of the suite: it fails 809 cases against the kernel as it was.
+
+Two things came of it beyond the five. A record the document needs and
+does not have is now reported, by `verify` and in the tools; before, the
+document was shown with a gap. And an offset is followed only to where a
+frame begins: bytes inside a chunk are not a frame, whatever an index
+says (P9). The independent reader already behaved so.
+
+**What a person types is theirs (F10).** A change that is only the text a
+person entered, put where the value they saw was, is written at once as
+their own, with no question. The kernel decides this, not the file: one
+`set`, from what was shown to what was typed. A press, a second
+operation, another value or another place is put to the person first.
+
+**A long history is asked for in parts.** `history` takes `count` and
+`first`; the tools show twenty changes at a time.
+
+**The formulas component.** A file's own formulas and handlers are no
+longer the base's work (`spike/SPLIT.md` section 11). The base is
+123 464 bytes.
+
+**Not settled.** Whether a reader that has not scanned a very large file
+may rely on its index until `verify` is run (P9 against P10). The first
+file from a second writer, `ufo-living-capsule.ufx`, is held and not yet
+examined: that is the next item, with the provenance of authoring tools.
+

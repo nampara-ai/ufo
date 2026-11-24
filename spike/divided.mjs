@@ -4,7 +4,7 @@
 //   node spike/tools/divide.mjs && node spike/divided.mjs
 import fs from 'fs'; import zlib from 'zlib'; import crypto from 'crypto'; import { start } from './binding/binding.mjs'; import { tree, flat } from './envelope/nodes.mjs'; import { withComponents, hashOf } from './envelope/parts.mjs';
 const root = new URL('../', import.meta.url), file = f => fs.readFileSync(new URL(f, root)), sha = b => crypto.createHash('sha256').update(b).digest('hex');
-const V = JSON.parse(file('vectors/vectors.json')), D = 'spike/out/divided/', whole = file(D + 'whole.wasm'), base = file(D + 'base.wasm'), printer = file(D + 'printer.wasm'), agent = file(D + 'agent.wasm');
+const V = JSON.parse(file('vectors/vectors.json')), D = 'spike/out/divided/', whole = file(D + 'whole.wasm'), base = file(D + 'base.wasm'), printer = file(D + 'printer.wasm'), agent = file(D + 'agent.wasm'), formulas = file(D + 'formulas.wasm');
 const measure = (piece, s) => ({ adv: [...s].length * piece.size * 0.5, asc: piece.size * 0.8, desc: piece.size * 0.2 }), clock = { time: () => 1767312000000, random: n => new Uint8Array(n).fill(7) };
 const kernel = async (pack, components) => { const k = await start(components ? base : whole, measure, b => zlib.inflateRawSync(b), clock, components); if (!await k.open(new Uint8Array(file('vectors/' + pack)))) throw new Error('does not open: ' + pack); return k; };
 const T = '71'.repeat(16);
@@ -24,7 +24,7 @@ async function asks(components) { const out = {};
 let ok = 0, bad = 0; const check = (what, a, b) => { if (JSON.stringify(a) === JSON.stringify(b)) { ok++; console.log('  agrees:', what); } else { bad++; console.log('  DIFFERS:', what, '\n    ', JSON.stringify(a).slice(0, 300), '\n    ', JSON.stringify(b).slice(0, 300)); } };
 const W = { reads: await reads(null), asks: await asks(null) };
 check('the printer of the whole kernel prints the vector', W.asks.printed, V.printer.printed_hex);
-console.log('base, printer and agent:'); { const all = { printer, agent }; check('reading, composing, an edit, publishing', await reads(all), W.reads); check('every projection asked, and the module printed', await asks(all), W.asks); }
+console.log('base, printer, agent and formulas:'); { const all = { printer, agent, formulas }; check('reading, composing, an edit, publishing', await reads(all), W.reads); check('every projection asked, and the module printed', await asks(all), W.asks); }
 console.log('the base alone:'); { const none = {}; check('reading, composing, an edit, publishing', await reads(none), W.reads); const a = await asks(none);
   check('no text of any projection, and nothing printed', [Object.values(a).flat().every(x => x === null || x === ''), a.printed], [true, '']); }
 console.log('the base and the agent, no printer:'); { const a = await asks({ agent }); check('the projections as the whole kernel gives them', [a['compose.ufx'], a['history.ufx'], a['timeline.ufx']], [W.asks['compose.ufx'], W.asks['history.ufx'], W.asks['timeline.ufx']]); check('nothing printed', a.printed, ''); }
@@ -52,4 +52,12 @@ console.log('components listed in the pack, for this base:');
   check('none listed: the base alone', await opened(plain), { shows: SAFE, asked: '', text: false });
   check('the printer listed, one byte of it changed in the file: it does not verify, and the file still opens', await opened(await withComponents(plain, ['printer'], { damage: true })), { shows: SAFE, asked: 'ufo.printer', text: false });
   check('the printer listed for another kernel: not this kernel\'s to use', await opened(await withComponents(plain, ['printer'], { other: true })), { shows: SAFE, asked: '', text: false }); }
+// the formulas component (PLAYER K8): what a file's own description works out and does. A file that needs it says so (SPEC 1.6)
+console.log('a file with a table, which requires `ufo.formulas`:');
+{ const { tools: toolsMade } = await import('./envelope/mkpack.mjs'), TOOLS = toolsMade(false).bytes;
+  const drawn = async components => { const k = await kernel('table.ufx', components); if (!k.openTools(TOOLS)) throw new Error('the tools do not open'); const texts = [];
+    for (const [kind, d] of k.input({ view: [600, 800] })) if (kind === 'draw' && d.on === 1) for (const [t, it] of d.list) if (t === 'text') texts.push(it.s); return texts; };
+  const whole = await drawn(null); check('the kernel whole: the table, and its total worked out', [whole.includes('Total: 195.50'), whole.includes('45.50')], [true, true]);
+  check('the formulas beside the base: drawn as the whole kernel draws it', await drawn({ formulas }), whole);
+  const bare = await drawn({ printer, agent }); check('the base without it: no face is attempted; one line says what is missing, then the plain text', [bare.some(t => /does not have: ufo\.formulas/.test(t)), bare.includes('Total: 195.50'), bare.some(t => t.includes('Costs'))], [true, false, true]); }
 console.log(bad ? `${bad} DIFFER` : `all ${ok} agree`); process.exit(bad ? 1 : 0);
