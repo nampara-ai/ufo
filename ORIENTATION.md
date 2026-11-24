@@ -1533,8 +1533,31 @@ operation, another value or another place is put to the person first.
 longer the base's work (`spike/SPLIT.md` section 11). The base is
 123 464 bytes.
 
-**Not settled.** Whether a reader that has not scanned a very large file
-may rely on its index until `verify` is run (P9 against P10). The first
+**Settled by delegation (owner, 2026-11-24: "make those decisions"):
+the frames are the one source of what a pack holds.** The question was
+whether an index entry that points inside a chunk, where the bytes of a
+frame happen to lie, gives a record. Three answers were weighed.
+*The index and the scan together decide*: any reader can check it
+locally, and a reader of a huge file over a network keeps its few seeks
+(P10); but then two things say what a pack holds, every tool that walks
+frames (copying, publishing, compacting, counting what leaves) must also
+chase index entries, and a reader that consults only one of the two
+disagrees silently. That is how ZIP came to have files that one program
+reads one way and another program another way: a directory at the end
+and headers along the way, each believed by somebody. *Leave it to
+`verify`*: readers differ on files that are wrong, which is where
+differing matters. *The frames alone decide*: one source, the simplest
+tools, and what an independent reader did unprompted; the cost is that
+where frames begin is known only by walking their headers. The third was
+chosen. A reader that holds the whole pack, as every web envelope and
+every reader of a local file does, walks the headers once and reads no
+payload: that is the MUST in P9. What is deliberately left unwritten: a
+reader that has only part of a pack, over a network. When one is built
+it will use the index, and it will have to say that it has not verified
+the pack, and not call it whole. That rule waits for the reader and the
+vector that exercise it; P10 stands for a correct index until then. Git
+answers the same question the same way: a pack's index is made by
+whoever receives the pack, by reading the pack. The first
 file from a second writer, `ufo-living-capsule.ufx`, is held and not yet
 examined: that is the next item, with the provenance of authoring tools.
 

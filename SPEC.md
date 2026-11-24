@@ -833,12 +833,14 @@ frames after the newest index's coverage.
   reader MUST have scanned the frames itself or rebuilt the index: an index
   cannot hide a record that is there. A wrong index is reported and
   rebuilt; it does not make the pack malformed or a head invalid. Nor can
-  an index show a record that is not there: an offset is followed only to
-  a place where a frame begins, as scanning from the signature finds
-  frames. What lies inside a frame's payload is not a frame, whatever
-  bytes it holds, and a reader MUST NOT take a record from there. A
-  reader that uses the index and one that scans therefore find the same
-  records in every pack.
+  an index show a record that is not there. The frames of a pack are
+  those that scanning from the signature finds, and there is no other
+  source of what a pack holds: what lies inside a frame's payload is not
+  a frame, whatever bytes it holds, and an index entry that points there
+  is wrong. A reader that holds the whole pack MUST NOT take a record
+  from such a place; it learns where frames begin by walking their
+  headers once, reading no payload. Every tool that copies, publishes,
+  compacts or counts a pack may therefore go by its frames alone.
 - **[P22] Offsets are 64 bits wide, and are checked as such.** Every
   offset and count a head or an index holds is compared, as the 64-bit
   number it is, with the length of the file before it is used for
