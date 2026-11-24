@@ -1,33 +1,33 @@
 {
  "functions": {
-  "whole": 750,
+  "whole": 751,
   "printer": 18,
   "agent": 12,
   "formulas": 10
  },
  "whole": {
-  "bytes": 290323,
-  "deflate": 135286,
-  "sha256": "ffa9aab152ca892c355de5025b08cebafe6e940a9b8d54c540f04274be52b3e3"
+  "bytes": 290969,
+  "deflate": 135669,
+  "sha256": "45716e11f961675dcdee645c74707e41d99f16b35da7411fcd7f48ac166ff802"
  },
  "base": {
-  "bytes": 265593,
-  "deflate": 123464,
-  "sha256": "65069e0088fd9e3c8e520f64244db36375d5098a0200cc8b7374d94afce6453d"
+  "bytes": 266311,
+  "deflate": 123834,
+  "sha256": "8efc686e36a1652926ffd4a95b2435e87e0917e6a21ddb62ec2a077c11cbb361"
  },
  "printer": {
   "bytes": 10349,
-  "deflate": 5143,
-  "sha256": "c9244a88a2913578fc45af3da886352353ec97ab87e4847c9bd09dac9c58cd2b"
+  "deflate": 5152,
+  "sha256": "23d12fdaca3236f12bc186296e793a122413f1d2743d83a320bccc32cb9969b5"
  },
  "agent": {
   "bytes": 7350,
-  "deflate": 3709,
-  "sha256": "78fe3aee2f5ea48dd6e3053caf979dd2b67c78b367e0c7cbe995ee473a5808ea"
+  "deflate": 3715,
+  "sha256": "5dc7ddb8a026a5fa292d70f1610f6d77594645803b7b4161936e4d0de874f6a4"
  },
  "formulas": {
-  "bytes": 11510,
-  "deflate": 5892,
-  "sha256": "b83cf8650a26957514640c4bf6ff68f64da8ea0ca48c314f2bf1c9b95fc4b7e8"
+  "bytes": 11448,
+  "deflate": 5861,
+  "sha256": "9a25bf84c7ca8179b281c5338d47d59f31308108e2eb2f48e01e23994423bed4"
  }
 }

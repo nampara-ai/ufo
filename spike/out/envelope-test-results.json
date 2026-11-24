@@ -37,6 +37,7 @@
      "components": "passed",
      "seals": "passed",
      "damage": "passed",
+     "interop": "passed",
      "sent on": "passed"
     },
     "http origin": {
@@ -130,7 +131,7 @@
      "state"
     ]
    },
-   "total": 257,
+   "total": 258,
    "failures": 0
   },
   "firefox": {
@@ -170,6 +171,7 @@
      "components": "passed",
      "seals": "passed",
      "damage": "passed",
+     "interop": "passed",
      "sent on": "passed"
     },
     "http origin": {
@@ -263,7 +265,7 @@
      "state"
     ]
    },
-   "total": 257,
+   "total": 258,
    "failures": 0
   },
   "webkit": {
@@ -303,6 +305,7 @@
      "components": "passed",
      "seals": "passed",
      "damage": "passed",
+     "interop": "passed",
      "sent on": "passed"
     },
     "http origin": {
@@ -396,7 +399,7 @@
      "state"
     ]
    },
-   "total": 257,
+   "total": 258,
    "failures": 0
   }
  },
@@ -524,7 +527,7 @@
     "engine": "firefox",
     "fails": true,
     "as_recorded": true,
-    "how": "http: fail: policy violation: img-src http://127.0.0.1:43955/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:43955/favic; http: violations: img-src http://127.0.0.1:43955/favicon.ico"
+    "how": "http: fail: policy violation: img-src http://127.0.0.1:36125/favicon.ico; http: console: error: [JavaScript Error: \"Content-Security-Policy: The page’s settings blocked the loading of a resource (img-src) at http://127.0.0.1:36125/favic; http: violations: img-src http://127.0.0.1:36125/favicon.ico"
    },
    {
     "file": "01-no-icon-request.naive2.html",

@@ -682,3 +682,11 @@ A file whose description has formulas or handlers says that it requires
 `ufo.formulas`. `table.ufx` and `contained.ufx` do. Opened with the base
 alone, each is shown by the safeguard: its plain text, and what is missing.
 
+## After the interop fixture and R10 (2026-11-24)
+
+The base is 123 834 bytes compressed (120.9 KiB of 128; 7 238 left): 370
+more, for a tool recording its own part in a change and for `bulk` in
+`history`. Printer 5 152, agent 3 715, formulas 5 861; the whole 135 669.
+The tools universe is 17 601 bytes of 24 576. Three engines: 258 of 258
+each, with the base alone in each page and what its file lists beside it.
+

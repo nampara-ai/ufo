@@ -35,6 +35,7 @@
    "components": "passed",
    "seals": "passed",
    "damage": "passed",
+   "interop": "passed",
    "sent on": "passed"
   },
   "http origin": {
@@ -128,6 +129,6 @@
    "state"
   ]
  },
- "total": 257,
+ "total": 258,
  "failures": 0
 }

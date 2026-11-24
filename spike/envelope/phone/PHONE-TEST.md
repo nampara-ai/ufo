@@ -13,10 +13,10 @@ Please record what actually happens.
 
 | File | What it is |
 | --- | --- |
-| `compose.ufx.html` | the test document (*The Quarterly Review*) as exported: 221 437 bytes. Its pack carries the tools (the words at the top and everything they do) as a universe nested in it |
-| `compose-edited.ufx.html` | the same after edits by "Ada Tester", saved by the page itself in the test run with "For people working on this" chosen: everything, with its working history: 261 926 bytes |
-| `compose-published.ufx.html` | the same state, saved with "For readers" chosen: the document and who made it, with the working history withheld: 210 082 bytes |
-| `table.ufx.html` | a short document with a table, for the ninth thing to try, below: 237 342 bytes. It carries, beside the reader every file carries, the part that works out a file's own formulas |
+| `compose.ufx.html` | the test document (*The Quarterly Review*) as exported: 222 361 bytes. Its pack carries the tools (the words at the top and everything they do) as a universe nested in it |
+| `compose-edited.ufx.html` | the same after edits by "Ada Tester", saved by the page itself in the test run with "For people working on this" chosen: everything, with its working history: 262 906 bytes |
+| `compose-published.ufx.html` | the same state, saved with "For readers" chosen: the document and who made it, with the working history withheld: 210 698 bytes |
+| `table.ufx.html` | a short document with a table, for the ninth thing to try, below: 238 590 bytes. It carries, beside the reader every file carries, the part that works out a file's own formulas |
 | `index.html` | a plain page linking them, for hosting (it asks search engines not to index it) |
 
 Hosted address used below (a placeholder until the files are put there):
