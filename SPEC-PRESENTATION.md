@@ -294,9 +294,10 @@ program, and let programs take part in composition.
 When the event occurs, the kernel evaluates the formulas — against data,
 presentation state and the event — and states each operation against the
 state as it is (**L2**). What comes of that is a request, and writes
-nothing (**F10**): the reader's tools put it to the person, and what the
-person applies is their change, verified and committed, or refused, like
-any change (**L4**). A checkbox, a form, an editable cell and a button
+nothing (**F10**): where it is only what the person typed, put where
+they typed it, the reader's tools commit it as theirs; anything more
+they put to the person first. Either way it is verified and committed,
+or refused, like any change (**L4**). A checkbox, a form, an editable cell and a button
 that adds a row are therefore description, with no Compute-let.
 
 In a universe that a reader presents as a tool for another (§9.6), a
@@ -349,16 +350,35 @@ Compute-let, which runs only by the person's explicit grant (§12).
   file presents is told apart from the reader's tools by the kernel, never
   by an identity the file gives: an object in a file that has the identity
   of one of the tools' is still the file's.
-- **[F10] A proposal writes nothing.** What a handler proposes is handed,
-  as the event `propose`, to the Portal through which the reader presents
-  the universe: the operations as stated, and the object whose handler
-  proposed them. With no handler for it there, nothing happens. The
-  reader's tools show the person what would change, in their own place,
-  which the file cannot draw on or read. Only what the person then
-  applies is committed: a change whose origin is that person, whose
-  `context` names the object that asked (§5.4), and which, where the
-  reader asked first, records the person's decision about it with the
-  verdict `approve`. It is whole or not at all (**L4**), and a state that
+- **[F10] A proposal writes nothing; what a person types is theirs.**
+  What a handler proposes is handed to the Portal through which the
+  reader presents the universe: the operations as stated, and the object
+  whose handler proposed them. It is handed over in one of two ways, and
+  the kernel, not the file, says which.
+
+  *The person's own input.* The person entered a text into a value that
+  takes text entry, and the handler of that `change` proposes exactly one
+  operation: a `set` whose `old` is what the value showed and whose `val`
+  is what the person entered. Each is compared as the text itself, or, if
+  the stored value is a number, as the number the text spells (`number`,
+  §7.3). That is the person putting a value where they saw a value. It is
+  handed over as text entry on a document is, as the event `change`, and
+  the reader's tools commit it at once: a change whose origin is that
+  person and whose `context` names the object typed into (§5.4). No
+  question is asked and no decision is recorded, because none was made.
+  Entering the text already there changes nothing.
+
+  *Anything beyond it.* Every other proposal — from a press; of more than
+  one operation; of a value other than the one entered; to a place other
+  than the value shown, or one that did not hold what was shown — is
+  handed over as the event `propose`. The reader's tools show the person
+  what would change, in their own place, which the file cannot draw on or
+  read. Only what the person then applies is committed: a change whose
+  origin is that person, whose `context` names the object that asked, and
+  which records the person's decision about it with the verdict `approve`.
+
+  Either way, with no handler for the event on that Portal nothing
+  happens; the change is whole or not at all (**L4**); and a state that
   has moved on since it was stated refuses it (**L2**).
 - **[F11] Only a person's input performs a handler.** The events of
   Appendix A are all of them a person's: a press, a key, the pointer, a
@@ -761,8 +781,10 @@ item, or Enter or Space while it has focus; `enter` and `leave` are the
 pointer's; `key` is a key going down while it has focus; `change` is an
 `edit` event delivered to it (§9.2), whose text a handler reads as
 `arg("text")`. A Portal in a reader's tools has one more, `propose`: what
-a handler in the universe it presents has asked for (**F10**), read as
-`arg("proposal")`.
+a handler in the universe it presents has asked for beyond the person's
+own input (**F10**), read as `arg("proposal")`; and its `change` is also
+what a person typed into a value of that universe. A value takes text
+entry only where it is a node: it has a `role`.
 
 **In a parent:** `place` (including `at`, an anchor, for a child of a
 surface), `x`, `y`, `w`, `h`, `row`, `col`, `span`, `align`, `grow`,

@@ -282,36 +282,61 @@
   {
    "pressed": "not paid, of the second row",
    "asked": "Set rows.r2.paid of o:b4b4b4b4: from no to yes.",
-   "applied": true
-  },
+   "applied": true,
+   "why_asked": "a press is not the value: what it changes is the handler's to say, so the person is asked (F10)"
+  }
+ ],
+ "typed": [
   {
    "typed": "50 for 45.50",
-   "asked": "Set rows.r2.amount of o:b4b4b4b4: from 45.5 to 50.",
-   "applied": true,
-   "total_then": "Total: 200.00"
+   "asked": false,
+   "written": "rows.r2.amount, from 45.5 to 50",
+   "total_then": "Total: 200.00",
+   "why_not_asked": "the one operation puts the number typed where the number shown was: the person's own input (F10)",
+   "origin": {
+    "by": "person",
+    "who": {
+     "name": "Table Hand"
+    },
+    "basis": "witnessed",
+    "context": {
+     "$ref": "o:bcbcbcbc"
+    }
+   }
   },
   {
    "typed": "-0.25 for 120.00",
-   "asked": "Set rows.r1.amount of o:b4b4b4b4: from 120 to -0.25.",
-   "applied": false
+   "asked": false,
+   "total_then": "Total: 79.75"
+  },
+  {
+   "typed": "120 for -0.25",
+   "asked": false,
+   "total_then": "Total: 200.00"
   },
   {
    "typed": "Ink, black for Ink",
-   "asked": "Set rows.r2.item of o:b4b4b4b4: from “Ink” to “Ink, black”.",
-   "applied": true,
+   "asked": false,
    "then": "undone"
+  },
+  {
+   "typed": "fifty, 12.5.1, 1e3, nothing, or sixteen digits, for a figure",
+   "asked": false,
+   "written": "nothing: `number` gives an error value, and the handler proposes nothing"
   }
  ],
  "after": {
   "file": "table-edited.ufx",
-  "length": 23528,
-  "sha256": "88c4a7e148aedea2de961ee1b603b35f6d324ac46a3ed24f0e361ef349f60e8f",
-  "root_hash": "44d005ade8e1113dd76718c1bf14db3f6169a8eef2d6d16ff151f3cff9a9f8a8",
+  "length": 30766,
+  "sha256": "6e2174576396e582501d782e04ebdd7699c3e8de3b8e0c723ec0d8e65b8f3def",
+  "root_hash": "a02a37f0ef15745fde15103d56e3ba968beae909b05016525b7ba3a9494a7a81",
   "rows": "prop key=rows value={\"r1\":{\"item\":\"Paper\",\"paid\":true,\"amount\":120},\"r2\":{\"item\":\"Ink\",\"paid\":true,\"amount\":50},\"r3\":{\"item\":\"Postage\",\"paid\":false,\"amount\":30}}",
   "history": [
-   "change id=o:c8ed1237 commit=c:44d005ad time=1767355200000 actor=\"Table Hand\" basis=witnessed by=tool ops=1 touched=[o:b4b4b4b4] verdict=none",
-   "change id=o:6388add2 commit=c:fd1efd25 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=approve decided-by=\"Table Hand\"",
-   "change id=o:fe23486d commit=c:d8a5caf0 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=approve decided-by=\"Table Hand\"",
+   "change id=o:92b7dc01 commit=c:a02a37f0 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=tool ops=1 touched=[o:b4b4b4b4] verdict=none",
+   "change id=o:2d52779c commit=c:19e8d30a time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
+   "change id=o:c8ed1237 commit=c:b47c9174 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
+   "change id=o:6388add2 commit=c:3742d385 time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
+   "change id=o:fe23486d commit=c:62c1c84b time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=none",
    "change id=o:99bee308 commit=c:9a441d6b time=1767355200000 actor=\"Table Hand\" basis=witnessed by=person ops=1 touched=[o:b4b4b4b4] verdict=approve decided-by=\"Table Hand\"",
    "change id=o:c1c1c1c1 commit=c:4e4a4abd time=1767225600000 actor=\"UFO spike\" basis=witnessed by=person ops=68 touched=[o:00000000,o:b1b1b1b1,o:b2b2b2b2,o:b3b3b3b3,o:b4b4b4b4,o:b5b5b5b5,o:b6b6b6b6,o:b7b7b7b7,o:b8b8b8b8,o:b9b9b9b9,o:babababa,o:bbbbbbbb,o:bcbcbcbc,o:bdbdbdbd,o:bebebebe,o:bfbfbfbf,o:c0c0c0c0] verdict=none"
   ],

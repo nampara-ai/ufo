@@ -177,9 +177,10 @@ table of three rows, a total, and a word, **Show the note**.
    top say "Changed, and recorded as change o:… by (your name)."
 6. Still with Edit on, tap the figure **45.50**. *Expectation:* the
    phone's keyboard opens on a field holding "45.50". Replace it with
-   50 and tap **Done**. The panel asks: "Set rows.r2.amount of
-   o:b4b4b4b4: from 45.5 to 50." Tap **Apply**: the row says "50.00" and
-   the total "Total: 200.00".
+   50 and tap **Done**. Nothing is asked: what you typed is your own
+   change. The row says "50.00", the total "Total: 200.00", and the
+   lines at the top say "Changed, and recorded as change o:… by (your
+   name)."
 7. Tap a figure and type something that is not a number, such as
    "fifty". *Expectation:* nothing is asked and nothing changes.
 
@@ -190,7 +191,7 @@ table of three rows, a total, and a word, **Show the note**.
 | A tap on "not paid" asks first, in the lines at the top | | |
 | Dismiss: nothing changes | | |
 | Apply, in my name: the row changes, and it is recorded as mine | | |
-| A figure typed: asked, applied, and the total follows | | |
+| A figure typed: written at once, not asked about, and the total follows | | |
 | A word typed for a figure: nothing is asked | | |
 
 With VoiceOver: the table should be announced as a table of four rows

@@ -139,12 +139,24 @@ r.press('Document'); assert.strictEqual(r.shown(), docText); assert.strictEqual(
   hit('BOTH-ME'); assert(asked() && askedLines().length === 2 && Buffer.compare(before, pack()) === 0, 'two operations: ' + askedLines().join(' / ')); h.press('Apply');
   assert(/Not changed: this reader applies a change that sets values of one object/.test(h.status()) && Buffer.compare(before, pack()) === 0, h.status()); h.press('Dismiss'); assert(!asked());
   tried('pressed: {propose: [set of one object, set of another]}, and the person applies it', 'whole or not at all (L4)', 'asked; applied; refused whole by this reader, nothing written');
+  // F10: what the person types. Into the value shown, put where it was: their own input, written at once and not asked about
+  const type = (shown, to) => { const x = h.texts().find(x => x.on === 1 && x.s === shown); assert(x, 'not drawn: ' + shown); h.send({ press: [x.X + 4, x.Y - 4], on: 1 }); const e = h.fx.find(e => e[0] === 'edit'); assert(e && e[1] && e[1].s === shown, 'no text entry on ' + shown); h.send({ edit: e[1].id, end: true, s: to }); };
+  for (const [shown, to, asks, what] of [['TYPE-MORE', 'typed', 'Set of of o:c2c2c2c2: from “TYPE-MORE” to “typed, and more than was typed”.', 'a value that is not what was typed'],
+    ['TYPE-ELSEWHERE', 'typed', 'Set label of o:93939393: from “as it was made” to “typed”.', 'what was typed, somewhere other than the value shown'],
+    ['1.3', '2', 'Set weight of o:93939393: from 1.25 to 2.', 'what was typed, where the value shown was that value rounded']]) {
+    type(shown, to); assert.deepStrictEqual(askedLines(), [asks]); assert(Buffer.compare(before, pack()) === 0, shown + ' wrote'); h.press('Dismiss'); tried('typed into a value whose handler proposes ' + what, 'the person is asked: it goes beyond their own input (F10)', 'asked: ' + asks + ' Dismissed: nothing written'); }
+  type('TYPE-TWICE', 'typed'); assert.strictEqual(askedLines().length, 2); assert(Buffer.compare(before, pack()) === 0); h.press('Dismiss'); tried('typed into a value whose handler proposes two operations', 'the person is asked (F10)', 'asked, with both; dismissed: nothing written');
   hit('HONEST-ME'); const line = askedLines(); assert.deepStrictEqual(line, ['Set label of o:93939393: from \u201cas it was made\u201d to \u201cchanged by the file\u201d.']); assert(Buffer.compare(before, pack()) === 0 && has('OWN label=as it was made'));
   h.press('Dismiss'); assert(!asked() && Buffer.compare(before, pack()) === 0); tried('pressed: {propose: [set of a value of its own universe]}, and the person dismisses it', 'nothing is written (F10)', 'asked: ' + line[0] + ' Dismissed: nothing written');
   hit('HONEST-ME'); h.press('Apply'); assert(!asked() && has('OWN label=changed by the file') && h.head().height === 1, h.status());
   const top = h.k.project({ name: 'history' }).split('\n').find(l => l.startsWith('change ')), og = JSON.parse(h.k.project({ name: 'object', o: h.head().change }).split('\n').find(l => l.startsWith('prop key=origin')).slice(22));
   assert(top.includes('actor="Reader Test"') && top.includes('ops=1') && top.endsWith('verdict=approve decided-by="Reader Test"'), top); assert(og.by === 'person' && og.who.name === 'Reader Test' && og.context.$ref === 'o:' + '90'.repeat(4), JSON.stringify(og));
   tried('the same, and the person applies it', 'one change through the gate, by the person, recording their decision and what in the file asked (F10)', top.slice(0, 40) + '… ' + top.slice(top.indexOf('actor')) + '; origin.context ' + og.context.$ref);
+  type('changed by the file', 'typed by the reader'); assert(!asked() && has('OWN label=typed by the reader') && h.head().height === 2, 'what was typed was not written at once: ' + h.status());
+  const top2 = h.k.project({ name: 'history' }).split('\n').find(l => l.startsWith('change ')), og2 = JSON.parse(h.k.project({ name: 'object', o: h.head().change }).split('\n').find(l => l.startsWith('prop key=origin')).slice(22));
+  assert(top2.includes('actor="Reader Test"') && top2.includes('ops=1') && top2.endsWith('verdict=none') && og2.by === 'person' && og2.context.$ref === 'o:' + 'c1'.repeat(4), top2 + JSON.stringify(og2));
+  tried('typed into a value whose handler sets that value to what was typed', 'their own input: written at once, as theirs, with no question and no decision recorded (F10)', top2.slice(top2.indexOf('actor')) + '; origin.context ' + og2.context.$ref);
+  type('typed by the reader', 'typed by the reader'); assert(h.head().height === 2 && !asked()); tried('the same text typed again', 'nothing: there is no change', 'nothing written');
   fs.writeFileSync(new URL('vectors/contained.ufx', root), packMade);
   fs.writeFileSync(new URL('vectors/provisional/containment.json', root), JSON.stringify({ status: { status: 'provisional', note: "the author's kernel only" },
     what: 'containment (PRESENTATION 7.6 F6, F8 to F11; 7.3 F2, F4): a file whose own description tries each way out. `must` is what the rules require of every reader; `here` is what this kernel did',
@@ -509,12 +521,13 @@ fs.writeFileSync(out('edited.ufx'), before);
   const c1 = t.head().change, og = prop(c1, 'origin'); assert(hist()[0].includes('actor="Table Hand"') && hist()[0].includes('touched=[o:b4b4b4b4]') && hist()[0].endsWith('verdict=approve decided-by="Table Hand"'), hist()[0]);
   assert(og.by === 'person' && og.who.name === 'Table Hand' && og.context.$ref === 'o:' + hex(TABLE.c3).slice(0, og.context.$ref.length - 2), JSON.stringify(og)); assert(/Changed, and recorded as change o:[0-9a-f]{8} by Table Hand\./.test(t.status()), t.status());
   // a figure typed: the handler makes a number of it; what does not spell a number proposes nothing
-  type('45.50', '50'); assert.deepStrictEqual(asked(), ['Set rows.r2.amount of o:b4b4b4b4: from 45.5 to 50.']); t.press('Apply'); assert(cells().includes('50.00') && cells().includes('Total: 200.00'), cells().join(' | '));
+  type('45.50', '50'); assert(asked().length === 0 && cells().includes('50.00') && cells().includes('Total: 200.00') && t.head().height === 2, 'a figure typed is not written at once: ' + cells().join(' | '));
+  const og2 = prop(t.head().change, 'origin'); assert(hist()[0].includes('actor="Table Hand"') && hist()[0].endsWith('verdict=none') && og2.by === 'person' && og2.context.$ref.startsWith('o:' + hex(TABLE.c2).slice(0, 8)), hist()[0]);
   for (const bad of ['fifty', '12.5.1', '1e3', '', '1234567890123456']) { const held = pack(); type('50.00', bad); assert(asked().length === 0 && Buffer.compare(held, pack()) === 0, 'proposed from ' + JSON.stringify(bad)); }
-  type('120.00', '-0.25'); assert.deepStrictEqual(asked(), ['Set rows.r1.amount of o:b4b4b4b4: from 120 to -0.25.']); t.press('Dismiss');
-  type('Ink', 'Ink, black'); assert.deepStrictEqual(asked(), ['Set rows.r2.item of o:b4b4b4b4: from “Ink” to “Ink, black”.']); t.press('Apply'); assert(cells().includes('Ink, black') && t.head().height === 3);
+  type('120.00', '-0.25'); assert(asked().length === 0 && cells().includes('-0.25') && cells().includes('Total: 79.75'), cells().join(' | ')); type('-0.25', '120'); assert(cells().includes('Total: 200.00'));
+  type('Ink', 'Ink, black'); assert(asked().length === 0 && cells().includes('Ink, black') && t.head().height === 5, 'height ' + t.head().height);
   // undo: the newest change of this person, the name of the item, is set back
-  t.press('Changes'); t.press('Undo my last change'); assert(/Undone: your change/.test(t.status()) && cells().includes('Ink') && !cells().includes('Ink, black') && t.head().height === 4 && hist()[0].includes('by=tool'), t.status());
+  t.press('Changes'); t.press('Undo my last change'); assert(/Undone: your change/.test(t.status()) && cells().includes('Ink') && !cells().includes('Ink, black') && t.head().height === 6 && hist()[0].includes('by=tool'), t.status());
   const now = pack(), data = t.k.project({ name: 'object', o: hex(TABLE.data) }).split('\n').find(l => l.startsWith('prop key=rows'));
   fs.writeFileSync(new URL('vectors/table.ufx', root), made); fs.writeFileSync(new URL('vectors/table-edited.ufx', root), now);
   const sha = b => crypto.createHash('sha256').update(b).digest('hex');
@@ -523,8 +536,10 @@ fs.writeFileSync(out('edited.ufx'), before);
     pack: { file: 'table.ufx', length: made.length, sha256: sha(made), root_hash: hex(tableMade().root) },
     presented: { texts: first.map(([s, x, y]) => ({ s, x, y })), nodes: tree0.map(([depth, role, text, label]) => ({ depth, role, ...(text ? { text } : {}), ...(label ? { label } : {}) })) },
     formulas: { total: 'Total: 195.50', 'number of': { '50': 50, '-0.25': -0.25, 'fifty': 'an error value', '12.5.1': 'an error value', '1e3': 'an error value', '': 'an error value', '1234567890123456': 'an error value: more than fifteen digits' } },
-    proposed: [{ pressed: 'not paid, of the second row', asked: 'Set rows.r2.paid of o:b4b4b4b4: from no to yes.', applied: true }, { typed: '50 for 45.50', asked: 'Set rows.r2.amount of o:b4b4b4b4: from 45.5 to 50.', applied: true, total_then: 'Total: 200.00' },
-      { typed: '-0.25 for 120.00', asked: 'Set rows.r1.amount of o:b4b4b4b4: from 120 to -0.25.', applied: false }, { typed: 'Ink, black for Ink', asked: 'Set rows.r2.item of o:b4b4b4b4: from “Ink” to “Ink, black”.', applied: true, then: 'undone' }],
+    proposed: [{ pressed: 'not paid, of the second row', asked: 'Set rows.r2.paid of o:b4b4b4b4: from no to yes.', applied: true, why_asked: 'a press is not the value: what it changes is the handler\'s to say, so the person is asked (F10)' }],
+    typed: [{ typed: '50 for 45.50', asked: false, written: 'rows.r2.amount, from 45.5 to 50', total_then: 'Total: 200.00', why_not_asked: 'the one operation puts the number typed where the number shown was: the person\'s own input (F10)', origin: og2 },
+      { typed: '-0.25 for 120.00', asked: false, total_then: 'Total: 79.75' }, { typed: '120 for -0.25', asked: false, total_then: 'Total: 200.00' }, { typed: 'Ink, black for Ink', asked: false, then: 'undone' },
+      { typed: 'fifty, 12.5.1, 1e3, nothing, or sixteen digits, for a figure', asked: false, written: 'nothing: `number` gives an error value, and the handler proposes nothing' }],
     after: { file: 'table-edited.ufx', length: now.length, sha256: sha(now), root_hash: t.head().commit, rows: data, history: hist(), origin_of_the_first: og },
     refused: [{ what: 'applying a proposal while the document is not open for changes', says: 'the document is not open for changes, or nothing was proposed', written: 'nothing' }] }, null, 1) + '\n');
   say('table:', JSON.stringify({ changes: t.head().height, pack: now.length, rows: data.slice(0, 160) })); }

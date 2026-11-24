@@ -158,16 +158,7 @@ fn apply(f: &V, env: &Env) -> Option<V> {
             }
         }
         // the number a text spells: digits, at most fifteen, with `-` before them or `.` among them or neither
-        "number" => {
-            let x = arg(1)?;
-            let (neg, body) = x.s()?.strip_prefix('-').map_or((false, x.s()?), |b| (true, b));
-            let (whole, frac) = body.split_once('.').unwrap_or((body, ""));
-            if whole.is_empty() || whole.len() + frac.len() > 15 || body.ends_with('.') || !whole.bytes().chain(frac.bytes()).all(|c| c.is_ascii_digit()) {
-                return None;
-            }
-            let m = whole.bytes().chain(frac.bytes()).fold(0i64, |m, c| m * 10 + (c - b'0') as i64) * if neg { -1 } else { 1 };
-            if frac.is_empty() { V::Int(m) } else { V::F(m as f64 / (0..frac.len()).fold(1.0, |p, _| p * 10.0)) }
-        }
+        "number" => number(arg(1)?.s()?)?,
         "slice" => {
             let (x, n) = (arg(1)?, |i: usize, len: usize| index(i).map(|k| k.clamp(0, len as i64) as usize));
             match &x {
@@ -223,6 +214,17 @@ fn apply(f: &V, env: &Env) -> Option<V> {
         }
         _ => return None,
     })
+}
+/// `number` (7.3): the number a text spells: digits, at most fifteen, with `-` before them or one `.` among them
+/// or neither, and a digit on each side of the `.`; an integer if there is no `.`.
+fn number(x: &str) -> Option<V> {
+    let (neg, body) = x.strip_prefix('-').map_or((false, x), |b| (true, b));
+    let (whole, frac) = body.split_once('.').unwrap_or((body, ""));
+    if whole.is_empty() || whole.len() + frac.len() > 15 || body.ends_with('.') || !whole.bytes().chain(frac.bytes()).all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let m = whole.bytes().chain(frac.bytes()).fold(0i64, |m, c| m * 10 + (c - b'0') as i64) * if neg { -1 } else { 1 };
+    Some(if frac.is_empty() { V::Int(m) } else { V::F(m as f64 / (0..frac.len()).fold(1.0, |p, _| p * 10.0)) })
 }
 /// `format` (7.3). A number by a pattern of fixed decimals: `0`, then `.` and a `0` for each decimal
 /// place; a `,` anywhere in it groups thousands; a final `%` multiplies by 100. Halves round away from
@@ -434,7 +436,7 @@ pub struct Reader {
     through: Option<Id>,         // the Portal the subject is presented through
     shown: Option<bool>,         // what was last presented asked what would leave, with or without history (E12)
     entry: Option<Entry>,        // a block of the subject, in the editing surface
-    field: Option<(i64, Id, Vec<(String, V)>, bool)>, // or a value a Portal presents: the entry's number, the Portal, what `each` had bound there, and whether it is of what the file presents
+    field: Option<(i64, Id, Vec<(String, V)>, bool, String)>, // or a value a Portal presents: the entry's number, the Portal, what `each` had bound there, whether it is of what the file presents, and the text it showed
     content: Vec<(String, V)>,   // the presentation state of what the subject presents: its own, and not the tools' (7.3)
     serial: i64,
     focus: Option<(usize, i64)>, // the node the host says has the focus, and the list it is in
@@ -585,13 +587,13 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
                 (Some(h), _, _) => {
                     // what an `each` had bound where this was composed is bound again while its handler runs
                     match (within, id) {
-                        (true, Some(id)) => handle(rd, own, pk, home, id, &h, &bound(&it), &mut fx),
+                        (true, Some(id)) => handle(rd, own, pk, home, id, &h, &bound(&it), None, &mut fx),
                         _ => perform(rd, pk, &h, &bound(&it), None, &mut fx),
                     }
                 }
                 (None, Some(s), Some(id)) => {
                     if let Some((_, e)) = surface(rd, on, i, scale, s) {
-                        rd.field = Some((rd.serial, id, bound(&it), within));
+                        rd.field = Some((rd.serial, id, bound(&it), within, String::from(s)));
                         fx.extend(e);
                     }
                 }
@@ -614,7 +616,7 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
         if let Some(b) = rd.focus.and_then(|(n, id)| bounds(&rd.lists[n], id)) {
             fx.push(effect("show", map(vec![("on", V::Int(on as i64)), ("at", V::L(vec![V::F(b[0]), V::F(b[1]), V::F(b[2] - b[0]), V::F(b[3] - b[1])]))])));
         }
-    } else if let Some((_, id, mut bound, within)) = ev.get("edit").and_then(|n| rd.field.clone().filter(|f| Some(f.0) == n.i())) {
+    } else if let Some((_, id, mut bound, within, shown)) = ev.get("edit").and_then(|n| rd.field.clone().filter(|f| Some(f.0) == n.i())) {
         // text entry on a value: when the person is done, the `change` handler of what presents it is performed,
         // with the text as `arg("text")` (Appendix A: `change` is an `edit` event delivered to it)
         let Some(V::Bool(done)) = ev.get("end") else { return V::L(fx) };
@@ -624,7 +626,7 @@ pub fn input(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, ev: &V) -> V {
         if let (true, Some(h)) = (*done, o.and_then(|o| o.p.get("on")?.get("change").cloned())) {
             bound.push((String::from("text"), ev.get("s").cloned().unwrap_or(V::Null)));
             match within {
-                true => handle(rd, own, pk, home, id, &h, &bound, &mut fx),
+                true => handle(rd, own, pk, home, id, &h, &bound, ev.get("s").and_then(|s| s.s()).map(|s| (shown.as_str(), s)), &mut fx),
                 false => perform(rd, pk, &h, &bound, None, &mut fx),
             }
         }
@@ -712,7 +714,8 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
                 // 10.3 `propose`, of a change the handler gives: operations, and what in the document asked for them. This
                 // is how the reader's tools commit what a file's own handler proposed, once the person has said so (F10)
                 ("propose", None) => text("who").ok_or("a change says who made it, and no name was given").and_then(|who| {
-                    let c = m.get("change").filter(|c| rd.editable && c.get("ops").is_some()).ok_or("the document is not open for changes, or nothing was proposed")?;
+                    // what is written: the change the handler gives; or, on a `change` event, what the person typed into a value of the document
+                    let c = m.get("change").or_else(|| event.iter().find(|e| e.0 == "direct").map(|e| &e.1)).filter(|c| rd.editable && c.get("ops").is_some()).ok_or("the document is not open for changes, or nothing was proposed")?;
                     let mut random = [0u8; 64];
                     crate::random(&mut random);
                     let r = write::submit(pk, c.get("ops").map(|o| o.l()).unwrap_or(&[]), &[], c.get("by").and_then(|b| b.id()), text("verdict"), who, crate::now(), &random)?;
@@ -750,7 +753,7 @@ fn perform(rd: &mut Reader, pk: &mut Pack, h: &V, event: &[(String, V)], mut cha
 /// operation is stated against the state as it is, and the request is handed, as the event `propose`, to the
 /// Portal the reader presents the file through, whose handler decides. That ends the handler. Anything else
 /// (`act`, an operation that is not a `set` of a value of an object of this universe) ends it and does nothing.
-fn handle(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, home: Option<H>, by: Id, h: &V, event: &[(String, V)], fx: &mut Vec<V>) {
+fn handle(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, home: Option<H>, by: Id, h: &V, event: &[(String, V)], typed: Option<(&str, &str)>, fx: &mut Vec<V>) {
     for h in if let V::L(l) = h { &l[..] } else { core::slice::from_ref(h) } {
         let Some(m) = eval(h, &Env::new(&rd.content, event, &[], None, Some(pk), &[])) else { return };
         if let Some(name) = m.get("set").and_then(|n| n.s()) {
@@ -777,9 +780,23 @@ fn handle(rd: &mut Reader, own: Option<&Pack>, pk: &mut Pack, home: Option<H>, b
             lines.push(map(vec![("obj", t(&cat!("o:", id.get(..8).unwrap_or("")))), ("key", t(&key.iter().filter_map(|k| k.s()).collect::<Vec<_>>().join("."))), ("old", t(&said("old"))), ("val", t(&said("val")))]));
             ops.push(stated);
         }
-        if let (false, Some(ask)) = (ops.is_empty(), rd.through.and_then(|id| home.and_then(|h| own.unwrap_or(pk).object(&h, &id))).and_then(|o| o.p.get("on")?.get("propose").cloned())) {
+        // F10. What the person typed into a value, put where that value was and nothing more, is their own input: it
+        // is handed on as text entry on the document is (`change`), to be written at once. `typed` is what the field
+        // showed and what was entered: the one operation must replace the first with the second, each as the text
+        // or as the number it spells. Anything else a handler asks for is put to the person (`propose`).
+        let same = |v: Option<&V>, s: &str| match v {
+            Some(V::T(x)) => x == s,
+            Some(n @ (V::Int(_) | V::F(_))) => number(s).map_or(false, |m| m.f() == n.f()),
+            _ => false,
+        };
+        let direct = typed.filter(|_| ops.len() == 1).map_or(false, |(shown, text)| same(ops[0].get("old"), shown) && same(ops[0].get("val"), text));
+        if ops.is_empty() || direct && ops[0].get("old") == ops[0].get("val") {
+            return;
+        }
+        let event = if direct { "change" } else { "propose" };
+        if let Some(ask) = rd.through.and_then(|id| home.and_then(|h| own.unwrap_or(pk).object(&h, &id))).and_then(|o| o.p.get("on")?.get(event).cloned()) {
             let asked = map(vec![("ops", V::L(ops)), ("by", V::B(by.to_vec())), ("lines", V::L(lines))]);
-            perform(rd, pk, &ask, &[(String::from("proposal"), asked)], None, fx);
+            perform(rd, pk, &ask, &[(String::from(if direct { "direct" } else { "proposal" }), asked)], None, fx);
         }
         return;
     }

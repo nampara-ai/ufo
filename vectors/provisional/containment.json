@@ -6,9 +6,9 @@
  "what": "containment (PRESENTATION 7.6 F6, F8 to F11; 7.3 F2, F4): a file whose own description tries each way out. `must` is what the rules require of every reader; `here` is what this kernel did",
  "pack": {
   "file": "contained.ufx",
-  "length": 20099,
-  "sha256": "d017e6736ebc909f2e6f7dc6f53f7f5d8e85e7feb54a7147d5e925fa7e8e548b",
-  "root_hash": "5ee44dbd2736c249d9b300213738dc42b2842e8cdef335c2eaa481a814e6b0f5"
+  "length": 24189,
+  "sha256": "3904e836994a108b50a931bb75854eb26a0bd29c359319f3507f351319551c0d",
+  "root_hash": "32e3db0e411d8f11e26d2646049b9a6c34869946df4e81e58240d5fbe7d39f34"
  },
  "reader": "the reader's own tools (spike/envelope/tools.ufx) present the pack as their subject, in the name of Reader Test",
  "attempts": [
@@ -123,6 +123,26 @@
    "here": "asked; applied; refused whole by this reader, nothing written"
   },
   {
+   "attempt": "typed into a value whose handler proposes a value that is not what was typed",
+   "must": "the person is asked: it goes beyond their own input (F10)",
+   "here": "asked: Set of of o:c2c2c2c2: from “TYPE-MORE” to “typed, and more than was typed”. Dismissed: nothing written"
+  },
+  {
+   "attempt": "typed into a value whose handler proposes what was typed, somewhere other than the value shown",
+   "must": "the person is asked: it goes beyond their own input (F10)",
+   "here": "asked: Set label of o:93939393: from “as it was made” to “typed”. Dismissed: nothing written"
+  },
+  {
+   "attempt": "typed into a value whose handler proposes what was typed, where the value shown was that value rounded",
+   "must": "the person is asked: it goes beyond their own input (F10)",
+   "here": "asked: Set weight of o:93939393: from 1.25 to 2. Dismissed: nothing written"
+  },
+  {
+   "attempt": "typed into a value whose handler proposes two operations",
+   "must": "the person is asked (F10)",
+   "here": "asked, with both; dismissed: nothing written"
+  },
+  {
    "attempt": "pressed: {propose: [set of a value of its own universe]}, and the person dismisses it",
    "must": "nothing is written (F10)",
    "here": "asked: Set label of o:93939393: from “as it was made” to “changed by the file”. Dismissed: nothing written"
@@ -130,11 +150,21 @@
   {
    "attempt": "the same, and the person applies it",
    "must": "one change through the gate, by the person, recording their decision and what in the file asked (F10)",
-   "here": "change id=o:d5fa1f44 commit=c:7de5e776 t… actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\"; origin.context o:90909090"
+   "here": "change id=o:d5fa1f44 commit=c:6aa3cdad t… actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\"; origin.context o:90909090"
+  },
+  {
+   "attempt": "typed into a value whose handler sets that value to what was typed",
+   "must": "their own input: written at once, as theirs, with no question and no decision recorded (F10)",
+   "here": "actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=none; origin.context o:c1c1c1c1"
+  },
+  {
+   "attempt": "the same text typed again",
+   "must": "nothing: there is no change",
+   "here": "nothing written"
   }
  ],
  "after": {
-  "height": 1,
-  "history": "change id=o:d5fa1f44 commit=c:7de5e776 time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\""
+  "height": 2,
+  "history": "change id=o:d5fa1f44 commit=c:6aa3cdad time=1767355200000 actor=\"Reader Test\" basis=witnessed by=person ops=1 touched=[o:93939393] verdict=approve decided-by=\"Reader Test\""
  }
 }

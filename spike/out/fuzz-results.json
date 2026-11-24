@@ -1,5 +1,5 @@
 {
- "cases": 2587,
+ "cases": 2768,
  "failed": 0,
  "offsets": {
   "minimal.ufx": {
@@ -23,9 +23,9 @@
    "cases": 731
   },
   "table-edited.ufx": {
-   "fields": 123,
-   "tried": 65,
-   "cases": 568
+   "fields": 202,
+   "tried": 86,
+   "cases": 749
   },
   "needs.ufx": {
    "fields": 17,
