@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>UFO probe</title><style>body{font:20px/1.5 -apple-system,sans-serif;margin:24px}h1{font-size:26px}pre{font:17px/1.6 ui-monospace,monospace;white-space:pre-wrap;background:#eef;padding:14px;border-radius:8px}a{font-size:22px}</style></head><body>
+<h1>UFO probe</h1>
+<p>If the box below still says <b>script did not run</b>, this place shows pages with script off.</p>
+<pre id="out">script did not run</pre>
+<p><a href="https://example.com/#from-the-probe">A link: tap it. Does Safari open?</a></p>
+<script>
+(function () {
+  var out = document.getElementById('out'), rows = [];
+  function say(k, v) { rows.push(k + ': ' + v); out.textContent = rows.join('\n'); }
+  say('script', 'RAN');
+  say('where', location.protocol + ' ' + String(location.href).slice(0, 60));
+  say('WebAssembly', typeof WebAssembly);
+  try {
+    var b = new Uint8Array([0,97,115,109,1,0,0,0,1,7,1,96,2,127,127,1,127,3,2,1,0,7,7,1,3,97,100,100,0,0,10,9,1,7,0,32,0,32,1,106,11]);
+    var m = new WebAssembly.Instance(new WebAssembly.Module(b));
+    say('wasm add(2,3)', m.exports.add(2, 3));
+  } catch (e) { say('wasm', 'FAILED ' + e); }
+  try { var c = document.createElement('canvas'); say('canvas', c.getContext('2d') ? 'yes' : 'no'); } catch (e) { say('canvas', 'FAILED ' + e); }
+  say('crypto.subtle', (window.crypto ? typeof crypto.subtle : 'no crypto'));
+  say('DecompressionStream', typeof DecompressionStream);
+  try { localStorage.setItem('ufo-probe', '1'); say('storage', 'yes'); } catch (e) { say('storage', 'no'); }
+  try { var u = URL.createObjectURL(new Blob(['x'])); say('blob url', u ? 'yes' : 'no'); } catch (e) { say('blob url', 'FAILED ' + e); }
+  say('touch', ('ontouchstart' in window) ? 'yes' : 'no');
+  say('agent', navigator.userAgent.slice(0, 120));
+})();
+</script>
+</body></html>
